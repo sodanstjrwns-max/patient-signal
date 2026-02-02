@@ -9,9 +9,7 @@ import {
   Bell, 
   ArrowRight,
   CheckCircle,
-  Globe,
-  Zap,
-  Shield
+  Globe
 } from 'lucide-react';
 
 export default function HomePage() {

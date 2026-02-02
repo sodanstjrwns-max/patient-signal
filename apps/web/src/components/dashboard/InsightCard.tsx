@@ -27,7 +27,7 @@ export function InsightCard({ insights, title = '주간 인사이트' }: Insight
 
   // 이모지 제거 함수
   const removeEmoji = (text: string) => {
-    return text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '').trim();
+    return text.replace(/[\uD83C-\uDBFF\uDC00-\uDFFF]+/g, '').replace(/[\u2600-\u27BF]/g, '').trim();
   };
 
   return (

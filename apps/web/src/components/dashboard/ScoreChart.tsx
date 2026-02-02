@@ -1,8 +1,6 @@
 'use client';
 
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,7 +10,6 @@ import {
   AreaChart,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatDate } from '@/lib/utils';
 
 interface ScoreChartProps {
   data: {
@@ -65,10 +62,6 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이' }: Score
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                 }}
-                formatter={(value: number, name: string) => [
-                  `${value}${name === 'score' ? '점' : '회'}`,
-                  name === 'score' ? '가시성 점수' : '언급 횟수',
-                ]}
               />
               <Area
                 type="monotone"

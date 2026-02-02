@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getPlatformName, getPlatformColor, formatPercent } from '@/lib/utils';
+import { getPlatformName, getPlatformColor } from '@/lib/utils';
 
 interface PlatformStatsProps {
   data: Record<string, number>;
