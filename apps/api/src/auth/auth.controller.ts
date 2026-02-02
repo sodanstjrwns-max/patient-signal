@@ -1,0 +1,51 @@
+import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
+import { Public } from './decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
+@ApiTags('인증')
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @Public()
+  @Post('register')
+  @ApiOperation({ summary: '회원가입', description: '새로운 사용자를 등록합니다' })
+  @ApiResponse({ status: 201, description: '회원가입 성공' })
+  @ApiResponse({ status: 409, description: '이미 등록된 이메일' })
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '로그인', description: '이메일과 비밀번호로 로그인합니다' })
+  @ApiResponse({ status: 200, description: '로그인 성공' })
+  @ApiResponse({ status: 401, description: '인증 실패' })
+  async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('profile')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '프로필 조회', description: '현재 로그인한 사용자 정보를 조회합니다' })
+  @ApiResponse({ status: 200, description: '프로필 조회 성공' })
+  @ApiResponse({ status: 401, description: '인증 필요' })
+  async getProfile(@CurrentUser('id') userId: string) {
+    return this.authService.getProfile(userId);
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '토큰 갱신', description: 'Refresh 토큰으로 새 Access 토큰을 발급받습니다' })
+  async refreshToken(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshToken(refreshToken);
+  }
+}

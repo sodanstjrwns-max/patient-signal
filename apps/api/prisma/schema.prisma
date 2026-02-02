@@ -1,0 +1,361 @@
+// Patient Signal - 병원 AI 검색 가시성 추적 SaaS
+// Prisma Schema Definition
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== ENUMS ====================
+
+enum SpecialtyType {
+  DENTAL
+  DERMATOLOGY
+  PLASTIC_SURGERY
+  OPHTHALMOLOGY
+  KOREAN_MEDICINE
+  OTHER
+}
+
+enum PlanType {
+  STARTER
+  STANDARD
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  VIEWER
+}
+
+enum PromptType {
+  PRESET
+  CUSTOM
+  AUTO_GENERATED
+}
+
+enum AIPlatform {
+  CHATGPT
+  PERPLEXITY
+  CLAUDE
+  GEMINI
+  NAVER_CUE
+  GOOGLE_AI_OVERVIEW
+}
+
+enum SentimentLabel {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+enum NotificationType {
+  NEW_MENTION
+  RANK_CHANGE
+  NEGATIVE_SENTIMENT
+  COMPETITOR_SURGE
+  WEEKLY_REPORT
+}
+
+enum NotificationChannel {
+  EMAIL
+  KAKAO
+  BOTH
+}
+
+enum ActionStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DISMISSED
+}
+
+enum GapType {
+  CONTENT
+  KEYWORD
+  TOPIC
+}
+
+enum CrawlStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ==================== MODELS ====================
+
+// 사용자 테이블
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  name          String
+  phone         String?
+  role          UserRole  @default(VIEWER)
+  hospitalId    String?   @map("hospital_id")
+  isPfMember    Boolean   @default(false) @map("is_pf_member") // 페이션트퍼널 수강생 여부
+  emailVerified Boolean   @default(false) @map("email_verified")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  hospital      Hospital?       @relation(fields: [hospitalId], references: [id])
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// 병원 테이블
+model Hospital {
+  id                 String             @id @default(uuid())
+  name               String
+  businessNumber     String?            @unique @map("business_number")
+  specialtyType      SpecialtyType      @map("specialty_type")
+  subSpecialties     String[]           @map("sub_specialties") // ['임플란트', '교정', '미백']
+  regionSido         String             @map("region_sido")     // 시/도
+  regionSigungu      String             @map("region_sigungu")  // 시/군/구
+  regionDong         String?            @map("region_dong")     // 동/읍/면
+  address            String?
+  websiteUrl         String?            @map("website_url")
+  naverPlaceId       String?            @map("naver_place_id")
+  planType           PlanType           @default(STARTER) @map("plan_type")
+  subscriptionStatus SubscriptionStatus @default(TRIAL) @map("subscription_status")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  users              User[]
+  prompts            Prompt[]
+  aiResponses        AIResponse[]
+  dailyScores        DailyScore[]
+  competitors        Competitor[]
+  contentGaps        ContentGap[]
+  improvementActions ImprovementAction[]
+  subscriptions      Subscription[]
+  notifications      Notification[]
+  crawlJobs          CrawlJob[]
+
+  @@map("hospitals")
+}
+
+// 모니터링 질문 테이블
+model Prompt {
+  id               String     @id @default(uuid())
+  hospitalId       String     @map("hospital_id")
+  promptText       String     @map("prompt_text")
+  promptType       PromptType @map("prompt_type")
+  specialtyCategory String?   @map("specialty_category")
+  regionKeywords   String[]   @map("region_keywords")
+  isActive         Boolean    @default(true) @map("is_active")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  hospital    Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  aiResponses AIResponse[]
+
+  @@map("prompts")
+}
+
+// AI 응답 테이블
+model AIResponse {
+  id                   String        @id @default(uuid())
+  promptId             String        @map("prompt_id")
+  hospitalId           String        @map("hospital_id")
+  aiPlatform           AIPlatform    @map("ai_platform")
+  aiModelVersion       String?       @map("ai_model_version")
+  responseText         String        @map("response_text")
+  responseDate         DateTime      @map("response_date") @db.Date
+  isMentioned          Boolean       @default(false) @map("is_mentioned")
+  mentionPosition      Int?          @map("mention_position")
+  totalRecommendations Int?          @map("total_recommendations")
+  sentimentScore       Float?        @map("sentiment_score") // -1 ~ 1
+  sentimentLabel       SentimentLabel? @map("sentiment_label")
+  citedSources         String[]      @map("cited_sources")
+  competitorsMentioned String[]      @map("competitors_mentioned")
+  createdAt            DateTime      @default(now()) @map("created_at")
+
+  prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId, responseDate])
+  @@index([promptId, aiPlatform])
+  @@map("ai_responses")
+}
+
+// 일일 점수 테이블
+model DailyScore {
+  id              String   @id @default(uuid())
+  hospitalId      String   @map("hospital_id")
+  scoreDate       DateTime @map("score_date") @db.Date
+  overallScore    Int      @map("overall_score") // 0~100
+  specialtyScores Json     @map("specialty_scores") // {implant: 72, ortho: 65}
+  platformScores  Json     @map("platform_scores")  // {chatgpt: 70, perplexity: 68}
+  mentionCount    Int      @default(0) @map("mention_count")
+  positiveRatio   Float    @default(0) @map("positive_ratio")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, scoreDate])
+  @@map("daily_scores")
+}
+
+// 경쟁사 테이블
+model Competitor {
+  id               String   @id @default(uuid())
+  hospitalId       String   @map("hospital_id")
+  competitorName   String   @map("competitor_name")
+  competitorRegion String?  @map("competitor_region")
+  isAutoDetected   Boolean  @default(false) @map("is_auto_detected")
+  isActive         Boolean  @default(true) @map("is_active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  hospital         Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  competitorScores CompetitorScore[]
+
+  @@map("competitors")
+}
+
+// 경쟁사 점수 테이블
+model CompetitorScore {
+  id           String   @id @default(uuid())
+  competitorId String   @map("competitor_id")
+  scoreDate    DateTime @map("score_date") @db.Date
+  overallScore Int      @map("overall_score")
+  mentionCount Int      @default(0) @map("mention_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+
+  @@unique([competitorId, scoreDate])
+  @@map("competitor_scores")
+}
+
+// 콘텐츠 갭 테이블
+model ContentGap {
+  id              String       @id @default(uuid())
+  hospitalId      String       @map("hospital_id")
+  gapType         GapType      @map("gap_type")
+  topic           String
+  competitorHas   Boolean      @default(true) @map("competitor_has")
+  priorityScore   Int          @default(0) @map("priority_score")
+  suggestedAction String?      @map("suggested_action")
+  status          ActionStatus @default(PENDING)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@map("content_gaps")
+}
+
+// 개선 액션 테이블
+model ImprovementAction {
+  id             String       @id @default(uuid())
+  hospitalId     String       @map("hospital_id")
+  actionType     String       @map("action_type")
+  title          String
+  description    String?
+  expectedImpact Int          @default(0) @map("expected_impact") // 1~10
+  status         ActionStatus @default(PENDING)
+  completedAt    DateTime?    @map("completed_at")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@map("improvement_actions")
+}
+
+// 구독 테이블
+model Subscription {
+  id                 String             @id @default(uuid())
+  hospitalId         String             @map("hospital_id")
+  planType           PlanType           @map("plan_type")
+  status             SubscriptionStatus
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  paymentMethodId    String?            @map("payment_method_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// 알림 테이블
+model Notification {
+  id               String              @id @default(uuid())
+  hospitalId       String              @map("hospital_id")
+  userId           String?             @map("user_id")
+  notificationType NotificationType    @map("notification_type")
+  title            String
+  message          String
+  isRead           Boolean             @default(false) @map("is_read")
+  channel          NotificationChannel
+  sentAt           DateTime            @default(now()) @map("sent_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+// 프리셋 질문 테이블 (시스템)
+model PresetPrompt {
+  id             String        @id @default(uuid())
+  specialtyType  SpecialtyType @map("specialty_type")
+  promptTemplate String        @map("prompt_template")
+  category       String
+  priority       Int           @default(0)
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@map("preset_prompts")
+}
+
+// 지역 테이블 (시스템)
+model Region {
+  id      String  @id @default(uuid())
+  sido    String
+  sigungu String
+  dong    String?
+  lat     Float?
+  lng     Float?
+
+  @@unique([sido, sigungu, dong])
+  @@map("regions")
+}
+
+// 크롤링 작업 테이블
+model CrawlJob {
+  id           String      @id @default(uuid())
+  hospitalId   String      @map("hospital_id")
+  status       CrawlStatus @default(PENDING)
+  totalPrompts Int         @default(0) @map("total_prompts")
+  completed    Int         @default(0)
+  failed       Int         @default(0)
+  startedAt    DateTime?   @map("started_at")
+  completedAt  DateTime?   @map("completed_at")
+  errorMessage String?     @map("error_message")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@map("crawl_jobs")
+}

@@ -1,0 +1,50 @@
+import { Controller, Get, Post, Put, Body, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { HospitalsService } from './hospitals.service';
+import { CreateHospitalDto } from './dto/create-hospital.dto';
+import { UpdateHospitalDto } from './dto/update-hospital.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+
+@ApiTags('병원')
+@Controller('hospitals')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class HospitalsController {
+  constructor(private hospitalsService: HospitalsService) {}
+
+  @Post()
+  @ApiOperation({ summary: '병원 등록', description: '새로운 병원을 등록합니다' })
+  @ApiResponse({ status: 201, description: '병원 등록 성공' })
+  async create(
+    @CurrentUser('id') userId: string,
+    @Body() dto: CreateHospitalDto,
+  ) {
+    return this.hospitalsService.create(userId, dto);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: '병원 상세 조회', description: '병원 정보를 조회합니다' })
+  @ApiResponse({ status: 200, description: '조회 성공' })
+  async findOne(@Param('id') id: string) {
+    return this.hospitalsService.findOne(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: '병원 정보 수정', description: '병원 정보를 수정합니다' })
+  @ApiResponse({ status: 200, description: '수정 성공' })
+  async update(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: UpdateHospitalDto,
+  ) {
+    return this.hospitalsService.update(id, userId, dto);
+  }
+
+  @Get(':id/dashboard')
+  @ApiOperation({ summary: '대시보드 데이터', description: '병원 대시보드 데이터를 조회합니다' })
+  @ApiResponse({ status: 200, description: '조회 성공' })
+  async getDashboard(@Param('id') id: string) {
+    return this.hospitalsService.getDashboard(id);
+  }
+}
