@@ -30,11 +30,9 @@ export default function LoginPage() {
       const { data } = await authApi.login(formData);
       setAuth(data.user, data.accessToken, data.refreshToken);
       
-      if (data.user.hospitalId) {
-        router.push('/dashboard');
-      } else {
-        router.push('/onboarding');
-      }
+      // 강제 리다이렉트 (router.push 대신 window.location 사용)
+      const redirectUrl = data.user.hospitalId ? '/dashboard' : '/onboarding';
+      window.location.href = redirectUrl;
     } catch (err: any) {
       setError(err.response?.data?.message || '로그인에 실패했습니다');
     } finally {

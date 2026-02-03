@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
+// Production API URL - 환경변수 대신 직접 지정
+const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
