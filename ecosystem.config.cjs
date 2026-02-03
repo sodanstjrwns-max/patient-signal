@@ -3,8 +3,8 @@ module.exports = {
     {
       name: 'patient-signal-api',
       cwd: './apps/api',
-      script: 'npm',
-      args: 'run start:dev',
+      script: 'node',
+      args: 'dist/src/main.js',
       env: {
         NODE_ENV: 'development',
         PORT: 4000
@@ -17,9 +17,9 @@ module.exports = {
       name: 'patient-signal-web',
       cwd: './apps/web',
       script: 'npm',
-      args: 'run dev',
+      args: 'run start',
       env: {
-        NODE_ENV: 'development',
+        NODE_ENV: 'production',
         PORT: 3000
       },
       watch: false,
