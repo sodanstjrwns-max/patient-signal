@@ -1,16 +1,26 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
+  private googleClient: OAuth2Client;
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+    private configService: ConfigService,
+  ) {
+    this.googleClient = new OAuth2Client(
+      this.configService.get('GOOGLE_CLIENT_ID'),
+      this.configService.get('GOOGLE_CLIENT_SECRET'),
+    );
+  }
 
   async register(dto: RegisterDto) {
     // 이메일 중복 확인
@@ -151,6 +161,70 @@ export class AuthService {
       return this.generateTokens(user.id, user.email, user.role, user.hospitalId);
     } catch (error) {
       throw new UnauthorizedException('유효하지 않은 토큰입니다');
+    }
+  }
+
+  /**
+   * Google OAuth 로그인
+   */
+  async googleLogin(idToken: string) {
+    try {
+      // Google ID 토큰 검증
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken,
+        audience: this.configService.get('GOOGLE_CLIENT_ID'),
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Google 인증에 실패했습니다');
+      }
+
+      const { email, name, picture, sub: googleId } = payload;
+
+      // 기존 사용자 확인
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+        include: { hospital: true },
+      });
+
+      if (!user) {
+        // 신규 사용자 생성 (비밀번호 없이)
+        user = await this.prisma.user.create({
+          data: {
+            email,
+            name: name || email.split('@')[0],
+            passwordHash: '', // Google 로그인은 비밀번호 없음
+            role: 'OWNER',
+            isPfMember: false,
+          },
+          include: { hospital: true },
+        });
+      }
+
+      // 토큰 생성
+      const tokens = await this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.hospitalId,
+      );
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          hospitalId: user.hospitalId,
+          hospital: user.hospital,
+          isPfMember: user.isPfMember,
+        },
+        ...tokens,
+      };
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw new UnauthorizedException('Google 인증에 실패했습니다');
     }
   }
 }

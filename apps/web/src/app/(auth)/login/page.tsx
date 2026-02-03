@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Script from 'next/script';
 import { Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,10 +11,28 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
+// Google Client ID
+const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.googleusercontent.com';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: any) => void;
+          renderButton: (element: HTMLElement, config: any) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -40,9 +59,63 @@ export default function LoginPage() {
     }
   };
 
+  // Google 로그인 콜백
+  const handleGoogleCallback = async (response: any) => {
+    setGoogleLoading(true);
+    setError('');
+    
+    try {
+      const { data } = await authApi.googleLogin(response.credential);
+      setAuth(data.user, data.accessToken, data.refreshToken);
+      
+      const redirectUrl = data.user.hospitalId ? '/dashboard' : '/onboarding';
+      window.location.href = redirectUrl;
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Google 로그인에 실패했습니다');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // Google Sign-In 초기화
+  useEffect(() => {
+    const initializeGoogle = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCallback,
+        });
+        
+        const buttonDiv = document.getElementById('google-signin-button');
+        if (buttonDiv) {
+          window.google.accounts.id.renderButton(buttonDiv, {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signin_with',
+            locale: 'ko',
+          });
+        }
+      }
+    };
+
+    // Google 스크립트 로드 후 초기화
+    if (window.google) {
+      initializeGoogle();
+    } else {
+      window.addEventListener('load', initializeGoogle);
+    }
+
+    return () => {
+      window.removeEventListener('load', initializeGoogle);
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <>
+      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
@@ -98,6 +171,28 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          {/* 구분선 */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">또는</span>
+            </div>
+          </div>
+
+          {/* Google 로그인 버튼 */}
+          <div className="space-y-3">
+            <div 
+              id="google-signin-button" 
+              className="flex justify-center"
+              style={{ minHeight: '44px' }}
+            ></div>
+            {googleLoading && (
+              <p className="text-center text-sm text-gray-500">Google 로그인 중...</p>
+            )}
+          </div>
+
           <div className="mt-6 text-center text-sm text-gray-500">
             계정이 없으신가요?{' '}
             <Link href="/register" className="text-blue-600 hover:underline font-medium">
@@ -107,5 +202,6 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
