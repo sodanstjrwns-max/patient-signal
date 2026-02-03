@@ -28,13 +28,19 @@ export class AICrawlerService {
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
+    // OpenAI 초기화 (키가 있을 때만)
+    const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
+    if (openaiKey && !openaiKey.includes('your-')) {
+      this.openai = new OpenAI({ apiKey: openaiKey });
+      this.logger.log('OpenAI API 초기화 완료');
+    }
 
-    this.anthropic = new Anthropic({
-      apiKey: this.configService.get<string>('ANTHROPIC_API_KEY'),
-    });
+    // Anthropic 초기화 (키가 있을 때만)
+    const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    if (anthropicKey && !anthropicKey.includes('your-')) {
+      this.anthropic = new Anthropic({ apiKey: anthropicKey });
+      this.logger.log('Anthropic API 초기화 완료');
+    }
   }
 
   /**
@@ -45,11 +51,15 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+    platforms: AIPlatform[] = ['CHATGPT', 'GEMINI'], // 기본값: 설정된 API만
   ): Promise<AIQueryResult[]> {
     const results: AIQueryResult[] = [];
 
-    for (const platform of platforms) {
+    // 사용 가능한 플랫폼만 필터링
+    const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
+    this.logger.log(`사용 가능한 플랫폼: ${availablePlatforms.join(', ')}`);
+
+    for (const platform of availablePlatforms) {
       try {
         const result = await this.queryPlatform(platform, promptText, hospitalName);
         results.push(result);
@@ -83,6 +93,26 @@ export class AICrawlerService {
   }
 
   /**
+   * 플랫폼 사용 가능 여부 확인
+   */
+  private isPlatformAvailable(platform: AIPlatform): boolean {
+    switch (platform) {
+      case 'CHATGPT':
+        return !!this.openai;
+      case 'CLAUDE':
+        return !!this.anthropic;
+      case 'PERPLEXITY':
+        const pplxKey = this.configService.get<string>('PERPLEXITY_API_KEY');
+        return !!pplxKey && !pplxKey.includes('your-');
+      case 'GEMINI':
+        const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
+        return !!geminiKey && !geminiKey.includes('your-');
+      default:
+        return false;
+    }
+  }
+
+  /**
    * 개별 플랫폼 질의
    */
   private async queryPlatform(
@@ -105,15 +135,15 @@ export class AICrawlerService {
   }
 
   /**
-   * ChatGPT (OpenAI) 질의
+   * ChatGPT (OpenAI) 질의 - gpt-4o-mini 사용 (비용 효율적)
    */
   private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: 'gpt-4o-mini', // 비용 효율적인 모델
       messages: [
         {
           role: 'system',
-          content: '당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요.',
+          content: '당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요. 추천 병원은 번호 목록으로 작성해주세요.',
         },
         {
           role: 'user',
@@ -121,11 +151,11 @@ export class AICrawlerService {
         },
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_tokens: 1500,
     });
 
     const response = completion.choices[0]?.message?.content || '';
-    return this.analyzeResponse(response, hospitalName, 'CHATGPT', 'gpt-4-turbo-preview');
+    return this.analyzeResponse(response, hospitalName, 'CHATGPT', 'gpt-4o-mini');
   }
 
   /**
@@ -176,13 +206,15 @@ export class AICrawlerService {
   }
 
   /**
-   * Gemini (Google AI) 질의
+   * Gemini (Google AI) 질의 - gemini-1.5-flash 사용 (무료)
    */
   private async queryGemini(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const geminiApiKey = this.configService.get<string>('GEMINI_API_KEY');
     
+    const systemPrompt = '당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요. 추천 병원은 번호 목록으로 작성해주세요.';
+    
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -191,16 +223,25 @@ export class AICrawlerService {
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: promptText }],
+              parts: [{ text: `${systemPrompt}\n\n질문: ${promptText}` }],
             },
           ],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1500,
+          },
         }),
       },
     );
 
     const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(`Gemini API 에러: ${data.error.message}`);
+    }
+    
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-pro');
+    return this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-1.5-flash');
   }
 
   /**
