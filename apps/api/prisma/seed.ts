@@ -1,15 +1,9 @@
 // Patient Signal - Demo Account Seed Script
 import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
 import * as bcrypt from 'bcrypt';
 import 'dotenv/config';
 
-// Prisma 7+ requires adapter for database connection
-const connectionString = process.env.DATABASE_URL!;
-const pool = new pg.Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
