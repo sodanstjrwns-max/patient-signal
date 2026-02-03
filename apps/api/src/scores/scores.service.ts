@@ -73,14 +73,14 @@ export class ScoresService {
     });
 
     const mentionedMap = new Map(
-      mentionedByPlatform.map((m) => [m.aiPlatform, m._count.id]),
+      mentionedByPlatform.map((m: { aiPlatform: string; _count: { id: number } }) => [m.aiPlatform, m._count.id]),
     );
 
-    return responses.map((r) => ({
+    return responses.map((r: { aiPlatform: string; _count: { id: number }; _avg: { sentimentScore: number | null } }) => ({
       platform: r.aiPlatform,
       totalQueries: r._count.id,
       mentionedCount: mentionedMap.get(r.aiPlatform) || 0,
-      mentionRate: ((mentionedMap.get(r.aiPlatform) || 0) / r._count.id) * 100,
+      mentionRate: ((Number(mentionedMap.get(r.aiPlatform)) || 0) / r._count.id) * 100,
       avgSentiment: r._avg.sentimentScore || 0,
     }));
   }
