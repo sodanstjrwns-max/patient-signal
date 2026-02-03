@@ -58,4 +58,25 @@ export class AuthController {
   async googleLogin(@Body('idToken') idToken: string) {
     return this.authService.googleLogin(idToken);
   }
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '비밀번호 찾기', description: '비밀번호 재설정 이메일을 발송합니다' })
+  @ApiResponse({ status: 200, description: '이메일 발송 성공' })
+  async forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassword(email);
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: '비밀번호 재설정', description: '새 비밀번호로 변경합니다' })
+  @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })
+  async resetPassword(
+    @Body('token') token: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.resetPassword(token, password);
+  }
 }

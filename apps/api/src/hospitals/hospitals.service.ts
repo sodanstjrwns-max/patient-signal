@@ -218,4 +218,24 @@ export class HospitalsService {
     };
     return names[type] || '병원';
   }
+
+  /**
+   * 활성 병원 목록 (Cron Job용)
+   */
+  async getActiveHospitals() {
+    return this.prisma.hospital.findMany({
+      where: {
+        subscriptionStatus: {
+          in: ['TRIAL', 'ACTIVE'],
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        specialtyType: true,
+        regionSido: true,
+        regionSigungu: true,
+      },
+    });
+  }
 }

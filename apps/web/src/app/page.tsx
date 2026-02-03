@@ -240,15 +240,26 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-12 bg-gray-900 text-gray-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center gap-2 mb-4 md:mb-0">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <span className="font-bold text-white">Patient Signal</span>
             </div>
+            <div className="flex items-center gap-6 text-sm">
+              <Link href="/terms" className="hover:text-white transition-colors">
+                이용약관
+              </Link>
+              <Link href="/privacy" className="hover:text-white transition-colors">
+                개인정보처리방침
+              </Link>
+              <a href="mailto:support@patientsignal.kr" className="hover:text-white transition-colors">
+                문의하기
+              </a>
+            </div>
             <div className="text-sm">
-              © 2026 페이션트퍼널 / 서울비디치과. All rights reserved.
+              © 2024 페이션트퍼널 / 서울비디치과. All rights reserved.
             </div>
           </div>
         </div>

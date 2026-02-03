@@ -167,6 +167,60 @@ export class AuthService {
   /**
    * Google OAuth 로그인
    */
+  /**
+   * 비밀번호 찾기 - 재설정 토큰 생성
+   */
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    // 보안: 사용자 존재 여부와 관계없이 동일한 응답
+    if (!user) {
+      return { message: '해당 이메일로 비밀번호 재설정 링크를 발송했습니다' };
+    }
+
+    // 재설정 토큰 생성 (1시간 유효)
+    const resetToken = this.jwtService.sign(
+      { sub: user.id, email: user.email, type: 'password-reset' },
+      { expiresIn: '1h' },
+    );
+
+    // TODO: 실제 이메일 발송 구현 (SendGrid, Resend 등)
+    // 현재는 콘솔에 로그만 출력
+    const resetUrl = `${this.configService.get('FRONTEND_URL') || 'https://patient-signal-web-2bbe.vercel.app'}/reset-password?token=${resetToken}`;
+    console.log('Password reset URL:', resetUrl);
+
+    return { message: '해당 이메일로 비밀번호 재설정 링크를 발송했습니다' };
+  }
+
+  /**
+   * 비밀번호 재설정
+   */
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const payload = this.jwtService.verify(token);
+      
+      if (payload.type !== 'password-reset') {
+        throw new UnauthorizedException('유효하지 않은 토큰입니다');
+      }
+
+      const passwordHash = await bcrypt.hash(newPassword, 10);
+      
+      await this.prisma.user.update({
+        where: { id: payload.sub },
+        data: { passwordHash },
+      });
+
+      return { message: '비밀번호가 성공적으로 변경되었습니다' };
+    } catch (error) {
+      throw new UnauthorizedException('유효하지 않거나 만료된 토큰입니다');
+    }
+  }
+
+  /**
+   * Google OAuth 로그인
+   */
   async googleLogin(idToken: string) {
     try {
       // Google ID 토큰 검증

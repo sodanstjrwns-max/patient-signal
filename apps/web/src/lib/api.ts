@@ -48,6 +48,10 @@ export const authApi = {
     api.post('/auth/login', data),
   googleLogin: (idToken: string) =>
     api.post('/auth/google', { idToken }),
+  forgotPassword: (email: string) =>
+    api.post('/auth/forgot-password', { email }),
+  resetPassword: (token: string, password: string) =>
+    api.post('/auth/reset-password', { token, password }),
   getProfile: () =>
     api.get('/auth/profile'),
   refresh: (refreshToken: string) =>
