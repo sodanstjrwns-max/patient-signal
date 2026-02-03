@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: patient-signal-api
+    env: node
+    rootDir: apps/api
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 4000
+      - key: FRONTEND_URL
+        sync: false
