@@ -82,11 +82,14 @@ export class AICrawlerService {
 
     for (const platform of availablePlatforms) {
       try {
+        this.logger.log(`🔄 ${platform} 질의 시작: "${promptText.substring(0, 30)}..."`);
         const result = await this.queryPlatform(platform, promptText, hospitalName);
+        this.logger.log(`✅ ${platform} 응답 받음: ${result.response.substring(0, 100)}...`);
         results.push(result);
 
         // DB에 저장
-        await this.prisma.aIResponse.create({
+        this.logger.log(`💾 DB 저장 시작...`);
+        const saved = await this.prisma.aIResponse.create({
           data: {
             promptId,
             hospitalId,
@@ -104,9 +107,10 @@ export class AICrawlerService {
           },
         });
 
-        this.logger.log(`${platform} 질의 완료: ${hospitalName}`);
+        this.logger.log(`✅ ${platform} 저장 완료: ID=${saved.id}`);
       } catch (error) {
-        this.logger.error(`${platform} 질의 실패: ${error.message}`);
+        this.logger.error(`❌ ${platform} 실패: ${error.message}`);
+        this.logger.error(`Stack: ${error.stack}`);
       }
     }
 
