@@ -241,7 +241,7 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['GEMINI'], // 기본값: Gemini (무료, ChatGPT 크레딧 부족 시 대안)
+    platforms: AIPlatform[] = ['PERPLEXITY'], // 기본값: Perplexity (유일하게 작동하는 API)
   ): Promise<AIQueryResult[]> {
     const results: AIQueryResult[] = [];
     
@@ -407,7 +407,7 @@ export class AICrawlerService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar-pro',
+        model: 'sonar',
         messages: [
           {
             role: 'user',
@@ -419,7 +419,7 @@ export class AICrawlerService {
 
     const data = await response.json();
     const text = data.choices?.[0]?.message?.content || '';
-    return this.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar-pro');
+    return this.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar');
   }
 
   /**
