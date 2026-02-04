@@ -171,9 +171,37 @@ cd apps/web && npm run dev
 
 ## 🔒 배포 상태
 
-- **프론트엔드**: 준비 중
-- **백엔드**: 준비 중
-- **데이터베이스**: PostgreSQL (로컬)
+✅ **프로덕션 배포 완료!**
+
+| 서비스 | URL | 플랫폼 |
+|--------|-----|--------|
+| **웹사이트** | https://patient-signal-web-2bbe.vercel.app | Vercel |
+| **로그인** | https://patient-signal-web-2bbe.vercel.app/login | Vercel |
+| **가이드** | https://patient-signal-web-2bbe.vercel.app/guide | Vercel |
+| **백엔드 API** | https://patient-signal.onrender.com/api | Render |
+| **API 문서** | https://patient-signal.onrender.com/api/docs | Swagger |
+| **데이터베이스** | Supabase (ap-northeast-2) | PostgreSQL |
+
+### 테스트 계정
+- **이메일**: `demo@patientsignal.kr`
+- **비밀번호**: `demo1234!`
+
+### 작동하는 기능
+- ✅ 이메일 회원가입/로그인
+- ✅ Google OAuth 로그인
+- ✅ 병원 온보딩 (3단계)
+- ✅ AI 크롤링 (Perplexity API)
+- ✅ AI 가시성 점수 계산
+- ✅ 대시보드
+- ✅ 온보딩 튜토리얼 (첫 로그인)
+- ✅ 가이드 페이지
+- ✅ 개인정보처리방침/이용약관
+
+### API 키 상태 (2026-02-04)
+- ⚠️ OpenAI: 크레딧 부족 (결제 필요)
+- ⚠️ Claude: 크레딧 부족 (결제 필요)
+- ⚠️ Gemini: 무료 쿼터 초과
+- ✅ **Perplexity: 정상 작동** (현재 사용 중)
 
 ## 👥 팀
 
