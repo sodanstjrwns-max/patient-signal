@@ -80,7 +80,7 @@ export default function LoginPage() {
   // Google Sign-In 초기화
   useEffect(() => {
     const initializeGoogle = () => {
-      if (window.google) {
+      if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
           client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCallback,
@@ -91,7 +91,7 @@ export default function LoginPage() {
           window.google.accounts.id.renderButton(buttonDiv, {
             theme: 'outline',
             size: 'large',
-            width: '100%',
+            width: 320,
             text: 'signin_with',
             locale: 'ko',
           });
@@ -99,21 +99,25 @@ export default function LoginPage() {
       }
     };
 
-    // Google 스크립트 로드 후 초기화
-    if (window.google) {
-      initializeGoogle();
-    } else {
-      window.addEventListener('load', initializeGoogle);
-    }
-
-    return () => {
-      window.removeEventListener('load', initializeGoogle);
+    // 스크립트 로드 대기 후 초기화 (여러 번 시도)
+    const checkAndInit = () => {
+      if (window.google?.accounts?.id) {
+        initializeGoogle();
+      } else {
+        setTimeout(checkAndInit, 100);
+      }
     };
+    
+    // 즉시 체크 + 폴링
+    checkAndInit();
   }, []);
 
   return (
     <>
-      <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+      <Script 
+        src="https://accounts.google.com/gsi/client" 
+        strategy="beforeInteractive"
+      />
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
         <CardHeader className="text-center">
