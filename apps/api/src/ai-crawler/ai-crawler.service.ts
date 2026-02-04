@@ -111,6 +111,40 @@ export class AICrawlerService {
   }
 
   /**
+   * Gemini API 테스트 (디버깅용)
+   */
+  async testGeminiCall(): Promise<any> {
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    this.logger.log(`=== Gemini 테스트 호출 === 키 존재: ${!!geminiKey}`);
+    
+    if (!geminiKey) {
+      throw new Error('Gemini API 키가 없습니다');
+    }
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: '안녕하세요. 테스트입니다. 간단히 답변해주세요.' }] }],
+          generationConfig: { maxOutputTokens: 50 },
+        }),
+      },
+    );
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(`Gemini 에러: ${data.error.message}`);
+    }
+    
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    this.logger.log(`Gemini 응답: ${text}`);
+    return { response: text, model: 'gemini-1.5-flash' };
+  }
+
+  /**
    * API 상태 확인 (디버깅용)
    */
   getApiStatus(): Record<string, any> {
@@ -153,7 +187,7 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['CHATGPT'], // 기본값: ChatGPT만 (가장 안정적)
+    platforms: AIPlatform[] = ['GEMINI'], // 기본값: Gemini (무료, ChatGPT 크레딧 부족 시 대안)
   ): Promise<AIQueryResult[]> {
     const results: AIQueryResult[] = [];
     
