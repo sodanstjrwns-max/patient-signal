@@ -241,7 +241,7 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['PERPLEXITY'], // 기본값: Perplexity (유일하게 작동하는 API)
+    platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'], // 4개 플랫폼 전체 크롤링
   ): Promise<AIQueryResult[]> {
     const results: AIQueryResult[] = [];
     
