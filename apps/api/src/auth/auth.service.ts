@@ -219,7 +219,76 @@ export class AuthService {
   }
 
   /**
-   * Google OAuth 로그인
+   * Google OAuth Callback 로그인 (Authorization Code 방식)
+   */
+  async googleCallbackLogin(code: string) {
+    try {
+      // Authorization Code로 토큰 교환
+      const { tokens } = await this.googleClient.getToken({
+        code,
+        redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
+      });
+
+      // ID 토큰 검증
+      const ticket = await this.googleClient.verifyIdToken({
+        idToken: tokens.id_token!,
+        audience: this.configService.get('GOOGLE_CLIENT_ID'),
+      });
+
+      const payload = ticket.getPayload();
+      if (!payload || !payload.email) {
+        throw new UnauthorizedException('Google 인증에 실패했습니다');
+      }
+
+      const { email, name } = payload;
+
+      // 기존 사용자 확인 또는 생성
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+        include: { hospital: true },
+      });
+
+      if (!user) {
+        user = await this.prisma.user.create({
+          data: {
+            email,
+            name: name || email.split('@')[0],
+            passwordHash: '',
+            role: 'OWNER',
+            isPfMember: false,
+          },
+          include: { hospital: true },
+        });
+      }
+
+      // JWT 토큰 생성
+      const jwtTokens = await this.generateTokens(
+        user.id,
+        user.email,
+        user.role,
+        user.hospitalId,
+      );
+
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          hospitalId: user.hospitalId,
+          hospital: user.hospital,
+          isPfMember: user.isPfMember,
+        },
+        ...jwtTokens,
+      };
+    } catch (error) {
+      console.error('Google callback login error:', error);
+      throw new UnauthorizedException('Google 인증에 실패했습니다');
+    }
+  }
+
+  /**
+   * Google OAuth 로그인 (ID Token 방식)
    */
   async googleLogin(idToken: string) {
     try {

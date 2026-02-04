@@ -1,4 +1,5 @@
-import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Res, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -57,6 +58,38 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Google 인증 실패' })
   async googleLogin(@Body('idToken') idToken: string) {
     return this.authService.googleLogin(idToken);
+  }
+
+  @Public()
+  @Get('google/callback')
+  @ApiOperation({ summary: 'Google OAuth 콜백', description: 'Google OAuth 인증 후 콜백 처리' })
+  async googleCallback(
+    @Query('code') code: string,
+    @Query('error') error: string,
+    @Res() res: Response,
+  ) {
+    const frontendUrl = 'https://patient-signal-web-2bbe.vercel.app';
+    
+    if (error) {
+      return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);
+    }
+
+    try {
+      const result = await this.authService.googleCallbackLogin(code);
+      
+      // 프론트엔드로 토큰과 함께 리다이렉트
+      const redirectUrl = result.user.hospitalId ? '/dashboard' : '/onboarding';
+      const params = new URLSearchParams({
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
+        user: JSON.stringify(result.user),
+      });
+      
+      return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}&redirect=${redirectUrl}`);
+    } catch (err) {
+      console.error('Google callback error:', err);
+      return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+    }
   }
 
   @Public()
