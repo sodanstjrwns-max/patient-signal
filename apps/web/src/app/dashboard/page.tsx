@@ -68,12 +68,22 @@ export default function DashboardPage() {
   // 크롤링 실행
   const crawlMutation = useMutation({
     mutationFn: () => crawlerApi.trigger(hospitalId!),
-    onSuccess: () => {
-      // 5초 후 데이터 갱신
+    onSuccess: (response) => {
+      const data = response.data;
+      if (data.totalPrompts === 0) {
+        alert('등록된 프롬프트가 없습니다. 먼저 질문을 추가해주세요!');
+        return;
+      }
+      alert(`크롤링이 시작되었습니다! (${data.totalPrompts}개 질문)`);
+      // 10초 후 데이터 갱신
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['weekly'] });
-      }, 5000);
+      }, 10000);
+    },
+    onError: (error: any) => {
+      console.error('크롤링 에러:', error);
+      alert(error.response?.data?.message || '크롤링 실행에 실패했습니다.');
     },
   });
 
