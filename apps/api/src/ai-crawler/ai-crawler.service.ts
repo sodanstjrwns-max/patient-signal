@@ -82,6 +82,35 @@ export class AICrawlerService {
   }
 
   /**
+   * OpenAI API 테스트 (디버깅용)
+   */
+  async testOpenAICall(): Promise<any> {
+    this.logger.log('=== OpenAI 테스트 호출 ===');
+    this.logger.log(`this.openai 존재: ${!!this.openai}`);
+    
+    if (!this.openai) {
+      throw new Error('OpenAI 클라이언트가 초기화되지 않았습니다');
+    }
+    
+    try {
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'user', content: '안녕하세요. 테스트입니다. 간단히 답변해주세요.' }
+        ],
+        max_tokens: 50,
+      });
+      
+      const response = completion.choices[0]?.message?.content || '';
+      this.logger.log(`OpenAI 응답: ${response}`);
+      return { response, model: 'gpt-4o-mini' };
+    } catch (error) {
+      this.logger.error(`OpenAI 호출 에러: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
    * API 상태 확인 (디버깅용)
    */
   getApiStatus(): Record<string, any> {

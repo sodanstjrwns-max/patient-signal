@@ -21,6 +21,21 @@ export class AICrawlerController {
     return this.aiCrawlerService.getApiStatus();
   }
 
+  @Get('test-openai')
+  @ApiOperation({ summary: 'OpenAI 테스트', description: 'OpenAI API 호출 테스트' })
+  async testOpenAI() {
+    try {
+      const result = await this.aiCrawlerService.testOpenAICall();
+      return { success: true, result };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.message,
+        stack: error.stack?.substring(0, 500),
+      };
+    }
+  }
+
   @Post('crawl/:hospitalId')
   @ApiOperation({ summary: '수동 크롤링 실행', description: '해당 병원의 모든 활성 프롬프트에 대해 AI 크롤링을 실행합니다' })
   @ApiResponse({ status: 200, description: '크롤링 시작' })
