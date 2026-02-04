@@ -28,18 +28,33 @@ export class AICrawlerService {
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    // OpenAI 초기화 (키가 있을 때만)
-    const openaiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (openaiKey && !openaiKey.includes('your-')) {
+    // OpenAI 초기화 - process.env 직접 사용
+    const openaiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY');
+    this.logger.log(`OpenAI Key 존재: ${!!openaiKey}, 길이: ${openaiKey?.length || 0}`);
+    if (openaiKey && openaiKey.length > 20 && !openaiKey.includes('your-')) {
       this.openai = new OpenAI({ apiKey: openaiKey });
-      this.logger.log('OpenAI API 초기화 완료');
+      this.logger.log('✅ OpenAI API 초기화 완료');
+    } else {
+      this.logger.warn('⚠️ OpenAI API 키가 없거나 유효하지 않습니다');
     }
 
-    // Anthropic 초기화 (키가 있을 때만)
-    const anthropicKey = this.configService.get<string>('ANTHROPIC_API_KEY');
-    if (anthropicKey && !anthropicKey.includes('your-')) {
+    // Anthropic 초기화
+    const anthropicKey = process.env.ANTHROPIC_API_KEY || this.configService.get<string>('ANTHROPIC_API_KEY');
+    if (anthropicKey && anthropicKey.length > 20 && !anthropicKey.includes('your-')) {
       this.anthropic = new Anthropic({ apiKey: anthropicKey });
-      this.logger.log('Anthropic API 초기화 완료');
+      this.logger.log('✅ Anthropic API 초기화 완료');
+    }
+
+    // Gemini 키 확인
+    const geminiKey = process.env.GEMINI_API_KEY || this.configService.get<string>('GEMINI_API_KEY');
+    if (geminiKey && geminiKey.length > 10) {
+      this.logger.log('✅ Gemini API 키 확인됨');
+    }
+
+    // Perplexity 키 확인
+    const perplexityKey = process.env.PERPLEXITY_API_KEY || this.configService.get<string>('PERPLEXITY_API_KEY');
+    if (perplexityKey && perplexityKey.length > 10) {
+      this.logger.log('✅ Perplexity API 키 확인됨');
     }
   }
 
@@ -108,11 +123,11 @@ export class AICrawlerService {
       case 'CLAUDE':
         return !!this.anthropic;
       case 'PERPLEXITY':
-        const pplxKey = this.configService.get<string>('PERPLEXITY_API_KEY');
-        return !!pplxKey && !pplxKey.includes('your-');
+        const pplxKey = process.env.PERPLEXITY_API_KEY || this.configService.get<string>('PERPLEXITY_API_KEY');
+        return !!pplxKey && pplxKey.length > 10 && !pplxKey.includes('your-');
       case 'GEMINI':
-        const geminiKey = this.configService.get<string>('GEMINI_API_KEY');
-        return !!geminiKey && !geminiKey.includes('your-');
+        const geminiKey = process.env.GEMINI_API_KEY || this.configService.get<string>('GEMINI_API_KEY');
+        return !!geminiKey && geminiKey.length > 10 && !geminiKey.includes('your-');
       default:
         return false;
     }
