@@ -28,42 +28,57 @@ export class AICrawlerService {
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    // 지연 초기화 - 첫 요청 시 초기화
-    this.logger.log('AICrawlerService 생성됨 (API 키는 첫 요청 시 로딩)');
+    // 즉시 초기화
+    this.initializeApis();
+  }
+
+  private initializeApis() {
+    this.logger.log('=== AI API 초기화 시작 ===');
+    
+    // OpenAI 초기화
+    const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    this.logger.log(`[OpenAI] 키 존재: ${!!openaiKey}, 길이: ${openaiKey?.length || 0}`);
+    if (openaiKey) {
+      this.logger.log(`[OpenAI] 키 시작: ${openaiKey.substring(0, 10)}...`);
+    }
+    
+    if (openaiKey && openaiKey.length > 20) {
+      try {
+        this.openai = new OpenAI({ apiKey: openaiKey });
+        this.logger.log('✅ OpenAI 초기화 완료');
+      } catch (e) {
+        this.logger.error(`❌ OpenAI 초기화 실패: ${e.message}`);
+      }
+    } else {
+      this.logger.warn('⚠️ OpenAI API 키 없음 또는 너무 짧음');
+    }
+
+    // Anthropic 초기화
+    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (anthropicKey && anthropicKey.length > 20) {
+      try {
+        this.anthropic = new Anthropic({ apiKey: anthropicKey });
+        this.logger.log('✅ Anthropic 초기화 완료');
+      } catch (e) {
+        this.logger.error(`❌ Anthropic 초기화 실패: ${e.message}`);
+      }
+    }
+    
+    this.logger.log(`=== 초기화 결과: OpenAI=${!!this.openai}, Anthropic=${!!this.anthropic} ===`);
   }
 
   /**
-   * OpenAI 클라이언트 가져오기 (지연 초기화)
+   * OpenAI 클라이언트 가져오기
    */
   private getOpenAI(): OpenAI | null {
-    if (this.openai) return this.openai;
-    
-    const openaiKey = process.env.OPENAI_API_KEY?.trim();
-    this.logger.log(`[OpenAI] 키 확인 - 존재: ${!!openaiKey}, 길이: ${openaiKey?.length || 0}`);
-    
-    if (openaiKey && openaiKey.length > 20 && !openaiKey.includes('your-') && openaiKey.startsWith('sk-')) {
-      this.openai = new OpenAI({ apiKey: openaiKey });
-      this.logger.log('✅ [OpenAI] API 초기화 완료');
-      return this.openai;
-    }
-    
-    this.logger.warn(`⚠️ [OpenAI] 키 문제 - 값 시작: ${openaiKey?.substring(0, 10) || 'EMPTY'}...`);
-    return null;
+    return this.openai || null;
   }
 
   /**
-   * Anthropic 클라이언트 가져오기 (지연 초기화)
+   * Anthropic 클라이언트 가져오기
    */
   private getAnthropic(): Anthropic | null {
-    if (this.anthropic) return this.anthropic;
-    
-    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (anthropicKey && anthropicKey.length > 20 && !anthropicKey.includes('your-')) {
-      this.anthropic = new Anthropic({ apiKey: anthropicKey });
-      this.logger.log('✅ [Anthropic] API 초기화 완료');
-      return this.anthropic;
-    }
-    return null;
+    return this.anthropic || null;
   }
 
   /**
@@ -79,9 +94,9 @@ export class AICrawlerService {
       openai: {
         hasKey: !!openaiKey,
         keyLength: openaiKey?.length || 0,
-        keyPrefix: openaiKey?.substring(0, 7) || 'EMPTY',
+        keyPrefix: openaiKey?.substring(0, 10) || 'EMPTY',
         isInitialized: !!this.openai,
-        isValid: openaiKey?.startsWith('sk-') || false,
+        clientType: this.openai?.constructor?.name || 'none',
       },
       anthropic: {
         hasKey: !!anthropicKey,
@@ -97,6 +112,7 @@ export class AICrawlerService {
         keyLength: perplexityKey?.length || 0,
       },
       environment: process.env.NODE_ENV || 'unknown',
+      timestamp: new Date().toISOString(),
     };
   }
 
@@ -172,17 +188,18 @@ export class AICrawlerService {
    * 플랫폼 사용 가능 여부 확인
    */
   private isPlatformAvailable(platform: AIPlatform): boolean {
+    this.logger.log(`[isPlatformAvailable] 체크: ${platform}, openai=${!!this.openai}`);
     switch (platform) {
       case 'CHATGPT':
-        return !!this.getOpenAI();
+        return !!this.openai;
       case 'CLAUDE':
-        return !!this.getAnthropic();
+        return !!this.anthropic;
       case 'PERPLEXITY':
         const pplxKey = process.env.PERPLEXITY_API_KEY?.trim();
-        return !!pplxKey && pplxKey.length > 10 && !pplxKey.includes('your-');
+        return !!pplxKey && pplxKey.length > 10;
       case 'GEMINI':
         const geminiKey = process.env.GEMINI_API_KEY?.trim();
-        return !!geminiKey && geminiKey.length > 10 && !geminiKey.includes('your-');
+        return !!geminiKey && geminiKey.length > 10;
       default:
         return false;
     }
@@ -214,11 +231,11 @@ export class AICrawlerService {
    * ChatGPT (OpenAI) 질의 - gpt-4o-mini 사용 (비용 효율적)
    */
   private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const openai = this.getOpenAI();
-    if (!openai) {
+    if (!this.openai) {
       throw new Error('OpenAI API가 초기화되지 않았습니다');
     }
-    const completion = await openai.chat.completions.create({
+    this.logger.log(`[ChatGPT] API 호출 시작: ${promptText.substring(0, 30)}...`);
+    const completion = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini', // 비용 효율적인 모델
       messages: [
         {
@@ -242,11 +259,10 @@ export class AICrawlerService {
    * Claude (Anthropic) 질의
    */
   private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const anthropic = this.getAnthropic();
-    if (!anthropic) {
+    if (!this.anthropic) {
       throw new Error('Anthropic API가 초기화되지 않았습니다');
     }
-    const message = await anthropic.messages.create({
+    const message = await this.anthropic.messages.create({
       model: 'claude-3-opus-20240229',
       max_tokens: 2000,
       messages: [
