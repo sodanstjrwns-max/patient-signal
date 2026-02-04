@@ -57,7 +57,13 @@ export class AICrawlerService {
 
     // 사용 가능한 플랫폼만 필터링
     const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
-    this.logger.log(`사용 가능한 플랫폼: ${availablePlatforms.join(', ')}`);
+    this.logger.log(`요청된 플랫폼: ${platforms.join(', ')}`);
+    this.logger.log(`사용 가능한 플랫폼: ${availablePlatforms.join(', ') || '없음'}`);
+    this.logger.log(`OpenAI 초기화됨: ${!!this.openai}`);
+    
+    if (availablePlatforms.length === 0) {
+      this.logger.warn('사용 가능한 AI 플랫폼이 없습니다. API 키를 확인하세요.');
+    }
 
     for (const platform of availablePlatforms) {
       try {
