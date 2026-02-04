@@ -145,6 +145,60 @@ export class AICrawlerService {
   }
 
   /**
+   * Claude API 테스트 (디버깅용)
+   */
+  async testClaudeCall(): Promise<any> {
+    this.logger.log('=== Claude 테스트 호출 ===');
+    
+    if (!this.anthropic) {
+      throw new Error('Anthropic 클라이언트가 초기화되지 않았습니다');
+    }
+    
+    const message = await this.anthropic.messages.create({
+      model: 'claude-3-haiku-20240307', // 가장 저렴한 모델
+      max_tokens: 50,
+      messages: [{ role: 'user', content: '안녕하세요. 테스트입니다. 간단히 답변해주세요.' }],
+    });
+    
+    const response = message.content[0].type === 'text' ? message.content[0].text : '';
+    return { response, model: 'claude-3-haiku-20240307' };
+  }
+
+  /**
+   * Perplexity API 테스트 (디버깅용)
+   */
+  async testPerplexityCall(): Promise<any> {
+    const perplexityKey = process.env.PERPLEXITY_API_KEY?.trim();
+    this.logger.log(`=== Perplexity 테스트 호출 === 키 존재: ${!!perplexityKey}`);
+    
+    if (!perplexityKey) {
+      throw new Error('Perplexity API 키가 없습니다');
+    }
+    
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${perplexityKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [{ role: 'user', content: '안녕하세요. 테스트입니다. 간단히 답변해주세요.' }],
+        max_tokens: 50,
+      }),
+    });
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(`Perplexity 에러: ${JSON.stringify(data.error)}`);
+    }
+    
+    const text = data.choices?.[0]?.message?.content || '';
+    return { response: text, model: 'sonar' };
+  }
+
+  /**
    * API 상태 확인 (디버깅용)
    */
   getApiStatus(): Record<string, any> {

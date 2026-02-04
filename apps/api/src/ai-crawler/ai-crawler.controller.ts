@@ -50,6 +50,34 @@ export class AICrawlerController {
     }
   }
 
+  @Get('test-claude')
+  @ApiOperation({ summary: 'Claude 테스트', description: 'Claude API 호출 테스트' })
+  async testClaude() {
+    try {
+      const result = await this.aiCrawlerService.testClaudeCall();
+      return { success: true, result };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.message,
+      };
+    }
+  }
+
+  @Get('test-perplexity')
+  @ApiOperation({ summary: 'Perplexity 테스트', description: 'Perplexity API 호출 테스트' })
+  async testPerplexity() {
+    try {
+      const result = await this.aiCrawlerService.testPerplexityCall();
+      return { success: true, result };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error.message,
+      };
+    }
+  }
+
   @Post('crawl/:hospitalId')
   @ApiOperation({ summary: '수동 크롤링 실행', description: '해당 병원의 모든 활성 프롬프트에 대해 AI 크롤링을 실행합니다' })
   @ApiResponse({ status: 200, description: '크롤링 시작' })
