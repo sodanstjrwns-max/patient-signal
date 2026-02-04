@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { ScoreCard } from '@/components/dashboard/ScoreCard';
@@ -7,6 +8,7 @@ import { ScoreChart } from '@/components/dashboard/ScoreChart';
 import { PlatformStats } from '@/components/dashboard/PlatformStats';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { CompetitorComparison } from '@/components/dashboard/CompetitorComparison';
+import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { hospitalApi, scoresApi, competitorsApi, crawlerApi } from '@/lib/api';
@@ -18,7 +20,8 @@ import {
   MessageSquare, 
   Zap, 
   ArrowRight,
-  PlayCircle
+  PlayCircle,
+  BookOpen
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,6 +29,20 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // 첫 방문 시 튜토리얼 표시
+  useEffect(() => {
+    const hasSeenTutorial = localStorage.getItem('patient-signal-tutorial-seen');
+    if (!hasSeenTutorial) {
+      setShowTutorial(true);
+    }
+  }, []);
+
+  const handleTutorialComplete = () => {
+    localStorage.setItem('patient-signal-tutorial-seen', 'true');
+    setShowTutorial(false);
+  };
 
   // 대시보드 데이터 조회
   const { data: dashboard, isLoading: dashboardLoading, refetch } = useQuery({
@@ -76,6 +93,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
+      {/* 온보딩 튜토리얼 */}
+      {showTutorial && (
+        <OnboardingTutorial
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialComplete}
+        />
+      )}
+
       <Header
         title="대시보드"
         description={`${dashboard?.hospital?.name || '병원'}의 AI 가시성 현황`}
@@ -187,7 +212,23 @@ export default function DashboardPage() {
         </div>
 
         {/* 빠른 액션 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Link href="/guide">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <BookOpen className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">사용 가이드</p>
+                    <p className="text-sm text-gray-500">서비스 이용 안내</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </CardContent>
+            </Card>
+          </Link>
           <Link href="/dashboard/prompts">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4 flex items-center justify-between">
