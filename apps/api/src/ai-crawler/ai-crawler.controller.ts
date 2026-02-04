@@ -15,6 +15,12 @@ export class AICrawlerController {
     private prisma: PrismaService,
   ) {}
 
+  @Get('status')
+  @ApiOperation({ summary: 'API 상태 확인', description: 'AI API 키 설정 상태를 확인합니다' })
+  async getApiStatus() {
+    return this.aiCrawlerService.getApiStatus();
+  }
+
   @Post('crawl/:hospitalId')
   @ApiOperation({ summary: '수동 크롤링 실행', description: '해당 병원의 모든 활성 프롬프트에 대해 AI 크롤링을 실행합니다' })
   @ApiResponse({ status: 200, description: '크롤링 시작' })

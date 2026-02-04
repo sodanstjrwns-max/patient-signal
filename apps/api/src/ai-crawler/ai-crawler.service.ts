@@ -28,34 +28,76 @@ export class AICrawlerService {
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    // OpenAI 초기화 - process.env 직접 사용
-    const openaiKey = process.env.OPENAI_API_KEY || this.configService.get<string>('OPENAI_API_KEY');
-    this.logger.log(`OpenAI Key 존재: ${!!openaiKey}, 길이: ${openaiKey?.length || 0}`);
-    if (openaiKey && openaiKey.length > 20 && !openaiKey.includes('your-')) {
-      this.openai = new OpenAI({ apiKey: openaiKey });
-      this.logger.log('✅ OpenAI API 초기화 완료');
-    } else {
-      this.logger.warn('⚠️ OpenAI API 키가 없거나 유효하지 않습니다');
-    }
+    // 지연 초기화 - 첫 요청 시 초기화
+    this.logger.log('AICrawlerService 생성됨 (API 키는 첫 요청 시 로딩)');
+  }
 
-    // Anthropic 초기화
-    const anthropicKey = process.env.ANTHROPIC_API_KEY || this.configService.get<string>('ANTHROPIC_API_KEY');
+  /**
+   * OpenAI 클라이언트 가져오기 (지연 초기화)
+   */
+  private getOpenAI(): OpenAI | null {
+    if (this.openai) return this.openai;
+    
+    const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    this.logger.log(`[OpenAI] 키 확인 - 존재: ${!!openaiKey}, 길이: ${openaiKey?.length || 0}`);
+    
+    if (openaiKey && openaiKey.length > 20 && !openaiKey.includes('your-') && openaiKey.startsWith('sk-')) {
+      this.openai = new OpenAI({ apiKey: openaiKey });
+      this.logger.log('✅ [OpenAI] API 초기화 완료');
+      return this.openai;
+    }
+    
+    this.logger.warn(`⚠️ [OpenAI] 키 문제 - 값 시작: ${openaiKey?.substring(0, 10) || 'EMPTY'}...`);
+    return null;
+  }
+
+  /**
+   * Anthropic 클라이언트 가져오기 (지연 초기화)
+   */
+  private getAnthropic(): Anthropic | null {
+    if (this.anthropic) return this.anthropic;
+    
+    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (anthropicKey && anthropicKey.length > 20 && !anthropicKey.includes('your-')) {
       this.anthropic = new Anthropic({ apiKey: anthropicKey });
-      this.logger.log('✅ Anthropic API 초기화 완료');
+      this.logger.log('✅ [Anthropic] API 초기화 완료');
+      return this.anthropic;
     }
+    return null;
+  }
 
-    // Gemini 키 확인
-    const geminiKey = process.env.GEMINI_API_KEY || this.configService.get<string>('GEMINI_API_KEY');
-    if (geminiKey && geminiKey.length > 10) {
-      this.logger.log('✅ Gemini API 키 확인됨');
-    }
-
-    // Perplexity 키 확인
-    const perplexityKey = process.env.PERPLEXITY_API_KEY || this.configService.get<string>('PERPLEXITY_API_KEY');
-    if (perplexityKey && perplexityKey.length > 10) {
-      this.logger.log('✅ Perplexity API 키 확인됨');
-    }
+  /**
+   * API 상태 확인 (디버깅용)
+   */
+  getApiStatus(): Record<string, any> {
+    const openaiKey = process.env.OPENAI_API_KEY?.trim();
+    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
+    const geminiKey = process.env.GEMINI_API_KEY?.trim();
+    const perplexityKey = process.env.PERPLEXITY_API_KEY?.trim();
+    
+    return {
+      openai: {
+        hasKey: !!openaiKey,
+        keyLength: openaiKey?.length || 0,
+        keyPrefix: openaiKey?.substring(0, 7) || 'EMPTY',
+        isInitialized: !!this.openai,
+        isValid: openaiKey?.startsWith('sk-') || false,
+      },
+      anthropic: {
+        hasKey: !!anthropicKey,
+        keyLength: anthropicKey?.length || 0,
+        isInitialized: !!this.anthropic,
+      },
+      gemini: {
+        hasKey: !!geminiKey,
+        keyLength: geminiKey?.length || 0,
+      },
+      perplexity: {
+        hasKey: !!perplexityKey,
+        keyLength: perplexityKey?.length || 0,
+      },
+      environment: process.env.NODE_ENV || 'unknown',
+    };
   }
 
   /**
@@ -123,14 +165,14 @@ export class AICrawlerService {
   private isPlatformAvailable(platform: AIPlatform): boolean {
     switch (platform) {
       case 'CHATGPT':
-        return !!this.openai;
+        return !!this.getOpenAI();
       case 'CLAUDE':
-        return !!this.anthropic;
+        return !!this.getAnthropic();
       case 'PERPLEXITY':
-        const pplxKey = process.env.PERPLEXITY_API_KEY || this.configService.get<string>('PERPLEXITY_API_KEY');
+        const pplxKey = process.env.PERPLEXITY_API_KEY?.trim();
         return !!pplxKey && pplxKey.length > 10 && !pplxKey.includes('your-');
       case 'GEMINI':
-        const geminiKey = process.env.GEMINI_API_KEY || this.configService.get<string>('GEMINI_API_KEY');
+        const geminiKey = process.env.GEMINI_API_KEY?.trim();
         return !!geminiKey && geminiKey.length > 10 && !geminiKey.includes('your-');
       default:
         return false;
@@ -163,7 +205,11 @@ export class AICrawlerService {
    * ChatGPT (OpenAI) 질의 - gpt-4o-mini 사용 (비용 효율적)
    */
   private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const completion = await this.openai.chat.completions.create({
+    const openai = this.getOpenAI();
+    if (!openai) {
+      throw new Error('OpenAI API가 초기화되지 않았습니다');
+    }
+    const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini', // 비용 효율적인 모델
       messages: [
         {
@@ -187,7 +233,11 @@ export class AICrawlerService {
    * Claude (Anthropic) 질의
    */
   private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const message = await this.anthropic.messages.create({
+    const anthropic = this.getAnthropic();
+    if (!anthropic) {
+      throw new Error('Anthropic API가 초기화되지 않았습니다');
+    }
+    const message = await anthropic.messages.create({
       model: 'claude-3-opus-20240229',
       max_tokens: 2000,
       messages: [
@@ -206,7 +256,7 @@ export class AICrawlerService {
    * Perplexity 질의 (OpenAI 호환 API)
    */
   private async queryPerplexity(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const perplexityApiKey = this.configService.get<string>('PERPLEXITY_API_KEY');
+    const perplexityApiKey = process.env.PERPLEXITY_API_KEY?.trim();
     
     const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
@@ -234,7 +284,7 @@ export class AICrawlerService {
    * Gemini (Google AI) 질의 - gemini-1.5-flash 사용 (무료)
    */
   private async queryGemini(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const geminiApiKey = this.configService.get<string>('GEMINI_API_KEY');
+    const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
     
     const systemPrompt = '당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요. 추천 병원은 번호 목록으로 작성해주세요.';
     
