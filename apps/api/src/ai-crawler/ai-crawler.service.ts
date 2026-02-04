@@ -122,7 +122,7 @@ export class AICrawlerService {
     }
     
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -141,7 +141,7 @@ export class AICrawlerService {
     
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     this.logger.log(`Gemini 응답: ${text}`);
-    return { response: text, model: 'gemini-1.5-flash' };
+    return { response: text, model: 'gemini-2.0-flash' };
   }
 
   /**
@@ -369,7 +369,7 @@ export class AICrawlerService {
   }
 
   /**
-   * Gemini (Google AI) 질의 - gemini-1.5-flash 사용 (무료)
+   * Gemini (Google AI) 질의 - gemini-2.0-flash 사용 (무료)
    */
   private async queryGemini(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
@@ -377,7 +377,7 @@ export class AICrawlerService {
     const systemPrompt = '당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요. 추천 병원은 번호 목록으로 작성해주세요.';
     
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: {
@@ -404,7 +404,7 @@ export class AICrawlerService {
     }
     
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-1.5-flash');
+    return this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.0-flash');
   }
 
   /**
