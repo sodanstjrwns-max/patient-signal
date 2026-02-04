@@ -108,15 +108,24 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['CHATGPT', 'GEMINI'], // 기본값: 설정된 API만
+    platforms: AIPlatform[] = ['CHATGPT'], // 기본값: ChatGPT만 (가장 안정적)
   ): Promise<AIQueryResult[]> {
     const results: AIQueryResult[] = [];
+    
+    // API 상태 로깅
+    this.logger.log(`=== queryAllPlatforms 시작 ===`);
+    this.logger.log(`프롬프트: "${promptText.substring(0, 50)}..."`);
+    this.logger.log(`병원: ${hospitalName}`);
+    
+    // OpenAI 강제 초기화 시도
+    const openai = this.getOpenAI();
+    this.logger.log(`OpenAI 클라이언트: ${openai ? '✅ 사용 가능' : '❌ 사용 불가'}`);
 
     // 사용 가능한 플랫폼만 필터링
     const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
     this.logger.log(`요청된 플랫폼: ${platforms.join(', ')}`);
     this.logger.log(`사용 가능한 플랫폼: ${availablePlatforms.join(', ') || '없음'}`);
-    this.logger.log(`OpenAI 초기화됨: ${!!this.openai}`);
+    this.logger.log(`this.openai: ${!!this.openai}`);
     
     if (availablePlatforms.length === 0) {
       this.logger.warn('사용 가능한 AI 플랫폼이 없습니다. API 키를 확인하세요.');

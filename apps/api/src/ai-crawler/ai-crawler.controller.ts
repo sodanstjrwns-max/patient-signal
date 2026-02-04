@@ -110,18 +110,31 @@ export class AICrawlerController {
   ) {
     let completed = 0;
     let failed = 0;
+    const errors: string[] = [];
+    
+    console.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개`);
 
     for (const prompt of prompts) {
       try {
-        await this.aiCrawlerService.queryAllPlatforms(
+        console.log(`[Crawl] 프롬프트 처리 중: ${prompt.promptText.substring(0, 30)}...`);
+        const results = await this.aiCrawlerService.queryAllPlatforms(
           prompt.id,
           hospital.id,
           hospital.name,
           prompt.promptText,
         );
-        completed++;
+        console.log(`[Crawl] 결과: ${results.length}개 응답`);
+        
+        if (results.length > 0) {
+          completed++;
+        } else {
+          failed++;
+          errors.push(`${prompt.promptText.substring(0, 20)}: 응답 없음`);
+        }
       } catch (error) {
         failed++;
+        errors.push(`${prompt.promptText.substring(0, 20)}: ${error.message}`);
+        console.error(`[Crawl] 에러: ${error.message}`);
       }
 
       // 진행 상황 업데이트
@@ -132,15 +145,21 @@ export class AICrawlerController {
     }
 
     // 완료 처리
+    const errorMessage = errors.length > 0 ? errors.join('; ') : null;
     await this.prisma.crawlJob.update({
       where: { id: jobId },
       data: {
         status: failed === prompts.length ? 'FAILED' : 'COMPLETED',
         completedAt: new Date(),
+        errorMessage,
       },
     });
+    
+    console.log(`[Crawl] 완료: completed=${completed}, failed=${failed}`);
 
     // 일일 점수 계산
-    await this.aiCrawlerService.calculateDailyScore(hospital.id);
+    if (completed > 0) {
+      await this.aiCrawlerService.calculateDailyScore(hospital.id);
+    }
   }
 }
