@@ -10,6 +10,7 @@ import { PromptsModule } from './prompts/prompts.module';
 import { AICrawlerModule } from './ai-crawler/ai-crawler.module';
 import { CompetitorsModule } from './competitors/competitors.module';
 import { ScoresModule } from './scores/scores.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ScoresModule } from './scores/scores.module';
     AICrawlerModule,
     CompetitorsModule,
     ScoresModule,
+    SchedulerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
