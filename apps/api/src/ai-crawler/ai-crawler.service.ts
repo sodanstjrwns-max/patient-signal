@@ -379,19 +379,21 @@ export class AICrawlerService {
     if (!this.anthropic) {
       throw new Error('Anthropic API가 초기화되지 않았습니다');
     }
+    this.logger.log(`[Claude] API 호출 시작: ${promptText.substring(0, 30)}...`);
     const message = await this.anthropic.messages.create({
-      model: 'claude-3-opus-20240229',
-      max_tokens: 2000,
+      model: 'claude-3-haiku-20240307', // 가장 저렴하고 빠른 모델
+      max_tokens: 1500,
       messages: [
         {
           role: 'user',
-          content: promptText,
+          content: `당신은 한국의 병원 및 의료 서비스에 대해 정확하고 도움이 되는 정보를 제공하는 어시스턴트입니다. 구체적인 병원 이름과 특징을 포함하여 답변해주세요. 추천 병원은 번호 목록으로 작성해주세요.\n\n질문: ${promptText}`,
         },
       ],
     });
 
     const response = message.content[0].type === 'text' ? message.content[0].text : '';
-    return this.analyzeResponse(response, hospitalName, 'CLAUDE', 'claude-3-opus-20240229');
+    this.logger.log(`[Claude] 응답 받음: ${response.substring(0, 50)}...`);
+    return this.analyzeResponse(response, hospitalName, 'CLAUDE', 'claude-3-haiku-20240307');
   }
 
   /**
