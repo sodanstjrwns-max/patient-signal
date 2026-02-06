@@ -62,14 +62,41 @@ function CheckoutContent() {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const orderName = `Patient Signal ${planDetails[plan]?.name || 'Starter'} 플랜 (${billing === 'yearly' ? '연간' : '월간'})`;
       
-      await tossPayments.requestPayment(selectedMethod, {
+      // 결제 수단별 파라미터 설정
+      const baseParams = {
         amount: price,
         orderId,
         orderName,
         successUrl: `${window.location.origin}/checkout/success?plan=${plan}&billing=${billing}`,
         failUrl: `${window.location.origin}/checkout/fail`,
         customerName: '고객',
-      });
+      };
+      
+      // 결제 수단별 추가 파라미터
+      let paymentParams: any = { ...baseParams };
+      
+      if (selectedMethod === '가상계좌') {
+        paymentParams = {
+          ...baseParams,
+          validHours: 24, // 입금 유효시간 24시간
+          cashReceipt: {
+            type: '소득공제',
+          },
+        };
+      } else if (selectedMethod === '계좌이체') {
+        paymentParams = {
+          ...baseParams,
+          cashReceipt: {
+            type: '소득공제',
+          },
+        };
+      } else if (selectedMethod === '휴대폰') {
+        paymentParams = {
+          ...baseParams,
+        };
+      }
+      
+      await tossPayments.requestPayment(selectedMethod, paymentParams);
     } catch (error: any) {
       console.error('결제 요청 실패:', error);
       if (error.code !== 'USER_CANCEL') {
