@@ -74,10 +74,13 @@ export default function HomePage() {
               <span className="font-bold text-xl text-gray-900">Patient Signal</span>
             </div>
             <div className="flex items-center gap-4">
+              <Link href="/pricing">
+                <Button variant="ghost">가격</Button>
+              </Link>
               <Link href="/login">
                 <Button variant="ghost">로그인</Button>
               </Link>
-              <Link href="/register">
+              <Link href="/pricing">
                 <Button>무료 체험 시작</Button>
               </Link>
             </div>
@@ -201,7 +204,7 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register">
+                <Link href={`/checkout?plan=${plan.name.toLowerCase()}&price=${plan.name === 'Starter' ? '190000' : plan.name === 'Standard' ? '390000' : '790000'}&billing=monthly`}>
                   <Button
                     variant={plan.popular ? 'default' : 'outline'}
                     className="w-full"
