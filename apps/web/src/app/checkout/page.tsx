@@ -22,7 +22,9 @@ const planDetails: Record<string, { name: string; description: string }> = {
 
 declare global {
   interface Window {
-    PaymentWidget: any;
+    TossPayments: (clientKey: string) => {
+      widgets: (options: { customerKey: string }) => any;
+    };
   }
 }
 
@@ -37,9 +39,7 @@ function CheckoutContent() {
   const [widgetReady, setWidgetReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const paymentWidgetRef = useRef<any>(null);
-  const paymentMethodsWidgetRef = useRef<any>(null);
-  const agreementWidgetRef = useRef<any>(null);
+  const widgetsRef = useRef<any>(null);
 
   // 고객 키 생성 (비회원용 랜덤 키)
   const customerKey = useRef(`guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`);
@@ -51,7 +51,7 @@ function CheckoutContent() {
     script.async = true;
     
     script.onload = async () => {
-      console.log('✅ 토스페이먼츠 결제위젯 SDK 로드 완료');
+      console.log('✅ 토스페이먼츠 SDK v2 로드 완료');
       
       if (!CLIENT_KEY) {
         setError('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요.');
@@ -60,29 +60,37 @@ function CheckoutContent() {
       }
 
       try {
-        // 결제위젯 초기화
-        const paymentWidget = await window.PaymentWidget(CLIENT_KEY, customerKey.current);
-        paymentWidgetRef.current = paymentWidget;
+        // 1. TossPayments 초기화
+        const tossPayments = window.TossPayments(CLIENT_KEY);
+        console.log('✅ TossPayments 초기화 완료');
         
+        // 2. 결제위젯 초기화
+        const widgets = tossPayments.widgets({ customerKey: customerKey.current });
+        widgetsRef.current = widgets;
         console.log('✅ 결제위젯 초기화 완료');
-        console.log('🔑 클라이언트 키:', CLIENT_KEY.substring(0, 15) + '...');
         
-        // 결제수단 위젯 렌더링
-        const paymentMethods = paymentWidget.renderPaymentMethods(
-          '#payment-methods',
-          { value: price },
-          { variantKey: 'DEFAULT' }
-        );
-        paymentMethodsWidgetRef.current = paymentMethods;
+        // 3. 결제 금액 설정
+        await widgets.setAmount({
+          value: price,
+          currency: 'KRW',
+        });
+        console.log('✅ 결제 금액 설정 완료:', price);
         
-        // 약관 동의 위젯 렌더링
-        const agreement = paymentWidget.renderAgreement('#agreement', {
+        // 4. 결제수단 UI 렌더링
+        await widgets.renderPaymentMethods({
+          selector: '#payment-methods',
+          variantKey: 'DEFAULT',
+        });
+        console.log('✅ 결제수단 UI 렌더링 완료');
+        
+        // 5. 약관 동의 UI 렌더링
+        await widgets.renderAgreement({
+          selector: '#agreement',
           variantKey: 'AGREEMENT',
         });
-        agreementWidgetRef.current = agreement;
+        console.log('✅ 약관 동의 UI 렌더링 완료');
         
         setWidgetReady(true);
-        console.log('✅ 결제위젯 렌더링 완료');
         
       } catch (err: any) {
         console.error('❌ 결제위젯 초기화 실패:', err);
@@ -100,7 +108,7 @@ function CheckoutContent() {
 
   // 결제 요청
   const handlePayment = async () => {
-    if (!widgetReady || !paymentWidgetRef.current) {
+    if (!widgetReady || !widgetsRef.current) {
       alert('결제 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
       return;
     }
@@ -114,7 +122,8 @@ function CheckoutContent() {
       
       console.log('🚀 결제 요청:', { orderId, orderName, amount: price });
       
-      await paymentWidgetRef.current.requestPayment({
+      // 결제 요청
+      await widgetsRef.current.requestPayment({
         orderId,
         orderName,
         successUrl: `${window.location.origin}/checkout/success?plan=${plan}&billing=${billing}`,
@@ -173,7 +182,7 @@ function CheckoutContent() {
               {/* 결제수단 위젯 */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div id="payment-methods" className="min-h-[300px]">
-                  {!widgetReady && (
+                  {!widgetReady && !error && (
                     <div className="flex items-center justify-center h-[300px]">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
@@ -187,7 +196,7 @@ function CheckoutContent() {
               {/* 약관 동의 위젯 */}
               <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
                 <div id="agreement" className="min-h-[100px]">
-                  {!widgetReady && (
+                  {!widgetReady && !error && (
                     <div className="flex items-center justify-center h-[100px]">
                       <p className="text-gray-500 text-sm">약관 불러오는 중...</p>
                     </div>
@@ -199,6 +208,12 @@ function CheckoutContent() {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <p className="text-red-700 text-sm">{error}</p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="mt-2 text-red-600 underline text-sm"
+                  >
+                    페이지 새로고침
+                  </button>
                 </div>
               )}
 
