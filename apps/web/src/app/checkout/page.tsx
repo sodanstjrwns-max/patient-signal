@@ -18,6 +18,11 @@ import {
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_GePWvyJnrKvgOLXvqEneVgLzN97E';
 
+// 디버깅용 로그 (개발 시에만)
+if (typeof window !== 'undefined') {
+  console.log('토스 클라이언트 키 로드됨:', clientKey.substring(0, 15) + '...');
+}
+
 const planDetails: Record<string, { name: string; description: string }> = {
   starter: { name: 'Starter', description: '1인 개원의를 위한 시작 플랜' },
   standard: { name: 'Standard', description: '성장하는 치과를 위한 플랜' },
@@ -62,39 +67,41 @@ function CheckoutContent() {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const orderName = `Patient Signal ${planDetails[plan]?.name || 'Starter'} 플랜 (${billing === 'yearly' ? '연간' : '월간'})`;
       
-      // 결제 수단별 파라미터 설정
+      // 공통 필수 파라미터 (SDK v1 문서 기준)
       const baseParams = {
         amount: price,
         orderId,
         orderName,
         successUrl: `${window.location.origin}/checkout/success?plan=${plan}&billing=${billing}`,
         failUrl: `${window.location.origin}/checkout/fail`,
-        customerName: '고객',
       };
       
-      // 결제 수단별 추가 파라미터
-      let paymentParams: any = { ...baseParams };
+      console.log('결제 요청 시작:', { method: selectedMethod, orderId, amount: price });
       
-      if (selectedMethod === '가상계좌') {
-        paymentParams = {
-          ...baseParams,
-          validHours: 24, // 입금 유효시간 24시간
-          cashReceipt: {
-            type: '소득공제',
-          },
-        };
-      } else if (selectedMethod === '계좌이체') {
-        paymentParams = {
-          ...baseParams,
-          cashReceipt: {
-            type: '소득공제',
-          },
-        };
-      } else if (selectedMethod === '휴대폰') {
-        paymentParams = {
-          ...baseParams,
-        };
+      // 결제 수단별 파라미터 설정
+      let paymentParams: any;
+      
+      switch (selectedMethod) {
+        case '카드':
+          paymentParams = { ...baseParams };
+          break;
+        case '계좌이체':
+          paymentParams = { ...baseParams };
+          break;
+        case '가상계좌':
+          paymentParams = {
+            ...baseParams,
+            validHours: 24,
+          };
+          break;
+        case '휴대폰':
+          paymentParams = { ...baseParams };
+          break;
+        default:
+          paymentParams = { ...baseParams };
       }
+      
+      console.log('결제 파라미터:', JSON.stringify(paymentParams, null, 2));
       
       await tossPayments.requestPayment(selectedMethod, paymentParams);
     } catch (error: any) {
