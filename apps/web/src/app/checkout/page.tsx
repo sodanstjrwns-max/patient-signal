@@ -9,9 +9,12 @@ import {
   ArrowLeft,
   CreditCard,
   Shield,
-  CheckCircle
+  CheckCircle,
+  Smartphone,
+  Building2,
+  Wallet
 } from 'lucide-react';
-import { loadTossPayments, TossPaymentsWidgets } from '@tosspayments/tosspayments-sdk';
+import { loadTossPayments } from '@tosspayments/tosspayments-sdk';
 
 const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'test_ck_GePWvyJnrKvgOLXvqEneVgLzN97E';
 
@@ -21,6 +24,13 @@ const planDetails: Record<string, { name: string; description: string }> = {
   pro: { name: 'Pro', description: '중대형/네트워크 병원 플랜' },
 };
 
+const paymentMethods = [
+  { id: 'CARD', name: '신용/체크카드', icon: CreditCard, description: '국내 모든 카드 결제' },
+  { id: 'TRANSFER', name: '계좌이체', icon: Building2, description: '실시간 계좌이체' },
+  { id: 'VIRTUAL_ACCOUNT', name: '가상계좌', icon: Wallet, description: '무통장 입금' },
+  { id: 'MOBILE_PHONE', name: '휴대폰 결제', icon: Smartphone, description: '휴대폰 소액결제' },
+];
+
 function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -29,74 +39,64 @@ function CheckoutContent() {
   const price = parseInt(searchParams.get('price') || '190000');
   const billing = searchParams.get('billing') || 'monthly';
   
-  const [widgets, setWidgets] = useState<TossPaymentsWidgets | null>(null);
-  const [ready, setReady] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState('CARD');
   const [loading, setLoading] = useState(false);
   const [agreementChecked, setAgreementChecked] = useState(false);
+  const [tossPayments, setTossPayments] = useState<any>(null);
 
   useEffect(() => {
     async function initTossPayments() {
       try {
-        const tossPayments = await loadTossPayments(clientKey);
-        
-        // 고객 키 생성 (실제 서비스에서는 로그인한 사용자 ID 사용)
-        const customerKey = `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
-        const widgetsInstance = tossPayments.widgets({
-          customerKey,
-        });
-        
-        // 결제 금액 설정
-        await widgetsInstance.setAmount({
-          currency: 'KRW',
-          value: price,
-        });
-        
-        // 결제 UI 렌더링
-        await Promise.all([
-          widgetsInstance.renderPaymentMethods({
-            selector: '#payment-method',
-            variantKey: 'DEFAULT',
-          }),
-          widgetsInstance.renderAgreement({
-            selector: '#agreement',
-            variantKey: 'AGREEMENT',
-          }),
-        ]);
-        
-        setWidgets(widgetsInstance);
-        setReady(true);
+        const tp = await loadTossPayments(clientKey);
+        setTossPayments(tp);
       } catch (error) {
         console.error('토스페이먼츠 초기화 실패:', error);
       }
     }
     
     initTossPayments();
-  }, [price]);
+  }, []);
 
   const handlePayment = async () => {
-    if (!widgets || !agreementChecked) return;
+    if (!tossPayments || !agreementChecked) return;
     
     setLoading(true);
     
     try {
       const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const orderName = `Patient Signal ${planDetails[plan]?.name || 'Starter'} 플랜 (${billing === 'yearly' ? '연간' : '월간'})`;
       
-      await widgets.requestPayment({
-        orderId,
-        orderName: `Patient Signal ${planDetails[plan]?.name || 'Starter'} 플랜 (${billing === 'yearly' ? '연간' : '월간'})`,
-        successUrl: `${window.location.origin}/checkout/success`,
-        failUrl: `${window.location.origin}/checkout/fail`,
-        customerEmail: 'customer@example.com', // 실제 서비스에서는 로그인한 사용자 이메일
-        customerName: '고객', // 실제 서비스에서는 로그인한 사용자 이름
-        metadata: {
-          plan,
-          billing,
-          price: price.toString(),
-        },
+      // 결제창 API 방식 (API 개별 연동 키 사용 가능)
+      const payment = tossPayments.payment({
+        customerKey: `customer_${Date.now()}`,
       });
-    } catch (error) {
+      
+      await payment.requestPayment({
+        method: selectedMethod,
+        amount: {
+          currency: 'KRW',
+          value: price,
+        },
+        orderId,
+        orderName,
+        successUrl: `${window.location.origin}/checkout/success?plan=${plan}&billing=${billing}`,
+        failUrl: `${window.location.origin}/checkout/fail`,
+        customerEmail: 'customer@example.com',
+        customerName: '고객',
+        card: selectedMethod === 'CARD' ? {
+          useEscrow: false,
+          flowMode: 'DEFAULT',
+          useCardPoint: false,
+          useAppCardOnly: false,
+        } : undefined,
+      });
+    } catch (error: any) {
       console.error('결제 요청 실패:', error);
+      if (error.code === 'USER_CANCEL') {
+        // 사용자가 결제를 취소한 경우
+      } else {
+        alert(error.message || '결제 중 오류가 발생했습니다.');
+      }
       setLoading(false);
     }
   };
@@ -136,49 +136,79 @@ function CheckoutContent() {
                 <p className="text-gray-600">안전하게 결제를 완료하세요</p>
               </div>
 
-              {/* 토스페이먼츠 결제 수단 */}
+              {/* 결제 수단 선택 */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
                   결제 수단 선택
                 </h2>
-                <div id="payment-method" className="min-h-[300px]">
-                  {!ready && (
-                    <div className="flex items-center justify-center h-[300px]">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
+                <div className="grid grid-cols-2 gap-3">
+                  {paymentMethods.map((method) => {
+                    const Icon = method.icon;
+                    return (
+                      <button
+                        key={method.id}
+                        onClick={() => setSelectedMethod(method.id)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          selectedMethod === method.id
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            selectedMethod === method.id ? 'bg-blue-100' : 'bg-gray-100'
+                          }`}>
+                            <Icon className={`h-5 w-5 ${
+                              selectedMethod === method.id ? 'text-blue-600' : 'text-gray-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <div className={`font-medium ${
+                              selectedMethod === method.id ? 'text-blue-900' : 'text-gray-900'
+                            }`}>
+                              {method.name}
+                            </div>
+                            <div className="text-xs text-gray-500">{method.description}</div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* 약관 동의 */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <div id="agreement" className="min-h-[100px]">
-                  {!ready && (
-                    <div className="flex items-center justify-center h-[100px]">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                    </div>
-                  )}
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">약관 동의</h2>
+                
+                <div className="space-y-3">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreementChecked}
+                      onChange={(e) => setAgreementChecked(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-600">
+                      <span className="font-medium text-gray-900">[필수]</span> 결제 서비스 이용약관 및 개인정보 제3자 제공에 동의합니다.
+                    </span>
+                  </label>
                 </div>
                 
-                <label className="flex items-start gap-3 mt-4 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={agreementChecked}
-                    onChange={(e) => setAgreementChecked(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-600">
-                    위 내용을 확인하였으며, 결제에 동의합니다. 
-                    7일 무료 체험 후 자동으로 결제가 진행됩니다.
-                  </span>
-                </label>
+                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-500">
+                    • 7일 무료 체험 기간이 제공됩니다.<br />
+                    • 체험 기간 중 해지 시 결제되지 않습니다.<br />
+                    • 체험 기간 종료 후 자동으로 정기 결제가 시작됩니다.
+                  </p>
+                </div>
               </div>
 
               {/* 결제 버튼 */}
               <Button
                 onClick={handlePayment}
-                disabled={!ready || !agreementChecked || loading}
+                disabled={!tossPayments || !agreementChecked || loading}
                 className="w-full h-14 text-lg"
                 size="lg"
               >
@@ -191,7 +221,7 @@ function CheckoutContent() {
                     결제 처리 중...
                   </span>
                 ) : (
-                  `${(price).toLocaleString()}원 결제하기`
+                  `${price.toLocaleString()}원 결제하기`
                 )}
               </Button>
             </div>
