@@ -99,8 +99,10 @@ function CheckoutContent() {
       await tossPayments.requestPayment(selectedMethod, paymentParams);
     } catch (error: any) {
       console.error('결제 요청 실패:', error);
+      console.error('에러 코드:', error.code);
+      console.error('에러 메시지:', error.message);
       if (error.code !== 'USER_CANCEL') {
-        alert(error.message || '결제 중 오류가 발생했습니다.');
+        alert(`[${error.code}] ${error.message}` || '결제 중 오류가 발생했습니다.');
       }
       setLoading(false);
     }
