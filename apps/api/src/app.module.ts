@@ -11,6 +11,8 @@ import { AICrawlerModule } from './ai-crawler/ai-crawler.module';
 import { CompetitorsModule } from './competitors/competitors.module';
 import { ScoresModule } from './scores/scores.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
+import { PaymentsModule } from './payments/payments.module';
+import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { SchedulerModule } from './scheduler/scheduler.module';
     CompetitorsModule,
     ScoresModule,
     SchedulerModule,
+    PaymentsModule,
+    SubscriptionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

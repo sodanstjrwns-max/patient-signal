@@ -284,7 +284,7 @@ model ImprovementAction {
 // 구독 테이블
 model Subscription {
   id                 String             @id @default(uuid())
-  hospitalId         String             @map("hospital_id")
+  hospitalId         String             @unique @map("hospital_id")
   planType           PlanType           @map("plan_type")
   status             SubscriptionStatus
   currentPeriodStart DateTime           @map("current_period_start")
@@ -359,4 +359,69 @@ model CrawlJob {
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@map("crawl_jobs")
+}
+
+// ==================== 결제 관련 모델 ====================
+
+enum PaymentStatus {
+  PENDING          // 결제 대기 (가상계좌 입금 대기)
+  DONE             // 결제 완료
+  CANCELED         // 결제 취소
+  PARTIAL_CANCELED // 부분 취소
+  EXPIRED          // 만료
+  FAILED           // 결제 실패
+}
+
+enum PaymentMethod {
+  CARD             // 카드
+  VIRTUAL_ACCOUNT  // 가상계좌
+  TRANSFER         // 계좌이체
+  MOBILE_PHONE     // 휴대폰
+  EASY_PAY         // 간편결제
+}
+
+// 결제 테이블
+model Payment {
+  id              String        @id @default(uuid())
+  orderId         String        @unique @map("order_id")       // 토스 주문번호
+  paymentKey      String?       @unique @map("payment_key")    // 토스 결제키
+  userId          String?       @map("user_id")
+  hospitalId      String?       @map("hospital_id")
+  
+  // 결제 정보
+  amount          Int                                          // 결제 금액
+  status          PaymentStatus  @default(PENDING)
+  method          PaymentMethod?
+  
+  // 플랜 정보
+  planType        PlanType       @map("plan_type")
+  billingType     String         @map("billing_type")          // monthly, yearly
+  
+  // 토스페이먼츠 응답 데이터
+  approvedAt      DateTime?      @map("approved_at")           // 결제 승인 시간
+  receiptUrl      String?        @map("receipt_url")           // 영수증 URL
+  transactionKey  String?        @map("transaction_key")       // 거래 키
+  
+  // 가상계좌 정보
+  virtualAccount  Json?          @map("virtual_account")       // {bank, accountNumber, dueDate}
+  
+  // 카드 정보
+  cardInfo        Json?          @map("card_info")             // {company, number, installments}
+  
+  // 간편결제 정보
+  easyPayInfo     Json?          @map("easy_pay_info")         // {provider}
+  
+  // 실패 정보
+  failReason      String?        @map("fail_reason")
+  
+  // 메타데이터
+  metadata        Json?
+  
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([hospitalId])
+  @@index([status])
+  @@map("payments")
 }
