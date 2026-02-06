@@ -65,6 +65,13 @@ export default function DashboardPage() {
     enabled: !!hospitalId,
   });
 
+  // 플랫폼별 상세 분석
+  const { data: platformDetails } = useQuery({
+    queryKey: ['platforms', hospitalId],
+    queryFn: () => scoresApi.getPlatforms(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId,
+  });
+
   // 크롤링 실행
   const crawlMutation = useMutation({
     mutationFn: () => crawlerApi.trigger(hospitalId!),
@@ -91,6 +98,7 @@ export default function DashboardPage() {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['weekly'] });
     queryClient.invalidateQueries({ queryKey: ['comparison'] });
+    queryClient.invalidateQueries({ queryKey: ['platforms'] });
   };
 
   if (dashboardLoading) {
@@ -204,7 +212,8 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <ScoreChart data={dashboard?.scoreHistory || []} />
           </div>
-          <PlatformStats data={dashboard?.platformScores || {}} />
+          {/* 플랫폼별 상세 데이터가 있으면 사용, 없으면 간단한 점수 사용 */}
+          <PlatformStats data={platformDetails?.length > 0 ? platformDetails : (dashboard?.platformScores || {})} />
         </div>
 
         {/* 하단 영역 */}

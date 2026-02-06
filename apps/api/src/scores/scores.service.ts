@@ -46,43 +46,130 @@ export class ScoresService {
   }
 
   /**
-   * 플랫폼별 분석
+   * 플랫폼별 분석 (상세)
    */
   async getPlatformAnalysis(hospitalId: string) {
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
+    
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
 
-    const responses = await this.prisma.aIResponse.groupBy({
-      by: ['aiPlatform'],
+    // 모든 응답 가져오기 (30일)
+    const allResponses = await this.prisma.aIResponse.findMany({
       where: {
         hospitalId,
         responseDate: { gte: last30Days },
       },
-      _count: { id: true },
-      _avg: { sentimentScore: true },
-    });
-
-    const mentionedByPlatform = await this.prisma.aIResponse.groupBy({
-      by: ['aiPlatform'],
-      where: {
-        hospitalId,
-        responseDate: { gte: last30Days },
+      select: {
+        aiPlatform: true,
         isMentioned: true,
+        mentionPosition: true,
+        totalRecommendations: true,
+        sentimentLabel: true,
+        sentimentScore: true,
+        responseDate: true,
       },
-      _count: { id: true },
     });
 
-    const mentionedMap = new Map(
-      mentionedByPlatform.map((m: { aiPlatform: string; _count: { id: number } }) => [m.aiPlatform, m._count.id]),
+    // 7일 전 응답 (트렌드 계산용)
+    const last7DaysResponses = allResponses.filter(
+      r => new Date(r.responseDate) >= last7Days
+    );
+    const prev7DaysResponses = allResponses.filter(
+      r => {
+        const date = new Date(r.responseDate);
+        const prev7Start = new Date(last7Days);
+        prev7Start.setDate(prev7Start.getDate() - 7);
+        return date >= prev7Start && date < last7Days;
+      }
     );
 
-    return responses.map((r: { aiPlatform: string; _count: { id: number }; _avg: { sentimentScore: number | null } }) => ({
-      platform: r.aiPlatform,
-      totalQueries: r._count.id,
-      mentionedCount: mentionedMap.get(r.aiPlatform) || 0,
-      mentionRate: ((Number(mentionedMap.get(r.aiPlatform)) || 0) / r._count.id) * 100,
-      avgSentiment: r._avg.sentimentScore || 0,
-    }));
+    // 플랫폼별 집계
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const platformNames: Record<string, string> = {
+      CHATGPT: 'ChatGPT',
+      PERPLEXITY: 'Perplexity',
+      CLAUDE: 'Claude',
+      GEMINI: 'Gemini',
+    };
+
+    return platforms.map(platform => {
+      const platformResponses = allResponses.filter(r => r.aiPlatform === platform);
+      const recentResponses = last7DaysResponses.filter(r => r.aiPlatform === platform);
+      const prevResponses = prev7DaysResponses.filter(r => r.aiPlatform === platform);
+      
+      const totalQueries = platformResponses.length;
+      const mentionedCount = platformResponses.filter(r => r.isMentioned).length;
+      const positiveCount = platformResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;
+      const neutralCount = platformResponses.filter(r => r.sentimentLabel === 'NEUTRAL').length;
+      const negativeCount = platformResponses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+      
+      // 순위 통계
+      const positionedResponses = platformResponses.filter(r => r.mentionPosition !== null);
+      const avgPosition = positionedResponses.length > 0
+        ? positionedResponses.reduce((sum, r) => sum + (r.mentionPosition || 0), 0) / positionedResponses.length
+        : null;
+      const top3Count = positionedResponses.filter(r => r.mentionPosition && r.mentionPosition <= 3).length;
+      
+      // 가시성 점수 계산 (100점 만점)
+      // 언급률 40% + 순위 점수 30% + 감성 점수 30%
+      const mentionRate = totalQueries > 0 ? mentionedCount / totalQueries : 0;
+      const positionScore = positionedResponses.length > 0 
+        ? positionedResponses.reduce((sum, r) => {
+            const pos = r.mentionPosition || 10;
+            if (pos === 1) return sum + 100;
+            if (pos === 2) return sum + 80;
+            if (pos === 3) return sum + 60;
+            if (pos <= 5) return sum + 40;
+            return sum + 20;
+          }, 0) / positionedResponses.length
+        : 0;
+      const sentimentScore = totalQueries > 0 
+        ? (positiveCount * 100 + neutralCount * 50) / totalQueries
+        : 0;
+      
+      const visibilityScore = Math.round(
+        mentionRate * 100 * 0.4 + 
+        positionScore * 0.3 + 
+        sentimentScore * 0.3
+      );
+
+      // 트렌드 계산
+      const recentMentionRate = recentResponses.length > 0 
+        ? recentResponses.filter(r => r.isMentioned).length / recentResponses.length
+        : 0;
+      const prevMentionRate = prevResponses.length > 0 
+        ? prevResponses.filter(r => r.isMentioned).length / prevResponses.length
+        : 0;
+      const trend = recentMentionRate - prevMentionRate;
+      
+      return {
+        platform,
+        platformName: platformNames[platform],
+        visibilityScore,
+        totalQueries,
+        mentionedCount,
+        mentionRate: totalQueries > 0 ? Math.round(mentionRate * 100) : 0,
+        sentiment: {
+          positive: positiveCount,
+          neutral: neutralCount,
+          negative: negativeCount,
+          positiveRate: totalQueries > 0 ? Math.round((positiveCount / totalQueries) * 100) : 0,
+        },
+        ranking: {
+          avgPosition: avgPosition ? Math.round(avgPosition * 10) / 10 : null,
+          top3Count,
+          top3Rate: positionedResponses.length > 0 
+            ? Math.round((top3Count / positionedResponses.length) * 100) 
+            : 0,
+        },
+        trend: {
+          direction: trend > 0.05 ? 'UP' : trend < -0.05 ? 'DOWN' : 'STABLE',
+          change: Math.round(trend * 100),
+        },
+      };
+    });
   }
 
   /**

@@ -16,6 +16,8 @@ interface AIQueryResult {
   citedSources: string[];
   sentimentScore: number;
   sentimentLabel: SentimentLabel;
+  matchedVariant?: string; // 매칭된 병원명 변형
+  allMentionCount?: number; // 모든 변형 포함 언급 횟수
 }
 
 @Injectable()
@@ -464,7 +466,140 @@ export class AICrawlerService {
   }
 
   /**
-   * AI 응답 분석 - 언급 여부, 위치, 감성 분석
+   * 병원명에서 변형 리스트 생성
+   * 예: "불당본점 서울비디치과의원" -> ["불당본점 서울비디치과의원", "서울비디치과의원", "비디치과의원", "비디치과", "서울비디치과", "비디치과병원" 등]
+   */
+  private generateHospitalNameVariants(hospitalName: string): string[] {
+    const variants: Set<string> = new Set();
+    
+    // 원본 추가
+    variants.add(hospitalName);
+    variants.add(hospitalName.toLowerCase());
+    
+    // 띄어쓰기 제거 버전
+    const noSpace = hospitalName.replace(/\s+/g, '');
+    variants.add(noSpace);
+    variants.add(noSpace.toLowerCase());
+    
+    // 지점명 제거 (불당본점, 강남점, 역삼점 등)
+    const branchPatterns = /(\S+(?:본점|지점|점))\s*/;
+    const withoutBranch = hospitalName.replace(branchPatterns, '').trim();
+    if (withoutBranch !== hospitalName && withoutBranch.length > 2) {
+      variants.add(withoutBranch);
+      variants.add(withoutBranch.replace(/\s+/g, ''));
+    }
+    
+    // 핵심 이름 추출 (비디치과, 서울대치과 등)
+    // 패턴: XX치과, XX치과의원, XX치과병원, XX병원, XX의원, XX클리닉
+    const corePatterns = [
+      /([가-힣a-zA-Z]+치과의원)/g,
+      /([가-힣a-zA-Z]+치과병원)/g,
+      /([가-힣a-zA-Z]+치과)/g,
+      /([가-힣a-zA-Z]+병원)/g,
+      /([가-힣a-zA-Z]+의원)/g,
+      /([가-힣a-zA-Z]+클리닉)/g,
+      /([가-힣a-zA-Z]+메디컬)/g,
+    ];
+    
+    for (const pattern of corePatterns) {
+      const matches = hospitalName.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          variants.add(match);
+          variants.add(match.toLowerCase());
+        }
+      }
+    }
+    
+    // 핵심 단어 추출 후 다양한 접미사 조합 생성
+    // 예: "비디" + ["치과", "치과의원", "치과병원"]
+    const suffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉', '메디컬', '덴탈'];
+    const prefixes = ['서울', '강남', '분당', '판교', '일산']; // 흔한 지역명
+    
+    // 핵심 키워드 추출 (치과, 병원 등 제외)
+    let coreName = hospitalName
+      .replace(/\s+/g, '')
+      .replace(/(본점|지점|점)$/, '')
+      .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
+    
+    // 지역명 제거
+    for (const prefix of prefixes) {
+      if (coreName.startsWith(prefix) && coreName.length > prefix.length + 1) {
+        const withoutPrefix = coreName.slice(prefix.length);
+        if (withoutPrefix.length >= 2) {
+          // 지역명 없는 버전도 추가
+          for (const suffix of suffixes) {
+            variants.add(withoutPrefix + suffix);
+          }
+        }
+      }
+    }
+    
+    // 핵심 이름 + 다양한 접미사 조합
+    if (coreName.length >= 2) {
+      for (const suffix of suffixes) {
+        variants.add(coreName + suffix);
+      }
+      // 핵심 이름만 (접미사 없이)
+      if (coreName.length >= 3) {
+        variants.add(coreName);
+      }
+    }
+    
+    // 최소 길이 필터링 (2글자 이상만)
+    const result = Array.from(variants).filter(v => v.length >= 2);
+    this.logger.log(`[변형 생성] "${hospitalName}" -> ${result.length}개: ${result.slice(0, 10).join(', ')}...`);
+    
+    return result;
+  }
+
+  /**
+   * 응답 텍스트에서 병원명 변형 매칭 확인
+   */
+  private checkMentionWithVariants(
+    response: string,
+    hospitalName: string,
+  ): { isMentioned: boolean; matchedVariant: string | null; mentionCount: number } {
+    const variants = this.generateHospitalNameVariants(hospitalName);
+    const lowerResponse = response.toLowerCase();
+    
+    let totalMentionCount = 0;
+    let firstMatchedVariant: string | null = null;
+    
+    // 긴 변형부터 먼저 체크 (더 정확한 매칭 우선)
+    const sortedVariants = variants.sort((a, b) => b.length - a.length);
+    
+    for (const variant of sortedVariants) {
+      const lowerVariant = variant.toLowerCase();
+      // 모든 등장 횟수 카운트
+      const regex = new RegExp(this.escapeRegex(lowerVariant), 'gi');
+      const matches = response.match(regex);
+      
+      if (matches && matches.length > 0) {
+        totalMentionCount += matches.length;
+        if (!firstMatchedVariant) {
+          firstMatchedVariant = variant;
+        }
+        this.logger.log(`  ✅ 매칭됨: "${variant}" (${matches.length}회)`);
+      }
+    }
+    
+    return {
+      isMentioned: totalMentionCount > 0,
+      matchedVariant: firstMatchedVariant,
+      mentionCount: totalMentionCount,
+    };
+  }
+
+  /**
+   * 정규식 특수문자 이스케이프
+   */
+  private escapeRegex(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * AI 응답 분석 - 언급 여부, 위치, 감성 분석 (병원명 변형 매칭 포함)
    */
   private analyzeResponse(
     response: string,
@@ -472,8 +607,9 @@ export class AICrawlerService {
     platform: AIPlatform,
     model: string,
   ): AIQueryResult {
-    // 병원 언급 여부 확인
-    const isMentioned = response.toLowerCase().includes(hospitalName.toLowerCase());
+    // 병원 언급 여부 확인 (변형 매칭 포함)
+    const mentionResult = this.checkMentionWithVariants(response, hospitalName);
+    const isMentioned = mentionResult.isMentioned;
 
     // 추천 목록에서 위치 확인
     let mentionPosition: number | null = null;
@@ -483,11 +619,20 @@ export class AICrawlerService {
     const listPattern = /(\d+)[.\)]\s*([^\n]+)/g;
     const matches = [...response.matchAll(listPattern)];
     
+    // 병원명 변형 목록 생성
+    const hospitalVariants = this.generateHospitalNameVariants(hospitalName);
+    
     if (matches.length > 0) {
       totalRecommendations = matches.length;
       for (let i = 0; i < matches.length; i++) {
-        if (matches[i][2].toLowerCase().includes(hospitalName.toLowerCase())) {
+        const listItem = matches[i][2].toLowerCase();
+        // 모든 변형에 대해 체크
+        const isMatch = hospitalVariants.some(variant => 
+          listItem.includes(variant.toLowerCase())
+        );
+        if (isMatch) {
           mentionPosition = i + 1;
+          this.logger.log(`  📍 순위 발견: ${mentionPosition}위 ("${matches[i][2].trim()}")`);
           break;
         }
       }
@@ -497,7 +642,10 @@ export class AICrawlerService {
     const competitorsMentioned: string[] = [];
     for (const match of matches) {
       const name = match[2].trim();
-      if (!name.toLowerCase().includes(hospitalName.toLowerCase())) {
+      const isOurHospital = hospitalVariants.some(variant => 
+        name.toLowerCase().includes(variant.toLowerCase())
+      );
+      if (!isOurHospital) {
         // 병원/치과/의원으로 끝나는 이름 추출
         const hospitalNameMatch = name.match(/([가-힣]+(?:치과|병원|의원|클리닉))/);
         if (hospitalNameMatch) {
@@ -506,8 +654,8 @@ export class AICrawlerService {
       }
     }
 
-    // 감성 분석 (단순 키워드 기반)
-    const sentimentResult = this.analyzeSentiment(response, hospitalName);
+    // 감성 분석 (단순 키워드 기반) - 변형 이름도 고려
+    const sentimentResult = this.analyzeSentimentWithVariants(response, hospitalVariants);
 
     // 인용 소스 추출
     const citedSources = this.extractCitedSources(response);
@@ -523,30 +671,41 @@ export class AICrawlerService {
       citedSources,
       sentimentScore: sentimentResult.score,
       sentimentLabel: sentimentResult.label,
+      matchedVariant: mentionResult.matchedVariant || undefined,
+      allMentionCount: mentionResult.mentionCount,
     };
   }
 
   /**
-   * 감성 분석 (키워드 기반 간단 분석)
+   * 감성 분석 (키워드 기반 간단 분석) - 병원명 변형 지원
    */
-  private analyzeSentiment(response: string, hospitalName: string): { score: number; label: SentimentLabel } {
-    // 병원명 주변 텍스트 추출
+  private analyzeSentimentWithVariants(response: string, hospitalVariants: string[]): { score: number; label: SentimentLabel } {
     const lowerResponse = response.toLowerCase();
-    const lowerHospitalName = hospitalName.toLowerCase();
-    const index = lowerResponse.indexOf(lowerHospitalName);
     
-    if (index === -1) {
+    // 모든 변형에 대해 위치 찾기
+    let firstIndex = -1;
+    let matchedVariant = '';
+    
+    for (const variant of hospitalVariants) {
+      const index = lowerResponse.indexOf(variant.toLowerCase());
+      if (index !== -1 && (firstIndex === -1 || index < firstIndex)) {
+        firstIndex = index;
+        matchedVariant = variant;
+      }
+    }
+    
+    if (firstIndex === -1) {
       return { score: 0, label: 'NEUTRAL' };
     }
 
     // 병원명 앞뒤 100자 추출
-    const start = Math.max(0, index - 100);
-    const end = Math.min(response.length, index + hospitalName.length + 100);
+    const start = Math.max(0, firstIndex - 100);
+    const end = Math.min(response.length, firstIndex + matchedVariant.length + 100);
     const context = response.slice(start, end).toLowerCase();
 
     // 긍정/부정 키워드
-    const positiveKeywords = ['추천', '좋은', '유명', '전문', '실력', '친절', '만족', '최고', '인기', '신뢰'];
-    const negativeKeywords = ['불만', '비추', '비싼', '불친절', '후회', '문제', '주의', '논란', '피해'];
+    const positiveKeywords = ['추천', '좋은', '유명', '전문', '실력', '친절', '만족', '최고', '인기', '신뢰', '베스트', '인정', '검증', '우수', '탁월'];
+    const negativeKeywords = ['불만', '비추', '비싼', '불친절', '후회', '문제', '주의', '논란', '피해', '사기', '최악', '실망'];
 
     let score = 0;
     for (const keyword of positiveKeywords) {
@@ -564,6 +723,13 @@ export class AICrawlerService {
     else if (score < -0.2) label = 'NEGATIVE';
 
     return { score, label };
+  }
+
+  /**
+   * 감성 분석 (하위 호환용 - 단일 병원명)
+   */
+  private analyzeSentiment(response: string, hospitalName: string): { score: number; label: SentimentLabel } {
+    return this.analyzeSentimentWithVariants(response, [hospitalName]);
   }
 
   /**
