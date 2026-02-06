@@ -83,12 +83,6 @@ function CheckoutContent() {
         failUrl: `${window.location.origin}/checkout/fail`,
         customerEmail: 'customer@example.com',
         customerName: '고객',
-        card: selectedMethod === 'CARD' ? {
-          useEscrow: false,
-          flowMode: 'DEFAULT',
-          useCardPoint: false,
-          useAppCardOnly: false,
-        } : undefined,
       });
     } catch (error: any) {
       console.error('결제 요청 실패:', error);
