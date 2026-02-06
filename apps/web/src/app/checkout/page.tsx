@@ -1,18 +1,17 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { 
   Sparkles, 
   ArrowLeft,
-  CreditCard,
   Shield,
   CheckCircle,
 } from 'lucide-react';
 
-// 클라이언트 키 - Vercel 환경변수에서 가져옴
+// 결제위젯 연동 키 (Vercel 환경변수에서 가져옴)
 const CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || '';
 
 const planDetails: Record<string, { name: string; description: string }> = {
@@ -23,9 +22,7 @@ const planDetails: Record<string, { name: string; description: string }> = {
 
 declare global {
   interface Window {
-    TossPayments: (clientKey: string) => {
-      requestPayment: (method: string, params: any) => Promise<void>;
-    };
+    PaymentWidget: any;
   }
 }
 
@@ -37,25 +34,60 @@ function CheckoutContent() {
   const billing = searchParams.get('billing') || 'monthly';
   
   const [loading, setLoading] = useState(false);
-  const [agreementChecked, setAgreementChecked] = useState(false);
-  const [sdkReady, setSdkReady] = useState(false);
+  const [widgetReady, setWidgetReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  const paymentWidgetRef = useRef<any>(null);
+  const paymentMethodsWidgetRef = useRef<any>(null);
+  const agreementWidgetRef = useRef<any>(null);
 
-  // SDK 로드
+  // 고객 키 생성 (비회원용 랜덤 키)
+  const customerKey = useRef(`guest_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`);
+
+  // 결제위젯 SDK 로드 및 초기화
   useEffect(() => {
-    // 이미 로드되어 있으면 스킵
-    if (window.TossPayments) {
-      setSdkReady(true);
-      return;
-    }
-
     const script = document.createElement('script');
-    script.src = 'https://js.tosspayments.com/v1/payment';
+    script.src = 'https://js.tosspayments.com/v2/standard';
     script.async = true;
     
-    script.onload = () => {
-      console.log('✅ 토스페이먼츠 SDK 로드 완료');
-      setSdkReady(true);
+    script.onload = async () => {
+      console.log('✅ 토스페이먼츠 결제위젯 SDK 로드 완료');
+      
+      if (!CLIENT_KEY) {
+        setError('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요.');
+        console.error('❌ NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
+        return;
+      }
+
+      try {
+        // 결제위젯 초기화
+        const paymentWidget = await window.PaymentWidget(CLIENT_KEY, customerKey.current);
+        paymentWidgetRef.current = paymentWidget;
+        
+        console.log('✅ 결제위젯 초기화 완료');
+        console.log('🔑 클라이언트 키:', CLIENT_KEY.substring(0, 15) + '...');
+        
+        // 결제수단 위젯 렌더링
+        const paymentMethods = paymentWidget.renderPaymentMethods(
+          '#payment-methods',
+          { value: price },
+          { variantKey: 'DEFAULT' }
+        );
+        paymentMethodsWidgetRef.current = paymentMethods;
+        
+        // 약관 동의 위젯 렌더링
+        const agreement = paymentWidget.renderAgreement('#agreement', {
+          variantKey: 'AGREEMENT',
+        });
+        agreementWidgetRef.current = agreement;
+        
+        setWidgetReady(true);
+        console.log('✅ 결제위젯 렌더링 완료');
+        
+      } catch (err: any) {
+        console.error('❌ 결제위젯 초기화 실패:', err);
+        setError(`결제위젯 초기화 실패: ${err.message}`);
+      }
     };
     
     script.onerror = () => {
@@ -64,27 +96,12 @@ function CheckoutContent() {
     };
     
     document.head.appendChild(script);
-    
-    return () => {
-      // cleanup은 하지 않음 (SDK는 한번 로드되면 유지)
-    };
-  }, []);
+  }, [price]);
 
+  // 결제 요청
   const handlePayment = async () => {
-    // 유효성 검사
-    if (!agreementChecked) {
-      alert('약관에 동의해주세요.');
-      return;
-    }
-
-    if (!sdkReady || !window.TossPayments) {
+    if (!widgetReady || !paymentWidgetRef.current) {
       alert('결제 시스템을 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-      return;
-    }
-
-    if (!CLIENT_KEY) {
-      alert('결제 설정이 올바르지 않습니다. 관리자에게 문의해주세요.');
-      console.error('❌ NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.');
       return;
     }
     
@@ -92,27 +109,14 @@ function CheckoutContent() {
     setError(null);
     
     try {
-      // 토스페이먼츠 객체 초기화
-      const tossPayments = window.TossPayments(CLIENT_KEY);
-      
-      // 주문 ID 생성 (고유해야 함)
       const orderId = `PS_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-      
-      // 주문명
       const orderName = `Patient Signal ${planDetails[plan]?.name || 'Starter'} 플랜 (${billing === 'yearly' ? '연간' : '월간'})`;
       
-      console.log('🚀 결제 요청:', {
-        clientKey: CLIENT_KEY.substring(0, 12) + '...',
+      console.log('🚀 결제 요청:', { orderId, orderName, amount: price });
+      
+      await paymentWidgetRef.current.requestPayment({
         orderId,
         orderName,
-        amount: price,
-      });
-
-      // 카드 결제 요청 (가장 기본적인 형태)
-      await tossPayments.requestPayment('카드', {
-        amount: price,
-        orderId: orderId,
-        orderName: orderName,
         successUrl: `${window.location.origin}/checkout/success?plan=${plan}&billing=${billing}`,
         failUrl: `${window.location.origin}/checkout/fail`,
       });
@@ -120,17 +124,13 @@ function CheckoutContent() {
     } catch (err: any) {
       console.error('❌ 결제 요청 실패:', err);
       
-      // 사용자 취소는 에러로 처리하지 않음
       if (err.code === 'USER_CANCEL' || err.code === 'PAY_PROCESS_CANCELED') {
         console.log('사용자가 결제를 취소했습니다.');
         setLoading(false);
         return;
       }
       
-      // 에러 메시지 표시
-      const errorMessage = err.message || '결제 중 오류가 발생했습니다.';
-      setError(`[${err.code || 'ERROR'}] ${errorMessage}`);
-      alert(`결제 오류: ${errorMessage}`);
+      setError(`[${err.code || 'ERROR'}] ${err.message || '결제 중 오류가 발생했습니다.'}`);
       setLoading(false);
     }
   };
@@ -170,50 +170,28 @@ function CheckoutContent() {
                 <p className="text-gray-600">안전하게 결제를 완료하세요</p>
               </div>
 
-              {/* 결제 수단 안내 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <CreditCard className="h-5 w-5" />
-                  결제 수단
-                </h2>
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
-                    <div>
-                      <div className="font-medium text-blue-900">신용/체크카드</div>
-                      <div className="text-sm text-blue-700">
-                        결제하기 버튼을 누르면 토스페이먼츠 결제창이 열립니다.
-                        <br />카드, 간편결제(토스페이, 카카오페이 등)를 선택할 수 있습니다.
+              {/* 결제수단 위젯 */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div id="payment-methods" className="min-h-[300px]">
+                  {!widgetReady && (
+                    <div className="flex items-center justify-center h-[300px]">
+                      <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                        <p className="text-gray-500 text-sm">결제수단 불러오는 중...</p>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              {/* 약관 동의 */}
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">약관 동의</h2>
-                
-                <div className="space-y-3">
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={agreementChecked}
-                      onChange={(e) => setAgreementChecked(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-600">
-                      <span className="font-medium text-gray-900">[필수]</span> 결제 서비스 이용약관 및 개인정보 제3자 제공에 동의합니다.
-                    </span>
-                  </label>
-                </div>
-                
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-xs text-gray-500">
-                    • 7일 무료 체험 기간이 제공됩니다.<br />
-                    • 체험 기간 중 해지 시 결제되지 않습니다.<br />
-                    • 체험 기간 종료 후 자동으로 정기 결제가 시작됩니다.
-                  </p>
+              {/* 약관 동의 위젯 */}
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div id="agreement" className="min-h-[100px]">
+                  {!widgetReady && (
+                    <div className="flex items-center justify-center h-[100px]">
+                      <p className="text-gray-500 text-sm">약관 불러오는 중...</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -227,7 +205,7 @@ function CheckoutContent() {
               {/* 결제 버튼 */}
               <Button
                 onClick={handlePayment}
-                disabled={!sdkReady || !agreementChecked || loading}
+                disabled={!widgetReady || loading}
                 className="w-full h-14 text-lg bg-blue-600 hover:bg-blue-700"
                 size="lg"
               >
@@ -239,17 +217,12 @@ function CheckoutContent() {
                     </svg>
                     결제 처리 중...
                   </span>
-                ) : !sdkReady ? (
+                ) : !widgetReady ? (
                   '결제 시스템 로딩 중...'
                 ) : (
                   `${price.toLocaleString()}원 결제하기`
                 )}
               </Button>
-
-              {/* SDK 상태 표시 (디버깅용) */}
-              <div className="text-center text-xs text-gray-400">
-                {sdkReady ? '✅ 결제 시스템 준비 완료' : '⏳ 결제 시스템 로딩 중...'}
-              </div>
             </div>
 
             {/* 주문 요약 */}
