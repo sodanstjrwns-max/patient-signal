@@ -179,25 +179,49 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Object.entries(platforms || {}).map(([platform, score]) => (
-                    <div key={platform} className="flex items-center gap-4">
-                      <div className="w-24 font-medium">
-                        {platformNames[platform] || platform}
+                  {Array.isArray(platforms) ? (
+                    // 새로운 배열 형식
+                    platforms.map((item: any) => (
+                      <div key={item.platform} className="flex items-center gap-4">
+                        <div className="w-24 font-medium">
+                          {item.platformName || platformNames[item.platform] || item.platform}
+                        </div>
+                        <div className="flex-1 bg-gray-100 rounded-full h-4">
+                          <div
+                            className="rounded-full h-4 transition-all"
+                            style={{
+                              width: `${item.visibilityScore || 0}%`,
+                              backgroundColor: platformColors[item.platform] || '#6B7280',
+                            }}
+                          />
+                        </div>
+                        <div className="w-12 text-right font-semibold">
+                          {item.visibilityScore || 0}점
+                        </div>
                       </div>
-                      <div className="flex-1 bg-gray-100 rounded-full h-4">
-                        <div
-                          className="rounded-full h-4 transition-all"
-                          style={{
-                            width: `${score as number}%`,
-                            backgroundColor: platformColors[platform] || '#6B7280',
-                          }}
-                        />
+                    ))
+                  ) : (
+                    // 기존 객체 형식 (하위 호환)
+                    Object.entries(platforms || {}).map(([platform, score]) => (
+                      <div key={platform} className="flex items-center gap-4">
+                        <div className="w-24 font-medium">
+                          {platformNames[platform] || platform}
+                        </div>
+                        <div className="flex-1 bg-gray-100 rounded-full h-4">
+                          <div
+                            className="rounded-full h-4 transition-all"
+                            style={{
+                              width: `${score as number}%`,
+                              backgroundColor: platformColors[platform] || '#6B7280',
+                            }}
+                          />
+                        </div>
+                        <div className="w-12 text-right font-semibold">
+                          {score as number}점
+                        </div>
                       </div>
-                      <div className="w-12 text-right font-semibold">
-                        {score as number}점
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
