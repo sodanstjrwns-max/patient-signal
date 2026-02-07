@@ -468,6 +468,12 @@ export class AICrawlerService {
   /**
    * 병원명에서 변형 리스트 생성
    * 예: "불당본점 서울비디치과의원" -> ["불당본점 서울비디치과의원", "서울비디치과의원", "비디치과의원", "비디치과", "서울비디치과", "비디치과병원" 등]
+   * 
+   * AI 응답에서 나올 수 있는 다양한 형태를 모두 커버:
+   * - "서울비디치과의원(불당본점)" - 괄호 포함
+   * - "서울비디치과의원 불당본점" - 띄어쓰기
+   * - "서울비디치과" - 축약형
+   * - "비디치과" - 핵심 키워드만
    */
   private generateHospitalNameVariants(hospitalName: string): string[] {
     const variants: Set<string> = new Set();
@@ -481,9 +487,21 @@ export class AICrawlerService {
     variants.add(noSpace);
     variants.add(noSpace.toLowerCase());
     
-    // 지점명 제거 (불당본점, 강남점, 역삼점 등)
-    const branchPatterns = /(\S+(?:본점|지점|점))\s*/;
-    const withoutBranch = hospitalName.replace(branchPatterns, '').trim();
+    // 괄호 및 특수문자 제거 버전
+    const noParens = hospitalName.replace(/[()（）\[\]【】]/g, ' ').replace(/\s+/g, ' ').trim();
+    variants.add(noParens);
+    variants.add(noParens.replace(/\s+/g, ''));
+    
+    // 지점명 제거 (불당본점, 강남점, 역삼점, 본원 등)
+    const branchPatterns = [
+      /\s*[\(（\[【]?\s*(\S*(?:본점|지점|점|본원|분원))\s*[\)）\]】]?\s*/g,
+      /(\S+(?:본점|지점|점|본원|분원))\s*/g,
+    ];
+    
+    let withoutBranch = hospitalName;
+    for (const pattern of branchPatterns) {
+      withoutBranch = withoutBranch.replace(pattern, ' ').trim();
+    }
     if (withoutBranch !== hospitalName && withoutBranch.length > 2) {
       variants.add(withoutBranch);
       variants.add(withoutBranch.replace(/\s+/g, ''));
@@ -499,6 +517,7 @@ export class AICrawlerService {
       /([가-힣a-zA-Z]+의원)/g,
       /([가-힣a-zA-Z]+클리닉)/g,
       /([가-힣a-zA-Z]+메디컬)/g,
+      /([가-힣a-zA-Z]+덴탈)/g,
     ];
     
     for (const pattern of corePatterns) {
@@ -514,12 +533,13 @@ export class AICrawlerService {
     // 핵심 단어 추출 후 다양한 접미사 조합 생성
     // 예: "비디" + ["치과", "치과의원", "치과병원"]
     const suffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉', '메디컬', '덴탈'];
-    const prefixes = ['서울', '강남', '분당', '판교', '일산']; // 흔한 지역명
+    const prefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천']; // 흔한 지역명
     
     // 핵심 키워드 추출 (치과, 병원 등 제외)
     let coreName = hospitalName
       .replace(/\s+/g, '')
-      .replace(/(본점|지점|점)$/, '')
+      .replace(/[()（）\[\]【】]/g, '')
+      .replace(/(본점|지점|점|본원|분원)$/, '')
       .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
     
     // 지역명 제거
@@ -531,6 +551,10 @@ export class AICrawlerService {
           for (const suffix of suffixes) {
             variants.add(withoutPrefix + suffix);
           }
+          // 핵심 이름만
+          if (withoutPrefix.length >= 2) {
+            variants.add(withoutPrefix);
+          }
         }
       }
     }
@@ -541,14 +565,29 @@ export class AICrawlerService {
         variants.add(coreName + suffix);
       }
       // 핵심 이름만 (접미사 없이)
-      if (coreName.length >= 3) {
+      if (coreName.length >= 2) {
         variants.add(coreName);
+      }
+    }
+    
+    // **추가: 역순 패턴도 생성 (AI가 "XX(지점명)" 형태로 출력할 경우)**
+    // "서울비디치과의원(불당본점)" 같은 형태 매칭용
+    const baseVariants = Array.from(variants);
+    const branchKeywords = ['불당', '강남', '본점', '지점', '본원'];
+    for (const base of baseVariants) {
+      for (const branch of branchKeywords) {
+        if (hospitalName.includes(branch)) {
+          variants.add(`${base}(${branch})`);
+          variants.add(`${base}（${branch}）`);
+          variants.add(`${base} ${branch}`);
+          variants.add(`${base}${branch}`);
+        }
       }
     }
     
     // 최소 길이 필터링 (2글자 이상만)
     const result = Array.from(variants).filter(v => v.length >= 2);
-    this.logger.log(`[변형 생성] "${hospitalName}" -> ${result.length}개: ${result.slice(0, 10).join(', ')}...`);
+    this.logger.log(`[변형 생성] "${hospitalName}" -> ${result.length}개: ${result.slice(0, 15).join(', ')}...`);
     
     return result;
   }
