@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -6,15 +6,18 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { OAuth2Client } from 'google-auth-library';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
   private googleClient: OAuth2Client;
 
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {
     this.googleClient = new OAuth2Client(
       this.configService.get('GOOGLE_CLIENT_ID'),
@@ -49,6 +52,11 @@ export class AuthService {
 
     // 토큰 생성
     const tokens = await this.generateTokens(user.id, user.email, user.role);
+
+    // 환영 이메일 발송 (비동기, 실패해도 회원가입은 성공)
+    this.emailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+      this.logger.error(`환영 이메일 발송 실패: ${err.message}`);
+    });
 
     return {
       user: {
@@ -186,10 +194,16 @@ export class AuthService {
       { expiresIn: '1h' },
     );
 
-    // TODO: 실제 이메일 발송 구현 (SendGrid, Resend 등)
-    // 현재는 콘솔에 로그만 출력
-    const resetUrl = `${this.configService.get('FRONTEND_URL') || 'https://patient-signal-web-2bbe.vercel.app'}/reset-password?token=${resetToken}`;
-    console.log('Password reset URL:', resetUrl);
+    // 이메일 발송
+    const emailSent = await this.emailService.sendPasswordResetEmail(
+      user.email,
+      resetToken,
+      user.name,
+    );
+
+    if (!emailSent) {
+      this.logger.warn(`비밀번호 재설정 이메일 발송 실패: ${user.email}`);
+    }
 
     return { message: '해당 이메일로 비밀번호 재설정 링크를 발송했습니다' };
   }

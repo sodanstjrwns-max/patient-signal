@@ -291,6 +291,17 @@ model Subscription {
   currentPeriodEnd   DateTime           @map("current_period_end")
   cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
   paymentMethodId    String?            @map("payment_method_id")
+  // 빌링키 (자동결제)
+  billingKey         String?            @map("billing_key")
+  customerKey        String?            @map("customer_key")
+  cardLast4          String?            @map("card_last_4")
+  cardBrand          String?            @map("card_brand")
+  // 자동결제 설정
+  autoRenewal        Boolean            @default(true) @map("auto_renewal")
+  nextBillingDate    DateTime?          @map("next_billing_date")
+  lastBillingDate    DateTime?          @map("last_billing_date")
+  failedBillingCount Int                @default(0) @map("failed_billing_count")
+  
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

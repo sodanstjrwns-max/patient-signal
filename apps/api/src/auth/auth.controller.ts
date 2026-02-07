@@ -1,6 +1,7 @@
 import { Controller, Post, Body, Get, Query, Res, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -15,6 +16,7 @@ export class AuthController {
 
   @Public()
   @Post('register')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 1분에 5회 제한
   @ApiOperation({ summary: '회원가입', description: '새로운 사용자를 등록합니다' })
   @ApiResponse({ status: 201, description: '회원가입 성공' })
   @ApiResponse({ status: 409, description: '이미 등록된 이메일' })
@@ -24,6 +26,7 @@ export class AuthController {
 
   @Public()
   @Post('login')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 1분에 10회 제한 (브루트포스 방지)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '로그인', description: '이메일과 비밀번호로 로그인합니다' })
   @ApiResponse({ status: 200, description: '로그인 성공' })
@@ -61,6 +64,7 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle() // Google 콜백은 Rate Limit 제외
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth 콜백', description: 'Google OAuth 인증 후 콜백 처리' })
   async googleCallback(
@@ -94,6 +98,7 @@ export class AuthController {
 
   @Public()
   @Post('forgot-password')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 1분에 3회 제한 (스팸 방지)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '비밀번호 찾기', description: '비밀번호 재설정 이메일을 발송합니다' })
   @ApiResponse({ status: 200, description: '이메일 발송 성공' })
@@ -103,6 +108,7 @@ export class AuthController {
 
   @Public()
   @Post('reset-password')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 1분에 5회 제한
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '비밀번호 재설정', description: '새 비밀번호로 변경합니다' })
   @ApiResponse({ status: 200, description: '비밀번호 변경 성공' })

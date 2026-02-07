@@ -4,11 +4,19 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    // 웹훅 서명 검증을 위해 rawBody 활성화
+    rawBody: true,
+  });
 
-  // CORS 설정
+  // CORS 설정 - 여러 도메인 허용
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'https://patient-signal-web-2bbe.vercel.app',
+      'https://patientsignal.kr',
+      'https://www.patientsignal.kr',
+    ],
     credentials: true,
   });
 

@@ -36,6 +36,21 @@ interface TossPaymentResponse {
   };
 }
 
+interface TossBillingResponse {
+  billingKey: string;
+  customerKey: string;
+  authenticatedAt: string;
+  method: string;
+  card: {
+    company: string;
+    number: string;
+    cardType: string;
+    ownerType: string;
+    issuerCode: string;
+    acquirerCode: string;
+  };
+}
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
@@ -458,5 +473,331 @@ export class PaymentsService {
     // orderId 형식: PS_{timestamp}_{random}
     // 기본값 STARTER 반환, 실제로는 메타데이터나 세션에서 가져오는 것이 좋음
     return 'STARTER';
+  }
+
+  // ==================== 빌링키 자동결제 ====================
+
+  /**
+   * 빌링키 발급 (카드 등록)
+   * 프론트엔드에서 토스 빌링 위젯으로 인증 후 호출
+   */
+  async issueBillingKey(data: {
+    authKey: string;
+    customerKey: string;
+    hospitalId: string;
+  }): Promise<any> {
+    this.logger.log(`빌링키 발급 요청: customerKey=${data.customerKey}`);
+
+    const authHeader = Buffer.from(`${this.secretKey}:`).toString('base64');
+
+    try {
+      // 토스페이먼츠 빌링키 발급 API
+      const response = await fetch(`${this.tossApiUrl}/billing/authorizations/issue`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          authKey: data.authKey,
+          customerKey: data.customerKey,
+        }),
+      });
+
+      const result: TossBillingResponse = await response.json();
+
+      if (!response.ok) {
+        this.logger.error(`빌링키 발급 실패: ${JSON.stringify(result)}`);
+        throw new BadRequestException((result as any).message || '빌링키 발급에 실패했습니다.');
+      }
+
+      this.logger.log(`빌링키 발급 성공: billingKey=${result.billingKey}`);
+
+      // 구독 정보 업데이트 (빌링키 저장)
+      await this.prisma.subscription.upsert({
+        where: { hospitalId: data.hospitalId },
+        create: {
+          hospitalId: data.hospitalId,
+          planType: 'STARTER',
+          status: 'TRIAL',
+          currentPeriodStart: new Date(),
+          currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 트라이얼
+          billingKey: result.billingKey,
+          customerKey: result.customerKey,
+          cardLast4: result.card?.number?.slice(-4) || null,
+          cardBrand: result.card?.company || null,
+          autoRenewal: true,
+          nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 후
+        },
+        update: {
+          billingKey: result.billingKey,
+          customerKey: result.customerKey,
+          cardLast4: result.card?.number?.slice(-4) || null,
+          cardBrand: result.card?.company || null,
+          autoRenewal: true,
+        },
+      });
+
+      return {
+        success: true,
+        billingKey: result.billingKey,
+        card: {
+          company: result.card?.company,
+          last4: result.card?.number?.slice(-4),
+        },
+      };
+    } catch (error) {
+      this.logger.error(`빌링키 발급 에러: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 빌링키로 자동결제 실행
+   */
+  async chargeBillingKey(data: {
+    billingKey: string;
+    customerKey: string;
+    amount: number;
+    orderId: string;
+    orderName: string;
+    hospitalId: string;
+  }): Promise<any> {
+    this.logger.log(`빌링키 결제 요청: orderId=${data.orderId}, amount=${data.amount}`);
+
+    const authHeader = Buffer.from(`${this.secretKey}:`).toString('base64');
+
+    try {
+      const response = await fetch(`${this.tossApiUrl}/billing/${data.billingKey}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${authHeader}`,
+          'Content-Type': 'application/json',
+          'Idempotency-Key': data.orderId, // 중복 결제 방지
+        },
+        body: JSON.stringify({
+          customerKey: data.customerKey,
+          amount: data.amount,
+          orderId: data.orderId,
+          orderName: data.orderName,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        this.logger.error(`빌링키 결제 실패: ${JSON.stringify(result)}`);
+        
+        // 결제 실패 횟수 증가
+        await this.prisma.subscription.update({
+          where: { hospitalId: data.hospitalId },
+          data: {
+            failedBillingCount: { increment: 1 },
+          },
+        });
+
+        // 결제 실패 기록
+        await this.prisma.payment.create({
+          data: {
+            orderId: data.orderId,
+            hospitalId: data.hospitalId,
+            amount: data.amount,
+            status: 'FAILED',
+            planType: 'STARTER',
+            billingType: 'monthly',
+            failReason: result.message || '자동결제 실패',
+          },
+        });
+
+        throw new BadRequestException(result.message || '자동결제에 실패했습니다.');
+      }
+
+      this.logger.log(`빌링키 결제 성공: paymentKey=${result.paymentKey}`);
+
+      // 결제 정보 저장
+      const payment = await this.prisma.payment.create({
+        data: {
+          orderId: data.orderId,
+          paymentKey: result.paymentKey,
+          hospitalId: data.hospitalId,
+          amount: result.totalAmount,
+          status: 'DONE',
+          method: 'CARD',
+          planType: 'STARTER',
+          billingType: 'monthly',
+          approvedAt: new Date(result.approvedAt),
+          receiptUrl: result.receipt?.url,
+          cardInfo: result.card,
+        },
+      });
+
+      // 구독 갱신
+      const now = new Date();
+      const nextMonth = new Date(now);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+      await this.prisma.subscription.update({
+        where: { hospitalId: data.hospitalId },
+        data: {
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: nextMonth,
+          lastBillingDate: now,
+          nextBillingDate: nextMonth,
+          failedBillingCount: 0, // 성공하면 리셋
+        },
+      });
+
+      return {
+        success: true,
+        payment,
+        receiptUrl: result.receipt?.url,
+      };
+    } catch (error) {
+      this.logger.error(`빌링키 결제 에러: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * 구독 자동 갱신 처리 (Cron에서 호출)
+   */
+  async processAutoRenewals(): Promise<any> {
+    this.logger.log('구독 자동 갱신 처리 시작');
+
+    const now = new Date();
+    
+    // 오늘 결제 예정인 구독 조회
+    const subscriptionsToRenew = await this.prisma.subscription.findMany({
+      where: {
+        autoRenewal: true,
+        billingKey: { not: null },
+        nextBillingDate: {
+          lte: now,
+        },
+        status: { in: ['TRIAL', 'ACTIVE'] },
+        failedBillingCount: { lt: 3 }, // 3번 이상 실패하면 중단
+      },
+      include: {
+        hospital: true,
+      },
+    });
+
+    this.logger.log(`갱신 대상 구독: ${subscriptionsToRenew.length}개`);
+
+    const results = [];
+
+    for (const subscription of subscriptionsToRenew) {
+      try {
+        // 플랜별 금액
+        const planPrices: Record<string, number> = {
+          STARTER: 49000,
+          STANDARD: 99000,
+          PRO: 199000,
+          ENTERPRISE: 299000,
+        };
+
+        const amount = planPrices[subscription.planType] || 49000;
+        const orderId = `PS_AUTO_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+
+        await this.chargeBillingKey({
+          billingKey: subscription.billingKey!,
+          customerKey: subscription.customerKey!,
+          amount,
+          orderId,
+          orderName: `Patient Signal ${subscription.planType} 월간 구독`,
+          hospitalId: subscription.hospitalId,
+        });
+
+        results.push({
+          hospitalId: subscription.hospitalId,
+          hospitalName: subscription.hospital.name,
+          status: 'success',
+          amount,
+        });
+
+        this.logger.log(`구독 갱신 성공: ${subscription.hospital.name}`);
+
+      } catch (error) {
+        results.push({
+          hospitalId: subscription.hospitalId,
+          hospitalName: subscription.hospital.name,
+          status: 'failed',
+          error: error.message,
+        });
+
+        this.logger.error(`구독 갱신 실패: ${subscription.hospital.name} - ${error.message}`);
+      }
+    }
+
+    this.logger.log(`구독 자동 갱신 완료: ${results.filter(r => r.status === 'success').length}/${results.length} 성공`);
+
+    return {
+      processed: results.length,
+      successful: results.filter(r => r.status === 'success').length,
+      failed: results.filter(r => r.status === 'failed').length,
+      results,
+    };
+  }
+
+  /**
+   * 빌링키 삭제 (카드 등록 해제)
+   */
+  async deleteBillingKey(hospitalId: string): Promise<any> {
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { hospitalId },
+    });
+
+    if (!subscription?.billingKey) {
+      throw new BadRequestException('등록된 결제 수단이 없습니다.');
+    }
+
+    // 빌링키 정보 삭제 (구독은 유지하되 자동갱신 중단)
+    await this.prisma.subscription.update({
+      where: { hospitalId },
+      data: {
+        billingKey: null,
+        customerKey: null,
+        cardLast4: null,
+        cardBrand: null,
+        autoRenewal: false,
+        cancelAtPeriodEnd: true,
+      },
+    });
+
+    this.logger.log(`빌링키 삭제 완료: hospitalId=${hospitalId}`);
+
+    return {
+      success: true,
+      message: '결제 수단이 삭제되었습니다. 현재 구독 기간 종료 후 자동 갱신되지 않습니다.',
+    };
+  }
+
+  /**
+   * 만료 예정 구독 조회 (알림용)
+   */
+  async getExpiringSubscriptions(daysBeforeExpiry: number = 3): Promise<any> {
+    const now = new Date();
+    const targetDate = new Date(now);
+    targetDate.setDate(targetDate.getDate() + daysBeforeExpiry);
+
+    const subscriptions = await this.prisma.subscription.findMany({
+      where: {
+        currentPeriodEnd: {
+          gte: now,
+          lte: targetDate,
+        },
+        status: { in: ['TRIAL', 'ACTIVE'] },
+      },
+      include: {
+        hospital: {
+          include: {
+            users: true,
+          },
+        },
+      },
+    });
+
+    return subscriptions;
   }
 }
