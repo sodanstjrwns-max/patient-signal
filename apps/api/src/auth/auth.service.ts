@@ -237,24 +237,33 @@ export class AuthService {
    */
   async googleCallbackLogin(code: string) {
     try {
+      this.logger.log('Google callback login: exchanging code for tokens...');
+      
       // Authorization Code로 토큰 교환
       const { tokens } = await this.googleClient.getToken({
         code,
         redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
       });
 
+      this.logger.log('Google callback login: tokens received, verifying ID token...');
+
+      if (!tokens.id_token) {
+        throw new Error('No id_token received from Google');
+      }
+
       // ID 토큰 검증
       const ticket = await this.googleClient.verifyIdToken({
-        idToken: tokens.id_token!,
+        idToken: tokens.id_token,
         audience: this.configService.get('GOOGLE_CLIENT_ID'),
       });
 
       const payload = ticket.getPayload();
       if (!payload || !payload.email) {
-        throw new UnauthorizedException('Google 인증에 실패했습니다');
+        throw new UnauthorizedException('Google 인증에 실패했습니다: 이메일 정보 없음');
       }
 
       const { email, name } = payload;
+      this.logger.log(`Google callback login: verified email=${email}`);
 
       // 기존 사용자 확인 또는 생성
       let user = await this.prisma.user.findUnique({
@@ -263,6 +272,7 @@ export class AuthService {
       });
 
       if (!user) {
+        this.logger.log(`Google callback login: creating new user for ${email}`);
         user = await this.prisma.user.create({
           data: {
             email,
@@ -283,6 +293,8 @@ export class AuthService {
         user.hospitalId,
       );
 
+      this.logger.log(`Google callback login: success for ${email}`);
+
       return {
         user: {
           id: user.id,
@@ -296,8 +308,8 @@ export class AuthService {
         ...jwtTokens,
       };
     } catch (error) {
-      console.error('Google callback login error:', error);
-      throw new UnauthorizedException('Google 인증에 실패했습니다');
+      this.logger.error(`Google callback login error: ${error?.message}`, error?.stack);
+      throw error;
     }
   }
 

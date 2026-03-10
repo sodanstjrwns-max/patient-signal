@@ -78,6 +78,10 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);
     }
 
+    if (!code) {
+      return res.redirect(`${frontendUrl}/login?error=missing_code`);
+    }
+
     try {
       const result = await this.authService.googleCallbackLogin(code);
       
@@ -87,12 +91,18 @@ export class AuthController {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         user: JSON.stringify(result.user),
+        redirect: redirectUrl,
       });
       
-      return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}&redirect=${redirectUrl}`);
+      return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
     } catch (err) {
-      console.error('Google callback error:', err);
-      return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+      console.error('Google callback error:', err?.message || err);
+      const errorMsg = err?.message || 'google_auth_failed';
+      // 에러 메시지를 더 구체적으로 전달
+      const errorCode = errorMsg.includes('token') ? 'token_exchange_failed' 
+        : errorMsg.includes('verified') ? 'email_not_verified'
+        : 'google_auth_failed';
+      return res.redirect(`${frontendUrl}/login?error=${errorCode}`);
     }
   }
 

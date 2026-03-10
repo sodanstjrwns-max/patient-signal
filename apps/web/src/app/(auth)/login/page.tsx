@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,19 @@ import { useAuthStore } from '@/stores/auth';
 const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.googleusercontent.com';
 const GOOGLE_REDIRECT_URI = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
+const ERROR_MESSAGES: Record<string, string> = {
+  google_auth_failed: 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
+  token_exchange_failed: 'Google 인증 토큰 교환에 실패했습니다. 다시 시도해주세요.',
+  email_not_verified: 'Google 이메일이 인증되지 않았습니다.',
+  missing_code: 'Google 인증 코드가 누락되었습니다.',
+  missing_data: '인증 데이터가 누락되었습니다. 다시 시도해주세요.',
+  parse_error: '인증 데이터 처리 중 오류가 발생했습니다.',
+  access_denied: 'Google 로그인이 취소되었습니다.',
+};
+
 export default function LoginPage() {
   const { setAuth } = useAuthStore();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +34,16 @@ export default function LoginPage() {
     email: '',
     password: '',
   });
+
+  // URL에서 에러 파라미터 읽기
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(ERROR_MESSAGES[errorParam] || `로그인 오류: ${errorParam}`);
+      // URL에서 에러 파라미터 제거 (히스토리 정리)
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
