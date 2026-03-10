@@ -21,7 +21,7 @@ export class EmailService {
     }
 
     this.fromEmail = process.env.EMAIL_FROM || 'noreply@patientsignal.kr';
-    this.appUrl = process.env.FRONTEND_URL || 'https://patient-signal-web-2bbe.vercel.app';
+    this.appUrl = process.env.FRONTEND_URL || 'https://patient-signal-web.vercel.app';
   }
 
   /**

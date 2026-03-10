@@ -13,7 +13,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onren
  * 
  * 토스페이먼츠 상점관리자에서 웹훅 URL 등록 필요:
  * https://app.tosspayments.com > 설정 > 웹훅
- * URL: https://patient-signal-web-2bbe.vercel.app/api/payments/webhook
+ * URL: https://patient-signal-web.vercel.app/api/payments/webhook
  */
 export async function POST(request: NextRequest) {
   try {
