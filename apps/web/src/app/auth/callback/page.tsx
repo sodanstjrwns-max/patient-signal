@@ -4,11 +4,22 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
 
+const ERROR_MESSAGES: Record<string, string> = {
+  google_auth_failed: 'Google 인증 과정에서 오류가 발생했습니다.',
+  token_exchange_failed: 'Google 인증 토큰 교환에 실패했습니다.',
+  email_not_verified: 'Google 이메일이 인증되지 않았습니다.',
+  missing_code: 'Google 인증 코드가 누락되었습니다.',
+  missing_data: '인증 데이터가 누락되었습니다.',
+  parse_error: '인증 데이터 처리 중 오류가 발생했습니다.',
+  access_denied: 'Google 로그인이 취소되었습니다.',
+};
+
 function CallbackHandler() {
   const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
   const [status, setStatus] = useState<'processing' | 'success' | 'error'>('processing');
   const [errorMessage, setErrorMessage] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     const accessToken = searchParams.get('accessToken');
@@ -25,13 +36,20 @@ function CallbackHandler() {
       error 
     });
 
+    // 디버그 정보 수집
+    setDebugInfo(JSON.stringify({
+      hasAccessToken: !!accessToken,
+      hasRefreshToken: !!refreshToken,
+      hasUser: !!userStr,
+      redirect,
+      error,
+      url: window.location.href.substring(0, 200),
+    }, null, 2));
+
     if (error) {
       setStatus('error');
-      setErrorMessage(error);
-      setTimeout(() => {
-        window.location.href = `/login?error=${error}`;
-      }, 1000);
-      return;
+      setErrorMessage(ERROR_MESSAGES[error] || error);
+      return; // 에러 시 페이지에 머물면서 에러 표시 (자동 리다이렉트 하지 않음)
     }
 
     if (accessToken && refreshToken && userStr) {
@@ -58,7 +76,7 @@ function CallbackHandler() {
         setStatus('success');
         console.log('[Auth Callback] Auth saved, redirecting to:', redirect);
         
-        // 저장 완료 후 리다이렉트 (약간의 딜레이)
+        // 저장 완료 후 리다이렉트
         setTimeout(() => {
           window.location.href = redirect;
         }, 500);
@@ -66,37 +84,51 @@ function CallbackHandler() {
       } catch (e) {
         console.error('[Auth Callback] Parse error:', e);
         setStatus('error');
-        setErrorMessage('데이터 파싱 오류');
-        setTimeout(() => {
-          window.location.href = '/login?error=parse_error';
-        }, 1000);
+        setErrorMessage('인증 데이터 파싱 오류: ' + (e instanceof Error ? e.message : String(e)));
       }
     } else {
       console.error('[Auth Callback] Missing data');
       setStatus('error');
-      setErrorMessage('필수 데이터 누락');
-      setTimeout(() => {
-        window.location.href = '/login?error=missing_data';
-      }, 1000);
+      setErrorMessage('필수 인증 데이터가 누락되었습니다.');
     }
   }, [searchParams, setAuth]);
+
+  if (status === 'error') {
+    return (
+      <div className="max-w-md w-full mx-auto">
+        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="rounded-full h-16 w-16 bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-600 text-3xl">✕</span>
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">로그인 실패</h2>
+          <p className="text-red-600 mb-6">{errorMessage}</p>
+          <a
+            href="/login"
+            className="inline-block w-full py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            로그인 페이지로 돌아가기
+          </a>
+          <details className="mt-4 text-left">
+            <summary className="text-xs text-gray-400 cursor-pointer">디버그 정보</summary>
+            <pre className="mt-2 text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">{debugInfo}</pre>
+          </details>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="text-center">
       <div className={`rounded-full h-12 w-12 mx-auto mb-4 ${
-        status === 'error' 
-          ? 'bg-red-100 flex items-center justify-center' 
-          : status === 'success'
-          ? 'bg-green-100 flex items-center justify-center'
-          : 'animate-spin border-b-2 border-blue-600'
+        status === 'success'
+        ? 'bg-green-100 flex items-center justify-center'
+        : 'animate-spin border-b-2 border-blue-600'
       }`}>
-        {status === 'error' && <span className="text-red-600 text-xl">✕</span>}
         {status === 'success' && <span className="text-green-600 text-xl">✓</span>}
       </div>
       <p className="text-gray-600">
         {status === 'processing' && '로그인 처리 중...'}
         {status === 'success' && '로그인 성공! 이동 중...'}
-        {status === 'error' && `오류: ${errorMessage}`}
       </p>
     </div>
   );
@@ -104,7 +136,7 @@ function CallbackHandler() {
 
 export default function AuthCallbackPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Suspense fallback={
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
