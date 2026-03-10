@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd apps/web && npm run build",
+  "outputDirectory": "apps/web/.next",
+  "installCommand": "npm install --prefix apps/web",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/crawl",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/keepalive",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/billing",
+      "schedule": "0 21 * * *"
+    }
+  ]
+}
