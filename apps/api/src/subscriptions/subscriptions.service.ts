@@ -363,7 +363,7 @@ export class SubscriptionsService {
       PRO: {
         maxPrompts: 100,
         maxCompetitors: 20,
-        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'NAVER_CUE', 'GOOGLE_AI_OVERVIEW'],
+        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW'],
         crawlFrequency: 'daily',
         exportEnabled: true,
         aiRecommendations: true,
@@ -371,7 +371,7 @@ export class SubscriptionsService {
       ENTERPRISE: {
         maxPrompts: -1, // unlimited
         maxCompetitors: -1,
-        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'NAVER_CUE', 'GOOGLE_AI_OVERVIEW'],
+        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW'],
         crawlFrequency: 'realtime',
         exportEnabled: true,
         aiRecommendations: true,

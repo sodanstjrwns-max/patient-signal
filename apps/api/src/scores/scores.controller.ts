@@ -26,7 +26,7 @@ export class ScoresController {
   }
 
   @Get(':hospitalId/platforms')
-  @ApiOperation({ summary: '플랫폼별 분석 (NAVER CUE 포함, 반복측정 일관성 포함)' })
+  @ApiOperation({ summary: '플랫폼별 분석 (찐 AI 4개, 반복측정 일관성 포함)' })
   async getPlatformAnalysis(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getPlatformAnalysis(hospitalId);
   }

@@ -72,10 +72,8 @@ export class AICrawlerController {
     summary: '수동 크롤링 실행 (개선: 3회 반복, temp=0, 웹검색)',
     description: '해당 병원의 활성 프롬프트에 대해 개선된 AI 크롤링을 실행합니다. 각 플랫폼 3회 반복 측정.' 
   })
-  @ApiQuery({ name: 'includeNaverCue', required: false, type: Boolean, description: 'Naver CUE 크롤링 포함 여부' })
   async triggerCrawl(
     @Param('hospitalId') hospitalId: string,
-    @Query('includeNaverCue') includeNaverCue?: string,
   ) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
@@ -99,7 +97,7 @@ export class AICrawlerController {
     });
 
     // 비동기로 개선된 크롤링 실행
-    this.executeCrawling(crawlJob.id, hospital, prompts, includeNaverCue === 'true');
+    this.executeCrawling(crawlJob.id, hospital, prompts);
 
     return {
       jobId: crawlJob.id,
@@ -261,7 +259,7 @@ export class AICrawlerController {
   @Get('verify-hospital/:hospitalName')
   @ApiOperation({ 
     summary: '【개선10】병원 실존 여부 검증',
-    description: 'Naver Place API로 병원명의 실존 여부를 검증합니다' 
+    description: '패턴 기반으로 병원명의 실존 여부를 검증합니다' 
   })
   async verifyHospital(
     @Param('hospitalName') hospitalName: string,
@@ -276,7 +274,6 @@ export class AICrawlerController {
     jobId: string,
     hospital: any,
     prompts: any[],
-    includeNaverCue: boolean = false,
   ) {
     let completed = 0;
     let failed = 0;
@@ -284,9 +281,8 @@ export class AICrawlerController {
     
     console.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개 (3회 반복 측정)`);
 
-    // 플랫폼 결정
+    // 플랫폼 결정: 찐 AI만 (ChatGPT, Claude, Perplexity, Gemini)
     const platforms: any[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
-    if (includeNaverCue) platforms.push('NAVER_CUE');
 
     for (const prompt of prompts) {
       try {

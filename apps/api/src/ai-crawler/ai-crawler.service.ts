@@ -184,7 +184,6 @@ export class AICrawlerService {
         webSearchEnabled: true,
         aiSentiment: true,
         hallucinationFilter: true,
-        naverCue: true,
         competitorScoring: true,
         contentGap: true,
       },
@@ -290,9 +289,6 @@ export class AICrawlerService {
       case 'GEMINI':
         const geminiKey = process.env.GEMINI_API_KEY?.trim();
         return !!geminiKey && geminiKey.length > 10;
-      case 'NAVER_CUE':
-        // 개선9: Naver CUE는 항상 시도 (웹 크롤링 기반)
-        return true;
       default:
         return false;
     }
@@ -315,8 +311,6 @@ export class AICrawlerService {
         return this.queryPerplexity(promptText, hospitalName);
       case 'GEMINI':
         return this.queryGemini(promptText, hospitalName);
-      case 'NAVER_CUE':
-        return this.queryNaverCue(promptText, hospitalName);
       default:
         throw new Error(`지원하지 않는 플랫폼: ${platform}`);
     }
@@ -580,112 +574,7 @@ export class AICrawlerService {
     return result;
   }
 
-  // ==================== 개선9: Naver CUE 크롤링 ====================
 
-  /**
-   * 【개선9】Naver CUE 크롤링 - CLOVA API 또는 Naver Search API 사용
-   * Naver CUE: 네이버의 AI 검색 결과
-   */
-  private async queryNaverCue(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    this.logger.log(`[Naver CUE] 크롤링 시작`);
-    
-    const naverClientId = process.env.NAVER_CLIENT_ID?.trim();
-    const naverClientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
-    
-    let text = '';
-    let citedSources: string[] = [];
-    
-    if (naverClientId && naverClientSecret) {
-      try {
-        // Naver Search API를 통해 AI 추천 결과 시뮬레이션
-        // 네이버 검색 API로 관련 블로그/카페/지식인 결과 수집
-        const encodedQuery = encodeURIComponent(promptText);
-        
-        // 블로그 검색
-        const blogResponse = await fetch(
-          `https://openapi.naver.com/v1/search/blog.json?query=${encodedQuery}&display=10&sort=sim`,
-          {
-            headers: {
-              'X-Naver-Client-Id': naverClientId,
-              'X-Naver-Client-Secret': naverClientSecret,
-            },
-          },
-        );
-        const blogData = await blogResponse.json();
-        
-        // 지역 검색 (병원 검색)
-        const localResponse = await fetch(
-          `https://openapi.naver.com/v1/search/local.json?query=${encodedQuery}&display=5&sort=random`,
-          {
-            headers: {
-              'X-Naver-Client-Id': naverClientId,
-              'X-Naver-Client-Secret': naverClientSecret,
-            },
-          },
-        );
-        const localData = await localResponse.json();
-        
-        // 결과 조합
-        const blogItems = blogData.items || [];
-        const localItems = localData.items || [];
-        
-        // 블로그 결과에서 텍스트 추출
-        const blogTexts = blogItems.map((item: any) => 
-          `${this.stripHtml(item.title)}: ${this.stripHtml(item.description)}`
-        ).join('\n');
-        
-        // 지역 결과에서 병원 목록 추출
-        const localTexts = localItems.map((item: any, idx: number) => 
-          `${idx + 1}. ${this.stripHtml(item.title)} - ${item.address} (${item.category})`
-        ).join('\n');
-        
-        text = `[네이버 블로그 검색 결과]\n${blogTexts}\n\n[네이버 지역 검색 결과]\n${localTexts}`;
-        
-        // 인용 소스 추출
-        citedSources = [
-          ...blogItems.map((item: any) => item.link).filter(Boolean),
-          ...localItems.map((item: any) => item.link).filter(Boolean),
-        ].slice(0, 10);
-        
-        this.logger.log(`[Naver CUE] 블로그 ${blogItems.length}건, 지역 ${localItems.length}건 수집`);
-      } catch (error) {
-        this.logger.error(`[Naver CUE] API 에러: ${error.message}`);
-        text = '';
-      }
-    } else {
-      this.logger.warn('[Naver CUE] NAVER_CLIENT_ID/SECRET 미설정 - 스킵');
-      // Naver API 키가 없어도 빈 결과로 리턴 (에러 아님)
-    }
-    
-    if (!text) {
-      return {
-        platform: 'NAVER_CUE',
-        model: 'naver-search-api',
-        response: '네이버 API 키가 설정되지 않았습니다.',
-        isMentioned: false,
-        mentionPosition: null,
-        totalRecommendations: null,
-        competitorsMentioned: [],
-        citedSources: [],
-        sentimentScore: 0,
-        sentimentLabel: 'NEUTRAL',
-        isWebSearch: true,
-      };
-    }
-    
-    const result = this.analyzeResponse(text, hospitalName, 'NAVER_CUE', 'naver-search-api');
-    result.citedSources = [...new Set([...result.citedSources, ...citedSources])].slice(0, 15);
-    result.isWebSearch = true;
-    
-    return result;
-  }
-  
-  /**
-   * HTML 태그 제거 유틸리티
-   */
-  private stripHtml(text: string): string {
-    return text ? text.replace(/<[^>]*>/g, '').replace(/&[^;]+;/g, ' ').trim() : '';
-  }
 
   // ==================== 개선7: AI 기반 감성 분석 ====================
 
@@ -795,7 +684,7 @@ ${contextText}
 
   /**
    * 【개선10】병원명 실존 가능성 판단 (패턴 기반)
-   * 향후 Naver Place API / Kakao Map API 연동 시 실제 검증으로 업그레이드
+   * 향후 외부 API 연동 시 실제 검증으로 업그레이드
    */
   private isLikelyRealHospital(name: string): boolean {
     // 1. 너무 짧거나 긴 이름 필터
@@ -832,59 +721,20 @@ ${contextText}
   }
 
   /**
-   * 【개선10】Naver Place API로 실존 병원 검증 (환경변수 설정 시)
+   * 【개선10】병원 실존 여부 검증 (패턴 기반)
    */
   async verifyHospitalExists(hospitalName: string, region?: string): Promise<{
     exists: boolean;
     source: string;
     details?: any;
   }> {
-    const naverClientId = process.env.NAVER_CLIENT_ID?.trim();
-    const naverClientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
-    
-    if (naverClientId && naverClientSecret) {
-      try {
-        const query = region ? `${region} ${hospitalName}` : hospitalName;
-        const encodedQuery = encodeURIComponent(query);
-        
-        const response = await fetch(
-          `https://openapi.naver.com/v1/search/local.json?query=${encodedQuery}&display=1`,
-          {
-            headers: {
-              'X-Naver-Client-Id': naverClientId,
-              'X-Naver-Client-Secret': naverClientSecret,
-            },
-          },
-        );
-        
-        const data = await response.json();
-        const items = data.items || [];
-        
-        if (items.length > 0) {
-          const title = this.stripHtml(items[0].title);
-          // 이름이 유사한지 확인
-          const similarity = this.calculateNameSimilarity(hospitalName, title);
-          if (similarity > 0.5) {
-            return {
-              exists: true,
-              source: 'naver_place',
-              details: {
-                name: title,
-                address: items[0].address,
-                category: items[0].category,
-                similarity,
-              },
-            };
-          }
-        }
-        
-        return { exists: false, source: 'naver_place' };
-      } catch (error) {
-        this.logger.warn(`[실존 검증] Naver API 실패: ${error.message}`);
-      }
-    }
-    
-    return { exists: true, source: 'not_verified' }; // API 없으면 일단 통과
+    // 패턴 기반 검증
+    const isReal = this.isLikelyRealHospital(hospitalName);
+    return {
+      exists: isReal,
+      source: 'pattern_based',
+      details: { hospitalName, region },
+    };
   }
 
   /**
@@ -1163,7 +1013,7 @@ JSON 형식으로만 답변:
       const mentionRate = totalQueries > 0 ? (mentionedResponses.length / totalQueries) * 100 : 0;
       
       // 플랫폼별 성과
-      const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'NAVER_CUE'] as const;
+      const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'] as const;
       const platformPerformance: Record<string, any> = {};
       
       for (const platform of platforms) {
@@ -1566,7 +1416,7 @@ JSON 형식으로만 답변:
     );
 
     // 플랫폼별 점수 (다수결 기반)
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'NAVER_CUE'] as const;
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
     const platformScores: Record<string, number> = {};
     
     for (const platform of platforms) {

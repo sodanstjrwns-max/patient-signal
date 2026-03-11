@@ -46,7 +46,7 @@ export class ScoresService {
   }
 
   /**
-   * 플랫폼별 분석 (상세) - 【개선9】NAVER_CUE 포함
+   * 플랫폼별 분석 (상세) - 찐 AI 4개 플랫폼
    */
   async getPlatformAnalysis(hospitalId: string) {
     const last30Days = new Date();
@@ -86,14 +86,13 @@ export class ScoresService {
       }
     );
 
-    // 【개선9】NAVER_CUE 추가
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'NAVER_CUE'] as const;
+    // 찐 AI 4개 플랫폼만
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
     const platformNames: Record<string, string> = {
       CHATGPT: 'ChatGPT',
       PERPLEXITY: 'Perplexity',
       CLAUDE: 'Claude',
       GEMINI: 'Gemini',
-      NAVER_CUE: 'Naver CUE',
     };
 
     return platforms.map(platform => {
@@ -448,7 +447,7 @@ export class ScoresService {
       },
     });
 
-    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'NAVER_CUE'];
+    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
 
     return prompts.map(prompt => {
       const heatmapRow: Record<string, any> = {

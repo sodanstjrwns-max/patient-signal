@@ -12,15 +12,14 @@ export class SchedulerService {
   ) {}
 
   /**
-   * 【개선6】모든 활성 병원에 대해 크롤링 실행
-   * 하루 3회 실행: 오전 9시, 오후 1시, 오후 6시 (KST)
+   * 모든 활성 병원에 대해 크롤링 실행
+   * 하루 1회 실행: 오전 9시 (KST)
    * Render Cron Job에서 호출됨
    */
   async runDailyCrawling(options?: {
     session?: 'morning' | 'afternoon' | 'evening';
     includeCompetitors?: boolean;
     includeContentGap?: boolean;
-    includeNaverCue?: boolean;
   }): Promise<{
     totalHospitals: number;
     successCount: number;
@@ -29,12 +28,11 @@ export class SchedulerService {
     results: any[];
   }> {
     const session = options?.session || this.getCurrentSession();
-    const includeCompetitors = options?.includeCompetitors ?? (session === 'evening'); // 저녁에만 경쟁사 분석
-    const includeContentGap = options?.includeContentGap ?? (session === 'evening'); // 저녁에만 Content Gap 분석
-    const includeNaverCue = options?.includeNaverCue ?? true;
+    const includeCompetitors = options?.includeCompetitors ?? (session === 'evening');
+    const includeContentGap = options?.includeContentGap ?? (session === 'evening');
     
     this.logger.log(`=== 자동 크롤링 시작 (세션: ${session}) ===`);
-    this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}, ContentGap=${includeContentGap}, NaverCue=${includeNaverCue}`);
+    this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}, ContentGap=${includeContentGap}`);
     
     // 활성 구독 상태인 병원들 조회
     const hospitals = await this.prisma.hospital.findMany({
@@ -79,8 +77,8 @@ export class SchedulerService {
         let completed = 0;
         let failed = 0;
 
-        // 【개선6】세션별 플랫폼 분배 (비용 최적화)
-        const platforms = this.getPlatformsForSession(session, includeNaverCue);
+        // 세션별 플랫폼 분배 (찐 AI만)
+        const platforms = this.getPlatformsForSession(session);
 
         for (const prompt of hospital.prompts) {
           try {
@@ -130,12 +128,12 @@ export class SchedulerService {
           session,
         };
 
-        // 【개선3】저녁 세션에서 경쟁사 AEO 측정
+        // 저녁 세션에서 경쟁사 AEO 측정
         if (includeCompetitors && hospital.competitors.length > 0) {
           this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개)`);
           const competitorResults = [];
           
-          for (const competitor of hospital.competitors.slice(0, 5)) { // 상위 5개만
+          for (const competitor of hospital.competitors.slice(0, 5)) {
             try {
               const competitorScore = await this.aiCrawlerService.measureCompetitorAEO(
                 hospital.id,
@@ -157,7 +155,7 @@ export class SchedulerService {
           hospitalResult.competitorScores = competitorResults;
         }
 
-        // 【개선5】저녁 세션에서 Content Gap 분석
+        // 저녁 세션에서 Content Gap 분석
         if (includeContentGap) {
           try {
             const gaps = await this.aiCrawlerService.generateContentGapGuide(hospital.id);
@@ -198,41 +196,33 @@ export class SchedulerService {
   }
 
   /**
-   * 【개선6】현재 시간 기반 세션 판별 (KST)
+   * 현재 시간 기반 세션 판별 (KST)
    */
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {
-    const kstHour = new Date().getUTCHours() + 9; // UTC → KST
+    const kstHour = new Date().getUTCHours() + 9;
     const adjustedHour = kstHour >= 24 ? kstHour - 24 : kstHour;
     
-    if (adjustedHour < 12) return 'morning';    // 오전 9시
-    if (adjustedHour < 17) return 'afternoon';   // 오후 1시
-    return 'evening';                             // 오후 6시
+    if (adjustedHour < 12) return 'morning';
+    if (adjustedHour < 17) return 'afternoon';
+    return 'evening';
   }
 
   /**
-   * 【개선6】세션별 플랫폼 분배
+   * 세션별 플랫폼 분배 (찐 AI 4개만)
    * - morning: 전체 플랫폼 (기본 크롤링)
    * - afternoon: ChatGPT + Gemini (주요 2개만 - 비용 절감)
-   * - evening: 전체 + Naver CUE + 경쟁사 분석
+   * - evening: 전체 + 경쟁사 분석
    */
-  private getPlatformsForSession(
-    session: string,
-    includeNaverCue: boolean,
-  ): any[] {
+  private getPlatformsForSession(session: string): any[] {
     const basePlatforms: any[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
     
     switch (session) {
       case 'morning':
-        return includeNaverCue 
-          ? [...basePlatforms, 'NAVER_CUE'] 
-          : basePlatforms;
+        return basePlatforms;
       case 'afternoon':
-        // 비용 절감: 주요 2개 플랫폼만
         return ['CHATGPT', 'GEMINI'];
       case 'evening':
-        return includeNaverCue 
-          ? [...basePlatforms, 'NAVER_CUE'] 
-          : basePlatforms;
+        return basePlatforms;
       default:
         return basePlatforms;
     }
