@@ -61,35 +61,50 @@ export class HospitalsService {
   }
 
   async findOne(hospitalId: string) {
-    const hospital = await this.prisma.hospital.findUnique({
-      where: { id: hospitalId },
-      include: {
-        users: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
+    try {
+      const hospital = await this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        include: {
+          users: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+            },
+          },
+          subscriptions: true,
+          _count: {
+            select: {
+              prompts: true,
+              competitors: true,
+            },
           },
         },
-        subscriptions: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-        _count: {
-          select: {
-            prompts: true,
-            competitors: true,
-          },
-        },
-      },
-    });
+      });
 
-    if (!hospital) {
-      throw new NotFoundException('병원을 찾을 수 없습니다');
+      if (!hospital) {
+        throw new NotFoundException('병원을 찾을 수 없습니다');
+      }
+
+      return hospital;
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      // subscriptions 관계 에러 시 subscription 없이 조회
+      const hospital = await this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        include: {
+          users: {
+            select: { id: true, email: true, name: true, role: true },
+          },
+          _count: {
+            select: { prompts: true, competitors: true },
+          },
+        },
+      });
+      if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+      return { ...hospital, subscriptions: [] };
     }
-
-    return hospital;
   }
 
   async update(hospitalId: string, userId: string, dto: UpdateHospitalDto) {
