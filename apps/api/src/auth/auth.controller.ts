@@ -64,6 +64,25 @@ export class AuthController {
   }
 
   @Public()
+  @SkipThrottle()
+  @Get('google/debug')
+  @ApiOperation({ summary: 'Google OAuth 디버깅', description: '현재 Google OAuth 설정 상태를 확인합니다' })
+  async googleDebug() {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const frontendUrl = process.env.FRONTEND_URL;
+    return {
+      hasClientId: !!clientId,
+      clientIdPreview: clientId ? clientId.substring(0, 20) + '...' : 'NOT SET',
+      hasClientSecret: !!clientSecret,
+      clientSecretLength: clientSecret?.length || 0,
+      frontendUrl: frontendUrl || 'NOT SET (using fallback: patient-signal-web-2bbe.vercel.app)',
+      redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  @Public()
   @SkipThrottle() // Google 콜백은 Rate Limit 제외
   @Get('google/callback')
   @ApiOperation({ summary: 'Google OAuth 콜백', description: 'Google OAuth 인증 후 콜백 처리' })
@@ -97,12 +116,12 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
     } catch (err) {
       console.error('Google callback error:', err?.message || err);
+      // 에러 메시지를 URL로 전달 (디버깅용)
       const errorMsg = err?.message || 'google_auth_failed';
-      // 에러 메시지를 더 구체적으로 전달
       const errorCode = errorMsg.includes('token') ? 'token_exchange_failed' 
         : errorMsg.includes('verified') ? 'email_not_verified'
         : 'google_auth_failed';
-      return res.redirect(`${frontendUrl}/login?error=${errorCode}`);
+      return res.redirect(`${frontendUrl}/login?error=${errorCode}&detail=${encodeURIComponent(errorMsg.substring(0, 200))}`);
     }
   }
 

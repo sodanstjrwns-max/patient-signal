@@ -38,8 +38,10 @@ function LoginForm() {
   // URL에서 에러 파라미터 읽기
   useEffect(() => {
     const errorParam = searchParams.get('error');
+    const detailParam = searchParams.get('detail');
     if (errorParam) {
-      setError(ERROR_MESSAGES[errorParam] || `로그인 오류: ${errorParam}`);
+      const msg = ERROR_MESSAGES[errorParam] || `로그인 오류: ${errorParam}`;
+      setError(detailParam ? `${msg} (${detailParam})` : msg);
       window.history.replaceState({}, '', '/login');
     }
   }, [searchParams]);
