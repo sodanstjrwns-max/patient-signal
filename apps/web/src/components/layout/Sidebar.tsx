@@ -52,8 +52,8 @@ export function Sidebar() {
               <p className="font-medium text-sm text-gray-900 truncate">
                 {user.hospital.name}
               </p>
-              <p className="text-xs text-gray-500">
-                {user.hospital.planType} 플랜
+              <p className="text-xs text-green-600 font-medium">
+                무료 플랜
               </p>
             </div>
           </div>

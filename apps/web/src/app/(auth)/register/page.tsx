@@ -51,7 +51,7 @@ export default function RegisterPage() {
           </Link>
           <CardTitle className="text-2xl">회원가입</CardTitle>
           <CardDescription>
-            7일 무료 체험을 시작하세요
+            모든 기능을 무료로 사용하세요
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -126,23 +126,22 @@ export default function RegisterPage() {
                 <span className="text-sm font-medium text-gray-900">
                   페이션트퍼널 수강생입니다
                 </span>
-                <p className="text-xs text-gray-500">첫 3개월 30% 할인 혜택!</p>
               </div>
             </label>
 
             <Button type="submit" className="w-full" loading={loading}>
-              무료 체험 시작하기
+              무료로 시작하기
             </Button>
           </form>
 
           <div className="mt-4 space-y-2">
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <CheckCircle className="h-4 w-4 text-green-500" />
-              7일 무료 체험 (카드 등록 필요 없음)
+              모든 기능 무료 (카드 등록 필요 없음)
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <CheckCircle className="h-4 w-4 text-green-500" />
-              언제든지 해지 가능
+              가입 즉시 사용 가능
             </div>
           </div>
 

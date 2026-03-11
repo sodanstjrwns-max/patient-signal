@@ -19,9 +19,7 @@ import {
   Shield,
   Loader2,
   Save,
-  ExternalLink,
 } from 'lucide-react';
-import Link from 'next/link';
 
 export default function SettingsPage() {
   const { user } = useAuthStore();
@@ -206,37 +204,30 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* 구독 정보 */}
+        {/* 플랜 정보 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              구독 정보
+              플랜 정보
             </CardTitle>
             <CardDescription>
-              현재 구독 플랜과 결제 정보를 확인합니다
+              현재 이용 중인 플랜을 확인합니다
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
               <div>
-                <p className="font-semibold text-blue-900">
-                  {hospital?.planType || 'STARTER'} 플랜
+                <p className="font-semibold text-green-900">
+                  무료 플랜 (모든 기능 이용 가능)
                 </p>
-                <p className="text-sm text-blue-700">
-                  {hospital?.subscriptionStatus === 'TRIAL'
-                    ? '7일 무료 체험 중'
-                    : hospital?.subscriptionStatus === 'ACTIVE'
-                    ? '활성 구독'
-                    : '구독 필요'}
+                <p className="text-sm text-green-700">
+                  현재 모든 기능을 무료로 사용 중입니다
                 </p>
               </div>
-              <Link href="/pricing">
-                <Button variant="outline">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  플랜 변경
-                </Button>
-              </Link>
+              <div className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+                무료
+              </div>
             </div>
           </CardContent>
         </Card>

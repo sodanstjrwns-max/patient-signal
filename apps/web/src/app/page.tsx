@@ -9,7 +9,10 @@ import {
   Bell, 
   ArrowRight,
   CheckCircle,
-  Globe
+  Globe,
+  Gift,
+  Zap,
+  Heart
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -36,29 +39,15 @@ export default function HomePage() {
     },
   ];
 
-  const pricing = [
-    {
-      name: 'Starter',
-      price: '19만원',
-      period: '/월',
-      description: '1인 개원의를 위한 시작 플랜',
-      features: ['30개 질문 모니터링', '3개 경쟁사 추적', '4개 AI 플랫폼', '주간 이메일 리포트'],
-    },
-    {
-      name: 'Standard',
-      price: '39만원',
-      period: '/월',
-      description: '성장하는 치과를 위한 플랜',
-      features: ['80개 질문 모니터링', '5개 경쟁사 추적', '5개 AI 플랫폼', '카카오톡 알림', '감성 분석'],
-      popular: true,
-    },
-    {
-      name: 'Pro',
-      price: '79만원',
-      period: '/월',
-      description: '중대형/네트워크 병원 플랜',
-      features: ['200개 질문 모니터링', '10개 경쟁사 추적', '네이버 Cue 포함', '월간 PDF 리포트', 'API 접근'],
-    },
+  const allFeatures = [
+    '200개 질문 모니터링',
+    '10개 경쟁사 추적',
+    '6개 AI 플랫폼 (ChatGPT, Perplexity, Claude, Gemini, 네이버 Cue, Google AI Overview)',
+    '카카오톡 + 이메일 알림',
+    '감성 분석 리포트',
+    '경쟁사 비교 분석',
+    '주간/월간 리포트',
+    'API 접근',
   ];
 
   return (
@@ -74,14 +63,11 @@ export default function HomePage() {
               <span className="font-bold text-xl text-gray-900">Patient Signal</span>
             </div>
             <div className="flex items-center gap-4">
-              <Link href="/pricing">
-                <Button variant="ghost">가격</Button>
-              </Link>
               <Link href="/login">
                 <Button variant="ghost">로그인</Button>
               </Link>
-              <Link href="/pricing">
-                <Button>무료 체험 시작</Button>
+              <Link href="/register">
+                <Button>무료로 시작하기</Button>
               </Link>
             </div>
           </div>
@@ -91,9 +77,9 @@ export default function HomePage() {
       {/* Hero */}
       <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-full text-blue-700 text-sm font-medium mb-6">
-            <Sparkles className="h-4 w-4" />
-            한국 최초 병원 전문 AI 검색 가시성 추적 SaaS
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 rounded-full text-green-700 text-sm font-medium mb-6">
+            <Gift className="h-4 w-4" />
+            현재 모든 기능 무료 개방 중!
           </div>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
             AI가 우리 병원을<br />
@@ -106,18 +92,18 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/register">
               <Button size="lg" className="px-8">
-                7일 무료 체험 시작
+                무료로 시작하기
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="#pricing">
+            <Link href="#features">
               <Button variant="outline" size="lg">
-                가격 보기
+                기능 살펴보기
               </Button>
             </Link>
           </div>
           <p className="text-sm text-gray-500 mt-4">
-            카드 등록 필요 • 7일 후 자동 결제 없음
+            카드 등록 없이 바로 사용 가능 · 모든 기능 무료
           </p>
         </div>
       </section>
@@ -135,8 +121,8 @@ export default function HomePage() {
               <div className="text-blue-200 text-sm mt-1">AI 플랫폼 지원</div>
             </div>
             <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">90%+</div>
-              <div className="text-blue-200 text-sm mt-1">예상 마진율</div>
+              <div className="text-3xl sm:text-4xl font-bold text-white">100%</div>
+              <div className="text-blue-200 text-sm mt-1">무료</div>
             </div>
             <div>
               <div className="text-3xl sm:text-4xl font-bold text-white">2.1배</div>
@@ -147,7 +133,7 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">핵심 기능</h2>
@@ -170,54 +156,81 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Pricing */}
+      {/* Free Plan */}
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">심플한 가격 정책</h2>
-            <p className="text-lg text-gray-600">병원 규모에 맞는 플랜을 선택하세요</p>
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">모든 기능, 완전 무료</h2>
+            <p className="text-lg text-gray-600">
+              원장님들의 AI 가시성 향상을 응원합니다
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl border-2 border-blue-500 shadow-xl p-8 relative">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 bg-blue-500 text-white text-sm font-medium rounded-full flex items-center gap-1.5">
+              <Gift className="h-4 w-4" />
+              완전 무료
+            </div>
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Patient Signal</h3>
+              <div className="flex items-baseline justify-center gap-2">
+                <span className="text-5xl font-bold text-blue-600">₩0</span>
+                <span className="text-gray-500 text-lg">/월</span>
+              </div>
+              <p className="text-gray-500 mt-2">카드 등록 없이 모든 기능을 사용하세요</p>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 mb-8">
+              {allFeatures.map((feature, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-gray-700">
+                  <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                  {feature}
+                </div>
+              ))}
+            </div>
+            <Link href="/register">
+              <Button className="w-full h-12 text-lg" size="lg">
+                무료로 시작하기
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Free */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">왜 무료인가요?</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {pricing.map((plan, index) => (
-              <div
-                key={index}
-                className={`p-8 bg-white rounded-2xl border-2 ${
-                  plan.popular ? 'border-blue-500 shadow-xl' : 'border-gray-200'
-                } relative`}
-              >
-                {plan.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-500 text-white text-sm font-medium rounded-full">
-                    가장 인기
-                  </div>
-                )}
-                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                <p className="text-gray-500 text-sm mt-1">{plan.description}</p>
-                <div className="mt-4 mb-6">
-                  <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-500">{plan.period}</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2 text-sm text-gray-600">
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Link href={`/checkout?plan=${plan.name.toLowerCase()}&price=${plan.name === 'Starter' ? '190000' : plan.name === 'Standard' ? '390000' : '790000'}&billing=monthly`}>
-                  <Button
-                    variant={plan.popular ? 'default' : 'outline'}
-                    className="w-full"
-                  >
-                    시작하기
-                  </Button>
-                </Link>
+            <div className="text-center p-6">
+              <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                <Heart className="h-7 w-7 text-blue-600" />
               </div>
-            ))}
+              <h3 className="font-semibold text-gray-900 mb-2">원장님들을 위해</h3>
+              <p className="text-sm text-gray-600">
+                AI 시대에 모든 원장님들이 자기 병원의 AI 가시성을 확인할 수 있어야 합니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                <Zap className="h-7 w-7 text-green-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">빠른 시작</h3>
+              <p className="text-sm text-gray-600">
+                복잡한 결제 과정 없이 가입하고 바로 사용하세요. 2분이면 충분합니다.
+              </p>
+            </div>
+            <div className="text-center p-6">
+              <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="h-7 w-7 text-purple-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">함께 성장</h3>
+              <p className="text-sm text-gray-600">
+                페이션트퍼널과 함께 AI 시대의 병원 마케팅을 선도합시다.
+              </p>
+            </div>
           </div>
-          <p className="text-center text-gray-500 text-sm mt-8">
-            연간 결제 시 2개월 무료 (16.7% 할인) • 페이션트퍼널 수강생 첫 3개월 30% 할인
-          </p>
         </div>
       </section>
 
@@ -228,15 +241,18 @@ export default function HomePage() {
             지금 바로 AI 가시성을 확인하세요
           </h2>
           <p className="text-lg text-gray-600 mb-8">
-            7일 무료 체험으로 우리 병원의 AI 검색 가시성을 측정하고<br />
+            가입하고 2분만에 우리 병원의 AI 검색 가시성을 측정하고<br />
             경쟁 병원 대비 포지션을 확인해보세요.
           </p>
           <Link href="/register">
             <Button size="lg" className="px-8">
-              무료 체험 시작하기
+              무료로 시작하기
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
+          <p className="text-sm text-gray-500 mt-4">
+            카드 등록 없음 · 설치 불필요 · 바로 사용 가능
+          </p>
         </div>
       </section>
 
