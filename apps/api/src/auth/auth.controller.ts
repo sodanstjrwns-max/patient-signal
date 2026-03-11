@@ -71,15 +71,40 @@ export class AuthController {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     const frontendUrl = process.env.FRONTEND_URL;
+    
+    // 실제 Google token endpoint에 가짜 코드로 테스트 → client_id/secret 유효성 확인
+    let tokenEndpointTest = 'not tested';
+    try {
+      const testParams = new URLSearchParams({
+        code: 'test_invalid_code',
+        client_id: clientId || '',
+        client_secret: clientSecret || '',
+        redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
+        grant_type: 'authorization_code',
+      });
+      const testRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: testParams.toString(),
+      });
+      const testData = await testRes.json();
+      // invalid_grant = client credentials are OK, code is invalid (expected)
+      // invalid_client = client credentials are WRONG
+      tokenEndpointTest = `${testData.error}: ${testData.error_description || 'no description'}`;
+    } catch (e) {
+      tokenEndpointTest = `fetch error: ${e.message}`;
+    }
+
     return {
       hasClientId: !!clientId,
       clientIdPreview: clientId ? clientId.substring(0, 20) + '...' : 'NOT SET',
       hasClientSecret: !!clientSecret,
-      clientSecretPreview: clientSecret ? clientSecret.substring(0, 6) + '...' : 'NOT SET',
+      clientSecretPreview: clientSecret ? clientSecret.substring(0, 8) + '...' : 'NOT SET',
       clientSecretLength: clientSecret?.length || 0,
       frontendUrl: frontendUrl || 'NOT SET (using fallback: patient-signal-web-2bbe.vercel.app)',
       redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
-      note: 'Google Client Secret은 보통 GOCSPX-로 시작하며 35자 정도입니다. invalid_client 에러가 발생한다면 Secret 값을 확인해주세요.',
+      tokenEndpointTest,
+      tokenEndpointTestNote: 'invalid_grant = credentials OK (expected with fake code), invalid_client = credentials WRONG',
       timestamp: new Date().toISOString(),
     };
   }
@@ -118,12 +143,15 @@ export class AuthController {
       return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
     } catch (err) {
       console.error('Google callback error:', err?.message || err);
-      // 에러 메시지를 URL로 전달 (디버깅용)
+      // 에러 메시지를 상세히 URL로 전달
       const errorMsg = err?.message || 'google_auth_failed';
-      const errorCode = errorMsg.includes('token') ? 'token_exchange_failed' 
-        : errorMsg.includes('verified') ? 'email_not_verified'
-        : 'google_auth_failed';
-      return res.redirect(`${frontendUrl}/login?error=${errorCode}&detail=${encodeURIComponent(errorMsg.substring(0, 200))}`);
+      let errorCode = 'google_auth_failed';
+      if (errorMsg.includes('invalid_client')) errorCode = 'invalid_client';
+      else if (errorMsg.includes('invalid_grant')) errorCode = 'invalid_grant';
+      else if (errorMsg.includes('redirect_uri_mismatch')) errorCode = 'redirect_uri_mismatch';
+      else if (errorMsg.includes('token')) errorCode = 'token_exchange_failed';
+      else if (errorMsg.includes('verified')) errorCode = 'email_not_verified';
+      return res.redirect(`${frontendUrl}/login?error=${errorCode}&detail=${encodeURIComponent(errorMsg.substring(0, 300))}`);
     }
   }
 

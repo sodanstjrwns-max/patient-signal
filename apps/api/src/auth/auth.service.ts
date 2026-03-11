@@ -19,10 +19,13 @@ export class AuthService {
     private configService: ConfigService,
     private emailService: EmailService,
   ) {
-    this.googleClient = new OAuth2Client(
-      this.configService.get('GOOGLE_CLIENT_ID'),
-      this.configService.get('GOOGLE_CLIENT_SECRET'),
-    );
+    // configService 또는 process.env에서 직접 읽기
+    const clientId = this.configService.get('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET;
+    
+    this.logger.log(`Google OAuth init: clientId=${clientId?.substring(0, 20)}..., hasSecret=${!!clientSecret}, secretLen=${clientSecret?.length}`);
+    
+    this.googleClient = new OAuth2Client(clientId, clientSecret);
   }
 
   async register(dto: RegisterDto) {
@@ -234,27 +237,52 @@ export class AuthService {
 
   /**
    * Google OAuth Callback 로그인 (Authorization Code 방식)
+   * - google-auth-library의 OAuth2Client.getToken() 대신 직접 fetch 사용
+   * - 디버깅 용이성 및 에러 메시지 정확성 향상
    */
   async googleCallbackLogin(code: string) {
+    const clientId = this.configService.get('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET;
+    const redirectUri = 'https://patient-signal.onrender.com/api/auth/google/callback';
+
+    this.logger.log(`Google callback: starting token exchange`);
+    this.logger.log(`Google callback: clientId=${clientId?.substring(0, 20)}..., secretLen=${clientSecret?.length}, redirectUri=${redirectUri}`);
+
     try {
-      this.logger.log('Google callback login: exchanging code for tokens...');
-      
-      // Authorization Code로 토큰 교환
-      const { tokens } = await this.googleClient.getToken({
+      // Step 1: Authorization Code → Token 교환 (직접 fetch)
+      const tokenParams = new URLSearchParams({
         code,
-        redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
       });
 
-      this.logger.log('Google callback login: tokens received, verifying ID token...');
+      this.logger.log(`Google callback: sending token request to Google...`);
 
-      if (!tokens.id_token) {
+      const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: tokenParams.toString(),
+      });
+
+      const tokenData = await tokenResponse.json();
+
+      if (!tokenResponse.ok) {
+        this.logger.error(`Google token exchange failed: ${JSON.stringify(tokenData)}`);
+        throw new Error(`Google token exchange failed: ${tokenData.error} - ${tokenData.error_description || 'no description'}`);
+      }
+
+      this.logger.log('Google callback: tokens received successfully');
+
+      if (!tokenData.id_token) {
         throw new Error('No id_token received from Google');
       }
 
-      // ID 토큰 검증
+      // Step 2: ID 토큰 검증
       const ticket = await this.googleClient.verifyIdToken({
-        idToken: tokens.id_token,
-        audience: this.configService.get('GOOGLE_CLIENT_ID'),
+        idToken: tokenData.id_token,
+        audience: clientId,
       });
 
       const payload = ticket.getPayload();
@@ -263,16 +291,16 @@ export class AuthService {
       }
 
       const { email, name } = payload;
-      this.logger.log(`Google callback login: verified email=${email}`);
+      this.logger.log(`Google callback: verified email=${email}`);
 
-      // 기존 사용자 확인 또는 생성
+      // Step 3: 기존 사용자 확인 또는 생성
       let user = await this.prisma.user.findUnique({
         where: { email },
         include: { hospital: true },
       });
 
       if (!user) {
-        this.logger.log(`Google callback login: creating new user for ${email}`);
+        this.logger.log(`Google callback: creating new user for ${email}`);
         user = await this.prisma.user.create({
           data: {
             email,
@@ -285,7 +313,7 @@ export class AuthService {
         });
       }
 
-      // JWT 토큰 생성
+      // Step 4: JWT 토큰 생성
       const jwtTokens = await this.generateTokens(
         user.id,
         user.email,
@@ -293,7 +321,7 @@ export class AuthService {
         user.hospitalId,
       );
 
-      this.logger.log(`Google callback login: success for ${email}`);
+      this.logger.log(`Google callback: login success for ${email}`);
 
       return {
         user: {
@@ -308,7 +336,7 @@ export class AuthService {
         ...jwtTokens,
       };
     } catch (error) {
-      this.logger.error(`Google callback login error: ${error?.message}`, error?.stack);
+      this.logger.error(`Google callback error: ${error?.message}`, error?.stack);
       throw error;
     }
   }
