@@ -66,4 +66,19 @@ export class HospitalsController {
   async getDashboard(@Param('id') id: string) {
     return this.hospitalsService.getDashboard(id);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post(':id/regenerate-prompts')
+  @ApiOperation({ 
+    summary: '프롬프트 재생성', 
+    description: '기존 자동 생성 프롬프트를 삭제하고 강화된 버전으로 재생성합니다' 
+  })
+  @ApiResponse({ status: 200, description: '프롬프트 재생성 성공' })
+  async regeneratePrompts(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.hospitalsService.regenerateAutoPrompts(id, userId);
+  }
 }
