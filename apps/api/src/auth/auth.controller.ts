@@ -72,7 +72,7 @@ export class AuthController {
     @Query('error') error: string,
     @Res() res: Response,
   ) {
-    const frontendUrl = 'https://patient-signal-web.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://patient-signal-web-2bbe.vercel.app';
     
     if (error) {
       return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);

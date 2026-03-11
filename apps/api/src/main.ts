@@ -14,6 +14,7 @@ async function bootstrap() {
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:3000',
       'https://patient-signal-web.vercel.app',
+      'https://patient-signal-web-2bbe.vercel.app',
       'https://patientsignal.kr',
       'https://www.patientsignal.kr',
     ],

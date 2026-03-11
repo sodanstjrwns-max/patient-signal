@@ -21,7 +21,7 @@ export default function TermsPage() {
               <li><strong>"서비스"</strong>란 회사가 제공하는 AI 플랫폼(ChatGPT, Claude, Perplexity, Gemini 등)에서의 
                 병원/의료기관 검색 가시성 분석, 경쟁사 비교, 개선 인사이트 제공 등의 서비스를 말합니다.</li>
               <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 병원, 의료기관 또는 개인을 말합니다.</li>
-              <li><strong>"구독"</strong>이란 이용자가 서비스를 이용하기 위해 정기적으로 결제하는 유료 이용권을 말합니다.</li>
+              <li><strong>"구독"</strong>이란 이용자가 서비스를 이용하기 위해 가입하는 이용권을 말합니다.</li>
             </ul>
           </section>
 
@@ -52,22 +52,20 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제5조 (이용요금 및 결제)</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">제5조 (이용요금)</h2>
             <ol className="list-decimal list-inside text-gray-600 space-y-2">
-              <li>서비스 이용요금은 회사가 정한 요금 정책에 따릅니다.</li>
-              <li>신규 가입 시 7일간의 무료 체험 기간이 제공됩니다.</li>
-              <li>결제는 토스페이먼츠를 통해 처리되며, 카드결제, 계좌이체 등의 방법을 지원합니다.</li>
-              <li>구독은 매월(또는 매년) 자동으로 갱신되며, 갱신일 전에 해지하지 않으면 자동으로 결제됩니다.</li>
+              <li>서비스는 현재 무료로 제공됩니다.</li>
+              <li>향후 유료 전환 시 사전에 이용자에게 충분히 고지하며, 별도 동의 없이 요금이 부과되지 않습니다.</li>
+              <li>유료 전환 시점 및 가격 정책은 서비스 내 공지사항을 통해 안내됩니다.</li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제6조 (환불 정책)</h2>
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">제6조 (서비스 해지)</h2>
             <ol className="list-decimal list-inside text-gray-600 space-y-2">
-              <li>무료 체험 기간 중에는 언제든지 해지가 가능하며, 별도의 비용이 청구되지 않습니다.</li>
-              <li>유료 구독 후 7일 이내에 해지를 요청하는 경우, 전액 환불됩니다.</li>
-              <li>7일 이후 해지 시에는 남은 기간에 대한 부분 환불이 불가합니다.</li>
-              <li>환불 요청은 고객센터를 통해 접수할 수 있습니다.</li>
+              <li>이용자는 언제든지 서비스 이용을 중단하고 계정을 삭제할 수 있습니다.</li>
+              <li>현재 서비스는 무료로 제공되므로 별도의 환불 절차가 없습니다.</li>
+              <li>서비스 관련 문의는 고객센터(support@patientsignal.kr)를 통해 접수할 수 있습니다.</li>
             </ol>
           </section>
 
