@@ -26,7 +26,7 @@ export class ScoresController {
   }
 
   @Get(':hospitalId/platforms')
-  @ApiOperation({ summary: '플랫폼별 분석' })
+  @ApiOperation({ summary: '플랫폼별 분석 (NAVER CUE 포함, 반복측정 일관성 포함)' })
   async getPlatformAnalysis(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getPlatformAnalysis(hospitalId);
   }
@@ -38,7 +38,7 @@ export class ScoresController {
   }
 
   @Get(':hospitalId/weekly')
-  @ApiOperation({ summary: '주간 하이라이트' })
+  @ApiOperation({ summary: '주간 하이라이트 (Content Gap 포함)' })
   async getWeeklyHighlights(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getWeeklyHighlights(hospitalId);
   }
@@ -47,5 +47,14 @@ export class ScoresController {
   @ApiOperation({ summary: '인용 소스 분석' })
   async getCitationAnalysis(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getCitationAnalysis(hospitalId);
+  }
+
+  @Get(':hospitalId/prompt-heatmap')
+  @ApiOperation({ 
+    summary: '【개선4】프롬프트별 성과 히트맵',
+    description: '각 프롬프트 × 플랫폼 조합의 언급률, 순위, 감성을 히트맵 형태로 제공' 
+  })
+  async getPromptHeatmap(@Param('hospitalId') hospitalId: string) {
+    return this.scoresService.getPromptHeatmap(hospitalId);
   }
 }

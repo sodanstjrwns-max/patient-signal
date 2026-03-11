@@ -185,6 +185,11 @@ model AIResponse {
   sentimentLabel       SentimentLabel? @map("sentiment_label")
   citedSources         String[]      @map("cited_sources")
   competitorsMentioned String[]      @map("competitors_mentioned")
+  // 개선: 반복 측정 메타데이터
+  repeatIndex          Int?          @map("repeat_index")        // 반복 측정 인덱스 (0,1,2)
+  isWebSearch          Boolean       @default(false) @map("is_web_search") // 웹 검색 모드 사용 여부
+  isVerified           Boolean       @default(true) @map("is_verified")     // 환각 필터링 통과 여부
+  verificationSource   String?       @map("verification_source")             // 검증 소스 (naver_place, kakao_map 등)
   createdAt            DateTime      @default(now()) @map("created_at")
 
   prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
@@ -247,16 +252,20 @@ model CompetitorScore {
 
 // 콘텐츠 갭 테이블
 model ContentGap {
-  id              String       @id @default(uuid())
-  hospitalId      String       @map("hospital_id")
-  gapType         GapType      @map("gap_type")
-  topic           String
-  competitorHas   Boolean      @default(true) @map("competitor_has")
-  priorityScore   Int          @default(0) @map("priority_score")
-  suggestedAction String?      @map("suggested_action")
-  status          ActionStatus @default(PENDING)
-  createdAt       DateTime     @default(now()) @map("created_at")
-  updatedAt       DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(uuid())
+  hospitalId        String       @map("hospital_id")
+  gapType           GapType      @map("gap_type")
+  topic             String
+  competitorHas     Boolean      @default(true) @map("competitor_has")
+  priorityScore     Int          @default(0) @map("priority_score")
+  suggestedAction   String?      @map("suggested_action")
+  status            ActionStatus @default(PENDING)
+  // 개선5: Content Gap 자동 생성 관련
+  competitorNames   String[]     @map("competitor_names")       // 해당 갭에서 경쟁사 이름들
+  relatedPromptIds  String[]     @map("related_prompt_ids")     // 관련 프롬프트 ID들
+  aiGeneratedGuide  String?      @map("ai_generated_guide")     // AI가 생성한 개선 가이드
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
