@@ -75,9 +75,11 @@ export class AuthController {
       hasClientId: !!clientId,
       clientIdPreview: clientId ? clientId.substring(0, 20) + '...' : 'NOT SET',
       hasClientSecret: !!clientSecret,
+      clientSecretPreview: clientSecret ? clientSecret.substring(0, 6) + '...' : 'NOT SET',
       clientSecretLength: clientSecret?.length || 0,
       frontendUrl: frontendUrl || 'NOT SET (using fallback: patient-signal-web-2bbe.vercel.app)',
       redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
+      note: 'Google Client Secret은 보통 GOCSPX-로 시작하며 35자 정도입니다. invalid_client 에러가 발생한다면 Secret 값을 확인해주세요.',
       timestamp: new Date().toISOString(),
     };
   }
