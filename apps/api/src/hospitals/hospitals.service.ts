@@ -8,7 +8,7 @@ export class HospitalsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateHospitalDto) {
-    // 병원 생성
+    // 병원 생성 (무료 플랜)
     const hospital = await this.prisma.hospital.create({
       data: {
         name: dto.name,
@@ -22,7 +22,7 @@ export class HospitalsService {
         websiteUrl: dto.websiteUrl,
         naverPlaceId: dto.naverPlaceId,
         planType: 'STARTER',
-        subscriptionStatus: 'TRIAL',
+        subscriptionStatus: 'ACTIVE',
       },
     });
 
@@ -35,19 +35,24 @@ export class HospitalsService {
       },
     });
 
-    // 7일 무료 체험 구독 생성
+    // 무료 플랜 구독 생성 (무기한)
     const now = new Date();
-    const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const farFuture = new Date('2099-12-31T23:59:59.000Z');
 
-    await this.prisma.subscription.create({
-      data: {
-        hospitalId: hospital.id,
-        planType: 'STARTER',
-        status: 'TRIAL',
-        currentPeriodStart: now,
-        currentPeriodEnd: trialEnd,
-      },
-    });
+    try {
+      await this.prisma.subscription.create({
+        data: {
+          hospitalId: hospital.id,
+          planType: 'STARTER',
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: farFuture,
+        },
+      });
+    } catch (err) {
+      // Subscription 생성 실패해도 병원 생성은 진행 (무료 모델)
+      console.warn('Subscription 생성 실패 (무시됨):', err?.message);
+    }
 
     // 자동 프롬프트 생성 (지역 기반)
     await this.createAutoPrompts(hospital.id, dto);
