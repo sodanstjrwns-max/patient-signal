@@ -14,11 +14,18 @@ datasource db {
 // ==================== ENUMS ====================
 
 enum SpecialtyType {
-  DENTAL
-  DERMATOLOGY
-  PLASTIC_SURGERY
-  OPHTHALMOLOGY
-  KOREAN_MEDICINE
+  DENTAL            // 치과
+  DERMATOLOGY       // 피부과
+  PLASTIC_SURGERY   // 성형외과
+  ORTHOPEDICS       // 정형외과
+  KOREAN_MEDICINE   // 한의원
+  OPHTHALMOLOGY     // 안과
+  INTERNAL_MEDICINE // 내과
+  UROLOGY           // 비뇨기과
+  ENT               // 이비인후과
+  PSYCHIATRY        // 정신건강의학과
+  OBSTETRICS        // 산부인과
+  PEDIATRICS        // 소아과
   OTHER
 }
 
@@ -142,6 +149,7 @@ model Hospital {
   businessNumber     String?            @unique @map("business_number")
   specialtyType      SpecialtyType      @map("specialty_type")
   subSpecialties     String[]           @map("sub_specialties") // ['임플란트', '교정', '미백']
+  keyProcedures      String[]           @map("key_procedures")  // 핵심 시술 3개 (쿼리 생성에 사용)
   regionSido         String             @map("region_sido")     // 시/도
   regionSigungu      String             @map("region_sigungu")  // 시/군/구
   regionDong         String?            @map("region_dong")     // 동/읍/면
@@ -163,6 +171,7 @@ model Hospital {
   subscriptions      Subscription[]
   notifications      Notification[]
   crawlJobs          CrawlJob[]
+  reports            Report[]
 
   @@map("hospitals")
 }
@@ -391,6 +400,90 @@ model Region {
 
   @@unique([sido, sigungu, dong])
   @@map("regions")
+}
+
+// ==================== 진료과별 프리셋 시술 DB ====================
+
+model SpecialtyPreset {
+  id              String        @id @default(uuid())
+  specialtyType   SpecialtyType @map("specialty_type")
+  procedureName   String        @map("procedure_name")    // '임플란트', '교정', '미백' 등
+  procedureAlias  String[]      @map("procedure_alias")   // 별칭들 ['임플', 'implant']
+  category        String        @default("core")          // 'core', 'cosmetic', 'general'
+  isPopular       Boolean       @default(false) @map("is_popular")
+  sortOrder       Int           @default(0) @map("sort_order")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  @@unique([specialtyType, procedureName])
+  @@map("specialty_presets")
+}
+
+// ==================== 쿼리 템플릿 시스템 ====================
+
+// 의도 카테고리별 쿼리 템플릿
+model QueryTemplate {
+  id              String      @id @default(uuid())
+  intentCategory  QueryIntent @map("intent_category")   // RESERVATION, COMPARISON, etc.
+  templateText    String      @map("template_text")      // "{region} {specialty} {procedure} 추천해줘"
+  description     String?                                // "예약 의도 기본 쿼리"
+  platformSpecific AIPlatform? @map("platform_specific") // 특정 플랫폼전용 (null=공통)
+  isWeekly        Boolean     @default(true) @map("is_weekly")   // 주간 14개 쿼리 포함
+  isMonthly       Boolean     @default(false) @map("is_monthly") // 월간 20개 추가 쿼리 포함 (Pro)
+  sortOrder       Int         @default(0) @map("sort_order")
+  isActive        Boolean     @default(true) @map("is_active")
+  createdAt       DateTime    @default(now()) @map("created_at")
+
+  @@map("query_templates")
+}
+
+// ==================== 주간/월간 리포트 ====================
+
+enum ReportType {
+  WEEKLY
+  MONTHLY
+}
+
+enum ReportStatus {
+  GENERATING
+  COMPLETED
+  FAILED
+}
+
+model Report {
+  id              String       @id @default(uuid())
+  hospitalId      String       @map("hospital_id")
+  reportType      ReportType   @map("report_type")
+  reportDate      DateTime     @map("report_date") @db.Date  // 리포트 기준일
+  periodStart     DateTime     @map("period_start") @db.Date
+  periodEnd       DateTime     @map("period_end") @db.Date
+  status          ReportStatus @default(GENERATING)
+  
+  // ABHS 요약
+  abhsScore       Float?       @map("abhs_score")
+  abhsChange      Float?       @map("abhs_change")        // 전주 대비 변화
+  sovPercent      Float?       @map("sov_percent")
+  avgSentimentV2  Float?       @map("avg_sentiment_v2")
+  competitiveShare Float?      @map("competitive_share")
+  
+  // 상세 데이터 (JSON)
+  platformBreakdown  Json?     @map("platform_breakdown")  // 플랫폼별 상세
+  intentBreakdown    Json?     @map("intent_breakdown")    // 의도별 상세
+  depthBreakdown     Json?     @map("depth_breakdown")     // 추천깊이 상세
+  competitorComparison Json?   @map("competitor_comparison")
+  actionInsights     Json?     @map("action_insights")     // AI 생성 인사이트
+  topKeywords        Json?     @map("top_keywords")        // 주요 키워드 분석
+  
+  // 요약 텍스트
+  executiveSummary   String?   @map("executive_summary")   // AI 생성 1문장 요약
+  
+  totalQueriesRun    Int       @default(0) @map("total_queries_run")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, reportType, reportDate])
+  @@map("reports")
 }
 
 // 크롤링 작업 테이블

@@ -33,11 +33,11 @@ const DEPTH_SCORES: Record<string, number> = {
 
 // 질문 의도별 배율
 const INTENT_MULTIPLIERS: Record<string, number> = {
-  RESERVATION: 1.5,   // 예약 의도
-  COMPARISON: 1.0,     // 비교 의도
-  INFORMATION: 1.0,    // 정보 탐색
-  REVIEW: 1.0,         // 후기/리뷰
-  FEAR: 1.0,           // 공포/걱정
+  RESERVATION: 1.5,   // 예약 의도 (매출 직결)
+  REVIEW: 1.3,         // 후기/리뷰 (신뢰도 핵심)
+  FEAR: 1.2,           // 공포/걱정 (전환 기회)
+  COMPARISON: 1.1,     // 비교 의도 (경쟁 분석)
+  INFORMATION: 1.0,    // 정보 탐색 (기본값)
 };
 
 // 감성 점수 매핑 (V2: -2 ~ +2)

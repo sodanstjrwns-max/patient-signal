@@ -1434,11 +1434,11 @@ JSON 형식으로만 답변:
    */
   private getIntentMultiplier(intent: string): number {
     const multipliers: Record<string, number> = {
-      RESERVATION: 1.5,
-      COMPARISON: 1.0,
-      INFORMATION: 1.0,
-      REVIEW: 1.0,
-      FEAR: 1.0,
+      RESERVATION: 1.5,  // 예약 의도 (매출 직결)
+      REVIEW: 1.3,        // 후기/리뷰 (신뢰도 핵심)
+      FEAR: 1.2,          // 공포/걱정 (전환 기회)
+      COMPARISON: 1.1,    // 비교 의도 (경쟁 분석)
+      INFORMATION: 1.0,   // 정보 탐색 (기본값)
     };
     return multipliers[intent] || 1.0;
   }

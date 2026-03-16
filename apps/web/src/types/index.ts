@@ -17,6 +17,7 @@ export interface Hospital {
   businessNumber?: string;
   specialtyType: string;
   subSpecialties: string[];
+  keyProcedures: string[];  // 핵심 시술 3개
   regionSido: string;
   regionSigungu: string;
   regionDong?: string;
@@ -26,6 +27,31 @@ export interface Hospital {
   planType: PlanType;
   subscriptionStatus: SubscriptionStatus;
   createdAt: string;
+}
+
+// 진료과 타입
+export type SpecialtyType = 
+  | 'DENTAL' | 'DERMATOLOGY' | 'PLASTIC_SURGERY' | 'ORTHOPEDICS'
+  | 'KOREAN_MEDICINE' | 'OPHTHALMOLOGY' | 'INTERNAL_MEDICINE' | 'UROLOGY'
+  | 'ENT' | 'PSYCHIATRY' | 'OBSTETRICS' | 'PEDIATRICS' | 'OTHER';
+
+// 쿼리 의도
+export type QueryIntent = 'RESERVATION' | 'COMPARISON' | 'INFORMATION' | 'REVIEW' | 'FEAR';
+
+// 프리셋 시술
+export interface ProcedurePreset {
+  name: string;
+  alias: string[];
+  category: 'core' | 'cosmetic' | 'general';
+  isPopular: boolean;
+}
+
+// 진료과 정보
+export interface SpecialtyInfo {
+  type: string;
+  name: string;
+  procedureCount: number;
+  popularProcedures: string[];
 }
 
 // 일일 점수

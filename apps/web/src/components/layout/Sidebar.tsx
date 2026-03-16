@@ -12,14 +12,16 @@ import {
   LogOut,
   Sparkles,
   Building2,
+  FileText,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
 const navigation = [
   { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
+  { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
   { name: '질문 관리', href: '/dashboard/prompts', icon: MessageSquare },
   { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
-  { name: '분석 리포트', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
   { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
   { name: '설정', href: '/dashboard/settings', icon: Settings },
 ];

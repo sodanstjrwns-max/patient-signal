@@ -43,6 +43,14 @@ const intentNames: Record<string, string> = {
   fear: '공포/걱정',
 };
 
+const intentWeights: Record<string, number> = {
+  reservation: 1.5,
+  review: 1.3,
+  fear: 1.2,
+  comparison: 1.1,
+  information: 1.0,
+};
+
 const depthNames: Record<string, string> = {
   R3: '단독 추천',
   R2: '상위 추천',
@@ -317,12 +325,13 @@ export default function AnalyticsPage() {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   {Object.entries(abhs?.intentScores || {}).map(([intent, score]: [string, any]) => {
-                    const isReservation = intent === 'reservation';
+                    const weight = intentWeights[intent] || 1.0;
+                    const hasWeight = weight > 1.0;
                     return (
-                      <div key={intent} className={`p-4 rounded-lg border ${isReservation ? 'border-blue-200 bg-blue-50' : 'border-gray-100'}`}>
+                      <div key={intent} className={`p-4 rounded-lg border ${hasWeight ? 'border-blue-200 bg-blue-50' : 'border-gray-100'}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-gray-500">{intentNames[intent] || intent}</span>
-                          {isReservation && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">×1.5</span>}
+                          {hasWeight && <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">×{weight}</span>}
                         </div>
                         <p className={`text-2xl font-bold ${score >= 60 ? 'text-green-600' : score >= 30 ? 'text-yellow-600' : 'text-red-500'}`}>
                           {score}

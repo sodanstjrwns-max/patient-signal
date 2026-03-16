@@ -16,6 +16,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { EmailModule } from './email/email.module';
+import { QueryTemplatesModule } from './query-templates/query-templates.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { EmailModule } from './email/email.module';
     PaymentsModule,
     SubscriptionsModule,
     EmailModule,
+    QueryTemplatesModule,
   ],
   controllers: [AppController],
   providers: [

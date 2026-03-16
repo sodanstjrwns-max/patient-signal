@@ -130,3 +130,24 @@ export const competitorsApi = {
   getComparison: (hospitalId: string) =>
     api.get(`/competitors/${hospitalId}/comparison`),
 };
+
+// Query Templates API (쿼리 템플릿 & 진료과 프리셋)
+export const queryTemplatesApi = {
+  // 진료과 목록 (공개)
+  getAllSpecialties: () =>
+    api.get('/query-templates/specialties'),
+  // 진료과별 시술 목록 (공개)
+  getSpecialtyProcedures: (type: string) =>
+    api.get(`/query-templates/specialties/${type}/procedures`),
+  // 쿼리 미리보기 (공개)
+  previewQueries: (data: { region: string; specialtyType: string; procedures: string[]; includeMonthly?: boolean }) =>
+    api.post('/query-templates/preview', data),
+  // 병원 맞춤 쿼리 자동 생성 (인증 필요)
+  generateQueries: (hospitalId: string, includeMonthly?: boolean) =>
+    api.post(`/query-templates/generate/${hospitalId}`, null, { params: { includeMonthly } }),
+  // 시드 데이터 (관리자)
+  seedPresets: () =>
+    api.post('/query-templates/seed/presets'),
+  seedTemplates: () =>
+    api.post('/query-templates/seed/templates'),
+};
