@@ -85,10 +85,10 @@ const DEMO_RESPONSES = [
    - 투명교정 특화
    - 분할납부 가능
 
-[출처: 네이버 플레이스, 강남구청 의료기관 현황]`,
+[출처: 강남구청 의료기관 현황, 강남세바란스병원]`,
     totalRecommendations: 3,
     competitorsMentioned: ['바른이치과', '예쁜미소치과'],
-    citedSources: ['https://place.naver.com', 'https://gangnam.go.kr'],
+    citedSources: ['https://gangnam.go.kr', 'https://www.sebarance.org'],
   },
   {
     id: 'demo-3',
@@ -136,7 +136,7 @@ const DEMO_RESPONSES = [
 4. 청담오라클치과 - 전체적 치료 가능
 
 💡 **선택 팁**
-- 네이버/카카오 리뷰 확인
+- 리뷰 사이트 확인
 - 전문의 자격증 확인
 - 첫 방문 시 상담 후 결정
 

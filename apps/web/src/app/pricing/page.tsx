@@ -15,7 +15,7 @@ import {
 const allFeatures = [
   '200개 질문 모니터링',
   '10개 경쟁사 추적',
-  '6개 AI 플랫폼 (ChatGPT, Perplexity, Claude, Gemini, 네이버 Cue, Google AI Overview)',
+  '4개 AI 플랫폼 (ChatGPT, Perplexity, Claude, Gemini)',
   '카카오톡 + 이메일 알림',
   '감성 분석 리포트',
   '경쟁사 비교 분석',
@@ -159,7 +159,7 @@ export default function PricingPage() {
                 </h3>
                 <p className="text-gray-600 text-sm">
                   현재는 모든 기능에 제한이 없습니다. 
-                  200개 질문 모니터링, 10개 경쟁사 추적, 6개 AI 플랫폼 등 모든 기능을 자유롭게 사용하세요.
+                  200개 질문 모니터링, 10개 경쟁사 추적, 4개 AI 플랫폼 등 모든 기능을 자유롭게 사용하세요.
                 </p>
               </div>
             </div>

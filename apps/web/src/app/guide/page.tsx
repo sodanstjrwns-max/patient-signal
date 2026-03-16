@@ -75,7 +75,7 @@ export default function GuidePage() {
                 <p className="text-blue-700 text-sm">
                   이제 환자들은 &quot;강남 치과 추천해줘&quot;라고 AI에게 물어봅니다.
                   AI가 추천하는 병원이 곧 환자가 선택하는 병원이 됩니다.
-                  기존 SEO가 구글/네이버였다면, 이제는 AI 가시성이 핵심입니다.
+                  기존 SEO가 구글 검색이었다면, 이제는 AI 가시성이 핵심입니다.
                 </p>
               </div>
             </CardContent>
@@ -276,8 +276,8 @@ export default function GuidePage() {
                   Q. 어떤 AI 플랫폼을 지원하나요?
                 </h4>
                 <p className="text-gray-600 text-sm">
-                  현재 ChatGPT(OpenAI)를 지원하며, 
-                  Perplexity, Claude, Gemini 등 추가 플랫폼을 순차적으로 지원 예정입니다.
+                  현재 ChatGPT(OpenAI), Claude, Gemini, Perplexity를 지원하며,
+                  추가 플랫폼도 순차적으로 지원 예정입니다.
                 </p>
               </div>
 

@@ -32,7 +32,7 @@ const slides = [
     iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
     title: 'AI 검색 가시성이란?',
     subtitle: '새로운 시대의 SEO',
-    description: '기존 SEO가 구글/네이버 검색 순위였다면, AI 가시성은 AI가 우리 병원을 얼마나 자주, 긍정적으로 추천하는지를 의미합니다.',
+    description: '기존 SEO가 구글 검색 순위였다면, AI 가시성은 AI가 우리 병원을 얼마나 자주, 긍정적으로 추천하는지를 의미합니다.',
     highlight: 'AI가 추천하는 병원 = 환자가 선택하는 병원',
   },
   {

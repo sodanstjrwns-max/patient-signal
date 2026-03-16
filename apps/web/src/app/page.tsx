@@ -20,7 +20,7 @@ export default function HomePage() {
     {
       icon: <Globe className="h-6 w-6" />,
       title: '멀티 플랫폼 모니터링',
-      description: 'ChatGPT, Perplexity, Claude, Gemini, 네이버 Cue 등 주요 AI 플랫폼을 모두 모니터링합니다.',
+      description: 'ChatGPT, Perplexity, Claude, Gemini 등 주요 AI 플랫폼을 모두 모니터링합니다.',
     },
     {
       icon: <BarChart3 className="h-6 w-6" />,
@@ -42,7 +42,7 @@ export default function HomePage() {
   const allFeatures = [
     '200개 질문 모니터링',
     '10개 경쟁사 추적',
-    '6개 AI 플랫폼 (ChatGPT, Perplexity, Claude, Gemini, 네이버 Cue, Google AI Overview)',
+    '4개 AI 플랫폼 (ChatGPT, Perplexity, Claude, Gemini)',
     '카카오톡 + 이메일 알림',
     '감성 분석 리포트',
     '경쟁사 비교 분석',
@@ -86,7 +86,7 @@ export default function HomePage() {
             <span className="text-blue-600">얼마나 추천하는지</span> 아시나요?
           </h1>
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-            ChatGPT, Perplexity, Claude, Gemini, 네이버 Cue에서<br />
+            ChatGPT, Perplexity, Claude, Gemini에서<br />
             우리 병원이 어떻게 노출되는지 추적하고 최적화하세요.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -117,7 +117,7 @@ export default function HomePage() {
               <div className="text-blue-200 text-sm mt-1">의료 전문 질문 템플릿</div>
             </div>
             <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">6개</div>
+              <div className="text-3xl sm:text-4xl font-bold text-white">4개</div>
               <div className="text-blue-200 text-sm mt-1">AI 플랫폼 지원</div>
             </div>
             <div>

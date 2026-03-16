@@ -48,7 +48,6 @@ export function getPlatformName(platform: string): string {
     PERPLEXITY: 'Perplexity',
     CLAUDE: 'Claude',
     GEMINI: 'Gemini',
-    NAVER_CUE: '네이버 Cue',
     GOOGLE_AI_OVERVIEW: 'Google AI Overview',
   };
   return names[platform] || platform;
@@ -60,7 +59,6 @@ export function getPlatformColor(platform: string): string {
     PERPLEXITY: '#1a73e8',
     CLAUDE: '#7c3aed',
     GEMINI: '#4285f4',
-    NAVER_CUE: '#03c75a',
     GOOGLE_AI_OVERVIEW: '#ea4335',
   };
   return colors[platform] || '#6b7280';
