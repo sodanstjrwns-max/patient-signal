@@ -8,10 +8,6 @@
     {
       "path": "/api/cron/crawl",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/keepalive",
-      "schedule": "*/10 * * * *"
     }
   ]
 }
