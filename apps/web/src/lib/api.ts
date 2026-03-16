@@ -108,6 +108,13 @@ export const scoresApi = {
     api.get(`/scores/${hospitalId}/specialties`),
   getWeekly: (hospitalId: string) =>
     api.get(`/scores/${hospitalId}/weekly`),
+  // 초고도화 ABHS
+  getABHS: (hospitalId: string, days?: number) =>
+    api.get(`/scores/${hospitalId}/abhs`, { params: { days } }),
+  getCompetitiveShare: (hospitalId: string) =>
+    api.get(`/scores/${hospitalId}/abhs/competitive-share`),
+  getActionIntelligence: (hospitalId: string) =>
+    api.get(`/scores/${hospitalId}/abhs/actions`),
 };
 
 // Competitors API

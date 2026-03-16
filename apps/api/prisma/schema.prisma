@@ -62,6 +62,23 @@ enum SentimentLabel {
   NEGATIVE
 }
 
+// 초고도화: 추천 깊이
+enum RecommendationDepth {
+  R0  // 부정적 언급 / 비추천
+  R1  // 단순 언급
+  R2  // 복수 추천 중 상위
+  R3  // 단독 추천
+}
+
+// 초고도화: 질문 의도
+enum QueryIntent {
+  RESERVATION   // 예약 의도 (×1.5)
+  COMPARISON    // 비교 의도 (×1.0)
+  INFORMATION   // 정보 탐색 (×1.0)
+  REVIEW        // 후기/리뷰 (×1.0)
+  FEAR          // 공포/걱정 (×1.0)
+}
+
 enum NotificationType {
   NEW_MENTION
   RANK_CHANGE
@@ -189,6 +206,13 @@ model AIResponse {
   isWebSearch          Boolean       @default(false) @map("is_web_search") // 웹 검색 모드 사용 여부
   isVerified           Boolean       @default(true) @map("is_verified")     // 환각 필터링 통과 여부
   verificationSource   String?       @map("verification_source")             // 검증 소스 (naver_place, kakao_map 등)
+  // 초고도화 ABHS 프레임워크 컬럼
+  sentimentScoreV2     Int?          @map("sentiment_score_v2")   // -2 ~ +2 (강한부정~강한긍정)
+  recommendationDepth  RecommendationDepth? @map("recommendation_depth") // R0~R3
+  queryIntent          QueryIntent?  @map("query_intent")         // 질문 의도
+  platformWeight       Float?        @map("platform_weight")      // 플랫폼 가중치 (1.0~1.4)
+  abhsContribution     Float?        @map("abhs_contribution")    // 이 응답의 ABHS 기여분
+  citedUrl             String?       @map("cited_url")            // Perplexity 인용 URL (대표)
   createdAt            DateTime      @default(now()) @map("created_at")
 
   prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
@@ -209,6 +233,13 @@ model DailyScore {
   platformScores  Json     @map("platform_scores")  // {chatgpt: 70, perplexity: 68}
   mentionCount    Int      @default(0) @map("mention_count")
   positiveRatio   Float    @default(0) @map("positive_ratio")
+  // 초고도화 ABHS 프레임워크
+  abhsScore       Float?   @map("abhs_score")       // ABHS 종합 점수 (0~100)
+  sovPercent      Float?   @map("sov_percent")      // Voice Share %
+  avgSentimentV2  Float?   @map("avg_sentiment_v2") // 평균 감성 (-2~+2)
+  platformContributions Json? @map("platform_contributions") // {chatgpt: {weight, score, contribution}}
+  intentScores    Json?    @map("intent_scores")    // {reservation: 85, comparison: 72, ...}
+  depthDistribution Json?  @map("depth_distribution") // {R0: 2, R1: 5, R2: 8, R3: 3}
   createdAt       DateTime @default(now()) @map("created_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)

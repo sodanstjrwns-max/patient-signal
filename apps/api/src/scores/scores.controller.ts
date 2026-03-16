@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScoresService } from './scores.service';
+import { ABHSService } from './abhs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('점수 및 통계')
@@ -8,7 +9,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class ScoresController {
-  constructor(private scoresService: ScoresService) {}
+  constructor(
+    private scoresService: ScoresService,
+    private abhsService: ABHSService,
+  ) {}
 
   @Get(':hospitalId/latest')
   @ApiOperation({ summary: '최신 점수 조회' })
@@ -56,5 +60,37 @@ export class ScoresController {
   })
   async getPromptHeatmap(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getPromptHeatmap(hospitalId);
+  }
+
+  // ==================== 초고도화: ABHS 엔드포인트 ====================
+
+  @Get(':hospitalId/abhs')
+  @ApiOperation({ 
+    summary: '【초고도화】ABHS 종합 점수',
+    description: 'AI-Based Hospital Score: SoV × Sentiment × Depth × PlatformWeight × IntentMatch → 0~100' 
+  })
+  async getABHSScore(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    return this.abhsService.calculateABHS(hospitalId, parseInt(days || '30'));
+  }
+
+  @Get(':hospitalId/abhs/competitive-share')
+  @ApiOperation({ 
+    summary: '【초고도화】경쟁사 대비 Weighted Competitive Share',
+    description: '경쟁사 대비 ABHS 점유율 계산' 
+  })
+  async getCompetitiveShare(@Param('hospitalId') hospitalId: string) {
+    return this.abhsService.calculateCompetitiveShare(hospitalId);
+  }
+
+  @Get(':hospitalId/abhs/actions')
+  @ApiOperation({ 
+    summary: '【초고도화】자동 액션 인텔리전스',
+    description: '부정 언급 감지, SoV 급락 경고, 예약 의도 미언급 경고 등' 
+  })
+  async getActionIntelligence(@Param('hospitalId') hospitalId: string) {
+    return this.abhsService.generateActionIntelligence(hospitalId);
   }
 }

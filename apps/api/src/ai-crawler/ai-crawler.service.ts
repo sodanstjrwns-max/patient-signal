@@ -235,7 +235,36 @@ export class AICrawlerService {
           this.logger.log(`✅ ${platform} [${repeatIdx + 1}] 응답 받음, 언급: ${result.isMentioned}`);
           allResults.push(result);
 
-          // DB에 저장 (반복 인덱스 포함)
+          // 【초고도화】ABHS 통합 분석 (감성V2 + 추천깊이 + 질문의도)
+          let sentimentV2: number | null = null;
+          let recDepth: string | null = null;
+          let queryIntent: string | null = null;
+          let abhsContribution: number | null = null;
+          let citedUrl: string | null = null;
+
+          if (result.isMentioned) {
+            const abhsAnalysis = await this.analyzeResponseWithABHS(result.response, hospitalName, promptText);
+            if (abhsAnalysis) {
+              result.sentimentScore = abhsAnalysis.score;
+              result.sentimentLabel = abhsAnalysis.label;
+              sentimentV2 = abhsAnalysis.sentimentV2;
+              recDepth = abhsAnalysis.recommendationDepth;
+              queryIntent = abhsAnalysis.queryIntent;
+              
+              // ABHS 기여분 계산
+              const platformWeight = this.getPlatformWeight(platform);
+              const sentFactor = this.sentimentToFactor(sentimentV2);
+              const depthScore = this.getDepthScore(recDepth);
+              const intentMultiplier = this.getIntentMultiplier(queryIntent);
+              abhsContribution = sentFactor * depthScore * platformWeight * intentMultiplier;
+              citedUrl = result.citedSources?.[0] || null;
+            }
+          } else {
+            // 미언급 시 의도만 분류
+            queryIntent = this.classifyQueryIntentSimple(promptText);
+          }
+
+          // DB에 저장 (ABHS 데이터 포함)
           await this.prisma.aIResponse.create({
             data: {
               promptId,
@@ -255,6 +284,13 @@ export class AICrawlerService {
               isWebSearch: result.isWebSearch || false,
               isVerified: result.isVerified,
               verificationSource: result.verificationSource,
+              // 초고도화 ABHS 필드
+              sentimentScoreV2: sentimentV2,
+              recommendationDepth: recDepth as any,
+              queryIntent: queryIntent as any,
+              platformWeight: this.getPlatformWeight(platform),
+              abhsContribution,
+              citedUrl,
             },
           });
 
@@ -372,14 +408,7 @@ export class AICrawlerService {
     const result = this.analyzeResponse(response, hospitalName, 'CHATGPT', model);
     result.isWebSearch = isWebSearch;
     
-    // 【개선7】AI 기반 감성 분석
-    if (result.isMentioned) {
-      const aiSentiment = await this.analyzeContextSentimentWithAI(response, hospitalName);
-      if (aiSentiment) {
-        result.sentimentScore = aiSentiment.score;
-        result.sentimentLabel = aiSentiment.label;
-      }
-    }
+    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
     
     return result;
   }
@@ -406,14 +435,7 @@ export class AICrawlerService {
     const response = message.content[0].type === 'text' ? message.content[0].text : '';
     const result = this.analyzeResponse(response, hospitalName, 'CLAUDE', 'claude-3-haiku-20240307');
     
-    // 【개선7】AI 기반 감성 분석
-    if (result.isMentioned) {
-      const aiSentiment = await this.analyzeContextSentimentWithAI(response, hospitalName);
-      if (aiSentiment) {
-        result.sentimentScore = aiSentiment.score;
-        result.sentimentLabel = aiSentiment.label;
-      }
-    }
+    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
     
     return result;
   }
@@ -467,14 +489,7 @@ export class AICrawlerService {
       result.citedSources = [...new Set([...result.citedSources, ...citations])].slice(0, 15);
     }
     
-    // 【개선7】AI 기반 감성 분석
-    if (result.isMentioned) {
-      const aiSentiment = await this.analyzeContextSentimentWithAI(text, hospitalName);
-      if (aiSentiment) {
-        result.sentimentScore = aiSentiment.score;
-        result.sentimentLabel = aiSentiment.label;
-      }
-    }
+    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
     
     return result;
   }
@@ -562,30 +577,30 @@ export class AICrawlerService {
     const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.0-flash');
     result.isWebSearch = isWebSearch;
     
-    // 【개선7】AI 기반 감성 분석
-    if (result.isMentioned) {
-      const aiSentiment = await this.analyzeContextSentimentWithAI(text, hospitalName);
-      if (aiSentiment) {
-        result.sentimentScore = aiSentiment.score;
-        result.sentimentLabel = aiSentiment.label;
-      }
-    }
+    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
     
     return result;
   }
 
 
 
-  // ==================== 개선7: AI 기반 감성 분석 ====================
+  // ==================== 초고도화: ABHS 통합 AI 분석 ====================
 
   /**
-   * 【개선7】GPT를 활용한 AI 기반 감성 분석
-   * 키워드 매칭 대신 AI가 맥락을 이해하여 감성 점수 산출
+   * 【초고도화】GPT를 활용한 ABHS 통합 분석
+   * 한 번의 API 호출로 Sentiment(-2~+2), RecommendationDepth(R0~R3), QueryIntent를 동시 분류
    */
-  private async analyzeContextSentimentWithAI(
+  async analyzeResponseWithABHS(
     responseText: string,
     hospitalName: string,
-  ): Promise<{ score: number; label: SentimentLabel } | null> {
+    promptText: string,
+  ): Promise<{
+    score: number;
+    label: SentimentLabel;
+    sentimentV2: number;
+    recommendationDepth: string;
+    queryIntent: string;
+  } | null> {
     if (!this.openai) return null;
     
     try {
@@ -603,11 +618,11 @@ export class AICrawlerService {
       }
       
       if (firstIdx !== -1) {
-        const start = Math.max(0, firstIdx - 200);
-        const end = Math.min(responseText.length, firstIdx + hospitalName.length + 300);
+        const start = Math.max(0, firstIdx - 300);
+        const end = Math.min(responseText.length, firstIdx + hospitalName.length + 400);
         contextText = responseText.slice(start, end);
-      } else if (responseText.length > 500) {
-        contextText = responseText.substring(0, 500);
+      } else if (responseText.length > 800) {
+        contextText = responseText.substring(0, 800);
       }
 
       const completion = await this.openai.chat.completions.create({
@@ -615,22 +630,39 @@ export class AICrawlerService {
         messages: [
           {
             role: 'user',
-            content: `다음 AI 응답에서 "${hospitalName}"에 대한 감성을 분석해주세요.
-            
-응답 텍스트:
+            content: `병원 AI 가시성 분석: "${hospitalName}"
+
+환자 질문: "${promptText.substring(0, 100)}"
+
+AI 응답:
 """
 ${contextText}
 """
 
-다음 JSON 형식으로만 답변해주세요 (다른 텍스트 없이):
-{"score": <-1.0 ~ 1.0 사이 소수>, "label": "<POSITIVE|NEUTRAL|NEGATIVE>", "reason": "<한 줄 근거>"}
+다음 3가지를 JSON으로만 답변하세요:
 
-점수 기준:
-- 1.0: 매우 긍정적 (강력 추천, 전문성 강조)
-- 0.5: 긍정적 (일반 추천)
-- 0.0: 중립 (단순 언급)
-- -0.5: 부정적 (부정적 후기 언급)
-- -1.0: 매우 부정적 (비추천, 부작용 등)`,
+1. sentiment (-2~+2 정수):
+  +2: 강한 긍정 (단독 강력 추천, "꼭 가보세요")
+  +1: 긍정 (일반 추천, 장점 나열)
+   0: 중립 (단순 언급, 팩트 전달)
+  -1: 부정 (단점 언급, 부정 후기)
+  -2: 강한 부정 (비추천, "피하세요", 부작용 경고)
+
+2. depth (R0~R3):
+  R3: 단독 추천 (유일하게 추천된 병원)
+  R2: 복수 추천 중 상위 (1~2번째)
+  R1: 단순 언급 (리스트 하위 또는 이름만)
+  R0: 미언급 또는 부정적 맥락
+
+3. intent (질문의 의도):
+  RESERVATION: 예약/방문 의도
+  COMPARISON: 비교 의도
+  INFORMATION: 정보 탐색
+  REVIEW: 후기/리뷰
+  FEAR: 공포/걱정
+
+JSON만 답변:
+{"sentiment": <-2~+2>, "depth": "<R0~R3>", "intent": "<INTENT>", "reason": "<한줄>"}`,
           },
         ],
         temperature: 0,
@@ -639,23 +671,41 @@ ${contextText}
 
       const aiResponse = completion.choices[0]?.message?.content || '';
       
-      // JSON 파싱
       const jsonMatch = aiResponse.match(/\{[^}]+\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const score = Math.max(-1, Math.min(1, parseFloat(parsed.score) || 0));
-        let label: SentimentLabel = 'NEUTRAL';
-        if (score > 0.2) label = 'POSITIVE';
-        else if (score < -0.2) label = 'NEGATIVE';
+        const sentimentV2 = Math.max(-2, Math.min(2, parseInt(parsed.sentiment) || 0));
+        const depth = ['R0', 'R1', 'R2', 'R3'].includes(parsed.depth) ? parsed.depth : 'R0';
+        const intent = ['RESERVATION', 'COMPARISON', 'INFORMATION', 'REVIEW', 'FEAR'].includes(parsed.intent) ? parsed.intent : 'INFORMATION';
         
-        this.logger.log(`[AI 감성분석] ${hospitalName}: score=${score}, label=${label}, reason=${parsed.reason}`);
-        return { score, label };
+        // V2 → 기존 호환 변환
+        const score = sentimentV2 / 2; // -2~+2 → -1~+1
+        let label: SentimentLabel = 'NEUTRAL';
+        if (sentimentV2 >= 1) label = 'POSITIVE';
+        else if (sentimentV2 <= -1) label = 'NEGATIVE';
+        
+        this.logger.log(`[ABHS분석] ${hospitalName}: sent=${sentimentV2}, depth=${depth}, intent=${intent}, reason=${parsed.reason}`);
+        return { score, label, sentimentV2, recommendationDepth: depth, queryIntent: intent };
       }
     } catch (error) {
-      this.logger.warn(`[AI 감성분석] 실패, 키워드 방식으로 폴백: ${error.message}`);
+      this.logger.warn(`[ABHS분석] 실패, 폴백: ${error.message}`);
     }
     
-    return null; // 실패 시 null 반환 → 기존 키워드 방식 사용
+    return null;
+  }
+
+  /**
+   * 하위 호환: 기존 감성 분석 (ABHS 분석 실패 시 폴백)
+   */
+  private async analyzeContextSentimentWithAI(
+    responseText: string,
+    hospitalName: string,
+  ): Promise<{ score: number; label: SentimentLabel } | null> {
+    const result = await this.analyzeResponseWithABHS(responseText, hospitalName, '');
+    if (result) {
+      return { score: result.score, label: result.label };
+    }
+    return null;
   }
 
   // ==================== 개선10: AI 환각 필터링 ====================
@@ -1337,6 +1387,83 @@ JSON 형식으로만 답변:
     return [...new Set(urls)].slice(0, 10);
   }
 
+  // ==================== 초고도화: ABHS 헬퍼 메서드 ====================
+
+  /**
+   * 플랫폼별 가중치
+   */
+  private getPlatformWeight(platform: AIPlatform): number {
+    const weights: Record<string, number> = {
+      PERPLEXITY: 1.4,
+      CHATGPT: 1.3,
+      GEMINI: 1.2,
+      CLAUDE: 1.0,
+    };
+    return weights[platform] || 1.0;
+  }
+
+  /**
+   * 감성 V2 → ABHS 팩터 변환
+   */
+  private sentimentToFactor(sentV2: number): number {
+    switch (sentV2) {
+      case -2: return 0;
+      case -1: return 0.25;
+      case 0: return 0.5;
+      case 1: return 1.0;
+      case 2: return 1.5;
+      default: return Math.max(0, (sentV2 + 2) / 4 * 1.5);
+    }
+  }
+
+  /**
+   * 추천 깊이 → 점수 변환
+   */
+  private getDepthScore(depth: string): number {
+    const scores: Record<string, number> = {
+      R3: 4.0,
+      R2: 3.0,
+      R1: 1.5,
+      R0: 0.0,
+    };
+    return scores[depth] || 0;
+  }
+
+  /**
+   * 질문 의도 → 배율 변환
+   */
+  private getIntentMultiplier(intent: string): number {
+    const multipliers: Record<string, number> = {
+      RESERVATION: 1.5,
+      COMPARISON: 1.0,
+      INFORMATION: 1.0,
+      REVIEW: 1.0,
+      FEAR: 1.0,
+    };
+    return multipliers[intent] || 1.0;
+  }
+
+  /**
+   * 간단한 질문 의도 분류 (AI 호출 없이 키워드 기반)
+   */
+  private classifyQueryIntentSimple(promptText: string): string {
+    const text = promptText.toLowerCase();
+    
+    const reservationKeywords = ['예약', '방문', '가고싶', '가려고', '추천해줘', '소개', '갈만한', '가볼만한', '좋은 병원', '어떤 병원'];
+    if (reservationKeywords.some(k => text.includes(k))) return 'RESERVATION';
+    
+    const comparisonKeywords = ['비교', 'vs', '차이', '뭐가 나', '어디가 더', '비용 비교'];
+    if (comparisonKeywords.some(k => text.includes(k))) return 'COMPARISON';
+    
+    const reviewKeywords = ['후기', '리뷰', '경험', '솔직', '실제', '다녀온'];
+    if (reviewKeywords.some(k => text.includes(k))) return 'REVIEW';
+    
+    const fearKeywords = ['아프', '무섭', '두려', '걱정', '부작용', '위험', '실패', '통증'];
+    if (fearKeywords.some(k => text.includes(k))) return 'FEAR';
+    
+    return 'INFORMATION';
+  }
+
   // ==================== 일일 점수 계산 (개선된 버전) ====================
 
   /**
@@ -1473,6 +1600,12 @@ JSON 형식으로만 답변:
         specialtyScores,
         mentionCount: mentionedGroups,
         positiveRatio: sentimentScores.filter(s => s > 60).length / Math.max(responses.length, 1),
+        // 초고도화 ABHS 데이터
+        sovPercent: mentionRate,
+        avgSentimentV2: this.calculateAvgSentimentV2(responses),
+        platformContributions: this.calculatePlatformContributions(responses),
+        intentScores: this.calculateIntentScores(responses),
+        depthDistribution: this.calculateDepthDistribution(responses),
       },
       create: {
         hospitalId,
@@ -1482,9 +1615,76 @@ JSON 형식으로만 답변:
         specialtyScores,
         mentionCount: mentionedGroups,
         positiveRatio: sentimentScores.filter(s => s > 60).length / Math.max(responses.length, 1),
+        // 초고도화 ABHS 데이터
+        sovPercent: mentionRate,
+        avgSentimentV2: this.calculateAvgSentimentV2(responses),
+        platformContributions: this.calculatePlatformContributions(responses),
+        intentScores: this.calculateIntentScores(responses),
+        depthDistribution: this.calculateDepthDistribution(responses),
       },
     });
 
     return overallScore;
+  }
+
+  // ==================== 초고도화: ABHS 집계 헬퍼 ====================
+
+  private calculateAvgSentimentV2(responses: any[]): number {
+    const v2Values = responses
+      .filter(r => r.sentimentScoreV2 != null)
+      .map(r => r.sentimentScoreV2);
+    if (v2Values.length === 0) return 0;
+    return v2Values.reduce((a: number, b: number) => a + b, 0) / v2Values.length;
+  }
+
+  private calculatePlatformContributions(responses: any[]): any {
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const result: any = {};
+    
+    for (const platform of platforms) {
+      const platResps = responses.filter(r => r.aiPlatform === platform);
+      if (platResps.length === 0) continue;
+      
+      const weight = this.getPlatformWeight(platform as AIPlatform);
+      const mentioned = platResps.filter(r => r.isMentioned).length;
+      const avgContrib = platResps
+        .filter(r => r.abhsContribution != null)
+        .map(r => r.abhsContribution);
+      
+      result[platform.toLowerCase()] = {
+        weight,
+        responseCount: platResps.length,
+        sovPercent: Math.round((mentioned / platResps.length) * 100),
+        avgContribution: avgContrib.length > 0 
+          ? avgContrib.reduce((a: number, b: number) => a + b, 0) / avgContrib.length 
+          : 0,
+      };
+    }
+    return result;
+  }
+
+  private calculateIntentScores(responses: any[]): any {
+    const intents = ['RESERVATION', 'COMPARISON', 'INFORMATION', 'REVIEW', 'FEAR'] as const;
+    const result: any = {};
+    
+    for (const intent of intents) {
+      const intentResps = responses.filter(r => r.queryIntent === intent);
+      if (intentResps.length === 0) {
+        result[intent.toLowerCase()] = 0;
+        continue;
+      }
+      const mentioned = intentResps.filter(r => r.isMentioned).length;
+      result[intent.toLowerCase()] = Math.round((mentioned / intentResps.length) * 100);
+    }
+    return result;
+  }
+
+  private calculateDepthDistribution(responses: any[]): any {
+    const dist: any = { R0: 0, R1: 0, R2: 0, R3: 0 };
+    for (const r of responses) {
+      const depth = r.recommendationDepth || 'R0';
+      dist[depth] = (dist[depth] || 0) + 1;
+    }
+    return dist;
   }
 }
