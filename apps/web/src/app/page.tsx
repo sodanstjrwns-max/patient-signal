@@ -92,42 +92,10 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/register">
               <Button size="lg" className="px-8">
-                무료로 시작하기
+                시작하기
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="#features">
-              <Button variant="outline" size="lg">
-                기능 살펴보기
-              </Button>
-            </Link>
-          </div>
-          <p className="text-sm text-gray-500 mt-4">
-            카드 등록 없이 바로 사용 가능 · 모든 기능 무료
-          </p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="py-12 bg-blue-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">500+</div>
-              <div className="text-blue-200 text-sm mt-1">의료 전문 질문 템플릿</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">4개</div>
-              <div className="text-blue-200 text-sm mt-1">AI 플랫폼 지원</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">100%</div>
-              <div className="text-blue-200 text-sm mt-1">무료</div>
-            </div>
-            <div>
-              <div className="text-3xl sm:text-4xl font-bold text-white">2.1배</div>
-              <div className="text-blue-200 text-sm mt-1">평균 매출 성장</div>
-            </div>
           </div>
         </div>
       </section>
