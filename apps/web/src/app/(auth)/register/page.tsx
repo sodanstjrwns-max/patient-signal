@@ -130,20 +130,9 @@ export default function RegisterPage() {
             </label>
 
             <Button type="submit" className="w-full" loading={loading}>
-              무료로 시작하기
+              가입하기
             </Button>
           </form>
-
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              모든 기능 무료 (카드 등록 필요 없음)
-            </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <CheckCircle className="h-4 w-4 text-green-500" />
-              가입 즉시 사용 가능
-            </div>
-          </div>
 
           <div className="mt-6 text-center text-sm text-gray-500">
             이미 계정이 있으신가요?{' '}
