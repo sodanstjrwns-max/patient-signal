@@ -109,6 +109,20 @@ export class SubscriptionsController {
   }
 
   /**
+   * 사용량 현황 조회
+   */
+  @Get('usage')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '사용량 현황', description: '현재 플랜의 사용량 현황을 조회합니다' })
+  async getUsage(@CurrentUser() user: any) {
+    if (!user.hospitalId) {
+      return { error: '병원 정보가 등록되지 않았습니다.' };
+    }
+    return this.subscriptionsService.getUsage(user.hospitalId);
+  }
+
+  /**
    * 전체 플랜 기능 비교
    */
   @Get('plans/compare')

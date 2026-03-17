@@ -134,6 +134,21 @@ api.interceptors.response.use(
   }
 );
 
+// 403 플랜 에러 전역 처리 (개별 컴포넌트에서 catch하지 않은 경우)
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 403) {
+      const data = error.response?.data as any;
+      if (data?.error === 'PLAN_UPGRADE_REQUIRED' || data?.error === 'PLAN_LIMIT_REACHED' || data?.error === 'FEATURE_NOT_AVAILABLE' || data?.error === 'MONTHLY_CRAWL_LIMIT') {
+        // 토스트로 안내 (컴포넌트에서 catch하지 않은 경우)
+        toast.warning(data?.message || '플랜 업그레이드가 필요합니다.');
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Auth API
 export const authApi = {
   register: (data: { email: string; password: string; name: string; phone?: string; isPfMember?: boolean }) =>
@@ -244,4 +259,22 @@ export const queryTemplatesApi = {
     api.post('/query-templates/seed/presets'),
   seedTemplates: () =>
     api.post('/query-templates/seed/templates'),
+};
+
+// Subscriptions API
+export const subscriptionsApi = {
+  getMySubscription: () =>
+    api.get('/subscriptions/me'),
+  getUsage: () =>
+    api.get('/subscriptions/usage'),
+  cancel: () =>
+    api.post('/subscriptions/cancel'),
+  reactivate: () =>
+    api.post('/subscriptions/reactivate'),
+  upgrade: (planType: string) =>
+    api.patch('/subscriptions/upgrade', { planType }),
+  getPlanLimits: (planType: string) =>
+    api.get(`/subscriptions/plans/${planType}/limits`),
+  comparePlans: () =>
+    api.get('/subscriptions/plans/compare'),
 };

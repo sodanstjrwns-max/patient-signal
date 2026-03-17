@@ -19,15 +19,20 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
-
-const MAX_PROMPTS = 10;
+import { UsageBar, UpgradeModal, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
+import { Lock } from 'lucide-react';
 
 export default function PromptsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
+  const planType = (user as any)?.hospital?.planType || 'STARTER';
+  const planLimits = getPlanLimits(planType);
+  const MAX_PROMPTS = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
   const [newPrompt, setNewPrompt] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('');
 
   // 프롬프트 목록 조회
   const { data: prompts, isLoading } = useQuery({
@@ -45,7 +50,13 @@ export default function PromptsPage() {
       setNewPrompt('');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || '질문 추가에 실패했습니다.');
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_LIMIT_REACHED') {
+        setUpgradeFeature('maxPrompts');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '질문 추가에 실패했습니다.');
+      }
     },
   });
 
@@ -74,7 +85,13 @@ export default function PromptsPage() {
       toast.success('AI가 연관 질문을 생성했습니다!');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || '질문 생성에 실패했습니다.');
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_UPGRADE_REQUIRED') {
+        setUpgradeFeature('queryFanouts');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '질문 생성에 실패했습니다.');
+      }
     },
   });
 
@@ -123,6 +140,18 @@ export default function PromptsPage() {
       />
 
       <div className="p-6 space-y-6">
+        {/* 플랜 사용량 표시 */}
+        <Card className="bg-gradient-to-r from-gray-50 to-white">
+          <CardContent className="p-4">
+            <UsageBar
+              used={totalPrompts}
+              limit={MAX_PROMPTS}
+              label="모니터링 질문"
+              planType={planType}
+            />
+          </CardContent>
+        </Card>
+
         {/* 질문 개수 현황 + 새 질문 추가 */}
         <Card>
           <CardHeader>
@@ -257,11 +286,21 @@ export default function PromptsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => generateMutation.mutate(prompt.id)}
+                          onClick={() => {
+                            if (!canUseFeature(planType, 'queryFanouts')) {
+                              setUpgradeFeature('queryFanouts');
+                              setShowUpgradeModal(true);
+                              return;
+                            }
+                            generateMutation.mutate(prompt.id);
+                          }}
                           disabled={generateMutation.isPending}
                           title="AI로 연관 질문 생성"
                         >
                           <Sparkles className="h-4 w-4 text-purple-600" />
+                          {!canUseFeature(planType, 'queryFanouts') && (
+                            <Lock className="h-3 w-3 ml-0.5 text-gray-400" />
+                          )}
                         </Button>
                       )}
                       <Button
@@ -296,6 +335,14 @@ export default function PromptsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 업그레이드 모달 */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
+        currentPlan={planType}
+      />
     </div>
   );
 }

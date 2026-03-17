@@ -1,13 +1,15 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Query } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AICrawlerService } from './ai-crawler.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { PlanGuard } from '../common/guards/plan.guard';
+import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
 @ApiTags('AI 크롤러')
 @Controller('ai-crawler')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PlanGuard)
 @ApiBearerAuth()
 export class AICrawlerController {
   constructor(
@@ -68,12 +70,14 @@ export class AICrawlerController {
   // ==================== 개선된 크롤링 엔드포인트 ====================
 
   @Post('crawl/:hospitalId')
+  @PlanLimit({ feature: 'crawlsPerMonth' })
   @ApiOperation({ 
     summary: '수동 크롤링 실행 (개선: 3회 반복, temp=0, 웹검색)',
     description: '해당 병원의 활성 프롬프트에 대해 개선된 AI 크롤링을 실행합니다. 각 플랫폼 3회 반복 측정.' 
   })
   async triggerCrawl(
     @Param('hospitalId') hospitalId: string,
+    @Req() req: any,
   ) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
@@ -96,14 +100,19 @@ export class AICrawlerController {
       },
     });
 
+    // 플랫폼 제한: 플랜에 따라 허용된 플랫폼만 사용
+    const allowedPlatforms = req.planLimits?.platforms || ['CHATGPT', 'PERPLEXITY'];
+
     // 비동기로 개선된 크롤링 실행
-    this.executeCrawling(crawlJob.id, hospital, prompts);
+    this.executeCrawling(crawlJob.id, hospital, prompts, allowedPlatforms);
 
     return {
       jobId: crawlJob.id,
       totalPrompts: prompts.length,
       status: 'RUNNING',
-      message: '개선된 크롤링이 시작되었습니다 (3회 반복 측정, temperature=0, 웹검색 활성화)',
+      platforms: allowedPlatforms,
+      planInfo: req.planInfo || null,
+      message: '크롤링이 시작되었습니다',
       improvements: [
         'temperature=0 (재현성 확보)',
         '3회 반복 측정 (일관성 검증)',
@@ -157,6 +166,7 @@ export class AICrawlerController {
   // ==================== 개선3: 경쟁사 AEO 측정 ====================
 
   @Post('competitor-aeo/:hospitalId/:competitorId')
+  @PlanLimit({ feature: 'competitorAEO' })
   @ApiOperation({ 
     summary: '【개선3】경쟁사 AEO 점수 측정',
     description: '동일한 프롬프트로 경쟁사의 AI 가시성을 실제 측정합니다' 
@@ -184,6 +194,7 @@ export class AICrawlerController {
   }
 
   @Post('competitor-aeo-all/:hospitalId')
+  @PlanLimit({ feature: 'competitorAEO' })
   @ApiOperation({ 
     summary: '【개선3】모든 경쟁사 AEO 일괄 측정',
     description: '등록된 모든 활성 경쟁사의 AEO 점수를 측정합니다' 
@@ -240,6 +251,7 @@ export class AICrawlerController {
   // ==================== 개선5: Content Gap 분석 ====================
 
   @Post('content-gap/:hospitalId')
+  @PlanLimit({ feature: 'contentGap' })
   @ApiOperation({ 
     summary: '【개선5】Content Gap 분석 + AI 개선 가이드',
     description: 'AI가 경쟁사 대비 부족한 콘텐츠를 분석하고 개선 전략을 제안합니다' 
@@ -274,15 +286,15 @@ export class AICrawlerController {
     jobId: string,
     hospital: any,
     prompts: any[],
+    allowedPlatforms?: string[],
   ) {
     let completed = 0;
     let failed = 0;
     const errors: string[] = [];
     
-    console.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개 (3회 반복 측정)`);
-
-    // 플랫폼 결정: 찐 AI만 (ChatGPT, Claude, Perplexity, Gemini)
-    const platforms: any[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+    // 플랜에 따라 허용된 플랫폼만 사용
+    const platforms: any[] = allowedPlatforms || ['CHATGPT', 'PERPLEXITY'];
+    console.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개, 플랫폼: ${platforms.join(', ')}`);
 
     for (const prompt of prompts) {
       try {

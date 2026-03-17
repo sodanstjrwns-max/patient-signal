@@ -340,44 +340,75 @@ export class SubscriptionsService {
   }
 
   /**
-   * 플랜별 기능 제한 확인
+   * 플랜별 기능 제한 확인 (PlanGuard.PLAN_LIMITS와 동기화)
    */
   getPlanLimits(planType: PlanType) {
-    const limits = {
-      STARTER: {
-        maxPrompts: 5,
-        maxCompetitors: 2,
-        platforms: ['CHATGPT', 'PERPLEXITY'],
-        crawlFrequency: 'weekly',
-        exportEnabled: false,
-        aiRecommendations: false,
+    // PlanGuard의 PLAN_LIMITS를 사용
+    const { PlanGuard } = require('../common/guards/plan.guard');
+    return PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+  }
+
+  /**
+   * 사용량 현황 조회 (프론트엔드 대시보드용)
+   */
+  async getUsage(hospitalId: string) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: {
+        planType: true,
+        _count: {
+          select: {
+            prompts: true,
+            competitors: true,
+          },
+        },
       },
-      STANDARD: {
-        maxPrompts: 20,
-        maxCompetitors: 5,
-        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
-        crawlFrequency: 'daily',
-        exportEnabled: true,
-        aiRecommendations: false,
+    });
+
+    if (!hospital) {
+      return null;
+    }
+
+    const { PlanGuard } = require('../common/guards/plan.guard');
+    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.STARTER;
+
+    // 이번 달 크롤링 횟수
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const crawlCount = await this.prisma.crawlJob.count({
+      where: {
+        hospitalId,
+        startedAt: { gte: monthStart },
+        status: { in: ['COMPLETED', 'RUNNING'] },
       },
-      PRO: {
-        maxPrompts: 100,
-        maxCompetitors: 20,
-        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW'],
-        crawlFrequency: 'daily',
-        exportEnabled: true,
-        aiRecommendations: true,
+    });
+
+    return {
+      planType: hospital.planType,
+      usage: {
+        prompts: {
+          used: hospital._count.prompts,
+          limit: limits.maxPrompts,
+          remaining: limits.maxPrompts === -1 ? -1 : Math.max(0, limits.maxPrompts - hospital._count.prompts),
+        },
+        competitors: {
+          used: hospital._count.competitors,
+          limit: limits.maxCompetitors,
+          remaining: limits.maxCompetitors === -1 ? -1 : Math.max(0, limits.maxCompetitors - hospital._count.competitors),
+        },
+        crawls: {
+          used: crawlCount,
+          limit: limits.crawlsPerMonth,
+          remaining: limits.crawlsPerMonth === -1 ? -1 : Math.max(0, limits.crawlsPerMonth - crawlCount),
+        },
       },
-      ENTERPRISE: {
-        maxPrompts: -1, // unlimited
-        maxCompetitors: -1,
-        platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW'],
-        crawlFrequency: 'realtime',
-        exportEnabled: true,
-        aiRecommendations: true,
+      features: {
+        platforms: limits.platforms,
+        exportEnabled: limits.exportEnabled,
+        aiRecommendations: limits.aiRecommendations,
+        contentGap: limits.contentGap,
+        competitorAEO: limits.competitorAEO,
       },
     };
-
-    return limits[planType] || limits.STARTER;
   }
 }

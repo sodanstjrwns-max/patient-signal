@@ -20,16 +20,22 @@ import {
   Loader2,
   Building,
   MapPin,
+  Lock,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
+import { LockedFeature, UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
 
 export default function CompetitorsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
+  const planType = (user as any)?.hospital?.planType || 'STARTER';
+  const planLimits = getPlanLimits(planType);
   const [newCompetitor, setNewCompetitor] = useState('');
   const [newRegion, setNewRegion] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('');
 
   // 경쟁사 목록 조회
   const { data: competitors, isLoading } = useQuery({
@@ -42,7 +48,7 @@ export default function CompetitorsPage() {
   const { data: comparison } = useQuery({
     queryKey: ['comparison', hospitalId],
     queryFn: () => competitorsApi.getComparison(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
+    enabled: !!hospitalId && canUseFeature(planType, 'competitorComparison'),
   });
 
   // 경쟁사 추가
@@ -56,9 +62,16 @@ export default function CompetitorsPage() {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
       setNewCompetitor('');
       setNewRegion('');
+      toast.success('경쟁사가 추가되었습니다.');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || '경쟁사 추가에 실패했습니다.');
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_LIMIT_REACHED' || errData?.error === 'PLAN_UPGRADE_REQUIRED') {
+        setUpgradeFeature('maxCompetitors');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '경쟁사 추가에 실패했습니다.');
+      }
     },
   });
 
@@ -67,6 +80,7 @@ export default function CompetitorsPage() {
     mutationFn: (id: string) => competitorsApi.remove(id, hospitalId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      toast.success('경쟁사가 삭제되었습니다.');
     },
   });
 
@@ -79,12 +93,24 @@ export default function CompetitorsPage() {
       toast.success(`AI가 ${count}개의 경쟁사를 발견했습니다!`);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || '자동 감지에 실패했습니다.');
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_UPGRADE_REQUIRED') {
+        setUpgradeFeature('autoDetect');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '자동 감지에 실패했습니다.');
+      }
     },
   });
 
   const handleAddCompetitor = () => {
     if (!newCompetitor.trim()) return;
+    // 프론트엔드 사전 체크
+    if (planLimits.maxCompetitors !== -1 && (competitors?.length || 0) >= planLimits.maxCompetitors) {
+      setUpgradeFeature('maxCompetitors');
+      setShowUpgradeModal(true);
+      return;
+    }
     addMutation.mutate();
   };
 
@@ -135,59 +161,92 @@ export default function CompetitorsPage() {
       <Header title="경쟁사 관리" description="경쟁사를 추가하고 비교 분석합니다" />
 
       <div className="p-6 space-y-6">
+        {/* 플랜 사용량 표시 */}
+        {planLimits.maxCompetitors !== -1 && (
+          <Card className="bg-gradient-to-r from-gray-50 to-white">
+            <CardContent className="p-4">
+              <UsageBar
+                used={competitors?.length || 0}
+                limit={planLimits.maxCompetitors}
+                label="경쟁사 등록"
+                planType={planType}
+              />
+              {planType === 'STARTER' && (
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  경쟁사 분석은 Standard 플랜부터 사용 가능합니다.
+                  <a href="/dashboard/settings" className="text-blue-600 underline ml-1">업그레이드</a>
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* 경쟁사 추가 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              경쟁사 추가
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-3">
-              <Input
-                placeholder="경쟁 병원 이름"
-                value={newCompetitor}
-                onChange={(e) => setNewCompetitor(e.target.value)}
-                className="flex-1"
-              />
-              <Input
-                placeholder="지역 (선택)"
-                value={newRegion}
-                onChange={(e) => setNewRegion(e.target.value)}
-                className="w-40"
-              />
-              <Button
-                onClick={handleAddCompetitor}
-                disabled={addMutation.isPending || !newCompetitor.trim()}
-              >
-                {addMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                추가
-              </Button>
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => autoDetectMutation.mutate()}
-                disabled={autoDetectMutation.isPending}
-              >
-                {autoDetectMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
-                )}
-                AI 자동 감지
-              </Button>
-              <p className="text-sm text-gray-500">
-                AI가 크롤링 결과에서 자주 언급되는 경쟁사를 자동으로 찾아줍니다
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <LockedFeature feature="maxCompetitors" currentPlan={planType}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                경쟁사 추가
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Input
+                  placeholder="경쟁 병원 이름"
+                  value={newCompetitor}
+                  onChange={(e) => setNewCompetitor(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="지역 (선택)"
+                  value={newRegion}
+                  onChange={(e) => setNewRegion(e.target.value)}
+                  className="w-40"
+                />
+                <Button
+                  onClick={handleAddCompetitor}
+                  disabled={addMutation.isPending || !newCompetitor.trim()}
+                >
+                  {addMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  추가
+                </Button>
+              </div>
+              <div className="flex items-center gap-4 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (!canUseFeature(planType, 'autoDetect')) {
+                      setUpgradeFeature('autoDetect');
+                      setShowUpgradeModal(true);
+                      return;
+                    }
+                    autoDetectMutation.mutate();
+                  }}
+                  disabled={autoDetectMutation.isPending}
+                >
+                  {autoDetectMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                  )}
+                  AI 자동 감지
+                  {!canUseFeature(planType, 'autoDetect') && (
+                    <Lock className="h-3 w-3 ml-1 text-gray-400" />
+                  )}
+                </Button>
+                <p className="text-sm text-gray-500">
+                  AI가 크롤링 결과에서 자주 언급되는 경쟁사를 자동으로 찾아줍니다
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </LockedFeature>
 
         {/* 검색 */}
         <div className="flex justify-between items-center">
@@ -220,7 +279,9 @@ export default function CompetitorsPage() {
                     {searchTerm ? '검색 결과가 없습니다' : '등록된 경쟁사가 없습니다'}
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
-                    경쟁사를 추가하거나 AI 자동 감지를 사용해보세요
+                    {planType === 'STARTER'
+                      ? 'Standard 플랜으로 업그레이드하여 경쟁사 분석을 시작하세요'
+                      : '경쟁사를 추가하거나 AI 자동 감지를 사용해보세요'}
                   </p>
                 </CardContent>
               </Card>
@@ -308,54 +369,64 @@ export default function CompetitorsPage() {
         </div>
 
         {/* 비교 요약 */}
-        {comparison && comparison.competitors?.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                경쟁사 점수 비교
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {/* 내 병원 */}
-                <div className="flex items-center gap-3">
-                  <div className="w-32 font-medium text-blue-600">
-                    {comparison.myHospital?.name || '우리 병원'}
-                  </div>
-                  <div className="flex-1 bg-gray-100 rounded-full h-4">
-                    <div
-                      className="bg-blue-500 rounded-full h-4 transition-all"
-                      style={{ width: `${comparison.myHospital?.score || 0}%` }}
-                    />
-                  </div>
-                  <div className="w-12 text-right font-semibold">
-                    {comparison.myHospital?.score || 0}점
-                  </div>
-                </div>
-
-                {/* 경쟁사들 */}
-                {comparison.competitors?.map((comp: any, index: number) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-32 text-sm text-gray-600 truncate">
-                      {comp.name}
+        <LockedFeature feature="competitorComparison" currentPlan={planType}>
+          {comparison && comparison.competitors?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  경쟁사 점수 비교
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* 내 병원 */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-32 font-medium text-blue-600">
+                      {comparison.myHospital?.name || '우리 병원'}
                     </div>
                     <div className="flex-1 bg-gray-100 rounded-full h-4">
                       <div
-                        className="bg-orange-400 rounded-full h-4 transition-all"
-                        style={{ width: `${comp.score || 0}%` }}
+                        className="bg-blue-500 rounded-full h-4 transition-all"
+                        style={{ width: `${comparison.myHospital?.score || 0}%` }}
                       />
                     </div>
-                    <div className="w-12 text-right text-sm">
-                      {comp.score || 0}점
+                    <div className="w-12 text-right font-semibold">
+                      {comparison.myHospital?.score || 0}점
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+
+                  {/* 경쟁사들 */}
+                  {comparison.competitors?.map((comp: any, index: number) => (
+                    <div key={index} className="flex items-center gap-3">
+                      <div className="w-32 text-sm text-gray-600 truncate">
+                        {comp.name}
+                      </div>
+                      <div className="flex-1 bg-gray-100 rounded-full h-4">
+                        <div
+                          className="bg-orange-400 rounded-full h-4 transition-all"
+                          style={{ width: `${comp.score || 0}%` }}
+                        />
+                      </div>
+                      <div className="w-12 text-right text-sm">
+                        {comp.score || 0}점
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </LockedFeature>
       </div>
+
+      {/* 업그레이드 모달 */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
+        currentPlan={planType}
+      />
     </div>
   );
 }

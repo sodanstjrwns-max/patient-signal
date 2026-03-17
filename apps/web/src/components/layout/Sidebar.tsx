@@ -82,11 +82,27 @@ export function Sidebar() {
               <p className="font-medium text-sm text-gray-900 truncate">
                 {user.hospital.name}
               </p>
-              <p className="text-xs text-green-600 font-medium">
-                무료 플랜
+              <p className={`text-xs font-medium ${
+                user.hospital.planType === 'PRO' ? 'text-purple-600' :
+                user.hospital.planType === 'STANDARD' ? 'text-blue-600' :
+                'text-gray-500'
+              }`}>
+                {user.hospital.planType === 'PRO' ? 'Pro 플랜' :
+                 user.hospital.planType === 'STANDARD' ? 'Standard 플랜' :
+                 user.hospital.planType === 'ENTERPRISE' ? 'Enterprise 플랜' :
+                 '무료 플랜 (Starter)'}
               </p>
             </div>
           </div>
+          {(!user.hospital.planType || user.hospital.planType === 'STARTER') && (
+            <Link
+              href="/dashboard/settings"
+              className="mt-2 flex items-center justify-center gap-1 w-full py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            >
+              <Sparkles className="h-3 w-3" />
+              업그레이드
+            </Link>
+          )}
         </div>
       )}
 

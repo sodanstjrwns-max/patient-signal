@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
+import { PlanGuard } from '../common/guards/plan.guard';
 
 @Injectable()
 export class SchedulerService {
@@ -34,10 +35,10 @@ export class SchedulerService {
     this.logger.log(`=== 자동 크롤링 시작 (세션: ${session}) ===`);
     this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}, ContentGap=${includeContentGap}`);
     
-    // 활성 구독 상태인 병원들 조회
+    // 활성 구독 상태인 병원들 조회 (TRIAL 포함)
     const hospitals = await this.prisma.hospital.findMany({
       where: {
-        subscriptionStatus: 'ACTIVE',
+        subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
       },
       include: {
         prompts: {
@@ -77,8 +78,30 @@ export class SchedulerService {
         let completed = 0;
         let failed = 0;
 
-        // 세션별 플랫폼 분배 (찐 AI만)
-        const platforms = this.getPlatformsForSession(session);
+        // 플랜별 플랫폼 제한 적용
+        const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.STARTER;
+        const sessionPlatforms = this.getPlatformsForSession(session);
+        // 플랜 허용 플랫폼과 세션 플랫폼의 교집합
+        const platforms = sessionPlatforms.filter((p: string) => planLimits.platforms.includes(p));
+        
+        this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
+
+        // 월간 크롤링 횟수 체크
+        if (planLimits.crawlsPerMonth !== -1) {
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const crawlCount = await this.prisma.crawlJob.count({
+            where: {
+              hospitalId: hospital.id,
+              startedAt: { gte: monthStart },
+              status: { in: ['COMPLETED', 'RUNNING'] },
+            },
+          });
+          if (crawlCount >= planLimits.crawlsPerMonth) {
+            this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
+            continue;
+          }
+        }
 
         for (const prompt of hospital.prompts) {
           try {
@@ -128,12 +151,13 @@ export class SchedulerService {
           session,
         };
 
-        // 저녁 세션에서 경쟁사 AEO 측정
-        if (includeCompetitors && hospital.competitors.length > 0) {
+        // 저녁 세션에서 경쟁사 AEO 측정 (플랜 체크)
+        if (includeCompetitors && hospital.competitors.length > 0 && planLimits.competitorAEO) {
+          const maxCompetitors = planLimits.maxCompetitors === -1 ? 5 : Math.min(planLimits.maxCompetitors, 5);
           this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개)`);
           const competitorResults = [];
           
-          for (const competitor of hospital.competitors.slice(0, 5)) {
+          for (const competitor of hospital.competitors.slice(0, maxCompetitors)) {
             try {
               const competitorScore = await this.aiCrawlerService.measureCompetitorAEO(
                 hospital.id,
@@ -155,8 +179,8 @@ export class SchedulerService {
           hospitalResult.competitorScores = competitorResults;
         }
 
-        // 저녁 세션에서 Content Gap 분석
-        if (includeContentGap) {
+        // 저녁 세션에서 Content Gap 분석 (플랜 체크)
+        if (includeContentGap && planLimits.contentGap) {
           try {
             const gaps = await this.aiCrawlerService.generateContentGapGuide(hospital.id);
             hospitalResult.contentGaps = gaps.length;

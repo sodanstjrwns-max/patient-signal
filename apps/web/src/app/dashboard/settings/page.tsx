@@ -55,22 +55,48 @@ const intentWeights: Record<string, number> = {
 // 요금제 정보
 const PLANS = [
   {
-    id: 'PF_FREE',
-    name: 'PF 수강생',
+    id: 'STARTER',
+    name: 'Starter (무료)',
     price: 0,
     priceText: '무료',
-    description: '페이션트 퍼널 수강생 전용',
-    features: ['주간 14개 쿼리', '4개 AI 플랫폼', '주간 리포트', 'ABHS 점수'],
+    description: '기본 AI 가시성 모니터링',
+    features: [
+      '모니터링 질문 5개',
+      '2개 AI 플랫폼 (ChatGPT, Perplexity)',
+      '월 4회 크롤링 (주 1회)',
+      'ABHS 점수',
+      '주간 리포트',
+    ],
+    notIncluded: [
+      '경쟁사 분석',
+      'AI 질문 변형 생성',
+      'Content Gap 분석',
+      '데이터 내보내기',
+    ],
     isPopular: false,
-    badge: '수강생 전용',
+    badge: '무료',
   },
   {
     id: 'STANDARD',
     name: 'Standard',
     price: 290000,
     priceText: '29만원/월',
-    description: '개원의를 위한 기본 플랜',
-    features: ['주간 14개 쿼리', '4개 AI 플랫폼', '주간 리포트', 'ABHS 점수', '경쟁사 1개 비교', '자동 액션 인텔리전스'],
+    description: '개원의를 위한 핵심 플랜',
+    features: [
+      '모니터링 질문 14개',
+      '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
+      '월 8회 크롤링 (주 2회)',
+      'ABHS 점수',
+      '주간 리포트',
+      '경쟁사 1개 비교 분석',
+      'AI 질문 변형 생성',
+      '경쟁사 AEO 측정',
+      '자동 액션 인텔리전스',
+      '데이터 내보내기',
+    ],
+    notIncluded: [
+      'Content Gap 분석',
+    ],
     isPopular: true,
     badge: '인기',
   },
@@ -80,7 +106,21 @@ const PLANS = [
     price: 590000,
     priceText: '59만원/월',
     description: '데이터 드리븐 원장을 위한 프로 플랜',
-    features: ['주간 14개 + 월간 20개 쿼리 (총 34개)', '4개 AI 플랫폼', '주간 + 월간 딥리포트', 'ABHS 점수', '경쟁사 3개 비교', '자동 액션 인텔리전스', '우선 지원'],
+    features: [
+      '모니터링 질문 34개',
+      '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
+      '매일 크롤링 (월 30회)',
+      'ABHS 점수',
+      '주간 + 월간 딥리포트',
+      '경쟁사 3개 비교 분석',
+      'AI 질문 변형 생성',
+      '경쟁사 AEO 측정',
+      'Content Gap 분석',
+      '자동 액션 인텔리전스',
+      '데이터 내보내기',
+      '우선 지원',
+    ],
+    notIncluded: [],
     isPopular: false,
     badge: 'Pro',
   },
@@ -147,7 +187,7 @@ export default function SettingsPage() {
 
   // 쿼리 자동 생성
   const generateMutation = useMutation({
-    mutationFn: () => queryTemplatesApi.generateQueries(hospitalId!, hospital?.planType === 'PRO' ? 'true' : 'false'),
+    mutationFn: () => queryTemplatesApi.generateQueries(hospitalId!, hospital?.planType === 'PRO' ? true : false),
     onSuccess: (res) => {
       toast.success(`${res.data.created}개의 모니터링 쿼리가 생성되었습니다!`);
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
@@ -382,8 +422,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {PLANS.map((plan) => {
                 const isCurrent = (
-                  (plan.id === 'PF_FREE' && user?.isPfMember) ||
-                  (plan.id === hospital?.planType)
+                  plan.id === (hospital?.planType || 'STARTER')
                 );
                 return (
                   <div

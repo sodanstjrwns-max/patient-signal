@@ -2,15 +2,18 @@ import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/c
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CompetitorsService } from './competitors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PlanGuard } from '../common/guards/plan.guard';
+import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
 @ApiTags('경쟁사 분석')
 @Controller('competitors')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PlanGuard)
 @ApiBearerAuth()
 export class CompetitorsController {
   constructor(private competitorsService: CompetitorsService) {}
 
   @Post(':hospitalId')
+  @PlanLimit({ feature: 'maxCompetitors', countField: 'competitors' })
   @ApiOperation({ summary: '경쟁사 추가' })
   async create(
     @Param('hospitalId') hospitalId: string,
@@ -35,12 +38,14 @@ export class CompetitorsController {
   }
 
   @Post(':hospitalId/auto-detect')
+  @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '경쟁사 자동 탐지' })
   async autoDetect(@Param('hospitalId') hospitalId: string) {
     return this.competitorsService.autoDetectCompetitors(hospitalId);
   }
 
   @Get(':hospitalId/comparison')
+  @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '경쟁사 비교 분석' })
   async getComparison(@Param('hospitalId') hospitalId: string) {
     return this.competitorsService.getComparison(hospitalId);

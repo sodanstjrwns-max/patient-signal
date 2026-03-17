@@ -4,15 +4,18 @@ import { PromptsService } from './prompts.service';
 import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { PlanGuard } from '../common/guards/plan.guard';
+import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
 @ApiTags('질문 관리')
 @Controller('prompts')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PlanGuard)
 @ApiBearerAuth()
 export class PromptsController {
   constructor(private promptsService: PromptsService) {}
 
   @Post(':hospitalId')
+  @PlanLimit({ feature: 'maxPrompts', countField: 'prompts' })
   @ApiOperation({ summary: '질문 추가', description: '새로운 모니터링 질문을 추가합니다' })
   @ApiResponse({ status: 201, description: '질문 생성 성공' })
   async create(
@@ -23,6 +26,7 @@ export class PromptsController {
   }
 
   @Post(':hospitalId/bulk')
+  @PlanLimit({ feature: 'maxPrompts', countField: 'prompts' })
   @ApiOperation({ summary: '질문 대량 추가' })
   async bulkCreate(
     @Param('hospitalId') hospitalId: string,
@@ -88,6 +92,7 @@ export class PromptsController {
   }
 
   @Post(':id/fanouts')
+  @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '질문 변형 생성 (Query Fanouts)' })
   async generateFanouts(@Param('id') id: string) {
     return this.promptsService.generateFanouts(id);
