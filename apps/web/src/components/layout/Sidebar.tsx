@@ -16,6 +16,7 @@ import {
   FileText,
   Menu,
   X,
+  CreditCard,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
   { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
   { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
+  { name: '결제/구독', href: '/dashboard/billing', icon: CreditCard },
   { name: '설정', href: '/dashboard/settings', icon: Settings },
 ];
 
@@ -90,13 +92,13 @@ export function Sidebar() {
                 {user.hospital.planType === 'PRO' ? 'Pro 플랜' :
                  user.hospital.planType === 'STANDARD' ? 'Standard 플랜' :
                  user.hospital.planType === 'ENTERPRISE' ? 'Enterprise 플랜' :
-                 '무료 플랜 (Starter)'}
+                 'Starter 플랜'}
               </p>
             </div>
           </div>
           {(!user.hospital.planType || user.hospital.planType === 'STARTER') && (
             <Link
-              href="/dashboard/settings"
+              href="/dashboard/billing"
               className="mt-2 flex items-center justify-center gap-1 w-full py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
             >
               <Sparkles className="h-3 w-3" />

@@ -17,6 +17,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
 import { EmailModule } from './email/email.module';
 import { QueryTemplatesModule } from './query-templates/query-templates.module';
+import { CouponsModule } from './coupons/coupons.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { QueryTemplatesModule } from './query-templates/query-templates.module';
     SubscriptionsModule,
     EmailModule,
     QueryTemplatesModule,
+    CouponsModule,
   ],
   controllers: [AppController],
   providers: [

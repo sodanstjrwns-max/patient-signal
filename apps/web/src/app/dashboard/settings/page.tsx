@@ -56,9 +56,9 @@ const intentWeights: Record<string, number> = {
 const PLANS = [
   {
     id: 'STARTER',
-    name: 'Starter (무료)',
-    price: 0,
-    priceText: '무료',
+    name: 'Starter',
+    price: 120000,
+    priceText: '12만원/월',
     description: '기본 AI 가시성 모니터링',
     features: [
       '모니터링 질문 5개',
@@ -74,7 +74,7 @@ const PLANS = [
       '데이터 내보내기',
     ],
     isPopular: false,
-    badge: '무료',
+    badge: '',
   },
   {
     id: 'STANDARD',
@@ -424,23 +424,24 @@ export default function SettingsPage() {
                 const isCurrent = (
                   plan.id === (hospital?.planType || 'STARTER')
                 );
+                const isActiveSub = hospital?.subscriptionStatus === 'ACTIVE' || hospital?.subscriptionStatus === 'TRIAL';
                 return (
                   <div
                     key={plan.id}
                     className={`relative p-5 rounded-xl border-2 transition-all ${
                       plan.isPopular
                         ? 'border-blue-500 ring-2 ring-blue-100'
-                        : isCurrent
+                        : isCurrent && isActiveSub
                         ? 'border-green-500 bg-green-50/30'
                         : 'border-gray-200'
                     }`}
                   >
-                    {plan.isPopular && (
+                    {plan.isPopular && !isCurrent && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                         {plan.badge}
                       </span>
                     )}
-                    {isCurrent && (
+                    {isCurrent && isActiveSub && (
                       <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                         현재 플랜
                       </span>
@@ -449,7 +450,7 @@ export default function SettingsPage() {
                     <div className="text-center mb-4">
                       <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
                       <p className="text-3xl font-bold mt-2">
-                        {plan.price === 0 ? '무료' : plan.priceText}
+                        {plan.priceText}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{plan.description}</p>
                     </div>
@@ -461,21 +462,33 @@ export default function SettingsPage() {
                           <span className="text-gray-600">{feature}</span>
                         </li>
                       ))}
+                      {plan.notIncluded.map((feature, idx) => (
+                        <li key={`no-${idx}`} className="flex items-start gap-2 text-sm opacity-40">
+                          <span className="h-4 w-4 flex-shrink-0 mt-0.5 text-center">-</span>
+                          <span className="text-gray-400 line-through">{feature}</span>
+                        </li>
+                      ))}
                     </ul>
 
                     <Button
                       className="w-full"
-                      variant={isCurrent ? 'outline' : plan.isPopular ? 'default' : 'outline'}
-                      disabled={isCurrent}
+                      variant={isCurrent && isActiveSub ? 'outline' : plan.isPopular ? 'default' : 'outline'}
+                      disabled={isCurrent && isActiveSub}
+                      onClick={() => {
+                        if (!(isCurrent && isActiveSub)) {
+                          window.location.href = `/dashboard/billing?plan=${plan.id}`;
+                        }
+                      }}
                     >
-                      {isCurrent ? '현재 이용 중' : plan.price === 0 ? 'PF 수강 확인' : '시작하기'}
+                      {isCurrent && isActiveSub ? '현재 이용 중' : '시작하기'}
                     </Button>
 
-                    {plan.price > 0 && (
-                      <p className="text-xs text-center text-gray-400 mt-2">
-                        API 비용 ≈ 1.9만원 → 마진율 93%
-                      </p>
-                    )}
+                    <p className="text-xs text-center text-gray-400 mt-2">
+                      쿠폰 코드가 있으신가요?{' '}
+                      <a href={`/dashboard/billing?plan=${plan.id}&coupon=true`} className="text-blue-500 underline">
+                        쿠폰 적용
+                      </a>
+                    </p>
                   </div>
                 );
               })}

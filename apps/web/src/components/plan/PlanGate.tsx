@@ -189,7 +189,7 @@ export function UpgradeModal({
             <button
               onClick={() => {
                 onClose();
-                window.location.href = '/dashboard/settings';
+                window.location.href = `/dashboard/billing?plan=${requiredPlan}`;
               }}
               className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2"
             >

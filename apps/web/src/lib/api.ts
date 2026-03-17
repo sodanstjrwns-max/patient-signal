@@ -278,3 +278,31 @@ export const subscriptionsApi = {
   comparePlans: () =>
     api.get('/subscriptions/plans/compare'),
 };
+
+// Coupons API
+export const couponsApi = {
+  validate: (code: string, planType: string) =>
+    api.post('/coupons/validate', { code, planType }),
+  apply: (code: string, planType: string) =>
+    api.post('/coupons/apply', { code, planType }),
+};
+
+// Payments API
+export const paymentsApi = {
+  confirm: (data: { paymentKey: string; orderId: string; amount: number }) =>
+    api.post('/payments/confirm', data),
+  save: (data: any) =>
+    api.post('/payments/save', data),
+  getPayment: (orderId: string) =>
+    api.get(`/payments/${orderId}`),
+  getSubscriptionStatus: (hospitalId: string) =>
+    api.get(`/payments/subscription/${hospitalId}`),
+  getMyPayments: () =>
+    api.get('/payments/user/history'),
+  issueBillingKey: (data: { authKey: string; customerKey: string; hospitalId: string }) =>
+    api.post('/payments/billing/issue', data),
+  deleteBillingKey: (hospitalId: string) =>
+    api.post('/payments/billing/delete', { hospitalId }),
+  getBillingInfo: (hospitalId: string) =>
+    api.get(`/payments/billing/${hospitalId}`),
+};

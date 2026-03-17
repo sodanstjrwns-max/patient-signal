@@ -506,6 +506,67 @@ model CrawlJob {
 
 // ==================== 결제 관련 모델 ====================
 
+// 쿠폰 상태
+enum CouponType {
+  PERCENT_OFF    // % 할인
+  AMOUNT_OFF     // 금액 할인
+  FREE_PERIOD    // 무료 기간 제공
+}
+
+// 쿠폰 테이블
+model Coupon {
+  id              String      @id @default(uuid())
+  code            String      @unique                    // 쿠폰 코드 (ex: PF2026-SPRING)
+  name            String                                 // 쿠폰명 (ex: 페이션트퍼널 수강생 쿠폰)
+  description     String?                                // 설명
+
+  couponType      CouponType  @map("coupon_type")
+  discountPercent Int?        @map("discount_percent")   // % 할인 (100 = 100%)
+  discountAmount  Int?        @map("discount_amount")    // 금액 할인
+  freeMonths      Int?        @map("free_months")        // 무료 개월 수
+
+  // 적용 대상
+  applicablePlans PlanType[]  @map("applicable_plans")   // 적용 가능 플랜 (빈 배열 = 모든 플랜)
+
+  // 제한
+  maxUses         Int         @default(0) @map("max_uses")        // 최대 사용 횟수 (0=무제한)
+  currentUses     Int         @default(0) @map("current_uses")    // 현재 사용 횟수
+  maxUsesPerUser  Int         @default(1) @map("max_uses_per_user") // 유저당 최대 사용 횟수
+
+  // 유효 기간
+  startsAt        DateTime    @default(now()) @map("starts_at")
+  expiresAt       DateTime?   @map("expires_at")
+  isActive        Boolean     @default(true) @map("is_active")
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // 사용 이력
+  redemptions     CouponRedemption[]
+
+  @@map("coupons")
+}
+
+// 쿠폰 사용 이력
+model CouponRedemption {
+  id              String    @id @default(uuid())
+  couponId        String    @map("coupon_id")
+  userId          String    @map("user_id")
+  hospitalId      String    @map("hospital_id")
+  
+  // 적용 정보
+  appliedPlan     PlanType  @map("applied_plan")
+  discountAmount  Int       @map("discount_amount")     // 실제 할인 금액
+  freeMonths      Int       @default(0) @map("free_months")  // 적용된 무료 개월 수
+  
+  redeemedAt      DateTime  @default(now()) @map("redeemed_at")
+
+  coupon          Coupon    @relation(fields: [couponId], references: [id])
+
+  @@unique([couponId, hospitalId])  // 같은 병원에 같은 쿠폰 중복 사용 방지
+  @@map("coupon_redemptions")
+}
+
 enum PaymentStatus {
   PENDING          // 결제 대기 (가상계좌 입금 대기)
   DONE             // 결제 완료

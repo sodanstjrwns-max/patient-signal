@@ -691,10 +691,10 @@ export class PaymentsService {
       try {
         // 플랜별 금액
         const planPrices: Record<string, number> = {
-          STARTER: 49000,
-          STANDARD: 99000,
-          PRO: 199000,
-          ENTERPRISE: 299000,
+          STARTER: 120000,
+          STANDARD: 290000,
+          PRO: 590000,
+          ENTERPRISE: 0,
         };
 
         const amount = planPrices[subscription.planType] || 49000;
