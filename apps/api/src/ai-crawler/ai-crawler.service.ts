@@ -1258,89 +1258,91 @@ JSON 형식으로만 답변:
     }
     
     const suffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉', '메디컬', '덴탈'];
-    const prefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천', '불당', '역삼', '논현', '잠실', '송파', '마포', '영등포', '광주', '대전', '울산', '제주'];
-    const branchPrefixes = ['불당본점', '불당', '강남본점', '강남', '본점', '지점'];
+    const regionPrefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천', '불당', '역삼', '논현', '잠실', '송파', '마포', '영등포', '광주', '대전', '울산', '제주'];
+    // 브랜드명 단독 매칭에서 제외할 일반 단어 (오탐 방지)
+    const commonWords = new Set(['대학교', '대학', '종합', '연합', '센터', '메디', '종합병원']);
     
+    // 1단계: coreName 추출 (공백/괄호/지점명/의료기관 접미사 제거)
     let coreName = hospitalName
       .replace(/\s+/g, '')
       .replace(/[()（）\[\]【】]/g, '')
-      .replace(/(본점|지점|점|본원|분원)$/, '')
-      .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
+      .replace(/(본점|지점|본원|분원)$/, '')   // 뒤쪽 지점 접미사 제거
+      .replace(/^[가-힣]+(본점|지점)\s*/g, '') // 앞쪽 "불당본점" 제거
+      .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)([가-힣]{2,3}점)?$/, ''); // 의료기관 접미사 + 지역점 동시 제거
     
-    // coreName에서 prefix 제거 → 브랜드명 추출
-    // 예: "불당본점서울비디" → "서울비디" → "비디"
-    for (const prefix of prefixes) {
-      if (coreName.startsWith(prefix) && coreName.length > prefix.length + 1) {
-        const withoutPrefix = coreName.slice(prefix.length);
-        if (withoutPrefix.length >= 2) {
-          for (const suffix of suffixes) {
-            variants.add(withoutPrefix + suffix);
-          }
-          variants.add(withoutPrefix);
-        }
+    // "이편한치과 역삼점" → corePatterns에서 "이편한치과"를 잡으므로 
+    // coreName 앞에 지점prefix가 남았으면 한번 더 제거
+    for (const rp of regionPrefixes) {
+      const branchPattern = new RegExp(`^${rp}(본점|지점|점)?`);
+      if (hospitalName.replace(/\s+/g, '').startsWith(rp) && coreName.startsWith(rp)) {
+        break; // 지역명이 진짜 병원명 일부면 유지
       }
     }
     
-    // 지점명+지역명 복합 접두사 제거 (불당본점서울비디 → 비디)
-    for (const bp of branchPrefixes) {
-      if (coreName.startsWith(bp) && coreName.length > bp.length + 1) {
-        let stripped = coreName.slice(bp.length);
-        // 지점명 뒤에 지역명이 붙는 케이스 (불당본점서울비디 → 서울비디 → 비디)
-        for (const prefix of prefixes) {
-          if (stripped.startsWith(prefix) && stripped.length > prefix.length + 1) {
-            const brandName = stripped.slice(prefix.length);
-            if (brandName.length >= 2) {
-              variants.add(brandName);
-              for (const suffix of suffixes) {
-                variants.add(brandName + suffix);
-              }
-            }
-            break;
-          }
-        }
-        // 지점명만 제거한 버전도 추가 (불당본점서울비디 → 서울비디)
-        if (stripped.length >= 2) {
-          variants.add(stripped);
-          for (const suffix of suffixes) {
-            variants.add(stripped + suffix);
-          }
-        }
+    // 2단계: 지역 prefix 제거 → 브랜드명 추출
+    let brandName = coreName;
+    for (const prefix of regionPrefixes) {
+      if (brandName.startsWith(prefix) && brandName.length > prefix.length) {
+        brandName = brandName.slice(prefix.length);
+        break;
       }
     }
     
-    // corePatterns에서 추출된 변형도 prefix 분해 (서울비디치과 → 비디치과, 비디)
-    const extractedVariants = Array.from(variants);
-    for (const v of extractedVariants) {
-      const vClean = v.replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
-      for (const prefix of prefixes) {
-        if (vClean.startsWith(prefix) && vClean.length > prefix.length + 1) {
-          const brandCore = vClean.slice(prefix.length);
-          if (brandCore.length >= 2) {
-            variants.add(brandCore);
-            for (const suffix of suffixes) {
-              variants.add(brandCore + suffix);
-            }
-          }
-        }
+    // 3단계: 브랜드명 기반 변형 생성
+    if (brandName.length >= 1) {
+      for (const suffix of suffixes) {
+        // 1글자 브랜드도 "예치과", "미치과" 같은 suffix 조합은 생성
+        variants.add(brandName + suffix);
+      }
+      // 브랜드명 단독 매칭 조건:
+      // - 3글자 이상: 일반 단어(commonWords) 제외하고 허용
+      // - 2글자: 일상 한국어 단어가 아닌 경우만 허용 (오탐 방지)
+      const common2CharWords = new Set([
+        '연세', '바른', '시드', '미래', '서울', '강남', '하나', '우리', '새벽', 
+        '사랑', '행복', '건강', '희망', '자연', '한울', '세계', '평화', '소망',
+        '청춘', '나눔', '보람', '아름', '참좋', '으뜸', '최고', '한빛', '새싹',
+      ]);
+      if (brandName.length >= 3 && !commonWords.has(brandName)) {
+        variants.add(brandName);
+      } else if (brandName.length === 2 && !common2CharWords.has(brandName) && !commonWords.has(brandName)) {
+        variants.add(brandName);
       }
     }
     
-    if (coreName.length >= 2) {
+    // coreName(지역+브랜드) + suffix 조합
+    if (coreName.length >= 2 && coreName !== brandName) {
       for (const suffix of suffixes) {
         variants.add(coreName + suffix);
       }
-      variants.add(coreName);
+      if (!commonWords.has(coreName)) {
+        variants.add(coreName);
+      }
     }
     
-    const baseVariants = Array.from(variants);
-    const branchKeywords = ['불당', '강남', '본점', '지점', '본원'];
-    for (const base of baseVariants) {
-      for (const branch of branchKeywords) {
-        if (hospitalName.includes(branch)) {
-          variants.add(`${base}(${branch})`);
-          variants.add(`${base}（${branch}）`);
+    // 4단계: 지점 키워드 조합은 핵심 변형에만 제한적으로 추가
+    const branchKeywords: string[] = [];
+    for (const bk of ['불당', '강남', '본점', '지점', '본원', '역삼']) {
+      if (hospitalName.includes(bk)) branchKeywords.push(bk);
+    }
+    
+    if (branchKeywords.length > 0) {
+      const coreVariantsForBranch: string[] = [];
+      if (brandName.length >= 1) {
+        for (const suffix of suffixes.slice(0, 3)) {
+          coreVariantsForBranch.push(brandName + suffix);
+        }
+      }
+      if (coreName !== brandName && coreName.length >= 2) {
+        for (const suffix of suffixes.slice(0, 3)) {
+          coreVariantsForBranch.push(coreName + suffix);
+        }
+      }
+      
+      for (const base of coreVariantsForBranch) {
+        for (const branch of branchKeywords) {
           variants.add(`${base} ${branch}`);
-          variants.add(`${base}${branch}`);
+          variants.add(`${base}(${branch})`);
+          variants.add(`${branch} ${base}`);
         }
       }
     }
