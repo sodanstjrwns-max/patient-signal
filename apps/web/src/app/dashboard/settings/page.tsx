@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Eye,
 } from 'lucide-react';
+import { toast } from '@/hooks/useToast';
 
 const specialtyNames: Record<string, string> = {
   DENTAL: '치과', DERMATOLOGY: '피부과', PLASTIC_SURGERY: '성형외과',
@@ -140,7 +141,7 @@ export default function SettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hospital'] });
       setIsEditing(false);
-      alert('병원 정보가 업데이트되었습니다.');
+      toast.success('병원 정보가 업데이트되었습니다.');
     },
   });
 
@@ -148,7 +149,7 @@ export default function SettingsPage() {
   const generateMutation = useMutation({
     mutationFn: () => queryTemplatesApi.generateQueries(hospitalId!, hospital?.planType === 'PRO' ? 'true' : 'false'),
     onSuccess: (res) => {
-      alert(`${res.data.created}개의 모니터링 쿼리가 생성되었습니다!`);
+      toast.success(`${res.data.created}개의 모니터링 쿼리가 생성되었습니다!`);
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
     },
   });
@@ -157,14 +158,14 @@ export default function SettingsPage() {
   const toggleProcedure = (name: string) => {
     setSelectedProcedures(prev => {
       if (prev.includes(name)) return prev.filter(p => p !== name);
-      if (prev.length >= 3) { alert('핵심 시술은 최대 3개까지 선택 가능합니다.'); return prev; }
+      if (prev.length >= 3) { toast.warning('핵심 시술은 최대 3개까지 선택 가능합니다.'); return prev; }
       return [...prev, name];
     });
   };
 
   // 시술 저장 + 쿼리 생성
   const handleSaveProcedures = async () => {
-    if (selectedProcedures.length === 0) { alert('최소 1개의 핵심 시술을 선택해주세요.'); return; }
+    if (selectedProcedures.length === 0) { toast.warning('최소 1개의 핵심 시술을 선택해주세요.'); return; }
     await hospitalApi.update(hospitalId!, { keyProcedures: selectedProcedures });
     queryClient.invalidateQueries({ queryKey: ['hospital'] });
     generateMutation.mutate();

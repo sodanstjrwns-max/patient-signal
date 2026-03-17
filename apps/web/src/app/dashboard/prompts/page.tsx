@@ -18,6 +18,7 @@ import {
   Search,
   Loader2,
 } from 'lucide-react';
+import { toast } from '@/hooks/useToast';
 
 const MAX_PROMPTS = 10;
 
@@ -44,7 +45,7 @@ export default function PromptsPage() {
       setNewPrompt('');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || '질문 추가에 실패했습니다.');
+      toast.error(error.response?.data?.message || '질문 추가에 실패했습니다.');
     },
   });
 
@@ -70,10 +71,10 @@ export default function PromptsPage() {
     mutationFn: (promptId: string) => promptsApi.generateFanouts(promptId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
-      alert('AI가 연관 질문을 생성했습니다!');
+      toast.success('AI가 연관 질문을 생성했습니다!');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || '질문 생성에 실패했습니다.');
+      toast.error(error.response?.data?.message || '질문 생성에 실패했습니다.');
     },
   });
 

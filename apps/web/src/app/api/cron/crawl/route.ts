@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Vercel Cron Job - 매일 오전 9시(한국 시간) 자동 크롤링
-// vercel.json에서 스케줄 설정 필요
+// Vercel Cron Job - 주 2회 (월/목 오전 9시 KST) 자동 크롤링
+// vercel.json: "0 0 * * 1,4" (UTC 00:00 = KST 09:00)
 
 const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 const CRON_SECRET = process.env.CRON_SECRET || 'patient-signal-cron-secret-2024';

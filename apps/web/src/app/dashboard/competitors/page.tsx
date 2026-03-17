@@ -21,6 +21,7 @@ import {
   Building,
   MapPin,
 } from 'lucide-react';
+import { toast } from '@/hooks/useToast';
 
 export default function CompetitorsPage() {
   const { user } = useAuthStore();
@@ -57,7 +58,7 @@ export default function CompetitorsPage() {
       setNewRegion('');
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || '경쟁사 추가에 실패했습니다.');
+      toast.error(error.response?.data?.message || '경쟁사 추가에 실패했습니다.');
     },
   });
 
@@ -75,10 +76,10 @@ export default function CompetitorsPage() {
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
       const count = response.data?.detected?.length || 0;
-      alert(`AI가 ${count}개의 경쟁사를 발견했습니다!`);
+      toast.success(`AI가 ${count}개의 경쟁사를 발견했습니다!`);
     },
     onError: (error: any) => {
-      alert(error.response?.data?.message || '자동 감지에 실패했습니다.');
+      toast.error(error.response?.data?.message || '자동 감지에 실패했습니다.');
     },
   });
 

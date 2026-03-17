@@ -101,7 +101,7 @@ export default function DashboardPage() {
         onRefresh={handleRefresh}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* 상단 안내 카드 - 최초 데이터 없을 때 */}
         {dashboard?.overallScore === 0 && (
           <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
@@ -201,7 +201,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 빠른 액션 */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Link href="/guide">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4 flex items-center justify-between">

@@ -1,6 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { toast } from '@/hooks/useToast';
 
-// Production API URL - 환경변수 대신 직접 지정
+// Production API URL
 const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 
 export const api = axios.create({
@@ -9,6 +10,24 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Refresh Token 상태 관리 (중복 갱신 방지)
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
 
 // Request interceptor - 토큰 추가
 api.interceptors.request.use(
@@ -24,18 +43,93 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - 에러 처리
+// Response interceptor - 401 시 자동 토큰 갱신
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    if (error.response?.status === 401) {
-      // 토큰 만료 시 로그아웃
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    // 401이고, 아직 재시도 안 한 요청이고, refresh 요청 자체는 아닌 경우
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh') &&
+      !originalRequest.url?.includes('/auth/login')
+    ) {
+      // 이미 다른 요청이 갱신 중이면 대기열에 추가
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: (token: string) => {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+              resolve(api(originalRequest));
+            },
+            reject: (err: any) => {
+              reject(err);
+            },
+          });
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = localStorage.getItem('refreshToken');
+
+        if (!refreshToken) {
+          throw new Error('No refresh token');
+        }
+
+        // Refresh Token으로 새 Access Token 발급
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+          refreshToken,
+        });
+
+        const newAccessToken = data.accessToken;
+        const newRefreshToken = data.refreshToken || refreshToken;
+
+        // 새 토큰 저장
+        localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+
+        // Zustand store도 업데이트 (직접 접근)
+        try {
+          const authStorage = localStorage.getItem('auth-storage');
+          if (authStorage) {
+            const parsed = JSON.parse(authStorage);
+            parsed.state.accessToken = newAccessToken;
+            parsed.state.refreshToken = newRefreshToken;
+            localStorage.setItem('auth-storage', JSON.stringify(parsed));
+          }
+        } catch {}
+
+        // 대기 중인 요청들에게 새 토큰 전달
+        processQueue(null, newAccessToken);
+
+        // 원래 요청 재시도
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Refresh도 실패 → 로그아웃
+        processQueue(refreshError, null);
+
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('auth-storage');
+          toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 1500);
+        }
+
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
+
     return Promise.reject(error);
   }
 );

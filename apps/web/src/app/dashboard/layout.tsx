@@ -17,16 +17,12 @@ export default function DashboardLayout({
   useEffect(() => {
     if (!_hasHydrated) return;
 
-    console.log('[Dashboard] Auth check (hydrated):', { isAuthenticated, user: user?.email, hospitalId: user?.hospitalId });
-
     if (!isAuthenticated) {
-      console.log('[Dashboard] Not authenticated, redirecting to login');
       router.push('/login');
       return;
     }
 
     if (!user?.hospitalId) {
-      console.log('[Dashboard] No hospitalId, redirecting to onboarding');
       router.push('/onboarding');
       return;
     }
@@ -51,7 +47,8 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+      {/* pt-14: 모바일 top bar 높이만큼 패딩, lg:pt-0: 데스크톱은 패딩 없음 */}
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0">{children}</main>
     </div>
   );
 }
