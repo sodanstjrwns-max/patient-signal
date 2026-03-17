@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { ScoreCard } from '@/components/dashboard/ScoreCard';
 import { ScoreChart } from '@/components/dashboard/ScoreChart';
@@ -10,18 +10,16 @@ import { InsightCard } from '@/components/dashboard/InsightCard';
 import { CompetitorComparison } from '@/components/dashboard/CompetitorComparison';
 import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { hospitalApi, scoresApi, competitorsApi, crawlerApi } from '@/lib/api';
+import { hospitalApi, scoresApi, competitorsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { 
   Activity, 
   Eye, 
   Users, 
   MessageSquare, 
-  Zap, 
   ArrowRight,
-  PlayCircle,
-  BookOpen
+  BookOpen,
+  Calendar
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -72,28 +70,6 @@ export default function DashboardPage() {
     enabled: !!hospitalId,
   });
 
-  // 크롤링 실행
-  const crawlMutation = useMutation({
-    mutationFn: () => crawlerApi.trigger(hospitalId!),
-    onSuccess: (response) => {
-      const data = response.data;
-      if (data.totalPrompts === 0) {
-        alert('등록된 프롬프트가 없습니다. 먼저 질문을 추가해주세요!');
-        return;
-      }
-      alert(`크롤링이 시작되었습니다! (${data.totalPrompts}개 질문)`);
-      // 10초 후 데이터 갱신
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['weekly'] });
-      }, 10000);
-    },
-    onError: (error: any) => {
-      console.error('크롤링 에러:', error);
-      alert(error.response?.data?.message || '크롤링 실행에 실패했습니다.');
-    },
-  });
-
   const handleRefresh = () => {
     refetch();
     queryClient.invalidateQueries({ queryKey: ['weekly'] });
@@ -126,27 +102,21 @@ export default function DashboardPage() {
       />
 
       <div className="p-6 space-y-6">
-        {/* 상단 액션 카드 */}
+        {/* 상단 안내 카드 - 최초 데이터 없을 때 */}
         {dashboard?.overallScore === 0 && (
           <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-white/20">
+                  <Calendar className="h-6 w-6" />
+                </div>
                 <div>
-                  <h3 className="text-lg font-semibold mb-1">AI 크롤링을 시작하세요!</h3>
+                  <h3 className="text-lg font-semibold mb-1">AI 크롤링이 곧 시작됩니다!</h3>
                   <p className="text-blue-100 text-sm">
-                    버튼을 클릭하면 ChatGPT, Perplexity, Claude, Gemini에서<br />
-                    우리 병원이 어떻게 노출되는지 확인할 수 있습니다.
+                    매주 2회 자동으로 ChatGPT, Perplexity, Claude, Gemini에서<br />
+                    우리 병원의 AI 가시성을 분석합니다.
                   </p>
                 </div>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  onClick={() => crawlMutation.mutate()}
-                  loading={crawlMutation.isPending}
-                >
-                  <PlayCircle className="mr-2 h-5 w-5" />
-                  크롤링 시작
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -280,25 +250,18 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
-          <Card
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => !crawlMutation.isPending && crawlMutation.mutate()}
-          >
+          <Card className="bg-gray-50 border-dashed">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-green-100">
-                  <Zap className="h-5 w-5 text-green-600" />
+                  <Calendar className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">크롤링 실행</p>
-                  <p className="text-sm text-gray-500">AI 가시성 업데이트</p>
+                  <p className="font-medium text-gray-900">자동 크롤링</p>
+                  <p className="text-sm text-gray-500">매주 2회 자동 실행</p>
                 </div>
               </div>
-              {crawlMutation.isPending ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-green-600"></div>
-              ) : (
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              )}
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">ON</span>
             </CardContent>
           </Card>
         </div>

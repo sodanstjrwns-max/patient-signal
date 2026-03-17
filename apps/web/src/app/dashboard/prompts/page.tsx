@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { promptsApi, crawlerApi } from '@/lib/api';
+import { promptsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
   Plus,
@@ -16,9 +16,10 @@ import {
   ToggleLeft,
   ToggleRight,
   Search,
-  PlayCircle,
   Loader2,
 } from 'lucide-react';
+
+const MAX_PROMPTS = 10;
 
 export default function PromptsPage() {
   const { user } = useAuthStore();
@@ -63,17 +64,6 @@ export default function PromptsPage() {
     },
   });
 
-  // 크롤링 실행
-  const crawlMutation = useMutation({
-    mutationFn: () => crawlerApi.trigger(hospitalId!),
-    onSuccess: (response) => {
-      const data = response.data;
-      alert(`크롤링이 시작되었습니다! (${data.totalPrompts}개 질문)`);
-    },
-    onError: (error: any) => {
-      alert(error.response?.data?.message || '크롤링 실행에 실패했습니다.');
-    },
-  });
 
   // AI 추천 질문 생성
   const generateMutation = useMutation({
@@ -86,6 +76,10 @@ export default function PromptsPage() {
       alert(error.response?.data?.message || '질문 생성에 실패했습니다.');
     },
   });
+
+  const totalPrompts = prompts?.length || 0;
+  const isAtLimit = totalPrompts >= MAX_PROMPTS;
+  const remainingSlots = MAX_PROMPTS - totalPrompts;
 
   const handleAddPrompt = () => {
     if (!newPrompt.trim()) return;
@@ -128,42 +122,66 @@ export default function PromptsPage() {
       />
 
       <div className="p-6 space-y-6">
-        {/* 새 질문 추가 */}
+        {/* 질문 개수 현황 + 새 질문 추가 */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              새 질문 추가
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Plus className="h-5 w-5" />
+                새 질문 추가
+              </span>
+              <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                isAtLimit
+                  ? 'bg-red-100 text-red-700'
+                  : remainingSlots <= 3
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                {totalPrompts} / {MAX_PROMPTS}개
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-3">
-              <Input
-                placeholder="예: 강남역 근처 임플란트 잘하는 치과 추천해줘"
-                value={newPrompt}
-                onChange={(e) => setNewPrompt(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddPrompt()}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleAddPrompt}
-                disabled={addMutation.isPending || !newPrompt.trim()}
-              >
-                {addMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                추가
-              </Button>
-            </div>
-            <p className="text-sm text-gray-500 mt-2">
-              💡 팁: 환자들이 실제로 검색할 만한 질문을 추가해보세요
-            </p>
+            {isAtLimit ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                <p className="text-red-700 font-medium">
+                  질문은 최대 {MAX_PROMPTS}개까지 등록할 수 있습니다
+                </p>
+                <p className="text-red-500 text-sm mt-1">
+                  기존 질문을 삭제한 후 새 질문을 추가해주세요
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="flex gap-3">
+                  <Input
+                    placeholder="예: 강남역 근처 임플란트 잘하는 치과 추천해줘"
+                    value={newPrompt}
+                    onChange={(e) => setNewPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddPrompt()}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={handleAddPrompt}
+                    disabled={addMutation.isPending || !newPrompt.trim()}
+                  >
+                    {addMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4" />
+                    )}
+                    추가
+                  </Button>
+                </div>
+                <p className="text-sm text-gray-500 mt-2">
+                  💡 팁: 환자들이 실제로 검색할 만한 질문을 추가해보세요 (남은 슬롯: {remainingSlots}개)
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* 검색 및 크롤링 버튼 */}
+        {/* 검색 */}
         <div className="flex justify-between items-center">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -174,18 +192,9 @@ export default function PromptsPage() {
               className="pl-10 w-64"
             />
           </div>
-          <Button
-            onClick={() => crawlMutation.mutate()}
-            disabled={crawlMutation.isPending || !prompts?.length}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            {crawlMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <PlayCircle className="h-4 w-4 mr-2" />
-            )}
-            크롤링 시작
-          </Button>
+          <p className="text-sm text-gray-500">
+            크롤링은 주 2회 자동으로 실행됩니다
+          </p>
         </div>
 
         {/* 질문 목록 */}
@@ -243,15 +252,17 @@ export default function PromptsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => generateMutation.mutate(prompt.id)}
-                        disabled={generateMutation.isPending}
-                        title="AI로 연관 질문 생성"
-                      >
-                        <Sparkles className="h-4 w-4 text-purple-600" />
-                      </Button>
+                      {!isAtLimit && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => generateMutation.mutate(prompt.id)}
+                          disabled={generateMutation.isPending}
+                          title="AI로 연관 질문 생성"
+                        >
+                          <Sparkles className="h-4 w-4 text-purple-600" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

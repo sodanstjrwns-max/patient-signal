@@ -4,9 +4,22 @@ import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
 
 @Injectable()
 export class PromptsService {
+  private readonly MAX_PROMPTS_PER_HOSPITAL = 10;
+
   constructor(private prisma: PrismaService) {}
 
   async create(hospitalId: string, dto: CreatePromptDto) {
+    // 질문 개수 제한 체크 (최대 10개)
+    const currentCount = await this.prisma.prompt.count({
+      where: { hospitalId },
+    });
+
+    if (currentCount >= this.MAX_PROMPTS_PER_HOSPITAL) {
+      throw new ForbiddenException(
+        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다. 기존 질문을 삭제 후 추가해주세요.`
+      );
+    }
+
     return this.prisma.prompt.create({
       data: {
         hospitalId,
@@ -20,8 +33,23 @@ export class PromptsService {
   }
 
   async bulkCreate(hospitalId: string, dto: BulkCreatePromptsDto) {
+    // 질문 개수 제한 체크 (최대 10개)
+    const currentCount = await this.prisma.prompt.count({
+      where: { hospitalId },
+    });
+
+    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    if (remainingSlots <= 0) {
+      throw new ForbiddenException(
+        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다.`
+      );
+    }
+
+    // 남은 슬롯만큼만 생성
+    const promptsToCreate = dto.prompts.slice(0, remainingSlots);
+
     const prompts = await this.prisma.prompt.createMany({
-      data: dto.prompts.map((p) => ({
+      data: promptsToCreate.map((p) => ({
         hospitalId,
         promptText: p.promptText,
         promptType: p.promptType || 'CUSTOM',
@@ -31,7 +59,11 @@ export class PromptsService {
       })),
     });
 
-    return { created: prompts.count };
+    return {
+      created: prompts.count,
+      maxPrompts: this.MAX_PROMPTS_PER_HOSPITAL,
+      remaining: this.MAX_PROMPTS_PER_HOSPITAL - currentCount - prompts.count,
+    };
   }
 
   async findAll(hospitalId: string, onlyActive: boolean = true) {
@@ -152,11 +184,23 @@ export class PromptsService {
       isActive: true,
     }));
 
-    if (prompts.length > 0) {
-      await this.prisma.prompt.createMany({ data: prompts });
+    // 질문 개수 제한 체크
+    const currentCount = await this.prisma.prompt.count({
+      where: { hospitalId },
+    });
+
+    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    const promptsToCreate = prompts.slice(0, Math.max(0, remainingSlots));
+
+    if (promptsToCreate.length > 0) {
+      await this.prisma.prompt.createMany({ data: promptsToCreate });
     }
 
-    return { created: prompts.length };
+    return {
+      created: promptsToCreate.length,
+      maxPrompts: this.MAX_PROMPTS_PER_HOSPITAL,
+      remaining: remainingSlots - promptsToCreate.length,
+    };
   }
 
   /**
@@ -185,8 +229,22 @@ export class PromptsService {
       (v) => v !== baseText,
     );
 
+    // 질문 개수 제한 체크
+    const currentCount = await this.prisma.prompt.count({
+      where: { hospitalId: prompt.hospitalId },
+    });
+
+    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    if (remainingSlots <= 0) {
+      throw new ForbiddenException(
+        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다. 기존 질문을 삭제 후 시도해주세요.`
+      );
+    }
+
+    const variationsToCreate = uniqueVariations.slice(0, Math.min(5, remainingSlots));
+
     const created = await this.prisma.prompt.createMany({
-      data: uniqueVariations.slice(0, 5).map((text) => ({
+      data: variationsToCreate.map((text) => ({
         hospitalId: prompt.hospitalId,
         promptText: text,
         promptType: 'AUTO_GENERATED',
@@ -196,6 +254,6 @@ export class PromptsService {
       })),
     });
 
-    return { created: created.count, variations: uniqueVariations.slice(0, 5) };
+    return { created: created.count, variations: variationsToCreate };
   }
 }

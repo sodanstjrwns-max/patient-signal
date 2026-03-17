@@ -41,8 +41,9 @@ export class AICrawlerService {
   private openai: OpenAI;
   private anthropic: Anthropic;
 
-  // 개선1: 반복 측정 횟수 (temperature 0 + 3회)
-  private readonly REPEAT_COUNT = 3;
+  // 반복 측정 횟수: 비용 최적화로 1회 (주 2회 스케줄 기준 월 ~$5.6)
+  // 3회 → 1회 변경: 일관성 데이터 대신 비용 73% 절감
+  private readonly REPEAT_COUNT = 1;
 
   constructor(
     private prisma: PrismaService,
