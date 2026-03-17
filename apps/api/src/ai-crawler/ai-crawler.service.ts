@@ -1258,7 +1258,8 @@ JSON 형식으로만 답변:
     }
     
     const suffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉', '메디컬', '덴탈'];
-    const prefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천'];
+    const prefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천', '불당', '역삼', '논현', '잠실', '송파', '마포', '영등포', '광주', '대전', '울산', '제주'];
+    const branchPrefixes = ['불당본점', '불당', '강남본점', '강남', '본점', '지점'];
     
     let coreName = hospitalName
       .replace(/\s+/g, '')
@@ -1266,6 +1267,8 @@ JSON 형식으로만 답변:
       .replace(/(본점|지점|점|본원|분원)$/, '')
       .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
     
+    // coreName에서 prefix 제거 → 브랜드명 추출
+    // 예: "불당본점서울비디" → "서울비디" → "비디"
     for (const prefix of prefixes) {
       if (coreName.startsWith(prefix) && coreName.length > prefix.length + 1) {
         const withoutPrefix = coreName.slice(prefix.length);
@@ -1273,8 +1276,50 @@ JSON 형식으로만 답변:
           for (const suffix of suffixes) {
             variants.add(withoutPrefix + suffix);
           }
-          if (withoutPrefix.length >= 2) {
-            variants.add(withoutPrefix);
+          variants.add(withoutPrefix);
+        }
+      }
+    }
+    
+    // 지점명+지역명 복합 접두사 제거 (불당본점서울비디 → 비디)
+    for (const bp of branchPrefixes) {
+      if (coreName.startsWith(bp) && coreName.length > bp.length + 1) {
+        let stripped = coreName.slice(bp.length);
+        // 지점명 뒤에 지역명이 붙는 케이스 (불당본점서울비디 → 서울비디 → 비디)
+        for (const prefix of prefixes) {
+          if (stripped.startsWith(prefix) && stripped.length > prefix.length + 1) {
+            const brandName = stripped.slice(prefix.length);
+            if (brandName.length >= 2) {
+              variants.add(brandName);
+              for (const suffix of suffixes) {
+                variants.add(brandName + suffix);
+              }
+            }
+            break;
+          }
+        }
+        // 지점명만 제거한 버전도 추가 (불당본점서울비디 → 서울비디)
+        if (stripped.length >= 2) {
+          variants.add(stripped);
+          for (const suffix of suffixes) {
+            variants.add(stripped + suffix);
+          }
+        }
+      }
+    }
+    
+    // corePatterns에서 추출된 변형도 prefix 분해 (서울비디치과 → 비디치과, 비디)
+    const extractedVariants = Array.from(variants);
+    for (const v of extractedVariants) {
+      const vClean = v.replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '');
+      for (const prefix of prefixes) {
+        if (vClean.startsWith(prefix) && vClean.length > prefix.length + 1) {
+          const brandCore = vClean.slice(prefix.length);
+          if (brandCore.length >= 2) {
+            variants.add(brandCore);
+            for (const suffix of suffixes) {
+              variants.add(brandCore + suffix);
+            }
           }
         }
       }
@@ -1284,9 +1329,7 @@ JSON 형식으로만 답변:
       for (const suffix of suffixes) {
         variants.add(coreName + suffix);
       }
-      if (coreName.length >= 2) {
-        variants.add(coreName);
-      }
+      variants.add(coreName);
     }
     
     const baseVariants = Array.from(variants);
