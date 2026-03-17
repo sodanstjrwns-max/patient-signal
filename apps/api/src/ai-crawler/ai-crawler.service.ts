@@ -356,27 +356,30 @@ export class AICrawlerService {
 
   /**
    * 【개선1+2+8】ChatGPT 질의 - temperature 0, 시스템 프롬프트 제거, 웹 검색 활성화
+   * 
+   * gpt-4o-mini는 web_search_options를 지원하지 않으므로
+   * gpt-4o-mini-search-preview 모델을 사용하여 웹 검색 수행
    */
   private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     if (!this.openai) throw new Error('OpenAI API가 초기화되지 않았습니다');
     
-    this.logger.log(`[ChatGPT] API 호출 시작 (temp=0, 웹검색 시도)`);
+    this.logger.log(`[ChatGPT] API 호출 시작 (웹검색 모델 우선)`);
     
     let response = '';
-    let model = 'gpt-4o-mini';
+    let model = 'gpt-4o-mini-search-preview';
     let isWebSearch = false;
 
     try {
-      // 【개선8】웹 검색 모드 시도 (gpt-4o-mini with web_search_options)
+      // 【핵심 수정】gpt-4o-mini-search-preview 모델로 웹 검색 수행
+      // gpt-4o-mini는 web_search_options 미지원 → 환각 발생 원인이었음
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o-mini-search-preview',
         messages: [
           {
             role: 'user',
-            content: promptText,  // 【개선2】시스템 프롬프트 없이 사용자 질문만 전송
+            content: promptText,
           },
         ],
-        temperature: 0,  // 【개선1】재현성을 위해 temperature 0
         max_tokens: 2000,
         web_search_options: {
           search_context_size: 'medium',
@@ -385,24 +388,49 @@ export class AICrawlerService {
 
       response = completion.choices[0]?.message?.content || '';
       isWebSearch = true;
-      this.logger.log(`[ChatGPT] 웹 검색 모드 응답 받음`);
-    } catch (webSearchError) {
-      // 웹 검색 실패 시 일반 모드로 폴백
-      this.logger.warn(`[ChatGPT] 웹 검색 모드 실패, 일반 모드로 폴백: ${webSearchError.message}`);
+      this.logger.log(`[ChatGPT] gpt-4o-mini-search-preview 웹 검색 응답 받음`);
+    } catch (searchError) {
+      this.logger.warn(`[ChatGPT] search-preview 실패: ${searchError.message}`);
       
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'user',
-            content: promptText,  // 【개선2】시스템 프롬프트 없음
+      try {
+        // 2차 시도: gpt-4o-search-preview (더 강력한 검색 모델)
+        const completion = await this.openai.chat.completions.create({
+          model: 'gpt-4o-search-preview',
+          messages: [
+            {
+              role: 'user',
+              content: promptText,
+            },
+          ],
+          max_tokens: 2000,
+          web_search_options: {
+            search_context_size: 'medium',
           },
-        ],
-        temperature: 0,  // 【개선1】temperature 0
-        max_tokens: 2000,
-      });
+        } as any);
 
-      response = completion.choices[0]?.message?.content || '';
+        response = completion.choices[0]?.message?.content || '';
+        model = 'gpt-4o-search-preview';
+        isWebSearch = true;
+        this.logger.log(`[ChatGPT] gpt-4o-search-preview 웹 검색 응답 받음`);
+      } catch (fallbackError) {
+        // 최종 폴백: 일반 gpt-4o-mini (웹검색 없음 → 환각 가능성 있음)
+        this.logger.warn(`[ChatGPT] 모든 검색 모델 실패, 일반 gpt-4o-mini 폴백: ${fallbackError.message}`);
+        
+        const completion = await this.openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'user',
+              content: promptText,
+            },
+          ],
+          temperature: 0,
+          max_tokens: 2000,
+        });
+
+        response = completion.choices[0]?.message?.content || '';
+        model = 'gpt-4o-mini';
+      }
     }
 
     const result = this.analyzeResponse(response, hospitalName, 'CHATGPT', model);
@@ -414,28 +442,79 @@ export class AICrawlerService {
   }
 
   /**
-   * 【개선1+2】Claude 질의 - temperature 0, 시스템 프롬프트 제거
+   * 【개선1+2+웹검색】Claude 질의 - 웹 검색 도구 활성화
+   * 
+   * builtin_web_search 도구를 통해 실시간 웹 데이터 접근
+   * 웹 검색 실패 시 일반 모드로 폴백
    */
   private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     if (!this.anthropic) throw new Error('Anthropic API가 초기화되지 않았습니다');
     
-    this.logger.log(`[Claude] API 호출 시작 (temp=0)`);
-    const message = await this.anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
-      max_tokens: 2000,
-      temperature: 0,  // 【개선1】temperature 0
-      messages: [
-        {
-          role: 'user',
-          content: promptText,  // 【개선2】시스템 프롬프트 없이 질문만 전송
-        },
-      ],
-    });
-
-    const response = message.content[0].type === 'text' ? message.content[0].text : '';
-    const result = this.analyzeResponse(response, hospitalName, 'CLAUDE', 'claude-3-haiku-20240307');
+    this.logger.log(`[Claude] API 호출 시작 (웹검색 도구 활성화)`);
     
-    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
+    let responseText = '';
+    let model = 'claude-sonnet-4-20250514';
+    let isWebSearch = false;
+
+    try {
+      // 【핵심 수정】웹 검색 도구 활성화
+      const message = await this.anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        tools: [
+          {
+            type: 'web_search' as any,
+            name: 'web_search',
+          } as any,
+        ],
+        messages: [
+          {
+            role: 'user',
+            content: promptText,
+          },
+        ],
+      });
+
+      // 응답에서 텍스트 블록 추출 (웹 검색 결과 포함)
+      for (const block of message.content) {
+        if (block.type === 'text') {
+          responseText += block.text;
+        }
+      }
+      
+      // 웹 검색이 사용되었는지 확인
+      isWebSearch = message.content.some((block: any) => 
+        block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
+      );
+      
+      this.logger.log(`[Claude] 웹 검색 도구 응답 받음 (검색 사용: ${isWebSearch})`);
+    } catch (webSearchError) {
+      this.logger.warn(`[Claude] 웹 검색 도구 실패, 일반 모드 폴백: ${webSearchError.message}`);
+      
+      // 폴백: 일반 Claude (웹 검색 없음)
+      try {
+        const message = await this.anthropic.messages.create({
+          model: 'claude-3-haiku-20240307',
+          max_tokens: 2000,
+          temperature: 0,
+          messages: [
+            {
+              role: 'user',
+              content: promptText,
+            },
+          ],
+        });
+
+        responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+        model = 'claude-3-haiku-20240307';
+      } catch (fallbackError) {
+        this.logger.error(`[Claude] 일반 모드도 실패: ${fallbackError.message}`);
+        throw fallbackError;
+      }
+    }
+    
+    const result = this.analyzeResponse(responseText, hospitalName, 'CLAUDE', model);
+    result.isWebSearch = isWebSearch;
     
     return result;
   }
