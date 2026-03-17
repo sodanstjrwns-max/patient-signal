@@ -95,6 +95,7 @@ export class ScoresService {
       GEMINI: 'Gemini',
     };
 
+    // 항상 4개 플랫폼 모두 반환 (데이터 없으면 0으로 표시)
     return platforms.map(platform => {
       const platformResponses = allResponses.filter(r => r.aiPlatform === platform);
       const recentResponses = last7DaysResponses.filter(r => r.aiPlatform === platform);
@@ -181,8 +182,9 @@ export class ScoresService {
         webSearchRate: totalQueries > 0 ? Math.round((webSearchCount / totalQueries) * 100) : 0,
         verificationRate: totalQueries > 0 ? Math.round((verifiedCount / totalQueries) * 100) : 0,
         repeatConsistency: repeatAnalysis,
+        hasData: totalQueries > 0,  // 데이터 유무 표시
       };
-    }).filter(p => p.totalQueries > 0); // 데이터가 있는 플랫폼만 반환
+    }); // 항상 4개 플랫폼 모두 반환 (데이터 없으면 visibilityScore=0)
   }
 
   /**

@@ -212,8 +212,8 @@ export default function DashboardPage() {
           <div className="lg:col-span-2">
             <ScoreChart data={dashboard?.scoreHistory || []} />
           </div>
-          {/* 플랫폼별 상세 데이터가 있으면 사용, 없으면 간단한 점수 사용 */}
-          <PlatformStats data={platformDetails?.length > 0 ? platformDetails : (dashboard?.platformScores || {})} />
+          {/* 플랫폼별 상세 데이터 우선 사용 (항상 4개 플랫폼 반환) */}
+          <PlatformStats data={platformDetails || (dashboard?.platformScores || {})} />
         </div>
 
         {/* 하단 영역 */}

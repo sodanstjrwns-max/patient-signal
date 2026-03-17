@@ -53,11 +53,13 @@ export function PlatformStats({ data }: PlatformStatsProps) {
     return <DetailedPlatformStats data={data as PlatformDetail[]} />;
   }
   
-  // 기존 간단한 형식 처리
-  const platforms = Object.entries(data as Record<string, number>).map(([platform, score]) => ({
-    name: platformNames[platform.toUpperCase()] || platform,
-    score,
-    color: platformColors[platform.toUpperCase()] || '#6B7280',
+  // 기존 간단한 형식 처리 - 항상 4개 플랫폼 표시
+  const allPlatforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'];
+  const scoreData = data as Record<string, number>;
+  const platforms = allPlatforms.map(platform => ({
+    name: platformNames[platform] || platform,
+    score: scoreData[platform.toLowerCase()] ?? scoreData[platform] ?? 0,
+    color: platformColors[platform] || '#6B7280',
   }));
 
   return (
@@ -125,9 +127,10 @@ function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
           <div className="space-y-6">
             {data.map((platform) => {
               const color = platformColors[platform.platform] || '#6B7280';
+              const hasData = (platform as any).hasData !== false && platform.totalQueries > 0;
               
               return (
-                <div key={platform.platform} className="space-y-3">
+                <div key={platform.platform} className={`space-y-3 ${!hasData ? 'opacity-60' : ''}`}>
                   {/* 플랫폼 헤더 */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -136,8 +139,8 @@ function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
                         style={{ backgroundColor: color }}
                       />
                       <span className="font-semibold">{platform.platformName}</span>
-                      <TrendIcon direction={platform.trend.direction} />
-                      {platform.trend.change !== 0 && (
+                      {hasData && <TrendIcon direction={platform.trend.direction} />}
+                      {hasData && platform.trend.change !== 0 && (
                         <span className={`text-xs ${
                           platform.trend.direction === 'UP' ? 'text-green-600' :
                           platform.trend.direction === 'DOWN' ? 'text-red-600' : 'text-gray-500'
@@ -145,12 +148,17 @@ function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
                           {platform.trend.change > 0 ? '+' : ''}{platform.trend.change}%
                         </span>
                       )}
+                      {!hasData && (
+                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                          크롤링 대기
+                        </span>
+                      )}
                     </div>
                     <div className="text-right">
-                      <span className="text-2xl font-bold" style={{ color }}>
-                        {platform.visibilityScore}
+                      <span className="text-2xl font-bold" style={{ color: hasData ? color : '#D1D5DB' }}>
+                        {hasData ? platform.visibilityScore : '-'}
                       </span>
-                      <span className="text-sm text-gray-500">점</span>
+                      {hasData && <span className="text-sm text-gray-500">점</span>}
                     </div>
                   </div>
                   
@@ -159,60 +167,66 @@ function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
-                        width: `${platform.visibilityScore}%`,
+                        width: hasData ? `${platform.visibilityScore}%` : '0%',
                         backgroundColor: color,
                       }}
                     />
                   </div>
                   
-                  {/* 상세 통계 */}
-                  <div className="grid grid-cols-4 gap-2 text-xs">
-                    {/* 언급률 */}
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <div className="text-gray-500 mb-1">언급률</div>
-                      <div className="font-semibold text-base">
-                        {platform.mentionRate}%
+                  {hasData ? (
+                    /* 상세 통계 */
+                    <div className="grid grid-cols-4 gap-2 text-xs">
+                      {/* 언급률 */}
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 mb-1">언급률</div>
+                        <div className="font-semibold text-base">
+                          {platform.mentionRate}%
+                        </div>
+                        <div className="text-gray-400">
+                          {platform.mentionedCount}/{platform.totalQueries}회
+                        </div>
                       </div>
-                      <div className="text-gray-400">
-                        {platform.mentionedCount}/{platform.totalQueries}회
+                      
+                      {/* 평균 순위 */}
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 mb-1">평균 순위</div>
+                        <div className="font-semibold text-base">
+                          {platform.ranking.avgPosition ? `${platform.ranking.avgPosition}위` : '-'}
+                        </div>
+                        <div className="text-gray-400">
+                          TOP3 {platform.ranking.top3Rate}%
+                        </div>
+                      </div>
+                      
+                      {/* 긍정 비율 */}
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 mb-1">긍정률</div>
+                        <div className="font-semibold text-base text-green-600">
+                          {platform.sentiment.positiveRate}%
+                        </div>
+                        <div className="text-gray-400">
+                          {platform.sentiment.positive}회
+                        </div>
+                      </div>
+                      
+                      {/* 감성 분포 */}
+                      <div className="bg-gray-50 rounded-lg p-2 text-center">
+                        <div className="text-gray-500 mb-1">감성</div>
+                        <div className="flex items-center justify-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-green-500" />
+                          <span>{platform.sentiment.positive}</span>
+                          <Minus className="w-3 h-3 text-gray-400 ml-1" />
+                          <span>{platform.sentiment.neutral}</span>
+                          <XCircle className="w-3 h-3 text-red-500 ml-1" />
+                          <span>{platform.sentiment.negative}</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    {/* 평균 순위 */}
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <div className="text-gray-500 mb-1">평균 순위</div>
-                      <div className="font-semibold text-base">
-                        {platform.ranking.avgPosition ? `${platform.ranking.avgPosition}위` : '-'}
-                      </div>
-                      <div className="text-gray-400">
-                        TOP3 {platform.ranking.top3Rate}%
-                      </div>
+                  ) : (
+                    <div className="text-xs text-gray-400 text-center py-2">
+                      크롤링을 실행하면 데이터가 수집됩니다.
                     </div>
-                    
-                    {/* 긍정 비율 */}
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <div className="text-gray-500 mb-1">긍정률</div>
-                      <div className="font-semibold text-base text-green-600">
-                        {platform.sentiment.positiveRate}%
-                      </div>
-                      <div className="text-gray-400">
-                        {platform.sentiment.positive}회
-                      </div>
-                    </div>
-                    
-                    {/* 감성 분포 */}
-                    <div className="bg-gray-50 rounded-lg p-2 text-center">
-                      <div className="text-gray-500 mb-1">감성</div>
-                      <div className="flex items-center justify-center gap-1">
-                        <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        <span>{platform.sentiment.positive}</span>
-                        <Minus className="w-3 h-3 text-gray-400 ml-1" />
-                        <span>{platform.sentiment.neutral}</span>
-                        <XCircle className="w-3 h-3 text-red-500 ml-1" />
-                        <span>{platform.sentiment.negative}</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
