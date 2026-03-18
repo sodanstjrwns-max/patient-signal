@@ -81,7 +81,16 @@ export default function CompetitorsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
-  const planType = (user as any)?.hospital?.planType || 'STARTER';
+
+  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
+  const { data: hospitalData } = useQuery({
+    queryKey: ['hospital', hospitalId],
+    queryFn: () => import('@/lib/api').then(m => m.hospitalApi.get(hospitalId!)).then(r => r.data),
+    enabled: !!hospitalId,
+    staleTime: 60 * 1000, // 1분 캐시
+  });
+
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
   const planLimits = getPlanLimits(planType);
   const [newCompetitor, setNewCompetitor] = useState('');
   const [newRegion, setNewRegion] = useState('');

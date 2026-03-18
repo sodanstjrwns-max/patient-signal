@@ -34,7 +34,8 @@ export default function DashboardLayout({
     if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) return;
 
     hospitalApi.get(user.hospitalId).then(({ data }) => {
-      if (data && data.planType !== user.hospital?.planType) {
+      if (data) {
+        // 항상 최신 hospital 데이터로 업데이트
         updateUser({ hospital: data });
       }
     }).catch(() => {

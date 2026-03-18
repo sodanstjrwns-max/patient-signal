@@ -40,7 +40,16 @@ export default function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
-  const planType = (user as any)?.hospital?.planType || 'STARTER';
+
+  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
+  const { data: hospitalData } = useQuery({
+    queryKey: ['hospital', hospitalId],
+    queryFn: () => hospitalApi.get(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId,
+    staleTime: 60 * 1000,
+  });
+
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
   const [showTutorial, setShowTutorial] = useState(false);
 
   // 첫 방문 시 튜토리얼 표시

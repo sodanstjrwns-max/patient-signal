@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { promptsApi } from '@/lib/api';
+import { promptsApi, hospitalApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
   Plus,
@@ -26,7 +26,16 @@ export default function PromptsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
-  const planType = (user as any)?.hospital?.planType || 'STARTER';
+
+  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
+  const { data: hospitalData } = useQuery({
+    queryKey: ['hospital', hospitalId],
+    queryFn: () => hospitalApi.get(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId,
+    staleTime: 60 * 1000,
+  });
+
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
   const planLimits = getPlanLimits(planType);
   const MAX_PROMPTS = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
   const [newPrompt, setNewPrompt] = useState('');
