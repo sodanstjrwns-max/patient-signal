@@ -18,20 +18,20 @@ interface AIQueryResult {
   sentimentLabel: SentimentLabel;
   matchedVariant?: string;
   allMentionCount?: number;
-  repeatIndex?: number;        // 개선1: 반복 측정 인덱스
+  repeatIndex?: number;        // 측정 인덱스 (현재 1회)
   isWebSearch?: boolean;       // 개선8: 웹 검색 모드 사용 여부
   isVerified?: boolean;        // 개선10: 환각 필터링 통과 여부
   verificationSource?: string; // 개선10: 검증 소스
 }
 
-// 개선1: 반복 측정 결과 집계
+// 측정 결과 집계 (REPEAT_COUNT 변경 시 확장 가능)
 interface AggregatedResult {
   platform: AIPlatform;
   model: string;
-  mentionRate: number;          // 3회 중 몇 회 언급
+  mentionRate: number;          // 측정 중 언급 비율
   avgPosition: number | null;   // 평균 순위
   avgSentiment: number;         // 평균 감성 점수
-  consistencyScore: number;     // 일관성 점수 (3회 모두 언급=100, 2회=66, 1회=33, 0회=0)
+  consistencyScore: number;     // 일관성 점수
   responses: AIQueryResult[];   // 원본 응답들
 }
 
@@ -41,8 +41,7 @@ export class AICrawlerService {
   private openai: OpenAI;
   private anthropic: Anthropic;
 
-  // 반복 측정 횟수: 비용 최적화로 1회 (주 2회 스케줄 기준 월 ~$5.6)
-  // 3회 → 1회 변경: 일관성 데이터 대신 비용 73% 절감
+  // 플랫폼당 측정 횟수 (비용 최적화: 1회, 필요 시 3으로 올려 일관성 검증 가능)
   private readonly REPEAT_COUNT = 1;
 
   constructor(
@@ -179,7 +178,7 @@ export class AICrawlerService {
         keyLength: perplexityKey?.length || 0,
       },
       improvements: {
-        repeatMeasurement: `${this.REPEAT_COUNT}회 반복 측정`,
+        measurementPerPlatform: `${this.REPEAT_COUNT}회 측정`,
         temperatureZero: true,
         systemPromptRemoved: true,
         webSearchEnabled: true,
@@ -193,10 +192,10 @@ export class AICrawlerService {
     };
   }
 
-  // ==================== 개선1 + 개선2: temperature 0 + 반복 측정 + 시스템 프롬프트 제거 ====================
+  // ==================== AI 플랫폼 질의 (temperature 0, 웹검색 활성화) ====================
 
   /**
-   * 【개선1+2+8】모든 AI 플랫폼에 질의 - temperature 0, 시스템 프롬프트 제거, 3회 반복 측정
+   * 모든 AI 플랫폼에 질의 - temperature 0, 시스템 프롬프트 제거, ABHS 분석
    */
   async queryAllPlatforms(
     promptId: string,
@@ -207,7 +206,7 @@ export class AICrawlerService {
   ): Promise<AIQueryResult[]> {
     const allResults: AIQueryResult[] = [];
     
-    this.logger.log(`=== queryAllPlatforms 시작 (${this.REPEAT_COUNT}회 반복 측정) ===`);
+    this.logger.log(`=== queryAllPlatforms 시작 (플랫폼당 ${this.REPEAT_COUNT}회 측정) ===`);
     this.logger.log(`프롬프트: "${promptText.substring(0, 50)}..."`);
     this.logger.log(`병원: ${hospitalName}`);
 
@@ -219,7 +218,6 @@ export class AICrawlerService {
     }
 
     for (const platform of availablePlatforms) {
-      // 【개선1】3회 반복 측정으로 일관성 확보
       for (let repeatIdx = 0; repeatIdx < this.REPEAT_COUNT; repeatIdx++) {
         try {
           this.logger.log(`🔄 ${platform} [${repeatIdx + 1}/${this.REPEAT_COUNT}] 질의 시작`);
@@ -295,7 +293,7 @@ export class AICrawlerService {
             },
           });
 
-          // API 레이트 리밋 방지 (반복 측정 사이 1.5초 딜레이)
+          // API 레이트 리밋 방지 (측정 사이 1.5초 딜레이)
           if (repeatIdx < this.REPEAT_COUNT - 1) {
             await new Promise(resolve => setTimeout(resolve, 1500));
           }
@@ -915,7 +913,7 @@ JSON만 답변:
     let positionCount = 0;
     const platformResults: Record<string, { mentioned: number; total: number }> = {};
 
-    // 각 플랫폼에서 경쟁사 이름으로 반복 측정 (1회만 - 비용 절감)
+    // 각 플랫폼에서 경쟁사 이름으로 측정
     const platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'GEMINI'];
     const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
 
@@ -1151,7 +1149,7 @@ JSON 형식으로만 답변:
         const platMentioned = platResponses.filter(r => r.isMentioned);
         
         if (platResponses.length > 0) {
-          // 【개선1】반복 측정 일관성 분석
+          // 측정 일관성 분석 (REPEAT_COUNT > 1 시 의미 있음)
           const repeatGroups: Map<number, boolean[]> = new Map();
           platResponses.forEach(r => {
             const idx = (r as any).repeatIndex ?? 0;
@@ -1592,7 +1590,7 @@ JSON 형식으로만 답변:
   // ==================== 일일 점수 계산 (개선된 버전) ====================
 
   /**
-   * 일일 점수 계산 - 【개선1】반복 측정 일관성 반영
+   * 일일 점수 계산 - 언급률 + 포지션 + 감성 + 플랫폼 가중치
    */
   async calculateDailyScore(hospitalId: string, date: Date = new Date()): Promise<number> {
     const startOfDay = new Date(date);
@@ -1614,7 +1612,7 @@ JSON 형식으로만 답변:
 
     if (responses.length === 0) return 0;
 
-    // 1. 언급률 (0~100) - 【개선1】반복 측정 고려 (같은 프롬프트+플랫폼의 다수결)
+    // 1. 언급률 (0~100) - 같은 프롬프트+플랫폼의 다수결 (REPEAT_COUNT > 1 시 활용)
     const promptPlatformGroups = new Map<string, boolean[]>();
     for (const r of responses) {
       const key = `${r.promptId}-${r.aiPlatform}`;
@@ -1624,7 +1622,7 @@ JSON 형식으로만 답변:
     
     let mentionedGroups = 0;
     for (const [, mentions] of promptPlatformGroups) {
-      // 다수결: 3회 중 2회 이상 언급되면 "언급됨"으로 판정
+      // 다수결: 과반 이상 언급되면 "언급됨"으로 판정
       const trueCount = mentions.filter(Boolean).length;
       if (trueCount > mentions.length / 2) mentionedGroups++;
     }

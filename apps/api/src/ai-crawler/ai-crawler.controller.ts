@@ -72,8 +72,8 @@ export class AICrawlerController {
   @Post('crawl/:hospitalId')
   @PlanLimit({ feature: 'crawlsPerMonth' })
   @ApiOperation({ 
-    summary: '수동 크롤링 실행 (개선: 3회 반복, temp=0, 웹검색)',
-    description: '해당 병원의 활성 프롬프트에 대해 개선된 AI 크롤링을 실행합니다. 각 플랫폼 3회 반복 측정.' 
+    summary: '수동 크롤링 실행 (temp=0, 웹검색, ABHS 분석)',
+    description: '해당 병원의 활성 프롬프트에 대해 AI 크롤링을 실행합니다. 플랫폼당 1회 측정 + ABHS 통합 분석.' 
   })
   async triggerCrawl(
     @Param('hospitalId') hospitalId: string,
@@ -115,10 +115,9 @@ export class AICrawlerController {
       message: '크롤링이 시작되었습니다',
       improvements: [
         'temperature=0 (재현성 확보)',
-        '3회 반복 측정 (일관성 검증)',
         '시스템 프롬프트 제거 (왜곡 방지)',
         '웹 검색 모드 활성화',
-        'AI 감성 분석',
+        'AI 감성 분석 + ABHS 통합 분석',
         '환각 필터링',
       ],
     };
