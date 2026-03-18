@@ -217,6 +217,9 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/source-quality/${hospitalId}`, { params: { days } }),
   getActionReport: (hospitalId: string) =>
     api.get(`/ai-crawler/insights/action-report/${hospitalId}`),
+  // Phase 2: 콘텐츠 갭 분석
+  analyzeContentGap: (hospitalId: string) =>
+    api.post(`/ai-crawler/content-gap/${hospitalId}`),
 };
 
 // Scores API

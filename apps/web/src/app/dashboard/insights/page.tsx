@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,14 @@ import {
   CheckCircle2,
   Clock,
   Star,
+  Search,
+  BookOpen,
+  Play,
+  PenTool,
+  RefreshCw,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 const platformNames: Record<string, string> = {
@@ -56,7 +64,8 @@ const platformBgColors: Record<string, string> = {
 export default function InsightsPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
-  const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions'>('mention');
+  const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions' | 'contentGap'>('mention');
+  const queryClient = useQueryClient();
 
   // Phase 1 APIs
   const { data: mentionData, isLoading: mentionLoading } = useQuery({
@@ -96,6 +105,12 @@ export default function InsightsPage() {
     enabled: !!hospitalId,
   });
 
+  // 콘텐츠 갭 분석 (POST - mutation)
+  const { data: contentGapData, isPending: contentGapLoading, mutate: runContentGap } = useMutation({
+    mutationFn: () => crawlerApi.analyzeContentGap(hospitalId!).then(r => r.data),
+    mutationKey: ['content-gap', hospitalId],
+  });
+
   const isLoading = mentionLoading || trendLoading || sourceLoading || positionLoading || sourceQualityLoading || actionLoading;
 
   if (!hospitalId) {
@@ -116,6 +131,7 @@ export default function InsightsPage() {
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[
             { key: 'actions', icon: FileText, label: '액션 리포트' },
+            { key: 'contentGap', icon: Search, label: '콘텐츠 갭' },
             { key: 'mention', icon: Quote, label: '추천 멘트' },
             { key: 'positioning', icon: Radar, label: '포지셔닝 맵' },
             { key: 'trend', icon: TrendingUp, label: '트렌드' },
@@ -142,6 +158,13 @@ export default function InsightsPage() {
         ) : (
           <>
             {activeTab === 'actions' && actionData && <ActionReport data={actionData} />}
+            {activeTab === 'contentGap' && (
+              <ContentGapAnalysis
+                data={contentGapData}
+                isLoading={contentGapLoading}
+                onRun={() => runContentGap()}
+              />
+            )}
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
             {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
             {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} />}
@@ -1265,6 +1288,361 @@ function ActionReport({ data }: { data: any }) {
                 </span>
               )}
             </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ==================== 7. 콘텐츠 갭 분석 ====================
+function ContentGapAnalysis({ data, isLoading, onRun }: { data: any; isLoading: boolean; onRun: () => void }) {
+  const [expandedGaps, setExpandedGaps] = useState<Set<number>>(new Set());
+
+  const toggleExpand = (index: number) => {
+    setExpandedGaps(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const gaps = data?.gaps || [];
+  const totalGaps = data?.totalGaps || 0;
+
+  const priorityColor = (score: number) => {
+    if (score >= 100) return { bg: 'bg-red-50', border: 'border-red-400', badge: 'bg-red-100 text-red-700', label: '긴급' };
+    if (score >= 75) return { bg: 'bg-orange-50', border: 'border-orange-400', badge: 'bg-orange-100 text-orange-700', label: '높음' };
+    if (score >= 50) return { bg: 'bg-yellow-50', border: 'border-yellow-400', badge: 'bg-yellow-100 text-yellow-700', label: '보통' };
+    return { bg: 'bg-blue-50', border: 'border-blue-400', badge: 'bg-blue-100 text-blue-700', label: '낮음' };
+  };
+
+  const strategyIcon = (priority: string) => {
+    if (priority === 'high') return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    if (priority === 'medium') return <PenTool className="h-4 w-4 text-amber-500" />;
+    return <BookOpen className="h-4 w-4 text-blue-500" />;
+  };
+
+  const strategyBorder = (priority: string) => {
+    if (priority === 'high') return 'border-l-red-400 bg-red-50/40';
+    if (priority === 'medium') return 'border-l-amber-400 bg-amber-50/40';
+    return 'border-l-blue-400 bg-blue-50/40';
+  };
+
+  // 아직 분석을 안 한 경우
+  if (!data && !isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+          <CardContent className="p-6 text-center">
+            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Search className="h-8 w-8 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">콘텐츠 갭 분석</h3>
+            <p className="text-sm text-gray-600 mb-1">
+              AI가 경쟁사는 추천하면서 <span className="font-bold text-red-600">우리 병원은 추천하지 않는 질문</span>을 찾아냅니다.
+            </p>
+            <p className="text-xs text-gray-500 mb-6">
+              각 갭에 대해 GPT가 자동으로 <span className="font-semibold">콘텐츠 제작 전략 3가지</span>를 생성합니다.
+            </p>
+
+            <div className="grid grid-cols-3 gap-3 mb-6 max-w-md mx-auto">
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <Search className="h-5 w-5 text-indigo-500 mx-auto mb-1" />
+                <p className="text-xs font-medium text-gray-700">갭 탐지</p>
+                <p className="text-[10px] text-gray-400">4개 AI 플랫폼</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <Zap className="h-5 w-5 text-amber-500 mx-auto mb-1" />
+                <p className="text-xs font-medium text-gray-700">AI 전략 생성</p>
+                <p className="text-[10px] text-gray-400">GPT-4o 기반</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <Target className="h-5 w-5 text-red-500 mx-auto mb-1" />
+                <p className="text-xs font-medium text-gray-700">우선순위 분류</p>
+                <p className="text-[10px] text-gray-400">긴급→낮음</p>
+              </div>
+            </div>
+
+            <Button
+              onClick={onRun}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl shadow-lg shadow-indigo-200"
+            >
+              <Play className="h-4 w-4 mr-2" />
+              콘텐츠 갭 분석 시작
+            </Button>
+            <p className="text-[10px] text-gray-400 mt-3">PRO 플랜 전용 기능 · 분석에 약 30초 소요</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 로딩 중
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-indigo-200">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-indigo-600 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">콘텐츠 갭 분석 중...</h3>
+            <p className="text-sm text-gray-500">4개 AI 플랫폼의 응답을 비교하고 AI 전략을 생성하고 있습니다</p>
+            <div className="flex justify-center gap-6 mt-6">
+              <div className="text-center">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-1 animate-pulse">
+                  <span className="text-sm">🔍</span>
+                </div>
+                <p className="text-[10px] text-gray-500">갭 탐지</p>
+              </div>
+              <div className="text-center">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-1 animate-pulse" style={{ animationDelay: '0.3s' }}>
+                  <span className="text-sm">🤖</span>
+                </div>
+                <p className="text-[10px] text-gray-500">AI 분석</p>
+              </div>
+              <div className="text-center">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-1 animate-pulse" style={{ animationDelay: '0.6s' }}>
+                  <span className="text-sm">📋</span>
+                </div>
+                <p className="text-[10px] text-gray-500">전략 생성</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // 결과
+  const urgentCount = gaps.filter((g: any) => g.priorityScore >= 100).length;
+  const highCount = gaps.filter((g: any) => g.priorityScore >= 75 && g.priorityScore < 100).length;
+
+  return (
+    <div className="space-y-6">
+      {/* 요약 헤더 */}
+      <Card className="bg-gradient-to-r from-slate-800 to-slate-900 text-white border-0">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-2">
+                <Search className="h-5 w-5 text-indigo-400" />
+                콘텐츠 갭 분석 결과
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                AI가 경쟁사만 추천하고 우리를 추천하지 않는 주제
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRun}
+              className="border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              재분석
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">발견된 갭</p>
+              <p className="text-2xl font-bold">{totalGaps}건</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">🔴 긴급 대응</p>
+              <p className="text-2xl font-bold text-red-400">{urgentCount}건</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">🟠 높은 우선순위</p>
+              <p className="text-2xl font-bold text-orange-400">{highCount}건</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">AI 전략</p>
+              <p className="text-2xl font-bold text-indigo-400">{gaps.filter((g: any) => g.aiGuide).length}건</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 갭이 없는 경우 */}
+      {totalGaps === 0 && (
+        <Card className="border-green-200 bg-green-50/30">
+          <CardContent className="p-8 text-center">
+            <CheckCircle2 className="h-14 w-14 text-green-400 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">콘텐츠 갭이 없습니다! 🎉</h3>
+            <p className="text-sm text-gray-600">
+              경쟁사가 추천받는 모든 질문에서 우리 병원도 함께 언급되고 있습니다.
+            </p>
+            <p className="text-xs text-gray-400 mt-2">현재 AI 가시성이 매우 우수한 상태입니다</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 갭 목록 */}
+      {gaps.sort((a: any, b: any) => b.priorityScore - a.priorityScore).map((gap: any, index: number) => {
+        const pStyle = priorityColor(gap.priorityScore);
+        const isExpanded = expandedGaps.has(index);
+        let aiGuide: any = null;
+        try {
+          aiGuide = typeof gap.aiGuide === 'string' ? JSON.parse(gap.aiGuide) : gap.aiGuide;
+        } catch { aiGuide = null; }
+
+        return (
+          <Card key={gap.id || index} className={`${pStyle.bg} border ${pStyle.border}`}>
+            <CardContent className="p-0">
+              {/* 갭 헤더 - 클릭으로 펼치기/접기 */}
+              <button
+                onClick={() => toggleExpand(index)}
+                className="w-full p-5 text-left hover:bg-black/[0.02] transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${pStyle.badge}`}>
+                        {pStyle.label} · {gap.priorityScore}점
+                      </span>
+                      {gap.category && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                          {gap.category}
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="text-base font-bold text-gray-900 mb-2">
+                      "{gap.promptText}"
+                    </h4>
+
+                    {/* 경쟁사 + 플랫폼 미리보기 */}
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">경쟁사:</span>
+                        {(gap.competitors || []).slice(0, 3).map((c: string, ci: number) => (
+                          <span key={ci} className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                            {c}
+                          </span>
+                        ))}
+                        {(gap.competitors || []).length > 3 && (
+                          <span className="text-xs text-gray-400">+{gap.competitors.length - 3}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-gray-500">플랫폼:</span>
+                        {(gap.platforms || []).map((p: string, pi: number) => (
+                          <span key={pi} className={`text-xs px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-gray-100 text-gray-700'}`}>
+                            {platformNames[p] || p}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 pt-1">
+                    {isExpanded ? (
+                      <ChevronUp className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    )}
+                  </div>
+                </div>
+              </button>
+
+              {/* 펼쳐진 상세 - AI 전략 가이드 */}
+              {isExpanded && (
+                <div className="border-t border-gray-200/60 px-5 pb-5">
+                  {aiGuide?.strategies && aiGuide.strategies.length > 0 ? (
+                    <div className="mt-4">
+                      <h5 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                        <Zap className="h-4 w-4 text-indigo-600" />
+                        AI 추천 콘텐츠 전략
+                      </h5>
+                      <div className="space-y-3">
+                        {aiGuide.strategies.map((strategy: any, si: number) => (
+                          <div key={si} className={`border-l-4 rounded-lg p-4 ${strategyBorder(strategy.priority)}`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              {strategyIcon(strategy.priority)}
+                              <span className="text-sm font-bold text-gray-900">{strategy.title}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ml-auto ${
+                                strategy.priority === 'high' ? 'bg-red-100 text-red-600' :
+                                strategy.priority === 'medium' ? 'bg-amber-100 text-amber-600' :
+                                'bg-blue-100 text-blue-600'
+                              }`}>
+                                {strategy.priority === 'high' ? '높음' : strategy.priority === 'medium' ? '보통' : '낮음'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 mb-2">{strategy.description}</p>
+                            {strategy.expectedImpact && (
+                              <p className="text-xs text-indigo-600 font-medium flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" />
+                                예상 효과: {strategy.expectedImpact}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-4 text-center py-4">
+                      <p className="text-sm text-gray-500">AI 전략 가이드가 생성되지 않았습니다</p>
+                      <p className="text-xs text-gray-400 mt-1">OpenAI API 연결 상태를 확인해주세요</p>
+                    </div>
+                  )}
+
+                  {/* 상세 정보 */}
+                  <div className="mt-4 pt-3 border-t border-gray-200/40">
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-gray-500">노출된 경쟁사:</span>
+                        <div className="mt-1 space-y-1">
+                          {(gap.competitors || []).map((c: string, ci: number) => (
+                            <div key={ci} className="flex items-center gap-1.5">
+                              <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                              <span className="text-gray-700">{c}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">우리가 빠진 AI:</span>
+                        <div className="mt-1 space-y-1">
+                          {(gap.platforms || []).map((p: string, pi: number) => (
+                            <div key={pi} className="flex items-center gap-1.5">
+                              <div className={`w-1.5 h-1.5 rounded-full ${platformColors[p] || 'bg-gray-400'}`} />
+                              <span className="text-gray-700">{platformNames[p] || p}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {/* 하단 팁 */}
+      {totalGaps > 0 && (
+        <Card className="border-indigo-100 bg-indigo-50/30">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-semibold text-indigo-800 mb-2 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4" />
+              콘텐츠 갭 해소 가이드
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <p className="font-bold text-gray-800 mb-1">1단계: 콘텐츠 발행</p>
+                <p className="text-gray-500">블로그, 유튜브, 네이버 플레이스에 해당 키워드 콘텐츠를 발행하세요</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <p className="font-bold text-gray-800 mb-1">2단계: 2~4주 대기</p>
+                <p className="text-gray-500">AI가 새 콘텐츠를 학습하는 데 보통 2~4주가 소요됩니다</p>
+              </div>
+              <div className="bg-white rounded-lg p-3 border border-indigo-100">
+                <p className="font-bold text-gray-800 mb-1">3단계: 재분석</p>
+                <p className="text-gray-500">콘텐츠 발행 후 재분석을 돌려서 갭이 해소되었는지 확인하세요</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
