@@ -7,6 +7,13 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
+const platformNames: Record<string, string> = {
+  CHATGPT: 'ChatGPT',
+  CLAUDE: 'Claude',
+  PERPLEXITY: 'Perplexity',
+  GEMINI: 'Gemini',
+};
+
 @ApiTags('AI 크롤러')
 @Controller('ai-crawler')
 @UseGuards(JwtAuthGuard, PlanGuard)
@@ -609,6 +616,546 @@ export class AICrawlerController {
       '티스토리 블로그': '전문적인 의료 콘텐츠 블로그로 검색 채널 다양화',
     };
     return recommendations[channel] || '해당 채널에 콘텐츠를 게시하면 AI 참조 가능성 증가';
+  }
+
+  // ==================== Phase 2-4: 경쟁사 포지셔닝 맵 ====================
+
+  @Get('insights/positioning/:hospitalId')
+  @ApiOperation({ summary: '경쟁사 포지셔닝 맵 - 레이더차트 5축 분석' })
+  async getPositioningMap(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
+    const hospitalName = hospital?.name || '';
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      include: { prompt: true },
+    });
+
+    // 5축 정의
+    const axes = {
+      expertise: { label: '전문성', keywords: ['전문', '실력', '경험', '베테랑', '숙련', '전문의', '박사', '석사', '대학병원', '전문', '노하우', '기술력'] },
+      price: { label: '가격', keywords: ['가격', '비용', '합리적', '저렴', '가성비', '양심적', '부담', '할인', '경제적', '착한'] },
+      accessibility: { label: '접근성', keywords: ['교통', '주차', '역세권', '야간', '주말', '일요일', '위치', '접근', '편리', '가까', '지하철'] },
+      facility: { label: '시설/장비', keywords: ['시설', '장비', '최신', '첨단', '디지털', '3D', 'CT', '현미경', '클린', '위생', '인테리어', '깨끗'] },
+      reputation: { label: '후기/평판', keywords: ['후기', '평판', '소문', '입소문', '만족', '추천', '리뷰', '평가', '인기', '유명', '신뢰'] },
+    };
+
+    // 포지션 분석 함수
+    const analyzePosition = (name: string, texts: { text: string; nameIdx: number }[]) => {
+      const scores: Record<string, number> = {};
+      const counts: Record<string, number> = {};
+      
+      for (const [axis, config] of Object.entries(axes)) {
+        let matchCount = 0;
+        for (const { text, nameIdx } of texts) {
+          const nearbyStart = Math.max(0, nameIdx - 200);
+          const nearbyEnd = Math.min(text.length, nameIdx + name.length + 200);
+          const nearby = text.substring(nearbyStart, nearbyEnd);
+          
+          for (const kw of config.keywords) {
+            if (nearby.includes(kw)) {
+              matchCount++;
+              break;
+            }
+          }
+        }
+        counts[axis] = matchCount;
+        // 정규화: 0-100 스케일 (최대 등장 비율 기준)
+        scores[axis] = texts.length > 0 ? Math.round((matchCount / texts.length) * 100) : 0;
+      }
+      
+      return { scores, counts };
+    };
+
+    // 우리 병원 포지션
+    const ourTexts = responses
+      .filter(r => r.isMentioned)
+      .map(r => ({
+        text: r.responseText,
+        nameIdx: r.responseText.indexOf(hospitalName),
+      }))
+      .filter(t => t.nameIdx >= 0);
+
+    const ourPosition = analyzePosition(hospitalName, ourTexts);
+
+    // 경쟁사 포지션
+    const competitorMap: Record<string, { text: string; nameIdx: number }[]> = {};
+    for (const r of responses) {
+      if (r.competitorsMentioned) {
+        for (const comp of r.competitorsMentioned) {
+          if (!competitorMap[comp]) competitorMap[comp] = [];
+          const idx = r.responseText.indexOf(comp);
+          if (idx >= 0) {
+            competitorMap[comp].push({ text: r.responseText, nameIdx: idx });
+          }
+        }
+      }
+    }
+
+    // 상위 5개 경쟁사
+    const competitorPositions = Object.entries(competitorMap)
+      .sort(([, a], [, b]) => b.length - a.length)
+      .slice(0, 5)
+      .map(([name, texts]) => ({
+        name,
+        mentionCount: texts.length,
+        ...analyzePosition(name, texts),
+      }));
+
+    // 포지셔닝 인사이트 생성
+    const insights: string[] = [];
+    const ourTop = Object.entries(ourPosition.scores).sort(([, a], [, b]) => b - a);
+    const ourWeak = Object.entries(ourPosition.scores).sort(([, a], [, b]) => a - b);
+    
+    if (ourTop.length > 0 && ourTop[0][1] > 0) {
+      insights.push(`AI는 우리 병원의 '${axes[ourTop[0][0] as keyof typeof axes].label}'을(를) 가장 강하게 인식합니다`);
+    }
+    if (ourWeak.length > 0) {
+      insights.push(`'${axes[ourWeak[0][0] as keyof typeof axes].label}' 영역 강화가 필요합니다`);
+    }
+
+    for (const comp of competitorPositions.slice(0, 3)) {
+      const compTop = Object.entries(comp.scores).sort(([, a], [, b]) => b - a);
+      if (compTop.length > 0 && compTop[0][1] > 0) {
+        insights.push(`${comp.name}은(는) '${axes[compTop[0][0] as keyof typeof axes].label}'으로 포지셔닝됨`);
+      }
+    }
+
+    return {
+      hospitalName,
+      period: `최근 ${daysNum}일`,
+      axes: Object.fromEntries(Object.entries(axes).map(([k, v]) => [k, v.label])),
+      ourPosition: {
+        scores: ourPosition.scores,
+        counts: ourPosition.counts,
+        totalMentions: ourTexts.length,
+      },
+      competitors: competitorPositions,
+      insights,
+    };
+  }
+
+  // ==================== Phase 2-5: 출처 품질 분석 (강화) ====================
+
+  @Get('insights/source-quality/:hospitalId')
+  @ApiOperation({ summary: '출처 품질 분석 - 채널별 영향력 및 품질 점수' })
+  async getSourceQuality(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      select: {
+        citedSources: true,
+        citedUrl: true,
+        aiPlatform: true,
+        isMentioned: true,
+        sentimentLabel: true,
+      },
+    });
+
+    // 채널 품질 점수 매핑
+    const channelQuality: Record<string, { score: number; weight: string; description: string }> = {
+      '병원 공식사이트': { score: 100, weight: '최상', description: 'AI가 가장 신뢰하는 공식 소스' },
+      '네이버 플레이스': { score: 90, weight: '최상', description: '위치 기반 추천의 핵심 데이터' },
+      '구글': { score: 85, weight: '상', description: 'ChatGPT/Gemini의 주요 참조 소스' },
+      '네이버 블로그': { score: 75, weight: '상', description: '한국어 AI의 핵심 학습 데이터' },
+      '유튜브': { score: 70, weight: '상', description: 'Gemini/Perplexity가 활발히 참조' },
+      '네이버 지식인': { score: 65, weight: '중상', description: 'Q&A 형식으로 AI 학습에 적합' },
+      '티스토리 블로그': { score: 60, weight: '중', description: '전문 콘텐츠 채널' },
+      '인스타그램': { score: 50, weight: '중', description: '시각 콘텐츠 기반 신뢰도' },
+      '카카오': { score: 55, weight: '중', description: '국내 플랫폼 참조' },
+      '카카오맵': { score: 80, weight: '상', description: '위치 기반 데이터' },
+      '브런치': { score: 65, weight: '중상', description: '전문 에세이 콘텐츠' },
+      '기타 웹사이트': { score: 40, weight: '하', description: '비전문 소스' },
+    };
+
+    // 채널별 데이터 수집
+    const channelData: Record<string, {
+      count: number;
+      mentionedCount: number;
+      positiveCount: number;
+      platforms: Set<string>;
+    }> = {};
+
+    for (const r of responses) {
+      const allSources = [...(r.citedSources || []), ...(r.citedUrl ? [r.citedUrl] : [])];
+      
+      for (const url of allSources) {
+        const channel = this.categorizeUrl(url);
+        if (!channelData[channel]) {
+          channelData[channel] = { count: 0, mentionedCount: 0, positiveCount: 0, platforms: new Set() };
+        }
+        channelData[channel].count++;
+        channelData[channel].platforms.add(r.aiPlatform);
+        if (r.isMentioned) channelData[channel].mentionedCount++;
+        if (r.sentimentLabel === 'POSITIVE') channelData[channel].positiveCount++;
+      }
+    }
+
+    // 채널 영향력 점수 계산
+    const channelAnalysis = Object.entries(channelData)
+      .sort(([, a], [, b]) => b.count - a.count)
+      .map(([channel, data]) => {
+        const quality = channelQuality[channel] || { score: 40, weight: '하', description: '' };
+        const mentionCorrelation = data.count > 0 ? Math.round((data.mentionedCount / data.count) * 100) : 0;
+        const positiveCorrelation = data.count > 0 ? Math.round((data.positiveCount / data.count) * 100) : 0;
+        
+        // 종합 영향력 = (품질 * 0.4) + (빈도 정규화 * 0.3) + (언급 상관관계 * 0.3)
+        const maxCount = Math.max(...Object.values(channelData).map(d => d.count));
+        const freqScore = maxCount > 0 ? Math.round((data.count / maxCount) * 100) : 0;
+        const influenceScore = Math.round(quality.score * 0.4 + freqScore * 0.3 + mentionCorrelation * 0.3);
+
+        return {
+          channel,
+          qualityScore: quality.score,
+          qualityWeight: quality.weight,
+          qualityDescription: quality.description,
+          citedCount: data.count,
+          mentionCorrelation,
+          positiveCorrelation,
+          influenceScore,
+          platforms: Array.from(data.platforms),
+        };
+      });
+
+    // 종합 출처 건강도 점수
+    const totalSources = Object.values(channelData).reduce((s, d) => s + d.count, 0);
+    const avgQuality = channelAnalysis.length > 0
+      ? Math.round(channelAnalysis.reduce((s, c) => s + c.qualityScore * c.citedCount, 0) / totalSources)
+      : 0;
+    const channelDiversity = channelAnalysis.length;
+    const healthScore = Math.round(avgQuality * 0.5 + Math.min(channelDiversity * 10, 50));
+
+    return {
+      period: `최근 ${daysNum}일`,
+      healthScore,
+      healthLabel: healthScore >= 70 ? '우수' : healthScore >= 50 ? '양호' : healthScore >= 30 ? '보통' : '개선 필요',
+      avgQuality,
+      channelDiversity,
+      channels: channelAnalysis,
+      recommendations: this.generateSourceRecommendations(channelAnalysis, channelQuality),
+    };
+  }
+
+  private categorizeUrl(url: string): string {
+    const patterns: [string, string][] = [
+      ['blog.naver.com', '네이버 블로그'],
+      ['m.place.naver.com', '네이버 플레이스'],
+      ['place.naver.com', '네이버 플레이스'],
+      ['map.naver.com', '네이버 지도'],
+      ['kin.naver.com', '네이버 지식인'],
+      ['naver.com', '네이버'],
+      ['youtube.com', '유튜브'],
+      ['instagram.com', '인스타그램'],
+      ['maps.google.com', '구글'],
+      ['google.com', '구글'],
+      ['map.kakao.com', '카카오맵'],
+      ['kakao.com', '카카오'],
+      ['tistory.com', '티스토리 블로그'],
+      ['brunch.co.kr', '브런치'],
+      ['modoo.at', '네이버 모두'],
+    ];
+
+    for (const [pattern, category] of patterns) {
+      if (url.includes(pattern)) return category;
+    }
+
+    try {
+      const domain = new URL(url).hostname;
+      if (domain.includes('치과') || domain.includes('dental') || domain.includes('clinic') || domain.includes('hospital')) {
+        return '병원 공식사이트';
+      }
+    } catch {}
+
+    return '기타 웹사이트';
+  }
+
+  private generateSourceRecommendations(
+    channels: any[],
+    qualityMap: Record<string, any>,
+  ): { priority: string; channel: string; action: string; expectedImpact: string }[] {
+    const recs: { priority: string; channel: string; action: string; expectedImpact: string }[] = [];
+
+    // 공식 사이트 없으면 최우선
+    if (!channels.find(c => c.channel === '병원 공식사이트')) {
+      recs.push({
+        priority: '🔴 긴급',
+        channel: '병원 공식사이트',
+        action: 'SEO 최적화된 공식 사이트 구축 또는 개선 (진료 안내, 의료진 소개, 후기 페이지)',
+        expectedImpact: 'AI 신뢰도 대폭 상승 → 언급률 +20~30%p 예상',
+      });
+    }
+
+    // 네이버 플레이스 없으면 우선
+    if (!channels.find(c => c.channel === '네이버 플레이스')) {
+      recs.push({
+        priority: '🟠 높음',
+        channel: '네이버 플레이스',
+        action: '네이버 플레이스 정보 최적화 (사진, 영업시간, 메뉴, 후기 관리)',
+        expectedImpact: '위치 기반 AI 추천 강화 → ChatGPT 언급률 +15%p 예상',
+      });
+    }
+
+    // 블로그 적으면
+    const blogChannel = channels.find(c => c.channel === '네이버 블로그');
+    if (!blogChannel || blogChannel.citedCount < 3) {
+      recs.push({
+        priority: '🟡 보통',
+        channel: '네이버 블로그',
+        action: '주 2회 이상 진료 사례/전문 정보 블로그 포스팅',
+        expectedImpact: 'Perplexity/Gemini 출처 참조 증가 → 언급률 +10%p 예상',
+      });
+    }
+
+    // 유튜브 없으면
+    if (!channels.find(c => c.channel === '유튜브')) {
+      recs.push({
+        priority: '🟡 보통',
+        channel: '유튜브',
+        action: '월 2회 이상 진료 과정 또는 원장님 Q&A 영상 업로드',
+        expectedImpact: 'Gemini/Perplexity 참조 다양화 → AI 출처 신뢰도 상승',
+      });
+    }
+
+    // 구글 없으면
+    if (!channels.find(c => c.channel === '구글')) {
+      recs.push({
+        priority: '🟡 보통',
+        channel: '구글 비즈니스 프로필',
+        action: '구글 비즈니스 프로필 등록 및 리뷰 관리',
+        expectedImpact: 'ChatGPT/Gemini 참조 강화 → 글로벌 AI 가시성 상승',
+      });
+    }
+
+    return recs;
+  }
+
+  // ==================== Phase 2-6: 자동 액션 리포트 ====================
+
+  @Get('insights/action-report/:hospitalId')
+  @ApiOperation({ summary: '자동 액션 리포트 - AI 기반 주간 실행 계획 생성' })
+  async getActionReport(
+    @Param('hospitalId') hospitalId: string,
+  ) {
+    const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
+    if (!hospital) throw new Error('병원을 찾을 수 없습니다');
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      include: { prompt: true },
+    });
+
+    // --- 데이터 수집 ---
+    const totalResponses = responses.length;
+    const mentionedResponses = responses.filter(r => r.isMentioned);
+    const mentionRate = totalResponses > 0 ? Math.round((mentionedResponses.length / totalResponses) * 100) : 0;
+
+    // 플랫폼별 언급률
+    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+    const platformStats: Record<string, { total: number; mentioned: number; rate: number }> = {};
+    for (const p of platforms) {
+      const pTotal = responses.filter(r => r.aiPlatform === p).length;
+      const pMentioned = responses.filter(r => r.aiPlatform === p && r.isMentioned).length;
+      platformStats[p] = { total: pTotal, mentioned: pMentioned, rate: pTotal > 0 ? Math.round((pMentioned / pTotal) * 100) : 0 };
+    }
+
+    // 가장 약한 플랫폼
+    const weakestPlatform = Object.entries(platformStats)
+      .filter(([, s]) => s.total > 0)
+      .sort(([, a], [, b]) => a.rate - b.rate)[0];
+
+    // 가장 강한 플랫폼
+    const strongestPlatform = Object.entries(platformStats)
+      .filter(([, s]) => s.total > 0)
+      .sort(([, a], [, b]) => b.rate - a.rate)[0];
+
+    // 안 언급되는 질문 (Content Gap)
+    const promptGaps: { question: string; platforms: string[] }[] = [];
+    const promptMap = new Map<string, { text: string; mentioned: string[]; notMentioned: string[] }>();
+    
+    for (const r of responses) {
+      const pId = r.promptId;
+      if (!promptMap.has(pId)) {
+        promptMap.set(pId, { text: r.prompt?.promptText || '', mentioned: [], notMentioned: [] });
+      }
+      if (r.isMentioned) {
+        promptMap.get(pId)!.mentioned.push(r.aiPlatform);
+      } else {
+        promptMap.get(pId)!.notMentioned.push(r.aiPlatform);
+      }
+    }
+
+    for (const [, data] of promptMap) {
+      if (data.mentioned.length === 0 && data.notMentioned.length > 0) {
+        promptGaps.push({ question: data.text, platforms: data.notMentioned });
+      }
+    }
+
+    // 경쟁사 빈도
+    const competitorFreq: Record<string, number> = {};
+    for (const r of responses) {
+      for (const comp of (r.competitorsMentioned || [])) {
+        competitorFreq[comp] = (competitorFreq[comp] || 0) + 1;
+      }
+    }
+    const topCompetitors = Object.entries(competitorFreq).sort(([, a], [, b]) => b - a).slice(0, 3);
+
+    // 출처 현황
+    const allSources = responses.flatMap(r => [...(r.citedSources || []), ...(r.citedUrl ? [r.citedUrl] : [])]);
+    const hasOfficialSite = allSources.some(s => {
+      try { const d = new URL(s).hostname; return d.includes('치과') || d.includes('dental') || d.includes('clinic'); } catch { return false; }
+    });
+    const hasBlog = allSources.some(s => s.includes('blog.naver.com'));
+    const hasYoutube = allSources.some(s => s.includes('youtube.com'));
+
+    // 감성 분석
+    const positiveCount = responses.filter(r => r.sentimentLabel === 'POSITIVE').length;
+    const negativeCount = responses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+    const sentimentRate = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
+
+    // --- 액션 플랜 생성 (GPT 없이 룰 기반) ---
+    const actions: {
+      priority: number;
+      category: string;
+      title: string;
+      description: string;
+      expectedImpact: string;
+      deadline: string;
+    }[] = [];
+
+    // 1. 가장 약한 플랫폼 공략
+    if (weakestPlatform && weakestPlatform[1].rate < 30) {
+      const pName = platformNames[weakestPlatform[0]] || weakestPlatform[0];
+      actions.push({
+        priority: 1,
+        category: '플랫폼 공략',
+        title: `${pName} 언급률 개선 (현재 ${weakestPlatform[1].rate}%)`,
+        description: weakestPlatform[0] === 'CHATGPT' 
+          ? '공식 웹사이트 SEO 최적화 + 구글 비즈니스 프로필 강화 → ChatGPT의 주요 참조 소스 확보'
+          : weakestPlatform[0] === 'PERPLEXITY'
+          ? '네이버 블로그/플레이스 콘텐츠 강화 → Perplexity의 한국어 검색 소스 확보'
+          : weakestPlatform[0] === 'GEMINI'
+          ? '유튜브 콘텐츠 + 구글 맵 최적화 → Gemini의 구글 생태계 참조 강화'
+          : 'AI 플랫폼별 최적화된 콘텐츠 배포',
+        expectedImpact: `${pName} 언급률 ${weakestPlatform[1].rate}% → 목표 ${Math.min(weakestPlatform[1].rate + 20, 80)}%`,
+        deadline: '이번 주',
+      });
+    }
+
+    // 2. Content Gap 해소
+    if (promptGaps.length > 0) {
+      const topGap = promptGaps[0];
+      actions.push({
+        priority: 2,
+        category: '콘텐츠 갭',
+        title: `AI가 전혀 언급하지 않는 질문 ${promptGaps.length}개 발견`,
+        description: `대표 질문: "${topGap.question.substring(0, 50)}" — 이 질문 관련 블로그 포스팅 + 공식사이트 페이지 필요`,
+        expectedImpact: `언급률 +${Math.min(promptGaps.length * 3, 20)}%p 예상`,
+        deadline: '이번 주',
+      });
+    }
+
+    // 3. 출처 다양화
+    if (!hasOfficialSite) {
+      actions.push({
+        priority: 3,
+        category: '출처 강화',
+        title: '병원 공식 사이트가 AI 출처에 없음',
+        description: 'SEO 최적화된 공식 사이트 구축/개선 → 진료 안내, 의료진 소개, 자주 묻는 질문 페이지 추가',
+        expectedImpact: 'AI 신뢰도 대폭 상승, 1순위 추천 확률 증가',
+        deadline: '2주 내',
+      });
+    }
+    if (!hasBlog) {
+      actions.push({
+        priority: 4,
+        category: '출처 강화',
+        title: '네이버 블로그 콘텐츠 시작',
+        description: `주 2회 진료 사례/팁 포스팅 시작 → "${hospital.name}" 키워드로 AI 참조 가능성 확보`,
+        expectedImpact: 'Perplexity/Gemini 출처 참조 확률 상승',
+        deadline: '이번 주 시작',
+      });
+    }
+    if (!hasYoutube) {
+      actions.push({
+        priority: 5,
+        category: '출처 강화',
+        title: '유튜브 채널 시작',
+        description: '월 2회 진료 과정/원장 Q&A 영상 → 영상 콘텐츠는 AI의 멀티모달 참조에 점점 더 중요',
+        expectedImpact: 'Gemini/Perplexity 출처 다양화',
+        deadline: '2주 내 시작',
+      });
+    }
+
+    // 4. 경쟁사 대응
+    if (topCompetitors.length > 0 && topCompetitors[0][1] > mentionedResponses.length) {
+      actions.push({
+        priority: 2,
+        category: '경쟁사 대응',
+        title: `${topCompetitors[0][0]}이(가) ${topCompetitors[0][1]}회 언급 — 우리(${mentionedResponses.length}회)보다 많음`,
+        description: `차별화 키워드로 콘텐츠 강화: 이 경쟁사와 다른 우리만의 강점 어필`,
+        expectedImpact: '경쟁사 대비 언급 비율 역전 가능',
+        deadline: '이번 주',
+      });
+    }
+
+    // 5. 감성 개선
+    if (negativeCount > 0 && negativeCount / totalResponses > 0.1) {
+      actions.push({
+        priority: 3,
+        category: '감성 관리',
+        title: `부정적 언급 ${negativeCount}건 감지`,
+        description: 'AI 응답 내 부정적 문맥 확인 후, 해당 이슈 관련 긍정적 콘텐츠 생산',
+        expectedImpact: '부정 비율 감소 → 전체 감성 점수 개선',
+        deadline: '이번 주',
+      });
+    }
+
+    // 정렬
+    actions.sort((a, b) => a.priority - b.priority);
+
+    return {
+      hospitalName: hospital.name,
+      generatedAt: new Date().toISOString(),
+      period: '최근 30일',
+      summary: {
+        overallMentionRate: mentionRate,
+        totalResponses,
+        mentionedCount: mentionedResponses.length,
+        sentimentRate,
+        strongestPlatform: strongestPlatform ? {
+          name: platformNames[strongestPlatform[0]] || strongestPlatform[0],
+          rate: strongestPlatform[1].rate,
+        } : null,
+        weakestPlatform: weakestPlatform ? {
+          name: platformNames[weakestPlatform[0]] || weakestPlatform[0],
+          rate: weakestPlatform[1].rate,
+        } : null,
+        contentGapCount: promptGaps.length,
+        topCompetitor: topCompetitors.length > 0 ? { name: topCompetitors[0][0], count: topCompetitors[0][1] } : null,
+      },
+      actions,
+      weeklyGoals: [
+        `전체 언급률 ${mentionRate}% → ${Math.min(mentionRate + 10, 80)}% 달성`,
+        weakestPlatform ? `${platformNames[weakestPlatform[0]]} 언급률 ${weakestPlatform[1].rate}% → ${Math.min(weakestPlatform[1].rate + 15, 60)}%` : null,
+        promptGaps.length > 0 ? `Content Gap ${promptGaps.length}개 중 ${Math.min(3, promptGaps.length)}개 해소` : null,
+      ].filter(Boolean),
+    };
   }
 
   @Post('score/:hospitalId')

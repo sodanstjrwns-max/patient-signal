@@ -210,6 +210,13 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days } }),
   getSourceAnalysis: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days } }),
+  // Phase 2: 심화 인사이트
+  getPositioningMap: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days } }),
+  getSourceQuality: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/insights/source-quality/${hospitalId}`, { params: { days } }),
+  getActionReport: (hospitalId: string) =>
+    api.get(`/ai-crawler/insights/action-report/${hospitalId}`),
 };
 
 // Scores API

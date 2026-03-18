@@ -24,6 +24,12 @@ import {
   Quote,
   Zap,
   AlertCircle,
+  Radar,
+  Shield,
+  FileText,
+  CheckCircle2,
+  Clock,
+  Star,
 } from 'lucide-react';
 
 const platformNames: Record<string, string> = {
@@ -50,7 +56,7 @@ const platformBgColors: Record<string, string> = {
 export default function InsightsPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
-  const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources'>('mention');
+  const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions'>('mention');
 
   // Phase 1 APIs
   const { data: mentionData, isLoading: mentionLoading } = useQuery({
@@ -71,7 +77,26 @@ export default function InsightsPage() {
     enabled: !!hospitalId,
   });
 
-  const isLoading = mentionLoading || trendLoading || sourceLoading;
+  // Phase 2 APIs
+  const { data: positionData, isLoading: positionLoading } = useQuery({
+    queryKey: ['insights-positioning', hospitalId],
+    queryFn: () => crawlerApi.getPositioningMap(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId,
+  });
+
+  const { data: sourceQualityData, isLoading: sourceQualityLoading } = useQuery({
+    queryKey: ['insights-source-quality', hospitalId],
+    queryFn: () => crawlerApi.getSourceQuality(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId,
+  });
+
+  const { data: actionData, isLoading: actionLoading } = useQuery({
+    queryKey: ['insights-actions', hospitalId],
+    queryFn: () => crawlerApi.getActionReport(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId,
+  });
+
+  const isLoading = mentionLoading || trendLoading || sourceLoading || positionLoading || sourceQualityLoading || actionLoading;
 
   if (!hospitalId) {
     return (
@@ -89,33 +114,25 @@ export default function InsightsPage() {
       <div className="p-4 sm:p-6 space-y-6">
         {/* 탭 */}
         <div className="flex gap-2 overflow-x-auto pb-1">
-          <Button
-            variant={activeTab === 'mention' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('mention')}
-            className="flex-shrink-0"
-          >
-            <Quote className="h-4 w-4 mr-1.5" />
-            추천 멘트 분석
-          </Button>
-          <Button
-            variant={activeTab === 'trend' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('trend')}
-            className="flex-shrink-0"
-          >
-            <TrendingUp className="h-4 w-4 mr-1.5" />
-            트렌드 추적
-          </Button>
-          <Button
-            variant={activeTab === 'sources' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('sources')}
-            className="flex-shrink-0"
-          >
-            <Globe className="h-4 w-4 mr-1.5" />
-            출처 분석
-          </Button>
+          {[
+            { key: 'actions', icon: FileText, label: '액션 리포트' },
+            { key: 'mention', icon: Quote, label: '추천 멘트' },
+            { key: 'positioning', icon: Radar, label: '포지셔닝 맵' },
+            { key: 'trend', icon: TrendingUp, label: '트렌드' },
+            { key: 'sources', icon: Globe, label: '출처 분석' },
+            { key: 'sourceQuality', icon: Shield, label: '출처 품질' },
+          ].map(tab => (
+            <Button
+              key={tab.key}
+              variant={activeTab === tab.key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab(tab.key as any)}
+              className="flex-shrink-0"
+            >
+              <tab.icon className="h-4 w-4 mr-1.5" />
+              {tab.label}
+            </Button>
+          ))}
         </div>
 
         {isLoading ? (
@@ -124,9 +141,12 @@ export default function InsightsPage() {
           </div>
         ) : (
           <>
+            {activeTab === 'actions' && actionData && <ActionReport data={actionData} />}
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
+            {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
             {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} />}
             {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} />}
+            {activeTab === 'sourceQuality' && sourceQualityData && <SourceQuality data={sourceQualityData} />}
           </>
         )}
       </div>
@@ -625,6 +645,626 @@ function SourceAnalysis({ data }: { data: any }) {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ==================== 4. 경쟁사 포지셔닝 맵 (레이더 차트) ====================
+function PositioningMap({ data }: { data: any }) {
+  const axisLabels: Record<string, string> = data.axes || {
+    expertise: '전문성',
+    price: '가격',
+    accessibility: '접근성',
+    facility: '시설/장비',
+    reputation: '후기/평판',
+  };
+  const axisKeys = Object.keys(axisLabels);
+  const axisEmojis: Record<string, string> = {
+    expertise: '🎓',
+    price: '💰',
+    accessibility: '🚇',
+    facility: '🏥',
+    reputation: '⭐',
+  };
+
+  // SVG 레이더 차트 계산
+  const cx = 150, cy = 150, maxR = 120;
+  const angleStep = (2 * Math.PI) / axisKeys.length;
+  const startAngle = -Math.PI / 2; // 12시 방향 시작
+
+  const getPoint = (axisIdx: number, value: number) => {
+    const angle = startAngle + axisIdx * angleStep;
+    const r = (value / 100) * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  };
+
+  const getPolygonPoints = (scores: Record<string, number>) => {
+    return axisKeys.map((key, i) => {
+      const pt = getPoint(i, scores[key] || 0);
+      return `${pt.x},${pt.y}`;
+    }).join(' ');
+  };
+
+  const ourScores = data.ourPosition?.scores || {};
+  const competitors = data.competitors || [];
+
+  // 경쟁사 색상
+  const compColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#8b5cf6'];
+  const compBgColors = ['bg-red-100 text-red-700', 'bg-orange-100 text-orange-700', 'bg-yellow-100 text-yellow-700', 'bg-green-100 text-green-700', 'bg-purple-100 text-purple-700'];
+
+  return (
+    <div className="space-y-6">
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-blue-600 font-medium">우리 병원 언급</p>
+            <p className="text-2xl font-bold text-blue-800">{data.ourPosition?.totalMentions || 0}회</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-red-600 font-medium">비교 경쟁사</p>
+            <p className="text-2xl font-bold text-red-800">{competitors.length}곳</p>
+          </CardContent>
+        </Card>
+        {(() => {
+          const topAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) > (ourScores[b] || 0) ? a : b, axisKeys[0]);
+          return (
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <CardContent className="p-4">
+                <p className="text-xs text-green-600 font-medium">최강 포인트</p>
+                <p className="text-lg font-bold text-green-800">{axisEmojis[topAxis]} {axisLabels[topAxis]}</p>
+                <p className="text-xs text-green-600">{ourScores[topAxis] || 0}점</p>
+              </CardContent>
+            </Card>
+          );
+        })()}
+        {(() => {
+          const weakAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) < (ourScores[b] || 0) ? a : b, axisKeys[0]);
+          return (
+            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+              <CardContent className="p-4">
+                <p className="text-xs text-amber-600 font-medium">강화 필요</p>
+                <p className="text-lg font-bold text-amber-800">{axisEmojis[weakAxis]} {axisLabels[weakAxis]}</p>
+                <p className="text-xs text-amber-600">{ourScores[weakAxis] || 0}점</p>
+              </CardContent>
+            </Card>
+          );
+        })()}
+      </div>
+
+      {/* 레이더 차트 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <Radar className="h-5 w-5 text-blue-600" />
+            AI가 보는 시장 내 포지션 맵
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">AI 응답에서 추출한 5개 축 기준 포지셔닝 비교</p>
+
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            {/* SVG 레이더 */}
+            <div className="flex-shrink-0">
+              <svg viewBox="0 0 300 300" className="w-72 h-72 sm:w-80 sm:h-80">
+                {/* 배경 동심원 */}
+                {[20, 40, 60, 80, 100].map(level => (
+                  <polygon
+                    key={level}
+                    points={axisKeys.map((_, i) => {
+                      const pt = getPoint(i, level);
+                      return `${pt.x},${pt.y}`;
+                    }).join(' ')}
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="1"
+                  />
+                ))}
+
+                {/* 축 선 */}
+                {axisKeys.map((_, i) => {
+                  const pt = getPoint(i, 100);
+                  return (
+                    <line key={i} x1={cx} y1={cy} x2={pt.x} y2={pt.y} stroke="#d1d5db" strokeWidth="1" />
+                  );
+                })}
+
+                {/* 경쟁사 폴리곤 */}
+                {competitors.map((comp: any, ci: number) => (
+                  <polygon
+                    key={comp.name}
+                    points={getPolygonPoints(comp.scores || {})}
+                    fill={compColors[ci % compColors.length]}
+                    fillOpacity="0.08"
+                    stroke={compColors[ci % compColors.length]}
+                    strokeWidth="1.5"
+                    strokeDasharray="4 2"
+                  />
+                ))}
+
+                {/* 우리 병원 폴리곤 */}
+                <polygon
+                  points={getPolygonPoints(ourScores)}
+                  fill="#3b82f6"
+                  fillOpacity="0.2"
+                  stroke="#2563eb"
+                  strokeWidth="2.5"
+                />
+
+                {/* 우리 병원 꼭짓점 */}
+                {axisKeys.map((key, i) => {
+                  const pt = getPoint(i, ourScores[key] || 0);
+                  return (
+                    <circle key={key} cx={pt.x} cy={pt.y} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
+                  );
+                })}
+
+                {/* 축 라벨 */}
+                {axisKeys.map((key, i) => {
+                  const pt = getPoint(i, 115);
+                  return (
+                    <text
+                      key={key}
+                      x={pt.x}
+                      y={pt.y}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      className="text-xs font-medium fill-gray-700"
+                      fontSize="11"
+                    >
+                      {axisEmojis[key]} {axisLabels[key]}
+                    </text>
+                  );
+                })}
+
+                {/* 점수 라벨 (20, 40, 60, 80, 100) */}
+                {[20, 40, 60, 80, 100].map(level => {
+                  const pt = getPoint(0, level);
+                  return (
+                    <text key={level} x={pt.x + 8} y={pt.y} fontSize="8" className="fill-gray-400" dominantBaseline="middle">
+                      {level}
+                    </text>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* 범례 + 수치 */}
+            <div className="flex-1 space-y-3 w-full">
+              {/* 우리 병원 */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-4 h-1 bg-blue-600 rounded" />
+                  <span className="text-sm font-semibold text-blue-800">🏥 {data.hospitalName} (우리)</span>
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {axisKeys.map(key => (
+                    <div key={key} className="text-center">
+                      <p className="text-xs text-gray-500">{axisLabels[key]}</p>
+                      <p className="text-lg font-bold text-blue-700">{ourScores[key] || 0}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 경쟁사 */}
+              {competitors.map((comp: any, ci: number) => (
+                <div key={comp.name} className="bg-gray-50 rounded-lg p-4 border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-4 h-1 rounded" style={{ backgroundColor: compColors[ci % compColors.length] }} />
+                    <span className="text-sm font-medium text-gray-700">{comp.name}</span>
+                    <span className="text-xs text-gray-400 ml-auto">{comp.mentionCount}회 언급</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {axisKeys.map(key => {
+                      const compVal = comp.scores?.[key] || 0;
+                      const ourVal = ourScores[key] || 0;
+                      const diff = compVal - ourVal;
+                      return (
+                        <div key={key} className="text-center">
+                          <p className="text-xs text-gray-500">{axisLabels[key]}</p>
+                          <p className="text-lg font-bold" style={{ color: compColors[ci % compColors.length] }}>{compVal}</p>
+                          {diff !== 0 && (
+                            <p className={`text-xs ${diff > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                              {diff > 0 ? `+${diff}` : diff}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {competitors.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">경쟁사 데이터가 없습니다. AI 응답에서 경쟁사가 언급되면 자동으로 추출됩니다.</p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 인사이트 */}
+      {data.insights?.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardContent className="p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Lightbulb className="h-5 w-5 text-amber-500" />
+              포지셔닝 인사이트
+            </h3>
+            <div className="space-y-3">
+              {data.insights.map((insight: string, i: number) => (
+                <div key={i} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-blue-100">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-600">{i + 1}</span>
+                  </div>
+                  <p className="text-sm text-gray-700">{insight}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 5축별 상세 비교 바 차트 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-purple-600" />
+            축별 상세 비교
+          </h3>
+          <div className="space-y-6">
+            {axisKeys.map(key => {
+              const ourVal = ourScores[key] || 0;
+              return (
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-700">{axisEmojis[key]} {axisLabels[key]}</span>
+                  </div>
+                  {/* 우리 바 */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{data.hospitalName}</span>
+                    <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                      <div className="h-full bg-blue-500 rounded-full transition-all duration-700" style={{ width: `${ourVal}%` }} />
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">{ourVal}</span>
+                    </div>
+                  </div>
+                  {/* 경쟁사 바 */}
+                  {competitors.map((comp: any, ci: number) => {
+                    const compVal = comp.scores?.[key] || 0;
+                    return (
+                      <div key={comp.name} className="flex items-center gap-2 mb-1">
+                        <span className="text-xs text-gray-400 w-20 flex-shrink-0 truncate">{comp.name}</span>
+                        <div className="flex-1 bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{ width: `${compVal}%`, backgroundColor: compColors[ci % compColors.length] }}
+                          />
+                          <span className="absolute inset-0 flex items-center justify-center text-xs text-gray-600">{compVal}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ==================== 5. 출처 품질 분석 ====================
+function SourceQuality({ data }: { data: any }) {
+  const channels = data.channels || [];
+
+  const healthColors: Record<string, string> = {
+    '우수': 'text-green-600 bg-green-50 border-green-200',
+    '양호': 'text-blue-600 bg-blue-50 border-blue-200',
+    '보통': 'text-amber-600 bg-amber-50 border-amber-200',
+    '개선 필요': 'text-red-600 bg-red-50 border-red-200',
+  };
+
+  const weightColors: Record<string, string> = {
+    '최상': 'bg-green-100 text-green-800',
+    '상': 'bg-blue-100 text-blue-800',
+    '중상': 'bg-cyan-100 text-cyan-800',
+    '중': 'bg-amber-100 text-amber-800',
+    '하': 'bg-gray-100 text-gray-600',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 건강도 점수 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className={`${healthColors[data.healthLabel] || 'bg-gray-50'} border-2`}>
+          <CardContent className="p-4 text-center">
+            <p className="text-xs font-medium opacity-80">출처 건강도</p>
+            <p className="text-3xl font-bold">{data.healthScore || 0}</p>
+            <p className="text-sm font-semibold">{data.healthLabel}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-blue-600 font-medium">평균 품질</p>
+            <p className="text-3xl font-bold text-blue-800">{data.avgQuality || 0}</p>
+            <p className="text-xs text-blue-600">100점 만점</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-purple-600 font-medium">활성 채널</p>
+            <p className="text-3xl font-bold text-purple-800">{data.channelDiversity || 0}</p>
+            <p className="text-xs text-purple-600">개 채널</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-gray-500 font-medium">분석 기간</p>
+            <p className="text-lg font-bold text-gray-800">{data.period}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 채널별 영향력 분석 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-blue-600" />
+            채널별 영향력 분석
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">각 출처 채널의 품질 점수와 AI 가시성 영향 분석</p>
+
+          {channels.length > 0 ? (
+            <div className="space-y-4">
+              {channels.map((ch: any, i: number) => (
+                <div key={ch.channel} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">{ch.channel}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${weightColors[ch.qualityWeight] || 'bg-gray-100 text-gray-600'}`}>
+                        {ch.qualityWeight}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-blue-600">{ch.influenceScore}</span>
+                      <span className="text-xs text-gray-400 ml-1">영향력</span>
+                    </div>
+                  </div>
+
+                  {/* 지표 바 */}
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">품질 점수</p>
+                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${ch.qualityScore}%` }} />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.qualityScore}/100</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">언급 상관도</p>
+                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${ch.mentionCorrelation}%` }} />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.mentionCorrelation}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">긍정 비율</p>
+                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${ch.positiveCorrelation}%` }} />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.positiveCorrelation}%</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>인용 {ch.citedCount}건</span>
+                    <span>{ch.qualityDescription}</span>
+                    <div className="flex gap-1">
+                      {ch.platforms?.map((p: string) => (
+                        <span key={p} className={`px-1.5 py-0.5 rounded text-xs ${platformBgColors[p] || 'bg-gray-100 text-gray-600'}`}>
+                          {platformNames[p] || p}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm text-center py-4">출처 데이터가 아직 없습니다</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 우선순위 추천 */}
+      {data.recommendations?.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardContent className="p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <Target className="h-5 w-5 text-amber-600" />
+              출처 강화 추천 (우선순위 순)
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">AI 가시성을 높이기 위해 집중해야 할 채널</p>
+            <div className="space-y-3">
+              {data.recommendations.map((rec: any, i: number) => (
+                <div key={i} className="bg-white rounded-lg p-4 border border-amber-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-sm">{rec.priority}</span>
+                    <span className="text-sm font-semibold text-gray-900">{rec.channel}</span>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-2">{rec.action}</p>
+                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    {rec.expectedImpact}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ==================== 6. 자동 액션 리포트 ====================
+function ActionReport({ data }: { data: any }) {
+  const summary = data.summary || {};
+  const actions = data.actions || [];
+  const weeklyGoals = data.weeklyGoals || [];
+
+  const priorityStyles: Record<number, string> = {
+    1: 'border-l-red-500 bg-red-50/50',
+    2: 'border-l-orange-500 bg-orange-50/50',
+    3: 'border-l-amber-500 bg-amber-50/50',
+    4: 'border-l-blue-500 bg-blue-50/50',
+    5: 'border-l-gray-400 bg-gray-50/50',
+  };
+
+  const categoryIcons: Record<string, string> = {
+    '플랫폼 공략': '🎯',
+    '콘텐츠 갭': '📝',
+    '출처 강화': '🔗',
+    '경쟁사 대응': '⚔️',
+    '감성 관리': '💬',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 리포트 헤더 */}
+      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-0">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                주간 액션 리포트
+              </h2>
+              <p className="text-sm text-slate-300 mt-1">{data.hospitalName} · {data.period}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">생성 시각</p>
+              <p className="text-sm text-slate-200">
+                {data.generatedAt ? new Date(data.generatedAt).toLocaleDateString('ko-KR', {
+                  year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : '-'}
+              </p>
+            </div>
+          </div>
+
+          {/* 핵심 수치 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">전체 언급률</p>
+              <p className="text-2xl font-bold">{summary.overallMentionRate || 0}%</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">최강 플랫폼</p>
+              <p className="text-lg font-bold">{summary.strongestPlatform?.name || '-'}</p>
+              <p className="text-xs text-green-400">{summary.strongestPlatform?.rate || 0}%</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">최약 플랫폼</p>
+              <p className="text-lg font-bold">{summary.weakestPlatform?.name || '-'}</p>
+              <p className="text-xs text-red-400">{summary.weakestPlatform?.rate || 0}%</p>
+            </div>
+            <div className="bg-white/10 rounded-lg p-3 text-center">
+              <p className="text-xs text-slate-300">콘텐츠 갭</p>
+              <p className="text-2xl font-bold">{summary.contentGapCount || 0}건</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 이번 주 목표 */}
+      {weeklyGoals.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardContent className="p-5">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Star className="h-5 w-5 text-amber-500" />
+              이번 주 목표
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {weeklyGoals.map((goal: string, i: number) => (
+                <div key={i} className="bg-white rounded-lg p-4 border border-blue-100 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <p className="text-sm text-gray-700 font-medium">{goal}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 액션 아이템 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-600" />
+            실행 과제 ({actions.length}개)
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">우선순위 순으로 정렬된 이번 주 실행 과제</p>
+
+          {actions.length > 0 ? (
+            <div className="space-y-4">
+              {actions.map((action: any, i: number) => (
+                <div
+                  key={i}
+                  className={`border-l-4 rounded-lg p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-gray-50/50'}`}
+                >
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-lg">{categoryIcons[action.category] || '📋'}</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border text-gray-600 font-medium">
+                      {action.category}
+                    </span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1 ml-auto">
+                      <Clock className="h-3 w-3" />
+                      {action.deadline}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{action.title}</h4>
+                  <p className="text-sm text-gray-600 mb-2">{action.description}</p>
+                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                    <TrendingUp className="h-3 w-3" />
+                    예상 효과: {action.expectedImpact}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">현재 긴급 액션 아이템이 없습니다!</p>
+              <p className="text-sm text-gray-400 mt-1">AI 가시성이 잘 관리되고 있어요 👏</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 경쟁사 알림 */}
+      {summary.topCompetitor && (
+        <Card className="border-red-200 bg-red-50/30">
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-red-800 mb-2 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              경쟁사 알림
+            </h3>
+            <p className="text-sm text-gray-700">
+              <span className="font-bold text-red-700">{summary.topCompetitor.name}</span>이(가)
+              최근 30일간 <span className="font-bold">{summary.topCompetitor.count}회</span> AI에서 언급되었습니다.
+              {summary.topCompetitor.count > (summary.mentionedCount || 0) && (
+                <span className="text-red-600 font-medium">
+                  {' '}— 우리({summary.mentionedCount}회)보다 많습니다! 대응이 필요합니다.
+                </span>
+              )}
+            </p>
           </CardContent>
         </Card>
       )}
