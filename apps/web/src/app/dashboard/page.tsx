@@ -22,11 +22,13 @@ import {
   Calendar
 } from 'lucide-react';
 import Link from 'next/link';
+import { getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
+  const planType = (user as any)?.hospital?.planType || 'STARTER';
   const [showTutorial, setShowTutorial] = useState(false);
 
   // 첫 방문 시 튜토리얼 표시
@@ -56,11 +58,11 @@ export default function DashboardPage() {
     enabled: !!hospitalId,
   });
 
-  // 경쟁사 비교
+  // 경쟁사 비교 (Starter는 competitorComparison 기능 없으므로 호출 안 함)
   const { data: comparison } = useQuery({
     queryKey: ['comparison', hospitalId],
     queryFn: () => competitorsApi.getComparison(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
+    enabled: !!hospitalId && canUseFeature(planType, 'competitorComparison'),
   });
 
   // 플랫폼별 상세 분석

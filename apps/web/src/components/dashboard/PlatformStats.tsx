@@ -51,15 +51,9 @@ const platformNames: Record<string, string> = {
 
 export function PlatformStats({ data, planType: propPlanType }: PlatformStatsProps) {
   const { user } = useAuthStore();
-  const hospitalPlanType = (user as any)?.hospital?.planType;
-  const planType = propPlanType || hospitalPlanType || 'STARTER';
+  const planType = propPlanType || (user as any)?.hospital?.planType || 'STARTER';
   const planLimits = getPlanLimits(planType);
   const allowedPlatforms = planLimits.platforms;
-
-  // 디버그: 콘솔에서 planType 확인 (프로덕션에서 제거 예정)
-  if (typeof window !== 'undefined') {
-    console.log('[PlatformStats] planType:', planType, '| propPlanType:', propPlanType, '| hospitalPlanType:', hospitalPlanType, '| allowedPlatforms:', allowedPlatforms);
-  }
 
   // 상세 데이터인지 확인
   const isDetailedData = Array.isArray(data);
