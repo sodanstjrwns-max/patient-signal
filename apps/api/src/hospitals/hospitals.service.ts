@@ -271,7 +271,7 @@ export class HospitalsService {
    * @param existingCount - 이미 생성된 질문 수 (업그레이드 시 추가분만 계산)
    */
   async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'STARTER', existingCount: number = 0) {
-    const planLimits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.STARTER;
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
     const availableSlots = Math.max(0, maxPrompts - existingCount);
 
@@ -936,8 +936,8 @@ export class HospitalsService {
 
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
-    const prevLimits = PlanGuard.PLAN_LIMITS[previousPlan] || PlanGuard.PLAN_LIMITS.STARTER;
-    const newLimits = PlanGuard.PLAN_LIMITS[newPlan] || PlanGuard.PLAN_LIMITS.STARTER;
+    const prevLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[previousPlan] || PlanGuard.PLAN_LIMITS.STARTER;
+    const newLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[newPlan] || PlanGuard.PLAN_LIMITS.STARTER;
 
     // ── 1. 추가 질문 자동 생성 ──
     const currentPromptCount = await this.prisma.prompt.count({ where: { hospitalId } });
@@ -1006,10 +1006,10 @@ export class HospitalsService {
     if (!prevLimits.competitorAEO && newLimits.competitorAEO) newFeatures.push('경쟁사 AEO 측정');
 
     // 새 플랫폼 추가 확인
-    const newPlatforms = newLimits.platforms.filter(p => !prevLimits.platforms.includes(p));
+    const newPlatforms = newLimits.platforms.filter((p: string) => !prevLimits.platforms.includes(p));
     if (newPlatforms.length > 0) {
-      const platformNames = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
-      newFeatures.push(`새 AI 플랫폼: ${newPlatforms.map(p => platformNames[p] || p).join(', ')}`);
+      const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
+      newFeatures.push(`새 AI 플랫폼: ${newPlatforms.map((p: string) => platformNames[p] || p).join(', ')}`);
     }
 
     // ── 4. 경쟁사 AEO 즉시 크롤링 트리거 (기존 경쟁사가 있고, 경쟁사AEO가 새로 열렸을 때) ──

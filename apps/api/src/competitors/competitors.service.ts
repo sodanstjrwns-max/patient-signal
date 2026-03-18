@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 
-interface CompetitorSuggestion {
+export interface CompetitorSuggestion {
   name: string;
   mentionCount: number;
   coMentionCount: number;      // 우리 병원과 같은 응답에 등장한 횟수
