@@ -10,6 +10,7 @@ import { InsightCard } from '@/components/dashboard/InsightCard';
 import { CompetitorComparison } from '@/components/dashboard/CompetitorComparison';
 import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { hospitalApi, scoresApi, competitorsApi, crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { 
@@ -25,6 +26,11 @@ import {
   Minus,
   Zap,
   Loader2,
+  Lightbulb,
+  Quote,
+  Globe,
+  TrendingUp,
+  Target,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -75,6 +81,19 @@ export default function DashboardPage() {
   const { data: platformDetails } = useQuery({
     queryKey: ['platforms', hospitalId],
     queryFn: () => scoresApi.getPlatforms(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId,
+  });
+
+  // Phase 1: 인사이트 요약 데이터
+  const { data: mentionInsight } = useQuery({
+    queryKey: ['insights-mention-summary', hospitalId],
+    queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId,
+  });
+
+  const { data: sourceInsight } = useQuery({
+    queryKey: ['insights-source-summary', hospitalId],
+    queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
   });
 
@@ -216,6 +235,97 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* AI 인사이트 요약 */}
+        {(mentionInsight || sourceInsight) && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-500" />
+                AI 인사이트 요약
+              </h3>
+              <Link href="/dashboard/insights">
+                <Button variant="ghost" size="sm" className="text-blue-600 text-xs">
+                  상세 분석 보기 →
+                </Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* 추천 멘트 분석 요약 */}
+              {mentionInsight && (
+                <Link href="/dashboard/insights">
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-400">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Quote className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-semibold text-gray-900">추천 키워드</span>
+                      </div>
+                      {mentionInsight.recommendationKeywords?.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {mentionInsight.recommendationKeywords.slice(0, 4).map((kw: any) => (
+                            <span key={kw.keyword} className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                              {kw.keyword} ({kw.count})
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400">데이터 수집 중</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        1순위 추천 {mentionInsight.recommendationContext?.primaryRecommend || 0}회
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
+
+              {/* 트렌드 요약 */}
+              {mentionInsight && (
+                <Link href="/dashboard/insights">
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-green-400">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-semibold text-gray-900">언급 현황</span>
+                      </div>
+                      <p className="text-2xl font-bold text-green-700">
+                        {mentionInsight.totalResponses > 0
+                          ? Math.round((mentionInsight.mentionedResponses / mentionInsight.totalResponses) * 100)
+                          : 0}%
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {mentionInsight.mentionedResponses}/{mentionInsight.totalResponses} 응답에서 언급
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
+
+              {/* 출처 분석 요약 */}
+              {sourceInsight && (
+                <Link href="/dashboard/insights">
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-amber-400">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Globe className="h-4 w-4 text-amber-600" />
+                        <span className="text-sm font-semibold text-gray-900">AI 참조 출처</span>
+                      </div>
+                      <p className="text-2xl font-bold text-amber-700">{sourceInsight.totalUrls || 0}건</p>
+                      <p className="text-xs text-gray-500">
+                        {sourceInsight.categories?.length || 0}개 채널
+                        {sourceInsight.missingChannels?.length > 0 && (
+                          <span className="text-amber-600 ml-1">
+                            · {sourceInsight.missingChannels.length}개 미활용
+                          </span>
+                        )}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 빠른 액션 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <Link href="/guide">
@@ -244,6 +354,22 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-medium text-gray-900">질문 관리</p>
                     <p className="text-sm text-gray-500">모니터링 질문 추가</p>
+                  </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-gray-400" />
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/dashboard/insights">
+            <Card className="hover:shadow-md transition-shadow cursor-pointer">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Lightbulb className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">AI 인사이트</p>
+                    <p className="text-sm text-gray-500">심층 분석 보기</p>
                   </div>
                 </div>
                 <ArrowRight className="h-5 w-5 text-gray-400" />
