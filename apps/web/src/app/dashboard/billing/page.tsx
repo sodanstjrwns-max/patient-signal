@@ -180,8 +180,8 @@ function BillingContent() {
       const orderId = `PS_${selectedPlan}_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
       const orderName = `Patient Signal ${planInfo.name} 월간 구독`;
       // Toss customerKey: 영문/숫자/특수문자(-, _, =, ., @), 2~50자 제한
-      const rawKey = `${hospitalId || 'H'}_${user?.id || 'U'}`;
-      const customerKey = rawKey.length > 50 ? rawKey.substring(0, 50) : rawKey;
+      const customerKey = (hospitalId || user?.id || 'default').replace(/[^a-zA-Z0-9\-_=.@]/g, '').substring(0, 50) || 'default_user';
+      console.log('[Toss] customerKey:', customerKey, 'len:', customerKey.length);
 
       const payment = tossPayments.payment({
         customerKey,
@@ -227,8 +227,8 @@ function BillingContent() {
       const tossPayments = await loadTossPayments(TOSS_CLIENT_KEY);
 
       // Toss customerKey: 영문/숫자/특수문자(-, _, =, ., @), 2~50자 제한
-      const rawKey = `${hospitalId || 'H'}_${user?.id || 'U'}`;
-      const customerKey = rawKey.length > 50 ? rawKey.substring(0, 50) : rawKey;
+      const customerKey = (hospitalId || user?.id || 'default').replace(/[^a-zA-Z0-9\-_=.@]/g, '').substring(0, 50) || 'default_user';
+      console.log('[Toss] customerKey:', customerKey, 'len:', customerKey.length);
 
       const billing = tossPayments.payment({
         customerKey,
