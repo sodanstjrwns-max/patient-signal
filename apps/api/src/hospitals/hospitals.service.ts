@@ -179,6 +179,33 @@ export class HospitalsService {
       },
     });
 
+    // 감성 분석 통계 (최근 30일)
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const sentimentResponses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        responseDate: { gte: last30Days },
+        sentimentLabel: { not: null },
+      },
+      select: {
+        sentimentLabel: true,
+        isMentioned: true,
+      },
+    });
+
+    const totalSentiment = sentimentResponses.length;
+    const positiveCount = sentimentResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;
+    const neutralCount = sentimentResponses.filter(r => r.sentimentLabel === 'NEUTRAL').length;
+    const negativeCount = sentimentResponses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+
+    // 언급된 응답 중 감성 분석 (언급됐을 때 어떤 톤인지가 더 중요)
+    const mentionedSentiment = sentimentResponses.filter(r => r.isMentioned);
+    const mentionedTotal = mentionedSentiment.length;
+    const mentionedPositive = mentionedSentiment.filter(r => r.sentimentLabel === 'POSITIVE').length;
+    const mentionedNegative = mentionedSentiment.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+
     return {
       hospital,
       overallScore: latestScore?.overallScore ?? 0,
@@ -190,6 +217,21 @@ export class HospitalsService {
         totalCompetitors: competitors,
         mentionRate: totalResponses > 0 ? (recentMentions / totalResponses) * 100 : 0,
         recentMentions,
+      },
+      sentiment: {
+        total: totalSentiment,
+        positive: positiveCount,
+        neutral: neutralCount,
+        negative: negativeCount,
+        positiveRate: totalSentiment > 0 ? Math.round((positiveCount / totalSentiment) * 100) : 0,
+        negativeRate: totalSentiment > 0 ? Math.round((negativeCount / totalSentiment) * 100) : 0,
+        neutralRate: totalSentiment > 0 ? Math.round((neutralCount / totalSentiment) * 100) : 0,
+        // 언급 시 감성 (병원이 AI에서 언급될 때의 톤)
+        mentioned: {
+          total: mentionedTotal,
+          positiveRate: mentionedTotal > 0 ? Math.round((mentionedPositive / mentionedTotal) * 100) : 0,
+          negativeRate: mentionedTotal > 0 ? Math.round((mentionedNegative / mentionedTotal) * 100) : 0,
+        },
       },
     };
   }
