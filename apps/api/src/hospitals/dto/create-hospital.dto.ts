@@ -56,4 +56,33 @@ export class CreateHospitalDto {
   @IsOptional()
   @IsString()
   naverPlaceId?: string;
+
+  // ── 신규 온보딩 필드 ──
+
+  @ApiPropertyOptional({ 
+    example: ['임플란트', '치아교정', '라미네이트'], 
+    description: '주력 진료/시술 (환자 유입 핵심 키워드)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  coreTreatments?: string[];
+
+  @ApiPropertyOptional({ 
+    example: ['강남역', '선릉역', '역삼동', '논현동'], 
+    description: '주요 내원 지역 (환자가 많이 오는 지역/역세권)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  targetRegions?: string[];
+
+  @ApiPropertyOptional({ 
+    example: ['ABC치과', 'XYZ치과의원'], 
+    description: '경쟁 병원명 (온보딩 시 직접 입력)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  competitorNames?: string[];
 }

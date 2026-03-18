@@ -50,11 +50,29 @@ export class HospitalsService {
         },
       });
     } catch (err) {
-      // Subscription 생성 실패해도 병원 생성은 진행 (무료 모델)
       console.warn('Subscription 생성 실패 (무시됨):', err?.message);
     }
 
-    // 자동 프롬프트 생성 (지역 기반)
+    // ── 경쟁 병원 등록 (온보딩 시 입력된 경쟁사) ──
+    if (dto.competitorNames && dto.competitorNames.length > 0) {
+      const competitorRegion = `${dto.regionSido} ${dto.regionSigungu}`;
+      for (const name of dto.competitorNames.slice(0, 5)) { // 최대 5개
+        try {
+          await this.prisma.competitor.create({
+            data: {
+              hospitalId: hospital.id,
+              competitorName: name.trim(),
+              competitorRegion: competitorRegion,
+              isActive: true,
+            },
+          });
+        } catch (err) {
+          console.warn(`경쟁사 등록 실패 (${name}):`, err?.message);
+        }
+      }
+    }
+
+    // 자동 프롬프트 생성 (주력 진료 + 내원 지역 + 기본 지역 기반)
     await this.createAutoPrompts(hospital.id, dto);
 
     return hospital;
@@ -237,14 +255,14 @@ export class HospitalsService {
   }
 
   /**
-   * 자동 프롬프트 생성 (강화 버전)
+   * 자동 프롬프트 생성 (v2 - 온보딩 데이터 기반)
    * 
-   * 전략:
-   * 1. 기본 지역 추천 질문 (시군구 + 동 레벨)
-   * 2. 진료과목별 핵심 시술 질문 
-   * 3. 환자 상황/니즈 기반 질문 (실제 검색 패턴)
-   * 4. 비교/선택 기준 질문
-   * 5. 세부 진료과목(subSpecialties) 기반 질문
+   * 우선순위:
+   * 1. 주력 진료 × 내원 지역 조합 (가장 실전적)
+   * 2. 주력 진료 × 기본 지역 조합
+   * 3. 내원 지역 × 기본 추천 질문
+   * 4. 기존 진료과목별 템플릿 (fallback)
+   * 5. 비교/선택 기준 질문
    */
   async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto) {
     const templates: string[] = [];
@@ -253,51 +271,100 @@ export class HospitalsService {
     const fullRegion = dto.regionDong
       ? `${dto.regionSido} ${dto.regionSigungu} ${dto.regionDong}`
       : `${dto.regionSido} ${dto.regionSigungu}`;
-    // 짧은 지역명: "서울특별시 강남구" → "강남", "서울 강남"
     const shortRegion = dto.regionSigungu.replace(/[시군구]$/, '');
     const midRegion = `${dto.regionSido.replace(/특별시|광역시|도$/, '')} ${shortRegion}`;
 
     const specialtyName = this.getSpecialtyName(dto.specialtyType);
-    const specialtyTemplates = this.getSpecialtyPromptTemplates(dto.specialtyType);
 
-    // ── 1. 기본 지역 추천 질문 (3개) ──
+    // 내원 지역 목록 (입력값 + 기본 지역)
+    const targetRegions = dto.targetRegions?.length 
+      ? dto.targetRegions 
+      : [];
+    // 기본 지역 세트
+    const baseRegions = [shortRegion, fullRegion, midRegion];
+    // 전체 지역 세트 (내원 지역 우선)
+    const allRegions = [...new Set([...targetRegions, ...baseRegions])];
+
+    // 주력 진료 목록
+    const coreTreatments = dto.coreTreatments?.length 
+      ? dto.coreTreatments 
+      : (dto.subSpecialties?.length ? dto.subSpecialties : []);
+
+    // ══════════════════════════════════════
+    // 1. 주력 진료 × 지역 조합 (핵심!)
+    // ══════════════════════════════════════
+    if (coreTreatments.length > 0) {
+      for (const treatment of coreTreatments.slice(0, 8)) {
+        // 각 주력 진료에 대해 주요 지역 조합
+        const regionsForTreatment = allRegions.slice(0, 4);
+        for (const region of regionsForTreatment) {
+          templates.push(`${region} ${treatment} 잘하는 ${specialtyName} 추천해줘`);
+        }
+        // 추가 패턴 (실제 환자 검색 패턴)
+        templates.push(
+          `${shortRegion} ${treatment} 전문 ${specialtyName} 어디가 좋아?`,
+          `${treatment} 잘하는 ${specialtyName} ${shortRegion} 근처 알려줘`,
+        );
+      }
+    }
+
+    // ══════════════════════════════════════
+    // 2. 내원 지역별 기본 추천 질문
+    // ══════════════════════════════════════
+    if (targetRegions.length > 0) {
+      for (const region of targetRegions.slice(0, 5)) {
+        templates.push(
+          `${region} ${specialtyName} 추천해줘`,
+          `${region} 근처 ${specialtyName} 잘하는 곳 알려줘`,
+          `${region}에서 좋은 ${specialtyName} 어디야?`,
+        );
+      }
+    }
+
+    // ══════════════════════════════════════
+    // 3. 기본 지역 추천 질문
+    // ══════════════════════════════════════
     templates.push(
       `${fullRegion} ${specialtyName} 추천해줘`,
       `${shortRegion} ${specialtyName} 잘하는 곳 알려줘`,
       `${midRegion}에서 좋은 ${specialtyName} 어디야?`,
     );
 
-    // ── 2. 진료과목별 핵심 시술 질문 ──
-    const regions = [shortRegion, fullRegion];
-    for (const template of specialtyTemplates.coreServices) {
-      // 지역 변형을 번갈아 사용하여 다양성 확보
-      const region = regions[templates.length % regions.length];
-      templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
-    }
-
-    // ── 3. 환자 상황/니즈 기반 질문 ──
-    for (const template of specialtyTemplates.patientNeeds) {
-      const region = regions[templates.length % regions.length];
-      templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
-    }
-
-    // ── 4. 비교/선택 기준 질문 ──
-    for (const template of specialtyTemplates.comparison) {
-      const region = regions[templates.length % regions.length];
-      templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
-    }
-
-    // ── 5. 세부 진료과목(subSpecialties) 기반 질문 ──
-    if (dto.subSpecialties && dto.subSpecialties.length > 0) {
-      for (const sub of dto.subSpecialties.slice(0, 5)) {
-        templates.push(
-          `${shortRegion} ${sub} 잘하는 ${specialtyName} 추천`,
-          `${fullRegion} ${sub} 전문 ${specialtyName} 어디가 좋아?`,
-        );
+    // ══════════════════════════════════════
+    // 4. 진료과목 기본 템플릿 (주력 진료 없을 때 보강)
+    // ══════════════════════════════════════
+    if (coreTreatments.length === 0) {
+      const specialtyTemplates = this.getSpecialtyPromptTemplates(dto.specialtyType);
+      const regions = [shortRegion, fullRegion];
+      for (const template of specialtyTemplates.coreServices) {
+        const region = regions[templates.length % regions.length];
+        templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
+      }
+      for (const template of specialtyTemplates.patientNeeds.slice(0, 4)) {
+        const region = regions[templates.length % regions.length];
+        templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
       }
     }
 
-    // 동이 있으면 동 레벨 질문도 추가
+    // ══════════════════════════════════════
+    // 5. 비교/선택 기준 질문
+    // ══════════════════════════════════════
+    templates.push(
+      `${shortRegion} ${specialtyName} 추천 순위 알려줘`,
+      `${shortRegion}에서 실력 좋은 ${specialtyName} 비교해줘`,
+    );
+
+    // 주력 진료 비교 질문
+    if (coreTreatments.length >= 2) {
+      const top2 = coreTreatments.slice(0, 2);
+      templates.push(
+        `${shortRegion} ${top2[0]} ${top2[1]} 잘하는 ${specialtyName} 추천`,
+      );
+    }
+
+    // ══════════════════════════════════════
+    // 6. 동 레벨 질문
+    // ══════════════════════════════════════
     if (dto.regionDong) {
       templates.push(
         `${dto.regionDong} 근처 ${specialtyName} 추천`,
@@ -314,7 +381,12 @@ export class HospitalsService {
         promptText: text,
         promptType: 'AUTO_GENERATED' as const,
         specialtyCategory: dto.specialtyType,
-        regionKeywords: [dto.regionSido, dto.regionSigungu, dto.regionDong].filter(Boolean) as string[],
+        regionKeywords: [
+          dto.regionSido, 
+          dto.regionSigungu, 
+          dto.regionDong,
+          ...(dto.targetRegions || []),
+        ].filter(Boolean) as string[],
         isActive: true,
       })),
     });
