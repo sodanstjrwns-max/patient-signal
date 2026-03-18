@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { ScoreCard } from '@/components/dashboard/ScoreCard';
 import { ScoreChart } from '@/components/dashboard/ScoreChart';
@@ -10,7 +10,7 @@ import { InsightCard } from '@/components/dashboard/InsightCard';
 import { CompetitorComparison } from '@/components/dashboard/CompetitorComparison';
 import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
-import { hospitalApi, scoresApi, competitorsApi } from '@/lib/api';
+import { hospitalApi, scoresApi, competitorsApi, crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { 
   Activity, 
@@ -22,10 +22,13 @@ import {
   Calendar,
   ThumbsUp,
   ThumbsDown,
-  Minus
+  Minus,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
+import { toast } from '@/hooks/useToast';
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -263,23 +266,120 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
-          <Card className="bg-gray-50 border-dashed">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-100">
-                  <Calendar className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">자동 크롤링</p>
-                  <p className="text-sm text-gray-500">매일 자동 실행</p>
-                </div>
-              </div>
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">ON</span>
-            </CardContent>
-          </Card>
+          <CrawlCard user={user} hospitalId={hospitalId} onComplete={handleRefresh} />
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * 크롤링 카드 - 원장님(sodanstjrwns@gmail.com) 전용 수동 크롤링 버튼
+ */
+function CrawlCard({ user, hospitalId, onComplete }: { user: any; hospitalId: string | undefined; onComplete: () => void }) {
+  const isAdmin = user?.email === 'sodanstjrwns@gmail.com';
+  const [crawlStatus, setCrawlStatus] = useState<string | null>(null);
+
+  const crawlMutation = useMutation({
+    mutationFn: () => crawlerApi.trigger(hospitalId!),
+    onSuccess: (res) => {
+      const jobId = res.data?.jobId;
+      toast.success('크롤링이 시작되었습니다! 잠시 후 결과가 반영됩니다.');
+      setCrawlStatus('running');
+      // 상태 폴링
+      if (jobId) {
+        const poll = setInterval(async () => {
+          try {
+            const status = await crawlerApi.getJobStatus(jobId);
+            if (status.data?.status === 'COMPLETED') {
+              clearInterval(poll);
+              setCrawlStatus('done');
+              toast.success(`크롤링 완료! ${status.data?.completed || 0}개 응답 수집`);
+              onComplete();
+              setTimeout(() => setCrawlStatus(null), 5000);
+            } else if (status.data?.status === 'FAILED') {
+              clearInterval(poll);
+              setCrawlStatus(null);
+              toast.error('크롤링 중 오류가 발생했습니다.');
+            }
+          } catch { /* ignore */ }
+        }, 5000);
+        // 최대 5분 후 폴링 중단
+        setTimeout(() => clearInterval(poll), 300000);
+      }
+    },
+    onError: (err: any) => {
+      setCrawlStatus(null);
+      toast.error(err.response?.data?.message || '크롤링 시작에 실패했습니다.');
+    },
+  });
+
+  if (!isAdmin) {
+    return (
+      <Card className="bg-gray-50 border-dashed">
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-green-100">
+              <Calendar className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">자동 크롤링</p>
+              <p className="text-sm text-gray-500">매일 자동 실행</p>
+            </div>
+          </div>
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">ON</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={`border-dashed transition-all ${
+      crawlStatus === 'running' ? 'bg-amber-50 border-amber-300' :
+      crawlStatus === 'done' ? 'bg-green-50 border-green-300' :
+      'bg-gray-50 hover:bg-blue-50 hover:border-blue-300 cursor-pointer'
+    }`}
+      onClick={() => {
+        if (!crawlMutation.isPending && crawlStatus !== 'running' && hospitalId) {
+          crawlMutation.mutate();
+        }
+      }}
+    >
+      <CardContent className="p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${
+            crawlStatus === 'running' ? 'bg-amber-100' :
+            crawlStatus === 'done' ? 'bg-green-100' :
+            'bg-blue-100'
+          }`}>
+            {crawlStatus === 'running' ? (
+              <Loader2 className="h-5 w-5 text-amber-600 animate-spin" />
+            ) : (
+              <Zap className="h-5 w-5 text-blue-600" />
+            )}
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">
+              {crawlStatus === 'running' ? '크롤링 중...' :
+               crawlStatus === 'done' ? '크롤링 완료!' :
+               '수동 크롤링'}
+            </p>
+            <p className="text-sm text-gray-500">
+              {crawlStatus === 'running' ? 'AI 플랫폼 분석 진행 중' :
+               crawlStatus === 'done' ? '데이터가 갱신되었습니다' :
+               '클릭하여 즉시 실행'}
+            </p>
+          </div>
+        </div>
+        {crawlStatus === 'done' ? (
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">완료</span>
+        ) : crawlStatus === 'running' ? (
+          <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full animate-pulse">진행 중</span>
+        ) : (
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">⚡ 실행</span>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
