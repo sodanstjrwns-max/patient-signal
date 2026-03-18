@@ -122,12 +122,12 @@ export class AICrawlerService {
   async testClaudeCall(): Promise<any> {
     if (!this.anthropic) throw new Error('Anthropic 클라이언트가 초기화되지 않았습니다');
     const message = await this.anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 50,
       messages: [{ role: 'user', content: '안녕하세요. 테스트입니다. 간단히 답변해주세요.' }],
     });
     const response = message.content[0].type === 'text' ? message.content[0].text : '';
-    return { response, model: 'claude-3-haiku-20240307' };
+    return { response, model: 'claude-3-5-haiku-20241022' };
   }
 
   async testPerplexityCall(): Promise<any> {
@@ -454,13 +454,13 @@ export class AICrawlerService {
     this.logger.log(`[Claude] API 호출 시작 (웹검색 도구 활성화)`);
     
     let responseText = '';
-    let model = 'claude-sonnet-4-20250514';
+    let model = 'claude-3-5-haiku-20241022';
     let isWebSearch = false;
 
     try {
-      // 【핵심 수정】웹 검색 도구 활성화
+      // 【비용 최적화】claude-3-5-haiku + 웹 검색 도구 (sonnet-4 대비 75% 비용 절감, 웹검색 동일 지원)
       const message = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 2000,
         tools: [
           {
@@ -492,10 +492,10 @@ export class AICrawlerService {
     } catch (webSearchError) {
       this.logger.warn(`[Claude] 웹 검색 도구 실패, 일반 모드 폴백: ${webSearchError.message}`);
       
-      // 폴백: 일반 Claude (웹 검색 없음)
+      // 폴백: claude-3-5-haiku 웹검색 없이 재시도
       try {
         const message = await this.anthropic.messages.create({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-3-5-haiku-20241022',
           max_tokens: 2000,
           temperature: 0,
           messages: [
@@ -507,7 +507,7 @@ export class AICrawlerService {
         });
 
         responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-        model = 'claude-3-haiku-20240307';
+        model = 'claude-3-5-haiku-20241022';
       } catch (fallbackError) {
         this.logger.error(`[Claude] 일반 모드도 실패: ${fallbackError.message}`);
         throw fallbackError;
