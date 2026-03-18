@@ -354,25 +354,21 @@ export class AICrawlerService {
   // ==================== 개선2: 시스템 프롬프트 제거 + 개선1: temperature 0 ====================
 
   /**
-   * 【개선1+2+8】ChatGPT 질의 - temperature 0, 시스템 프롬프트 제거, 웹 검색 활성화
-   * 
-   * gpt-4o-mini는 web_search_options를 지원하지 않으므로
-   * gpt-4o-mini-search-preview 모델을 사용하여 웹 검색 수행
+   * ChatGPT 질의 - gpt-4o-search-preview 메인 (실제 웹검색으로 할루시네이션 최소화)
    */
   private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     if (!this.openai) throw new Error('OpenAI API가 초기화되지 않았습니다');
     
-    this.logger.log(`[ChatGPT] API 호출 시작 (웹검색 모델 우선)`);
+    this.logger.log(`[ChatGPT] API 호출 시작 (gpt-4o-search-preview)`);
     
     let response = '';
-    let model = 'gpt-4o-mini-search-preview';
+    let model = 'gpt-4o-search-preview';
     let isWebSearch = false;
 
     try {
-      // 【핵심 수정】gpt-4o-mini-search-preview 모델로 웹 검색 수행
-      // gpt-4o-mini는 web_search_options 미지원 → 환각 발생 원인이었음
+      // 1순위: gpt-4o-search-preview (실제 웹검색, 할루시네이션 최소)
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini-search-preview',
+        model: 'gpt-4o-search-preview',
         messages: [
           {
             role: 'user',
@@ -387,14 +383,14 @@ export class AICrawlerService {
 
       response = completion.choices[0]?.message?.content || '';
       isWebSearch = true;
-      this.logger.log(`[ChatGPT] gpt-4o-mini-search-preview 웹 검색 응답 받음`);
+      this.logger.log(`[ChatGPT] gpt-4o-search-preview 웹 검색 응답 받음`);
     } catch (searchError) {
-      this.logger.warn(`[ChatGPT] search-preview 실패: ${searchError.message}`);
+      this.logger.warn(`[ChatGPT] gpt-4o-search-preview 실패: ${searchError.message}`);
       
       try {
-        // 2차 시도: gpt-4o-search-preview (더 강력한 검색 모델)
+        // 2순위 폴백: gpt-4o-mini-search-preview (비용 절감 웹검색)
         const completion = await this.openai.chat.completions.create({
-          model: 'gpt-4o-search-preview',
+          model: 'gpt-4o-mini-search-preview',
           messages: [
             {
               role: 'user',
@@ -408,12 +404,12 @@ export class AICrawlerService {
         } as any);
 
         response = completion.choices[0]?.message?.content || '';
-        model = 'gpt-4o-search-preview';
+        model = 'gpt-4o-mini-search-preview';
         isWebSearch = true;
-        this.logger.log(`[ChatGPT] gpt-4o-search-preview 웹 검색 응답 받음`);
+        this.logger.log(`[ChatGPT] gpt-4o-mini-search-preview 폴백 응답 받음`);
       } catch (fallbackError) {
-        // 최종 폴백: 일반 gpt-4o-mini (웹검색 없음 → 환각 가능성 있음)
-        this.logger.warn(`[ChatGPT] 모든 검색 모델 실패, 일반 gpt-4o-mini 폴백: ${fallbackError.message}`);
+        // 최종 폴백: gpt-4o-mini (웹검색 없음 → 할루시네이션 주의)
+        this.logger.warn(`[ChatGPT] 검색 모델 전부 실패, gpt-4o-mini 폴백: ${fallbackError.message}`);
         
         const completion = await this.openai.chat.completions.create({
           model: 'gpt-4o-mini',
@@ -441,24 +437,21 @@ export class AICrawlerService {
   }
 
   /**
-   * 【개선1+2+웹검색】Claude 질의 - 웹 검색 도구 활성화
-   * 
-   * builtin_web_search 도구를 통해 실시간 웹 데이터 접근
-   * 웹 검색 실패 시 일반 모드로 폴백
+   * Claude 질의 - Claude Haiku 4.5 + 웹 검색 도구 (3.5-haiku는 웹검색 미지원)
    */
   private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     if (!this.anthropic) throw new Error('Anthropic API가 초기화되지 않았습니다');
     
-    this.logger.log(`[Claude] API 호출 시작 (웹검색 도구 활성화)`);
+    this.logger.log(`[Claude] API 호출 시작 (claude-haiku-4-5-20250514 + 웹검색)`);
     
     let responseText = '';
-    let model = 'claude-3-5-haiku-20241022';
+    let model = 'claude-haiku-4-5-20250514';
     let isWebSearch = false;
 
     try {
-      // 【비용 최적화】claude-3-5-haiku + 웹 검색 도구 (sonnet-4 대비 75% 비용 절감, 웹검색 동일 지원)
+      // 1순위: Claude Haiku 4.5 + 웹 검색 도구 (웹검색 지원하는 최저가 모델)
       const message = await this.anthropic.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20250514',
         max_tokens: 2000,
         tools: [
           {
@@ -486,16 +479,21 @@ export class AICrawlerService {
         block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
       );
       
-      this.logger.log(`[Claude] 웹 검색 도구 응답 받음 (검색 사용: ${isWebSearch})`);
+      this.logger.log(`[Claude] Haiku 4.5 웹 검색 응답 받음 (검색 사용: ${isWebSearch})`);
     } catch (webSearchError) {
-      this.logger.warn(`[Claude] 웹 검색 도구 실패, 일반 모드 폴백: ${webSearchError.message}`);
+      this.logger.warn(`[Claude] Haiku 4.5 웹검색 실패: ${webSearchError.message}`);
       
-      // 폴백: claude-3-5-haiku 웹검색 없이 재시도
       try {
+        // 2순위 폴백: Claude Sonnet 4 + 웹검색 (더 강력하지만 비용 높음)
         const message = await this.anthropic.messages.create({
-          model: 'claude-3-5-haiku-20241022',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 2000,
-          temperature: 0,
+          tools: [
+            {
+              type: 'web_search' as any,
+              name: 'web_search',
+            } as any,
+          ],
           messages: [
             {
               role: 'user',
@@ -504,11 +502,39 @@ export class AICrawlerService {
           ],
         });
 
-        responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-        model = 'claude-3-5-haiku-20241022';
-      } catch (fallbackError) {
-        this.logger.error(`[Claude] 일반 모드도 실패: ${fallbackError.message}`);
-        throw fallbackError;
+        for (const block of message.content) {
+          if (block.type === 'text') {
+            responseText += block.text;
+          }
+        }
+        isWebSearch = message.content.some((block: any) => 
+          block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
+        );
+        model = 'claude-sonnet-4-20250514';
+        this.logger.log(`[Claude] Sonnet 4 폴백 웹검색 응답 받음`);
+      } catch (sonnetError) {
+        this.logger.warn(`[Claude] Sonnet 4도 실패, 일반 모드 폴백: ${sonnetError.message}`);
+        
+        // 최종 폴백: Claude Haiku 4.5 웹검색 없이
+        try {
+          const message = await this.anthropic.messages.create({
+            model: 'claude-haiku-4-5-20250514',
+            max_tokens: 2000,
+            temperature: 0,
+            messages: [
+              {
+                role: 'user',
+                content: promptText,
+              },
+            ],
+          });
+
+          responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+          model = 'claude-haiku-4-5-20250514-no-search';
+        } catch (fallbackError) {
+          this.logger.error(`[Claude] 모든 모드 실패: ${fallbackError.message}`);
+          throw fallbackError;
+        }
       }
     }
     
