@@ -118,7 +118,7 @@ export default function DashboardPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-1">AI 크롤링이 곧 시작됩니다!</h3>
                   <p className="text-blue-100 text-sm">
-                    매주 2회 자동으로 ChatGPT, Perplexity, Claude, Gemini에서<br />
+                    매일 자동으로 ChatGPT, Perplexity, Claude, Gemini에서<br />
                     우리 병원의 AI 가시성을 분석합니다.
                   </p>
                 </div>
@@ -271,7 +271,7 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">자동 크롤링</p>
-                  <p className="text-sm text-gray-500">매주 2회 자동 실행</p>
+                  <p className="text-sm text-gray-500">매일 자동 실행</p>
                 </div>
               </div>
               <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">ON</span>

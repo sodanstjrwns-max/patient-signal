@@ -63,7 +63,7 @@ const PLANS = [
     features: [
       '모니터링 질문 5개',
       '2개 AI 플랫폼 (Perplexity, Gemini)',
-      '월 4회 크롤링 (주 1회)',
+      '매일 크롤링 (월 30회)',
       '경쟁사 1개 비교 분석',
       'ABHS 점수',
       '주간 리포트',
@@ -86,7 +86,7 @@ const PLANS = [
     features: [
       '모니터링 질문 15개',
       '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
-      '월 8회 크롤링 (주 2회)',
+      '매일 크롤링 (월 30회)',
       'ABHS 점수',
       '주간 리포트',
       '경쟁사 5개 비교 분석',
