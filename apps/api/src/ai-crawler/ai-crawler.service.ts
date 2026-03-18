@@ -437,25 +437,25 @@ export class AICrawlerService {
   }
 
   /**
-   * Claude 질의 - Claude Haiku 4.5 + 웹 검색 도구 (3.5-haiku는 웹검색 미지원)
+   * Claude 질의 - Claude Haiku 4.5 + 웹 검색 도구 (web_search_20250305)
    */
   private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     if (!this.anthropic) throw new Error('Anthropic API가 초기화되지 않았습니다');
     
-    this.logger.log(`[Claude] API 호출 시작 (claude-haiku-4-5-20250514 + 웹검색)`);
+    this.logger.log(`[Claude] API 호출 시작 (claude-haiku-4-5 + 웹검색)`);
     
     let responseText = '';
-    let model = 'claude-haiku-4-5-20250514';
+    let model = 'claude-haiku-4-5';
     let isWebSearch = false;
 
     try {
       // 1순위: Claude Haiku 4.5 + 웹 검색 도구 (웹검색 지원하는 최저가 모델)
       const message = await this.anthropic.messages.create({
-        model: 'claude-haiku-4-5-20250514',
+        model: 'claude-haiku-4-5',
         max_tokens: 2000,
         tools: [
           {
-            type: 'web_search' as any,
+            type: 'web_search_20250305' as any,
             name: 'web_search',
           } as any,
         ],
@@ -484,13 +484,13 @@ export class AICrawlerService {
       this.logger.warn(`[Claude] Haiku 4.5 웹검색 실패: ${webSearchError.message}`);
       
       try {
-        // 2순위 폴백: Claude Sonnet 4 + 웹검색 (더 강력하지만 비용 높음)
+        // 2순위 폴백: Claude Sonnet 4 + 웹검색
         const message = await this.anthropic.messages.create({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-sonnet-4',
           max_tokens: 2000,
           tools: [
             {
-              type: 'web_search' as any,
+              type: 'web_search_20250305' as any,
               name: 'web_search',
             } as any,
           ],
@@ -510,7 +510,7 @@ export class AICrawlerService {
         isWebSearch = message.content.some((block: any) => 
           block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
         );
-        model = 'claude-sonnet-4-20250514';
+        model = 'claude-sonnet-4';
         this.logger.log(`[Claude] Sonnet 4 폴백 웹검색 응답 받음`);
       } catch (sonnetError) {
         this.logger.warn(`[Claude] Sonnet 4도 실패, 일반 모드 폴백: ${sonnetError.message}`);
@@ -518,7 +518,7 @@ export class AICrawlerService {
         // 최종 폴백: Claude Haiku 4.5 웹검색 없이
         try {
           const message = await this.anthropic.messages.create({
-            model: 'claude-haiku-4-5-20250514',
+            model: 'claude-haiku-4-5',
             max_tokens: 2000,
             temperature: 0,
             messages: [
@@ -530,7 +530,7 @@ export class AICrawlerService {
           });
 
           responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-          model = 'claude-haiku-4-5-20250514-no-search';
+          model = 'claude-haiku-4-5-no-search';
         } catch (fallbackError) {
           this.logger.error(`[Claude] 모든 모드 실패: ${fallbackError.message}`);
           throw fallbackError;
