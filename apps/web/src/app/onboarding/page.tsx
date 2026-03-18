@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Sparkles, Building2, MapPin, Stethoscope, ArrowRight, ArrowLeft,
-  Target, Users, Plus, X, Check, Lightbulb
+  Target, Users, Plus, X, Check, Lightbulb, Star
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,7 @@ export default function OnboardingPage() {
     coreTreatments: [] as string[],
     targetRegions: [] as string[],
     competitorNames: [] as string[],
+    hospitalStrengths: [] as string[],
   });
 
   // 주력 진료 토글
@@ -378,6 +379,56 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              {/* 구분선 */}
+              <div className="border-t pt-4">
+                {/* 병원 강점 */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    우리 병원 강점
+                    <span className="text-xs text-gray-400 font-normal">(복수 선택)</span>
+                  </label>
+                  <div className="bg-yellow-50 rounded-lg p-3">
+                    <p className="text-xs text-yellow-700">
+                      <Lightbulb className="inline h-3 w-3 mr-1" />
+                      선택한 강점에 맞는 AI 모니터링 질문이 추가 생성됩니다.
+                      예: &quot;무통치료&quot; 선택 → &quot;무통으로 치료해주는 치과 있어?&quot; 질문 자동 추가
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {getStrengthOptions(formData.specialtyType).map((strength) => (
+                      <button
+                        key={strength}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            hospitalStrengths: prev.hospitalStrengths.includes(strength)
+                              ? prev.hospitalStrengths.filter((s) => s !== strength)
+                              : [...prev.hospitalStrengths, strength],
+                          }));
+                        }}
+                        className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
+                          formData.hospitalStrengths.includes(strength)
+                            ? 'border-yellow-500 bg-yellow-500 text-white shadow-sm'
+                            : 'border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                        }`}
+                      >
+                        {formData.hospitalStrengths.includes(strength) && (
+                          <Check className="inline h-3 w-3 mr-1" />
+                        )}
+                        {strength}
+                      </button>
+                    ))}
+                  </div>
+                  {formData.hospitalStrengths.length > 0 && (
+                    <p className="text-xs text-yellow-600 font-medium">
+                      ⭐ {formData.hospitalStrengths.length}개 강점 선택됨
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> 이전
@@ -521,6 +572,19 @@ export default function OnboardingPage() {
                     </div>
                   </div>
                 )}
+
+                {formData.hospitalStrengths.length > 0 && (
+                  <div className="p-3 bg-yellow-50 rounded-lg">
+                    <p className="text-xs text-yellow-600 mb-1.5">⭐ 병원 강점</p>
+                    <div className="flex flex-wrap gap-1">
+                      {formData.hospitalStrengths.map((s) => (
+                        <span key={s} className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs rounded-full">
+                          {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 예상 생성 질문 미리보기 */}
@@ -626,4 +690,21 @@ function generatePreviewQuestions(formData: {
   }
 
   return [...new Set(questions)];
+}
+
+/**
+ * 진료과목별 병원 강점 옵션
+ */
+function getStrengthOptions(specialtyType: string): string[] {
+  const common = ['친절', '상담꼼꼼', '가격합리적', '최신장비', '야간진료', '주말진료', '주차편리', '역세권', '경력풍부', '전문의', '대기시간짧음'];
+  
+  const specialtyStrengths: Record<string, string[]> = {
+    DENTAL: ['무통치료', '수면치료', '소아전문', '원장직접진료', '감염관리', '디지털진료', '대학병원급'],
+    DERMATOLOGY: ['자연스러운결과', '원장직접진료', '남녀전용', '피부맞춤상담', '시술후관리'],
+    PLASTIC_SURGERY: ['자연스러운결과', '원장직접진료', '재수술전문', '안전마취', '사후관리'],
+    OPHTHALMOLOGY: ['정밀검사', '원장직접진료', '부작용관리', '최신레이저', '사후관리'],
+    KOREAN_MEDICINE: ['원장직접진료', '한양방협진', '맞춤처방', '체질분석', '통증특화'],
+  };
+
+  return [...(specialtyStrengths[specialtyType] || []), ...common];
 }

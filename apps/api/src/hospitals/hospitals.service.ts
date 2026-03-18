@@ -366,7 +366,16 @@ export class HospitalsService {
     templates.push(...conditionQuestions);
 
     // ═══════════════════════════════════════════
-    // ⑧ 내원 지역 특화 (입력된 경우)
+    // ⑧ 병원 강점 기반 질문 (핵심 차별화!)
+    // ═══════════════════════════════════════════
+    const strengths = dto.hospitalStrengths || [];
+    const strengthQuestions = this.getStrengthQuestions(
+      strengths, dto.specialtyType, shortRegion, specialtyName, treatments,
+    );
+    templates.push(...strengthQuestions);
+
+    // ═══════════════════════════════════════════
+    // ⑨ 내원 지역 특화 (입력된 경우)
     // ═══════════════════════════════════════════
     if (targetRegions.length > 0) {
       for (const r of targetRegions.slice(0, 3)) {
@@ -521,6 +530,134 @@ export class HospitalsService {
           `${region} ${name} 주차 편한 곳 추천해줘`,
         );
     }
+    return q;
+  }
+
+  /**
+   * ⑧ 병원 강점 기반 질문 생성
+   * 강점 키워드를 분석해서 해당 카테고리의 질문을 강화
+   */
+  private getStrengthQuestions(
+    strengths: string[],
+    type: string,
+    region: string,
+    name: string,
+    treatments: string[],
+  ): string[] {
+    if (strengths.length === 0) return [];
+    const q: string[] = [];
+    const t0 = treatments[0] || '';
+
+    // 강점 키워드 → 질문 매핑
+    const strengthMap: Record<string, (r: string, n: string, t: string) => string[]> = {
+      // ── 진료 환경 ──
+      '무통치료': (r, n, t) => [
+        `${r}에서 무통으로 치료해주는 ${n} 있어?`,
+        `통증 없이 ${t || '치료'} 받을 수 있는 ${r} ${n} 추천해줘`,
+        `주사 안 아프게 놓는 ${r} ${n} 어디야?`,
+      ],
+      '친절': (r, n) => [
+        `${r} ${n} 중에 의사 선생님 친절한 곳 어디야?`,
+        `설명 잘 해주고 친절한 ${r} ${n} 추천해줘`,
+      ],
+      '최신장비': (r, n, t) => [
+        `최신 장비로 ${t || '치료'} 하는 ${r} ${n} 추천해줘`,
+        `${r} ${n} 중에 시설 좋은 곳 알려줘`,
+      ],
+      '감염관리': (r, n) => [
+        `위생 철저한 ${r} ${n} 추천해줘`,
+        `${r} ${n} 중에 감염관리 잘하는 곳 어디야?`,
+      ],
+      // ── 접근성 ──
+      '야간진료': (r, n) => [
+        `퇴근 후에 갈 수 있는 ${r} ${n} 있어?`,
+        `${r} ${n} 저녁 8시 이후에도 진료하는 곳 알려줘`,
+      ],
+      '주말진료': (r, n) => [
+        `토요일에도 진료하는 ${r} ${n} 추천해줘`,
+        `주말에 갈 수 있는 ${r} ${n} 어디 있어?`,
+      ],
+      '주차편리': (r, n) => [
+        `주차 걱정 없이 갈 수 있는 ${r} ${n} 추천해줘`,
+        `${r} ${n} 주차 편한 곳 알려줘`,
+      ],
+      '역세권': (r, n) => [
+        `지하철역에서 가까운 ${r} ${n} 추천해줘`,
+        `대중교통 편한 ${r} ${n} 어디야?`,
+      ],
+      // ── 전문성 ──
+      '경력풍부': (r, n, t) => [
+        `${t || '진료'} 경험 많은 원장님 있는 ${r} ${n} 추천해줘`,
+        `${r} ${n} 중에 베테랑 의사 있는 곳 알려줘`,
+      ],
+      '대학병원급': (r, n) => [
+        `대학병원급 시스템 갖춘 ${r} ${n} 있어?`,
+        `${r}에서 대학병원처럼 체계적인 ${n} 추천해줘`,
+      ],
+      '원장직접진료': (r, n) => [
+        `원장님이 직접 진료하는 ${r} ${n} 추천해줘`,
+        `담당의 바뀌지 않는 ${r} ${n} 어디야?`,
+      ],
+      '전문의': (r, n) => [
+        `전문의가 있는 ${r} ${n} 추천해줘`,
+        `${r} ${n} 전문의 직접 진료하는 곳 알려줘`,
+      ],
+      // ── 환자 경험 ──
+      '가격합리적': (r, n, t) => [
+        `${t || '진료'} 가격 양심적인 ${r} ${n} 추천해줘`,
+        `${r} ${n} 비용 부담 없는 곳 알려줘`,
+        `가성비 좋은 ${r} ${n} 어디야?`,
+      ],
+      '상담꼼꼼': (r, n) => [
+        `상담 자세하게 해주는 ${r} ${n} 추천해줘`,
+        `과잉진료 안 하고 꼼꼼하게 설명해주는 ${r} ${n} 있어?`,
+      ],
+      '대기시간짧음': (r, n) => [
+        `대기 시간 짧은 ${r} ${n} 추천해줘`,
+        `예약하면 바로 볼 수 있는 ${r} ${n} 있어?`,
+      ],
+      '소아전문': (r, n) => [
+        `아이 데리고 가기 좋은 ${r} ${n} 추천해줘`,
+        `${r} 소아 전문 ${n} 어디가 좋아?`,
+        `아이가 무서워하지 않게 치료해주는 ${r} ${n} 있어?`,
+      ],
+      // ── 특수 강점 ──
+      '수면치료': (r, n) => [
+        `수면 치료 가능한 ${r} ${n} 있어?`,
+        `잠자면서 치료받을 수 있는 ${r} ${n} 추천해줘`,
+      ],
+      '디지털진료': (r, n) => [
+        `3D 스캔으로 정밀 진료하는 ${r} ${n} 추천해줘`,
+        `디지털 장비 갖춘 ${r} ${n} 알려줘`,
+      ],
+      '자연스러운결과': (r, n, t) => [
+        `${t || '시술'} 자연스럽게 잘하는 ${r} ${n} 추천해줘`,
+        `티 안 나게 자연스러운 결과 보여주는 ${r} ${n} 어디야?`,
+      ],
+    };
+
+    for (const strength of strengths) {
+      // 정확히 일치하는 키가 있으면 사용
+      if (strengthMap[strength]) {
+        q.push(...strengthMap[strength](region, name, t0));
+        continue;
+      }
+      // 부분 일치 검색 (예: "무통" → "무통치료" 매칭)
+      for (const [key, fn] of Object.entries(strengthMap)) {
+        if (key.includes(strength) || strength.includes(key)) {
+          q.push(...fn(region, name, t0));
+          break;
+        }
+      }
+      // 매칭 안 되면 범용 질문 생성
+      if (!Object.keys(strengthMap).some(k => k.includes(strength) || strength.includes(k))) {
+        q.push(`${strength} 잘하는 ${region} ${name} 추천해줘`);
+        if (t0) {
+          q.push(`${t0} 하면서 ${strength}도 좋은 ${region} ${name} 있어?`);
+        }
+      }
+    }
+
     return q;
   }
 

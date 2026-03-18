@@ -85,4 +85,13 @@ export class CreateHospitalDto {
   @IsArray()
   @IsString({ each: true })
   competitorNames?: string[];
+
+  @ApiPropertyOptional({ 
+    example: ['무통치료', '야간진료', '가격합리적'], 
+    description: '병원 강점 (질문 생성 가중치에 반영)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  hospitalStrengths?: string[];
 }
