@@ -1,22 +1,36 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
+import { PlanGuard } from '../common/guards/plan.guard';
 
 @Injectable()
 export class PromptsService {
-  private readonly MAX_PROMPTS_PER_HOSPITAL = 10;
-
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * 병원의 플랜별 질문 한도 조회
+   */
+  private async getPromptLimit(hospitalId: string): Promise<number> {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { planType: true },
+    });
+    const planType = hospital?.planType || 'STARTER';
+    const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    return limits.maxPrompts === -1 ? 999 : limits.maxPrompts;
+  }
+
   async create(hospitalId: string, dto: CreatePromptDto) {
-    // 질문 개수 제한 체크 (최대 10개)
+    const maxPrompts = await this.getPromptLimit(hospitalId);
+
+    // 질문 개수 제한 체크 (플랜별)
     const currentCount = await this.prisma.prompt.count({
       where: { hospitalId },
     });
 
-    if (currentCount >= this.MAX_PROMPTS_PER_HOSPITAL) {
+    if (currentCount >= maxPrompts) {
       throw new ForbiddenException(
-        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다. 기존 질문을 삭제 후 추가해주세요.`
+        `현재 플랜에서는 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다. 플랜을 업그레이드하거나 기존 질문을 삭제해주세요.`
       );
     }
 
@@ -33,15 +47,17 @@ export class PromptsService {
   }
 
   async bulkCreate(hospitalId: string, dto: BulkCreatePromptsDto) {
-    // 질문 개수 제한 체크 (최대 10개)
+    const maxPrompts = await this.getPromptLimit(hospitalId);
+
+    // 질문 개수 제한 체크 (플랜별)
     const currentCount = await this.prisma.prompt.count({
       where: { hospitalId },
     });
 
-    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    const remainingSlots = maxPrompts - currentCount;
     if (remainingSlots <= 0) {
       throw new ForbiddenException(
-        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다.`
+        `현재 플랜에서는 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다.`
       );
     }
 
@@ -61,8 +77,8 @@ export class PromptsService {
 
     return {
       created: prompts.count,
-      maxPrompts: this.MAX_PROMPTS_PER_HOSPITAL,
-      remaining: this.MAX_PROMPTS_PER_HOSPITAL - currentCount - prompts.count,
+      maxPrompts,
+      remaining: maxPrompts - currentCount - prompts.count,
     };
   }
 
@@ -167,6 +183,8 @@ export class PromptsService {
    * 프리셋 질문 템플릿에서 병원 맞춤 질문 생성
    */
   async generateFromPresets(hospitalId: string, specialtyType: string, region: string) {
+    const maxPrompts = await this.getPromptLimit(hospitalId);
+
     const presets = await this.prisma.presetPrompt.findMany({
       where: {
         specialtyType: specialtyType as any,
@@ -189,7 +207,7 @@ export class PromptsService {
       where: { hospitalId },
     });
 
-    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    const remainingSlots = maxPrompts - currentCount;
     const promptsToCreate = prompts.slice(0, Math.max(0, remainingSlots));
 
     if (promptsToCreate.length > 0) {
@@ -198,7 +216,7 @@ export class PromptsService {
 
     return {
       created: promptsToCreate.length,
-      maxPrompts: this.MAX_PROMPTS_PER_HOSPITAL,
+      maxPrompts,
       remaining: remainingSlots - promptsToCreate.length,
     };
   }
@@ -229,15 +247,16 @@ export class PromptsService {
       (v) => v !== baseText,
     );
 
-    // 질문 개수 제한 체크
+    // 질문 개수 제한 체크 (플랜별)
+    const maxPrompts = await this.getPromptLimit(prompt.hospitalId);
     const currentCount = await this.prisma.prompt.count({
       where: { hospitalId: prompt.hospitalId },
     });
 
-    const remainingSlots = this.MAX_PROMPTS_PER_HOSPITAL - currentCount;
+    const remainingSlots = maxPrompts - currentCount;
     if (remainingSlots <= 0) {
       throw new ForbiddenException(
-        `질문은 최대 ${this.MAX_PROMPTS_PER_HOSPITAL}개까지 등록할 수 있습니다. 기존 질문을 삭제 후 시도해주세요.`
+        `현재 플랜에서는 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다. 플랜을 업그레이드하거나 기존 질문을 삭제해주세요.`
       );
     }
 

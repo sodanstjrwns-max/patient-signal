@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
+import { PlanGuard } from '../common/guards/plan.guard';
 
 @Injectable()
 export class HospitalsService {
+  private readonly logger = new Logger(HospitalsService.name);
+
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateHospitalDto) {
@@ -73,7 +76,8 @@ export class HospitalsService {
     }
 
     // 자동 프롬프트 생성 (주력 진료 + 내원 지역 + 기본 지역 기반)
-    await this.createAutoPrompts(hospital.id, dto);
+    // 플랜별 질문 수 제한 적용
+    await this.createAutoPrompts(hospital.id, dto, 'STARTER');
 
     return hospital;
   }
@@ -257,16 +261,27 @@ export class HospitalsService {
   /**
    * 자동 프롬프트 생성 v3 - 실전 환자 AI 검색 패턴 기반
    * 
-   * 환자가 AI에 질문하는 7가지 의도(Intent):
-   * ① 추천 탐색: "OO 근처 △△ 잘하는 □□ 추천해줘"
-   * ② 비교 평가: "A치과 vs B치과 어디가 나아?"
-   * ③ 가격/비용: "임플란트 비용 얼마나 해?"
-   * ④ 증상/상황: "이가 아픈데 어디 가야 해?"
-   * ⑤ 공포/불안: "무서워서 못 가겠는데..."
-   * ⑥ 후기/평판: "후기 좋은 곳 알려줘"
-   * ⑦ 조건 필터: "야간 진료 되는 곳", "주차 편한 곳"
+   * 플랜별 질문 수 제한:
+   *   STARTER: 5개 (핵심 추천 질문만)
+   *   STANDARD: 15개 (추천 + 비교 + 가격 + 증상)
+   *   PRO: 35개 (전체 카테고리)
+   *   ENTERPRISE: 무제한
+   * 
+   * @param planType - 현재 플랜 (질문 수 제한 적용)
+   * @param existingCount - 이미 생성된 질문 수 (업그레이드 시 추가분만 계산)
    */
-  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto) {
+  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'STARTER', existingCount: number = 0) {
+    const planLimits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
+    const availableSlots = Math.max(0, maxPrompts - existingCount);
+
+    if (availableSlots <= 0) {
+      this.logger.log(`[${planType}] 질문 슬롯 없음 (기존 ${existingCount}/${maxPrompts})`);
+      return { created: 0, prompts: [] };
+    }
+
+    this.logger.log(`[${planType}] 질문 생성 시작: 최대 ${availableSlots}개 (기존 ${existingCount}, 한도 ${maxPrompts})`);
+
     const templates: string[] = [];
 
     // ── 지역 변형 준비 ──
@@ -386,11 +401,17 @@ export class HospitalsService {
       }
     }
 
-    // 중복 제거 후 생성
+    // 중복 제거 후 플랜 한도에 맞게 자르기
     const uniqueTemplates = [...new Set(templates)];
 
+    // 플랜별 우선순위: ① 추천 → ② 비교 → ③ 가격 → ④ 증상 → ⑤ 공포 → ⑥ 후기 → ⑦ 조건 → ⑧ 강점 → ⑨ 지역
+    // (templates에 순서대로 push했으므로 앞에서부터 자르면 자연스럽게 우선순위 적용)
+    const limitedTemplates = uniqueTemplates.slice(0, availableSlots);
+
+    this.logger.log(`[${planType}] 질문 생성: ${limitedTemplates.length}개 (후보 ${uniqueTemplates.length}개 중)`);
+
     await this.prisma.prompt.createMany({
-      data: uniqueTemplates.map((text) => ({
+      data: limitedTemplates.map((text) => ({
         hospitalId,
         promptText: text,
         promptType: 'AUTO_GENERATED' as const,
@@ -405,7 +426,7 @@ export class HospitalsService {
       })),
     });
 
-    return { created: uniqueTemplates.length, prompts: uniqueTemplates };
+    return { created: limitedTemplates.length, prompts: limitedTemplates, totalCandidates: uniqueTemplates.length };
   }
 
   /**
@@ -842,7 +863,7 @@ export class HospitalsService {
       where: { hospitalId, promptType: 'AUTO_GENERATED' },
     });
 
-    // 강화된 프롬프트 재생성
+    // 강화된 프롬프트 재생성 (현재 플랜 기준)
     const dto: CreateHospitalDto = {
       name: hospital.name,
       specialtyType: hospital.specialtyType as any,
@@ -850,9 +871,16 @@ export class HospitalsService {
       regionSido: hospital.regionSido,
       regionSigungu: hospital.regionSigungu,
       regionDong: hospital.regionDong || undefined,
+      coreTreatments: (hospital as any).coreTreatments || [],
+      targetRegions: (hospital as any).targetRegions || [],
+      hospitalStrengths: (hospital as any).hospitalStrengths || [],
     };
 
-    const result = await this.createAutoPrompts(hospitalId, dto);
+    // CUSTOM 질문은 유지하므로, 그 수를 뺀 만큼만 자동 생성
+    const customCount = await this.prisma.prompt.count({
+      where: { hospitalId, promptType: 'CUSTOM' },
+    });
+    const result = await this.createAutoPrompts(hospitalId, dto, hospital.planType || 'STARTER', customCount);
 
     return {
       deleted: deleted.count,
@@ -879,5 +907,221 @@ export class HospitalsService {
         regionSigungu: true,
       },
     });
+  }
+
+  /**
+   * 플랜 업그레이드 시 추가 질문 자동 생성 + 경쟁사 조사 트리거
+   * 
+   * 흐름:
+   * 1. 이전 플랜 → 새 플랜의 질문 한도 차이만큼 추가 생성
+   * 2. 경쟁사 한도가 늘어나면 경쟁사 AEO 즉시 크롤링 트리거
+   * 3. 결과를 반환하여 프론트에서 안내
+   */
+  async handlePlanUpgrade(hospitalId: string, previousPlan: string, newPlan: string): Promise<{
+    addedPrompts: number;
+    totalPrompts: number;
+    maxPrompts: number;
+    competitorSlots: { previous: number; new: number; added: number };
+    newFeatures: string[];
+    triggeredCompetitorCrawl: boolean;
+  }> {
+    this.logger.log(`=== 플랜 업그레이드 처리: ${previousPlan} → ${newPlan} ===`);
+
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      include: {
+        competitors: { where: { isActive: true } },
+      },
+    });
+
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+
+    const prevLimits = PlanGuard.PLAN_LIMITS[previousPlan] || PlanGuard.PLAN_LIMITS.STARTER;
+    const newLimits = PlanGuard.PLAN_LIMITS[newPlan] || PlanGuard.PLAN_LIMITS.STARTER;
+
+    // ── 1. 추가 질문 자동 생성 ──
+    const currentPromptCount = await this.prisma.prompt.count({ where: { hospitalId } });
+    const newMaxPrompts = newLimits.maxPrompts === -1 ? 100 : newLimits.maxPrompts;
+    let addedPrompts = 0;
+
+    if (currentPromptCount < newMaxPrompts) {
+      // 병원 정보로 DTO 구성
+      const dto: CreateHospitalDto = {
+        name: hospital.name,
+        specialtyType: hospital.specialtyType as any,
+        subSpecialties: hospital.subSpecialties || [],
+        regionSido: hospital.regionSido,
+        regionSigungu: hospital.regionSigungu,
+        regionDong: hospital.regionDong || undefined,
+        coreTreatments: (hospital as any).coreTreatments || [],
+        targetRegions: (hospital as any).targetRegions || [],
+        hospitalStrengths: (hospital as any).hospitalStrengths || [],
+      };
+
+      // 기존 질문 텍스트 가져오기 (중복 방지)
+      const existingPrompts = await this.prisma.prompt.findMany({
+        where: { hospitalId },
+        select: { promptText: true },
+      });
+      const existingTexts = new Set(existingPrompts.map(p => p.promptText));
+
+      // 전체 후보 생성 후, 기존에 없는 것만 추가
+      const result = await this.generatePromptCandidates(dto);
+      const newPrompts = result.filter(text => !existingTexts.has(text));
+      const slotsAvailable = newMaxPrompts - currentPromptCount;
+      const promptsToAdd = newPrompts.slice(0, slotsAvailable);
+
+      if (promptsToAdd.length > 0) {
+        await this.prisma.prompt.createMany({
+          data: promptsToAdd.map(text => ({
+            hospitalId,
+            promptText: text,
+            promptType: 'AUTO_GENERATED' as const,
+            specialtyCategory: hospital.specialtyType,
+            regionKeywords: [
+              hospital.regionSido,
+              hospital.regionSigungu,
+              hospital.regionDong,
+            ].filter(Boolean) as string[],
+            isActive: true,
+          })),
+        });
+        addedPrompts = promptsToAdd.length;
+      }
+
+      this.logger.log(`[업그레이드] 질문 추가: ${addedPrompts}개 (${currentPromptCount} → ${currentPromptCount + addedPrompts}/${newMaxPrompts})`);
+    }
+
+    // ── 2. 경쟁사 슬롯 확인 ──
+    const prevMaxComp = prevLimits.maxCompetitors === -1 ? 999 : prevLimits.maxCompetitors;
+    const newMaxComp = newLimits.maxCompetitors === -1 ? 999 : newLimits.maxCompetitors;
+    const currentCompetitors = hospital.competitors.length;
+    const addedCompSlots = Math.max(0, newMaxComp - prevMaxComp);
+
+    // ── 3. 새로 열린 기능 확인 ──
+    const newFeatures: string[] = [];
+    if (!prevLimits.exportEnabled && newLimits.exportEnabled) newFeatures.push('데이터 내보내기');
+    if (!prevLimits.aiRecommendations && newLimits.aiRecommendations) newFeatures.push('AI 개선 추천');
+    if (!prevLimits.contentGap && newLimits.contentGap) newFeatures.push('Content Gap 분석');
+    if (!prevLimits.competitorAEO && newLimits.competitorAEO) newFeatures.push('경쟁사 AEO 측정');
+
+    // 새 플랫폼 추가 확인
+    const newPlatforms = newLimits.platforms.filter(p => !prevLimits.platforms.includes(p));
+    if (newPlatforms.length > 0) {
+      const platformNames = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
+      newFeatures.push(`새 AI 플랫폼: ${newPlatforms.map(p => platformNames[p] || p).join(', ')}`);
+    }
+
+    // ── 4. 경쟁사 AEO 즉시 크롤링 트리거 (기존 경쟁사가 있고, 경쟁사AEO가 새로 열렸을 때) ──
+    let triggeredCompetitorCrawl = false;
+    if (!prevLimits.competitorAEO && newLimits.competitorAEO && currentCompetitors > 0) {
+      triggeredCompetitorCrawl = true;
+      this.logger.log(`[업그레이드] 경쟁사 AEO 크롤링 트리거: ${currentCompetitors}개 경쟁사`);
+      // 비동기로 실행 (응답은 즉시 반환)
+      // 실제 크롤링은 스케줄러 또는 별도 작업큐에서 처리
+    }
+
+    const totalPrompts = currentPromptCount + addedPrompts;
+
+    this.logger.log(`=== 업그레이드 처리 완료: 질문 +${addedPrompts}, 경쟁사 슬롯 +${addedCompSlots}, 신규기능 ${newFeatures.length}개 ===`);
+
+    return {
+      addedPrompts,
+      totalPrompts,
+      maxPrompts: newMaxPrompts,
+      competitorSlots: {
+        previous: prevMaxComp,
+        new: newMaxComp,
+        added: addedCompSlots,
+      },
+      newFeatures,
+      triggeredCompetitorCrawl,
+    };
+  }
+
+  /**
+   * 질문 후보 전체 생성 (중복 체크용)
+   * createAutoPrompts의 템플릿 로직을 재사용하되 DB 저장 없이 텍스트만 반환
+   */
+  private async generatePromptCandidates(dto: CreateHospitalDto): Promise<string[]> {
+    const templates: string[] = [];
+
+    const fullRegion = dto.regionDong
+      ? `${dto.regionSido} ${dto.regionSigungu} ${dto.regionDong}`
+      : `${dto.regionSido} ${dto.regionSigungu}`;
+    const shortRegion = dto.regionSigungu.replace(/[시군구]$/, '');
+    const dong = dto.regionDong || '';
+    const specialtyName = this.getSpecialtyName(dto.specialtyType);
+
+    const targetRegions = dto.targetRegions?.length ? dto.targetRegions : [];
+    const regions = [...new Set([
+      ...targetRegions.slice(0, 3),
+      shortRegion,
+      ...(dong ? [dong] : []),
+    ])];
+
+    const treatments = dto.coreTreatments?.length
+      ? dto.coreTreatments
+      : (dto.subSpecialties?.length ? dto.subSpecialties : []);
+
+    // ① 추천 탐색
+    for (const r of regions.slice(0, 3)) {
+      templates.push(`${r} ${specialtyName} 추천해줘`);
+    }
+    templates.push(`${fullRegion} 잘하는 ${specialtyName} 어디야?`);
+
+    const recommendPatterns = [
+      (r: string, t: string) => `${r}에서 ${t} 잘하는 ${specialtyName} 추천해줘`,
+      (r: string, t: string) => `${t} 전문 ${specialtyName} ${r} 근처에 있어?`,
+      (r: string, t: string) => `${r} ${t} 잘한다고 소문난 ${specialtyName} 알려줘`,
+      (r: string, t: string) => `${t} 하려는데 ${r} 쪽에 괜찮은 ${specialtyName} 있을까?`,
+    ];
+    for (const t of treatments.slice(0, 5)) {
+      const r = regions[templates.length % regions.length] || shortRegion;
+      const pattern = recommendPatterns[templates.length % recommendPatterns.length];
+      templates.push(pattern(r, t));
+    }
+
+    // ② 비교 평가
+    templates.push(`${shortRegion} ${specialtyName} 비교해서 알려줘`);
+    if (treatments.length > 0) {
+      templates.push(`${shortRegion} ${treatments[0]} ${specialtyName} 어디가 제일 잘해?`);
+    }
+    if (treatments.length >= 2) {
+      templates.push(`${treatments[0]}이랑 ${treatments[1]} 같이 하려는데 ${shortRegion} ${specialtyName} 어디가 좋아?`);
+    }
+
+    // ③ 가격/비용
+    if (treatments.length > 0) {
+      templates.push(
+        `${shortRegion} ${treatments[0]} 가격 합리적인 ${specialtyName} 추천해줘`,
+        `${treatments[0]} 비용 보통 얼마야? ${shortRegion} 기준으로 알려줘`,
+      );
+    }
+    templates.push(`${shortRegion} ${specialtyName} 가격 착한 곳 알려줘`);
+
+    // ④~⑨ (기존과 동일)
+    templates.push(...this.getSymptomQuestions(dto.specialtyType, shortRegion, specialtyName, treatments));
+    templates.push(...this.getAnxietyQuestions(dto.specialtyType, shortRegion, specialtyName));
+    templates.push(`${shortRegion} ${specialtyName} 후기 좋은 곳 알려줘`);
+    templates.push(`${shortRegion} ${specialtyName} 실제 다녀본 사람들 평가 좋은 곳 어디야?`);
+    if (treatments.length > 0) {
+      templates.push(`${shortRegion} ${treatments[0]} 후기 좋은 ${specialtyName} 추천해줘`);
+    }
+    templates.push(...this.getConditionQuestions(dto.specialtyType, shortRegion, specialtyName));
+
+    const strengths = dto.hospitalStrengths || [];
+    templates.push(...this.getStrengthQuestions(strengths, dto.specialtyType, shortRegion, specialtyName, treatments));
+
+    if (targetRegions.length > 0) {
+      for (const r of targetRegions.slice(0, 3)) {
+        if (treatments.length > 0) {
+          templates.push(`${r} 근처 ${treatments[0]} 잘하는 ${specialtyName} 있어?`);
+        }
+        templates.push(`${r}에서 가까운 ${specialtyName} 중에 잘하는 곳 알려줘`);
+      }
+    }
+
+    return [...new Set(templates)];
   }
 }

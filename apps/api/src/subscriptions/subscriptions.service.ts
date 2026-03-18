@@ -2,12 +2,16 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanType, SubscriptionStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { HospitalsService } from '../hospitals/hospitals.service';
 
 @Injectable()
 export class SubscriptionsService {
   private readonly logger = new Logger(SubscriptionsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private hospitalsService: HospitalsService,
+  ) {}
 
   /**
    * 구독 생성/활성화
@@ -169,7 +173,7 @@ export class SubscriptionsService {
   }
 
   /**
-   * 플랜 업그레이드
+   * 플랜 업그레이드 - 추가 질문 자동 생성 + 경쟁사 조사 트리거
    */
   async upgradePlan(hospitalId: string, newPlan: PlanType) {
     const subscription = await this.prisma.subscription.findFirst({
@@ -186,6 +190,8 @@ export class SubscriptionsService {
       throw new BadRequestException('현재 플랜보다 높은 플랜만 선택할 수 있습니다.');
     }
 
+    const previousPlan = subscription.planType;
+
     await this.prisma.subscription.update({
       where: { id: subscription.id },
       data: {
@@ -200,12 +206,26 @@ export class SubscriptionsService {
       },
     });
 
-    this.logger.log(`플랜 업그레이드: hospitalId=${hospitalId}, ${subscription.planType} -> ${newPlan}`);
+    this.logger.log(`플랜 업그레이드: hospitalId=${hospitalId}, ${previousPlan} -> ${newPlan}`);
+
+    // ── 핵심: 업그레이드 후 추가 질문 생성 + 경쟁사 조사 트리거 ──
+    let upgradeResult = null;
+    try {
+      upgradeResult = await this.hospitalsService.handlePlanUpgrade(
+        hospitalId,
+        previousPlan,
+        newPlan,
+      );
+      this.logger.log(`[업그레이드 처리] 질문 +${upgradeResult.addedPrompts}, 신규기능 ${upgradeResult.newFeatures.length}개`);
+    } catch (error) {
+      this.logger.error(`[업그레이드 처리] 실패 (플랜 변경은 완료됨): ${error.message}`);
+    }
 
     return {
       success: true,
-      previousPlan: subscription.planType,
+      previousPlan,
       newPlan,
+      upgrade: upgradeResult,
     };
   }
 
