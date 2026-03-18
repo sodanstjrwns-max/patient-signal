@@ -37,11 +37,29 @@ export class CompetitorsController {
     return this.competitorsService.remove(id, hospitalId);
   }
 
+  @Post(':hospitalId/suggest')
+  @PlanLimit({ minPlan: 'STANDARD' })
+  @ApiOperation({ summary: 'AI 경쟁사 제안 - 크롤링 데이터 기반 위협도 분석' })
+  async suggestCompetitors(@Param('hospitalId') hospitalId: string) {
+    return this.competitorsService.suggestCompetitors(hospitalId);
+  }
+
+  @Post(':hospitalId/accept-suggestion')
+  @PlanLimit({ feature: 'maxCompetitors', countField: 'competitors' })
+  @ApiOperation({ summary: 'AI 제안 경쟁사 수락' })
+  async acceptSuggestion(
+    @Param('hospitalId') hospitalId: string,
+    @Body() dto: { competitorName: string; competitorRegion?: string },
+  ) {
+    return this.competitorsService.acceptSuggestion(hospitalId, dto);
+  }
+
+  // 하위 호환: 기존 auto-detect 엔드포인트 → suggest로 리다이렉트
   @Post(':hospitalId/auto-detect')
   @PlanLimit({ minPlan: 'STANDARD' })
-  @ApiOperation({ summary: '경쟁사 자동 탐지' })
+  @ApiOperation({ summary: '경쟁사 AI 제안 (레거시 호환)', deprecated: true })
   async autoDetect(@Param('hospitalId') hospitalId: string) {
-    return this.competitorsService.autoDetectCompetitors(hospitalId);
+    return this.competitorsService.suggestCompetitors(hospitalId);
   }
 
   @Get(':hospitalId/comparison')

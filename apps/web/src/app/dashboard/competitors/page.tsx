@@ -21,9 +21,61 @@ import {
   Building,
   MapPin,
   Lock,
+  AlertTriangle,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
+  CheckCircle,
+  X,
+  Lightbulb,
+  BarChart3,
+  Zap,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { LockedFeature, UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
+
+interface Suggestion {
+  name: string;
+  mentionCount: number;
+  coMentionCount: number;
+  soloMentionCount: number;
+  avgPosition: number | null;
+  platforms: string[];
+  threatLevel: 'HIGH' | 'MEDIUM' | 'LOW';
+  threatScore: number;
+  reason: string;
+}
+
+const THREAT_CONFIG = {
+  HIGH: {
+    icon: ShieldAlert,
+    color: 'text-red-600',
+    bg: 'bg-red-50 border-red-200',
+    badge: 'bg-red-100 text-red-700',
+    label: '높은 위협',
+  },
+  MEDIUM: {
+    icon: Shield,
+    color: 'text-amber-600',
+    bg: 'bg-amber-50 border-amber-200',
+    badge: 'bg-amber-100 text-amber-700',
+    label: '주의 필요',
+  },
+  LOW: {
+    icon: ShieldCheck,
+    color: 'text-green-600',
+    bg: 'bg-green-50 border-green-200',
+    badge: 'bg-green-100 text-green-700',
+    label: '낮은 위협',
+  },
+};
+
+const PLATFORM_LABELS: Record<string, string> = {
+  CHATGPT: 'ChatGPT',
+  PERPLEXITY: 'Perplexity',
+  CLAUDE: 'Claude',
+  GEMINI: 'Gemini',
+};
 
 export default function CompetitorsPage() {
   const { user } = useAuthStore();
@@ -36,6 +88,8 @@ export default function CompetitorsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
   // 경쟁사 목록 조회
   const { data: competitors, isLoading } = useQuery({
@@ -84,13 +138,12 @@ export default function CompetitorsPage() {
     },
   });
 
-  // AI 자동 감지
-  const autoDetectMutation = useMutation({
-    mutationFn: () => competitorsApi.autoDetect(hospitalId!),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
-      const count = response.data?.detected?.length || 0;
-      toast.success(`AI가 ${count}개의 경쟁사를 발견했습니다!`);
+  // AI 제안
+  const suggestMutation = useMutation({
+    mutationFn: () => competitorsApi.suggest(hospitalId!),
+    onSuccess: () => {
+      setShowSuggestions(true);
+      toast.success('AI 분석이 완료되었습니다!');
     },
     onError: (error: any) => {
       const errData = error.response?.data;
@@ -98,14 +151,33 @@ export default function CompetitorsPage() {
         setUpgradeFeature('autoDetect');
         setShowUpgradeModal(true);
       } else {
-        toast.error(errData?.message || '자동 감지에 실패했습니다.');
+        toast.error(errData?.message || 'AI 제안 분석에 실패했습니다.');
+      }
+    },
+  });
+
+  // 제안 수락
+  const acceptMutation = useMutation({
+    mutationFn: (data: { competitorName: string }) =>
+      competitorsApi.acceptSuggestion(hospitalId!, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      setDismissedSuggestions((prev) => new Set([...prev, variables.competitorName]));
+      toast.success(`${variables.competitorName}이(가) 경쟁사로 등록되었습니다!`);
+    },
+    onError: (error: any) => {
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_LIMIT_REACHED') {
+        setUpgradeFeature('maxCompetitors');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '경쟁사 등록에 실패했습니다.');
       }
     },
   });
 
   const handleAddCompetitor = () => {
     if (!newCompetitor.trim()) return;
-    // 프론트엔드 사전 체크
     if (planLimits.maxCompetitors !== -1 && (competitors?.length || 0) >= planLimits.maxCompetitors) {
       setUpgradeFeature('maxCompetitors');
       setShowUpgradeModal(true);
@@ -123,14 +195,20 @@ export default function CompetitorsPage() {
       (c: any) => c.name === competitor.competitorName
     );
     if (!compData) return null;
-    
+
     const myScore = comparison?.myHospital?.score || 0;
     const diff = myScore - compData.score;
-    
-    if (diff > 5) return { icon: <TrendingUp className="h-4 w-4 text-green-500" />, text: '우위' };
-    if (diff < -5) return { icon: <TrendingDown className="h-4 w-4 text-red-500" />, text: '열세' };
-    return { icon: <Minus className="h-4 w-4 text-gray-400" />, text: '비슷' };
+
+    if (diff > 5) return { icon: <TrendingUp className="h-4 w-4 text-green-500" />, text: '우위', color: 'text-green-600' };
+    if (diff < -5) return { icon: <TrendingDown className="h-4 w-4 text-red-500" />, text: '열세', color: 'text-red-600' };
+    return { icon: <Minus className="h-4 w-4 text-gray-400" />, text: '비슷', color: 'text-gray-500' };
   };
+
+  // 제안 결과에서 이미 등록/거절된 것 필터링
+  const suggestions: Suggestion[] = (suggestMutation.data?.data?.suggestions || [])
+    .filter((s: Suggestion) => !dismissedSuggestions.has(s.name));
+
+  const analysisInfo = suggestMutation.data?.data?.analysisInfo;
 
   if (!hospitalId) {
     return (
@@ -140,15 +218,9 @@ export default function CompetitorsPage() {
           <Card>
             <CardContent className="p-12 text-center">
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                병원 등록이 필요합니다
-              </h3>
-              <p className="text-gray-500 mb-4">
-                경쟁사를 관리하려면 먼저 병원 정보를 등록해주세요.
-              </p>
-              <Button onClick={() => window.location.href = '/onboarding'}>
-                병원 등록하기
-              </Button>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">병원 등록이 필요합니다</h3>
+              <p className="text-gray-500 mb-4">경쟁사를 관리하려면 먼저 병원 정보를 등록해주세요.</p>
+              <Button onClick={() => window.location.href = '/onboarding'}>병원 등록하기</Button>
             </CardContent>
           </Card>
         </div>
@@ -158,7 +230,7 @@ export default function CompetitorsPage() {
 
   return (
     <div className="min-h-screen">
-      <Header title="경쟁사 관리" description="경쟁사를 추가하고 비교 분석합니다" />
+      <Header title="경쟁사 관리" description="경쟁사를 추가하고 AI 기반 위협도를 분석합니다" />
 
       <div className="p-6 space-y-6">
         {/* 플랜 사용량 표시 */}
@@ -198,6 +270,7 @@ export default function CompetitorsPage() {
                   value={newCompetitor}
                   onChange={(e) => setNewCompetitor(e.target.value)}
                   className="flex-1"
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCompetitor()}
                 />
                 <Input
                   placeholder="지역 (선택)"
@@ -226,27 +299,148 @@ export default function CompetitorsPage() {
                       setShowUpgradeModal(true);
                       return;
                     }
-                    autoDetectMutation.mutate();
+                    suggestMutation.mutate();
                   }}
-                  disabled={autoDetectMutation.isPending}
+                  disabled={suggestMutation.isPending}
+                  className="border-purple-200 hover:bg-purple-50"
                 >
-                  {autoDetectMutation.isPending ? (
+                  {suggestMutation.isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                    <Lightbulb className="h-4 w-4 mr-2 text-purple-600" />
                   )}
-                  AI 자동 감지
+                  AI 경쟁사 제안
                   {!canUseFeature(planType, 'autoDetect') && (
                     <Lock className="h-3 w-3 ml-1 text-gray-400" />
                   )}
                 </Button>
                 <p className="text-sm text-gray-500">
-                  AI가 크롤링 결과에서 자주 언급되는 경쟁사를 자동으로 찾아줍니다
+                  크롤링 데이터를 분석하여 주요 경쟁사를 제안합니다
                 </p>
               </div>
             </CardContent>
           </Card>
         </LockedFeature>
+
+        {/* ========== AI 제안 결과 ========== */}
+        {showSuggestions && (suggestions.length > 0 || analysisInfo) && (
+          <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-white">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-purple-800">
+                  <Sparkles className="h-5 w-5 text-purple-600" />
+                  AI 경쟁사 제안
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSuggestions(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              {analysisInfo && (
+                <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                  <span className="flex items-center gap-1">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    {analysisInfo.totalResponsesAnalyzed}개 AI 응답 분석
+                  </span>
+                  <span>최근 {analysisInfo.periodDays}일</span>
+                  <span className="flex items-center gap-1">
+                    우리 병원 언급률: <strong className="text-purple-700">{analysisInfo.myMentionRate}%</strong>
+                  </span>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {suggestions.length === 0 ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">추가 제안할 경쟁사가 없습니다</p>
+                  <p className="text-sm text-gray-400 mt-1">크롤링 데이터가 더 쌓이면 새로운 제안이 나올 수 있습니다</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {suggestions.map((suggestion) => {
+                    const config = THREAT_CONFIG[suggestion.threatLevel];
+                    const ThreatIcon = config.icon;
+
+                    return (
+                      <div
+                        key={suggestion.name}
+                        className={`p-4 rounded-xl border transition-all ${config.bg}`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            <div className={`p-2 rounded-lg bg-white shadow-sm flex-shrink-0`}>
+                              <ThreatIcon className={`h-5 w-5 ${config.color}`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h4 className="font-semibold text-gray-900">{suggestion.name}</h4>
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${config.badge}`}>
+                                  {config.label} · {suggestion.threatScore}점
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                                {suggestion.reason}
+                              </p>
+                              {/* 상세 지표 */}
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+                                <span>총 {suggestion.mentionCount}회 언급</span>
+                                {suggestion.soloMentionCount > 0 && (
+                                  <span className="text-red-500 font-medium">
+                                    <AlertTriangle className="h-3 w-3 inline mr-0.5" />
+                                    우리 대신 {suggestion.soloMentionCount}회 추천
+                                  </span>
+                                )}
+                                {suggestion.coMentionCount > 0 && (
+                                  <span>동시 비교 {suggestion.coMentionCount}회</span>
+                                )}
+                                {suggestion.avgPosition && (
+                                  <span>평균 {suggestion.avgPosition}위</span>
+                                )}
+                                <span>
+                                  {suggestion.platforms.map((p) => PLATFORM_LABELS[p] || p).join(', ')}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          {/* 수락/거절 버튼 */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-gray-400 hover:text-gray-600"
+                              onClick={() => {
+                                setDismissedSuggestions((prev) => new Set([...prev, suggestion.name]));
+                              }}
+                            >
+                              건너뛰기
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => acceptMutation.mutate({ competitorName: suggestion.name })}
+                              disabled={acceptMutation.isPending}
+                              className="bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                              {acceptMutation.isPending ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                              ) : (
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              등록
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 검색 */}
         <div className="flex justify-between items-center">
@@ -281,7 +475,7 @@ export default function CompetitorsPage() {
                   <p className="text-sm text-gray-400 mt-1">
                     {planType === 'STARTER'
                       ? 'Standard 플랜으로 업그레이드하여 경쟁사 분석을 시작하세요'
-                      : '경쟁사를 추가하거나 AI 자동 감지를 사용해보세요'}
+                      : '경쟁사를 추가하거나 AI 제안을 사용해보세요'}
                   </p>
                 </CardContent>
               </Card>
@@ -294,7 +488,7 @@ export default function CompetitorsPage() {
               )?.score;
 
               return (
-                <Card key={competitor.id}>
+                <Card key={competitor.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
@@ -349,8 +543,9 @@ export default function CompetitorsPage() {
                     {/* 배지 */}
                     <div className="flex gap-2 mt-3">
                       {competitor.isAutoDetected && (
-                        <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700">
-                          AI 감지
+                        <span className="text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-700 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          AI 제안
                         </span>
                       )}
                       <span className={`text-xs px-2 py-0.5 rounded ${

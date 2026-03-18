@@ -234,8 +234,10 @@ export const competitorsApi = {
     api.post(`/competitors/${hospitalId}`, data),
   remove: (id: string, hospitalId: string) =>
     api.delete(`/competitors/${id}/${hospitalId}`),
-  autoDetect: (hospitalId: string) =>
-    api.post(`/competitors/${hospitalId}/auto-detect`),
+  suggest: (hospitalId: string) =>
+    api.post(`/competitors/${hospitalId}/suggest`),
+  acceptSuggestion: (hospitalId: string, data: { competitorName: string; competitorRegion?: string }) =>
+    api.post(`/competitors/${hospitalId}/accept-suggestion`, data),
   getComparison: (hospitalId: string) =>
     api.get(`/competitors/${hospitalId}/comparison`),
 };
