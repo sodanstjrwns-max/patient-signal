@@ -28,7 +28,7 @@ export class PlanGuard implements CanActivate {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
       platforms: ['PERPLEXITY', 'GEMINI'],  // API 저렴한 2개
-      crawlsPerMonth: 4,           // 월 4회 (주 1회)
+      crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
       exportEnabled: false,
       aiRecommendations: false,
       contentGap: false,
@@ -38,7 +38,7 @@ export class PlanGuard implements CanActivate {
       maxPrompts: 15,
       maxCompetitors: 5,
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
-      crawlsPerMonth: 8,           // 월 8회 (주 2회)
+      crawlsPerMonth: 30,          // 매일
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: false,
