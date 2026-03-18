@@ -528,15 +528,17 @@ export default function OnboardingPage() {
                 <p className="text-xs font-medium text-blue-700 mb-2">
                   ✨ 이 정보를 바탕으로 AI 모니터링 질문이 자동 생성됩니다
                 </p>
-                <div className="space-y-1">
-                  {generatePreviewQuestions(formData).slice(0, 4).map((q, i) => (
+                <div className="space-y-1.5">
+                  {generatePreviewQuestions(formData).slice(0, 6).map((q, i) => (
                     <p key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
-                      <span className="text-blue-400 mt-0.5">•</span>
+                      <span className={`text-xs mt-0.5 ${
+                        i < 2 ? 'text-blue-500' : i < 4 ? 'text-green-500' : 'text-orange-400'
+                      }`}>•</span>
                       <span>"{q}"</span>
                     </p>
                   ))}
-                  <p className="text-xs text-blue-500 font-medium mt-1">
-                    외 {Math.max(0, generatePreviewQuestions(formData).length - 4)}개 질문 자동 생성 예정
+                  <p className="text-xs text-blue-500 font-medium mt-2">
+                    + 증상/상황, 가격, 후기, 공포 해소 등 다양한 패턴 포함
                   </p>
                 </div>
               </div>
@@ -562,7 +564,7 @@ export default function OnboardingPage() {
 }
 
 /**
- * 미리보기용 질문 생성 (프론트엔드 프리뷰)
+ * 미리보기용 고퀄리티 질문 생성 (7가지 의도 기반)
  */
 function generatePreviewQuestions(formData: {
   specialtyType: string;
@@ -577,24 +579,50 @@ function generatePreviewQuestions(formData: {
   };
   const name = specialtyNames[formData.specialtyType] || '병원';
   const region = formData.regionSigungu?.replace(/[시군구]$/, '') || '지역';
+  const t0 = formData.coreTreatments[0];
+  const t1 = formData.coreTreatments[1];
+  const r0 = formData.targetRegions[0];
   const questions: string[] = [];
 
-  // 주력 진료 기반
-  for (const t of formData.coreTreatments.slice(0, 3)) {
-    questions.push(`${region} ${t} 잘하는 ${name} 추천해줘`);
+  // ① 추천 탐색
+  if (t0) {
+    questions.push(`${r0 || region}에서 ${t0} 잘하는 ${name} 추천해줘`);
+    questions.push(`${t0} 전문 ${name} ${region} 근처에 있어?`);
+  } else {
+    questions.push(`${region} ${name} 추천해줘`);
   }
 
-  // 내원 지역 기반
-  for (const r of formData.targetRegions.slice(0, 2)) {
-    questions.push(`${r} ${name} 추천해줘`);
+  // ② 비교 평가
+  if (t0 && t1) {
+    questions.push(`${t0}이랑 ${t1} 같이 하려는데 ${region} ${name} 어디가 좋아?`);
+  } else {
+    questions.push(`${region} ${name} 비교해서 알려줘`);
   }
 
-  // 기본
-  questions.push(`${region} ${name} 잘하는 곳 알려줘`);
-  questions.push(`${region}에서 좋은 ${name} 비교해줘`);
+  // ③ 가격/비용
+  if (t0) {
+    questions.push(`${region} ${t0} 가격 합리적인 ${name} 추천해줘`);
+  }
 
-  if (formData.coreTreatments.length > 0 && formData.targetRegions.length > 0) {
-    questions.push(`${formData.targetRegions[0]} ${formData.coreTreatments[0]} 전문 ${name} 어디가 좋아?`);
+  // ④ 증상/상황 (진료과목별)
+  const symptomMap: Record<string, string> = {
+    DENTAL: `이가 너무 아픈데 ${region} ${name} 어디 가면 좋을까?`,
+    DERMATOLOGY: `얼굴에 여드름이 계속 나는데 ${region} ${name} 추천해줘`,
+    PLASTIC_SURGERY: `코가 낮아서 고민인데 ${region} ${name} 자연스럽게 잘하는 곳 추천해줘`,
+    OPHTHALMOLOGY: `시력 나빠서 라식이나 라섹 하고 싶은데 ${region} ${name} 어디가 좋아?`,
+    KOREAN_MEDICINE: `허리가 너무 아픈데 ${region} ${name} 추천해줘`,
+  };
+  questions.push(symptomMap[formData.specialtyType] || `${region} ${name} 잘하는 곳 알려줘`);
+
+  // ⑥ 후기/평판
+  questions.push(`${region} ${name} 후기 좋은 곳 알려줘`);
+
+  // ⑦ 조건 필터
+  questions.push(`${region} ${name} 야간 진료 되는 곳 있어?`);
+
+  // ⑧ 내원 지역 특화
+  if (r0 && t0) {
+    questions.push(`${r0} 근처 ${t0} 잘하는 ${name} 있어?`);
   }
 
   return [...new Set(questions)];

@@ -255,14 +255,16 @@ export class HospitalsService {
   }
 
   /**
-   * 자동 프롬프트 생성 (v2 - 온보딩 데이터 기반)
+   * 자동 프롬프트 생성 v3 - 실전 환자 AI 검색 패턴 기반
    * 
-   * 우선순위:
-   * 1. 주력 진료 × 내원 지역 조합 (가장 실전적)
-   * 2. 주력 진료 × 기본 지역 조합
-   * 3. 내원 지역 × 기본 추천 질문
-   * 4. 기존 진료과목별 템플릿 (fallback)
-   * 5. 비교/선택 기준 질문
+   * 환자가 AI에 질문하는 7가지 의도(Intent):
+   * ① 추천 탐색: "OO 근처 △△ 잘하는 □□ 추천해줘"
+   * ② 비교 평가: "A치과 vs B치과 어디가 나아?"
+   * ③ 가격/비용: "임플란트 비용 얼마나 해?"
+   * ④ 증상/상황: "이가 아픈데 어디 가야 해?"
+   * ⑤ 공포/불안: "무서워서 못 가겠는데..."
+   * ⑥ 후기/평판: "후기 좋은 곳 알려줘"
+   * ⑦ 조건 필터: "야간 진료 되는 곳", "주차 편한 곳"
    */
   async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto) {
     const templates: string[] = [];
@@ -272,104 +274,107 @@ export class HospitalsService {
       ? `${dto.regionSido} ${dto.regionSigungu} ${dto.regionDong}`
       : `${dto.regionSido} ${dto.regionSigungu}`;
     const shortRegion = dto.regionSigungu.replace(/[시군구]$/, '');
-    const midRegion = `${dto.regionSido.replace(/특별시|광역시|도$/, '')} ${shortRegion}`;
-
+    const dong = dto.regionDong || '';
     const specialtyName = this.getSpecialtyName(dto.specialtyType);
 
-    // 내원 지역 목록 (입력값 + 기본 지역)
-    const targetRegions = dto.targetRegions?.length 
-      ? dto.targetRegions 
-      : [];
-    // 기본 지역 세트
-    const baseRegions = [shortRegion, fullRegion, midRegion];
-    // 전체 지역 세트 (내원 지역 우선)
-    const allRegions = [...new Set([...targetRegions, ...baseRegions])];
+    // 내원 지역 (입력값 우선, 없으면 기본 지역)
+    const targetRegions = dto.targetRegions?.length ? dto.targetRegions : [];
+    // 질문에 쓸 대표 지역들 (중복 제거)
+    const regions = [...new Set([
+      ...targetRegions.slice(0, 3),
+      shortRegion,
+      ...(dong ? [dong] : []),
+    ])];
 
-    // 주력 진료 목록
-    const coreTreatments = dto.coreTreatments?.length 
-      ? dto.coreTreatments 
+    // 주력 진료 (입력값 우선, 없으면 subSpecialties)
+    const treatments = dto.coreTreatments?.length
+      ? dto.coreTreatments
       : (dto.subSpecialties?.length ? dto.subSpecialties : []);
 
-    // ══════════════════════════════════════
-    // 1. 주력 진료 × 지역 조합 (핵심!)
-    // ══════════════════════════════════════
-    if (coreTreatments.length > 0) {
-      for (const treatment of coreTreatments.slice(0, 8)) {
-        // 각 주력 진료에 대해 주요 지역 조합
-        const regionsForTreatment = allRegions.slice(0, 4);
-        for (const region of regionsForTreatment) {
-          templates.push(`${region} ${treatment} 잘하는 ${specialtyName} 추천해줘`);
-        }
-        // 추가 패턴 (실제 환자 검색 패턴)
-        templates.push(
-          `${shortRegion} ${treatment} 전문 ${specialtyName} 어디가 좋아?`,
-          `${treatment} 잘하는 ${specialtyName} ${shortRegion} 근처 알려줘`,
-        );
-      }
+    // ═══════════════════════════════════════════
+    // ① 추천 탐색 (기본, 가장 중요)
+    // ═══════════════════════════════════════════
+    // 지역 × 진료과목 기본 추천
+    for (const r of regions.slice(0, 3)) {
+      templates.push(`${r} ${specialtyName} 추천해줘`);
+    }
+    templates.push(`${fullRegion} 잘하는 ${specialtyName} 어디야?`);
+
+    // 주력 진료별 추천 (다양한 말투)
+    const recommendPatterns = [
+      (r: string, t: string) => `${r}에서 ${t} 잘하는 ${specialtyName} 추천해줘`,
+      (r: string, t: string) => `${t} 전문 ${specialtyName} ${r} 근처에 있어?`,
+      (r: string, t: string) => `${r} ${t} 잘한다고 소문난 ${specialtyName} 알려줘`,
+      (r: string, t: string) => `${t} 하려는데 ${r} 쪽에 괜찮은 ${specialtyName} 있을까?`,
+    ];
+    for (const t of treatments.slice(0, 5)) {
+      const r = regions[templates.length % regions.length] || shortRegion;
+      const pattern = recommendPatterns[templates.length % recommendPatterns.length];
+      templates.push(pattern(r, t));
     }
 
-    // ══════════════════════════════════════
-    // 2. 내원 지역별 기본 추천 질문
-    // ══════════════════════════════════════
+    // ═══════════════════════════════════════════
+    // ② 비교 평가
+    // ═══════════════════════════════════════════
+    templates.push(`${shortRegion} ${specialtyName} 비교해서 알려줘`);
+    if (treatments.length > 0) {
+      templates.push(`${shortRegion} ${treatments[0]} ${specialtyName} 어디가 제일 잘해?`);
+    }
+    if (treatments.length >= 2) {
+      templates.push(`${treatments[0]}이랑 ${treatments[1]} 같이 하려는데 ${shortRegion} ${specialtyName} 어디가 좋아?`);
+    }
+
+    // ═══════════════════════════════════════════
+    // ③ 가격/비용 질문
+    // ═══════════════════════════════════════════
+    if (treatments.length > 0) {
+      const topTreatment = treatments[0];
+      templates.push(
+        `${shortRegion} ${topTreatment} 가격 합리적인 ${specialtyName} 추천해줘`,
+        `${topTreatment} 비용 보통 얼마야? ${shortRegion} 기준으로 알려줘`,
+      );
+    }
+    templates.push(`${shortRegion} ${specialtyName} 가격 착한 곳 알려줘`);
+
+    // ═══════════════════════════════════════════
+    // ④ 증상/상황 기반 질문 (진료과목별 특화)
+    // ═══════════════════════════════════════════
+    const symptomQuestions = this.getSymptomQuestions(dto.specialtyType, shortRegion, specialtyName, treatments);
+    templates.push(...symptomQuestions);
+
+    // ═══════════════════════════════════════════
+    // ⑤ 공포/불안 해소 질문 (진료과목별)
+    // ═══════════════════════════════════════════
+    const anxietyQuestions = this.getAnxietyQuestions(dto.specialtyType, shortRegion, specialtyName);
+    templates.push(...anxietyQuestions);
+
+    // ═══════════════════════════════════════════
+    // ⑥ 후기/평판 질문
+    // ═══════════════════════════════════════════
+    templates.push(
+      `${shortRegion} ${specialtyName} 후기 좋은 곳 알려줘`,
+      `${shortRegion} ${specialtyName} 실제 다녀본 사람들 평가 좋은 곳 어디야?`,
+    );
+    if (treatments.length > 0) {
+      templates.push(`${shortRegion} ${treatments[0]} 후기 좋은 ${specialtyName} 추천해줘`);
+    }
+
+    // ═══════════════════════════════════════════
+    // ⑦ 조건 필터 질문
+    // ═══════════════════════════════════════════
+    const conditionQuestions = this.getConditionQuestions(dto.specialtyType, shortRegion, specialtyName);
+    templates.push(...conditionQuestions);
+
+    // ═══════════════════════════════════════════
+    // ⑧ 내원 지역 특화 (입력된 경우)
+    // ═══════════════════════════════════════════
     if (targetRegions.length > 0) {
-      for (const region of targetRegions.slice(0, 5)) {
-        templates.push(
-          `${region} ${specialtyName} 추천해줘`,
-          `${region} 근처 ${specialtyName} 잘하는 곳 알려줘`,
-          `${region}에서 좋은 ${specialtyName} 어디야?`,
-        );
+      for (const r of targetRegions.slice(0, 3)) {
+        if (treatments.length > 0) {
+          templates.push(`${r} 근처 ${treatments[0]} 잘하는 ${specialtyName} 있어?`);
+        }
+        templates.push(`${r}에서 가까운 ${specialtyName} 중에 잘하는 곳 알려줘`);
       }
-    }
-
-    // ══════════════════════════════════════
-    // 3. 기본 지역 추천 질문
-    // ══════════════════════════════════════
-    templates.push(
-      `${fullRegion} ${specialtyName} 추천해줘`,
-      `${shortRegion} ${specialtyName} 잘하는 곳 알려줘`,
-      `${midRegion}에서 좋은 ${specialtyName} 어디야?`,
-    );
-
-    // ══════════════════════════════════════
-    // 4. 진료과목 기본 템플릿 (주력 진료 없을 때 보강)
-    // ══════════════════════════════════════
-    if (coreTreatments.length === 0) {
-      const specialtyTemplates = this.getSpecialtyPromptTemplates(dto.specialtyType);
-      const regions = [shortRegion, fullRegion];
-      for (const template of specialtyTemplates.coreServices) {
-        const region = regions[templates.length % regions.length];
-        templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
-      }
-      for (const template of specialtyTemplates.patientNeeds.slice(0, 4)) {
-        const region = regions[templates.length % regions.length];
-        templates.push(template.replace('{지역}', region).replace('{과}', specialtyName));
-      }
-    }
-
-    // ══════════════════════════════════════
-    // 5. 비교/선택 기준 질문
-    // ══════════════════════════════════════
-    templates.push(
-      `${shortRegion} ${specialtyName} 추천 순위 알려줘`,
-      `${shortRegion}에서 실력 좋은 ${specialtyName} 비교해줘`,
-    );
-
-    // 주력 진료 비교 질문
-    if (coreTreatments.length >= 2) {
-      const top2 = coreTreatments.slice(0, 2);
-      templates.push(
-        `${shortRegion} ${top2[0]} ${top2[1]} 잘하는 ${specialtyName} 추천`,
-      );
-    }
-
-    // ══════════════════════════════════════
-    // 6. 동 레벨 질문
-    // ══════════════════════════════════════
-    if (dto.regionDong) {
-      templates.push(
-        `${dto.regionDong} 근처 ${specialtyName} 추천`,
-        `${dto.regionSigungu} ${dto.regionDong} ${specialtyName} 어디가 좋아?`,
-      );
     }
 
     // 중복 제거 후 생성
@@ -382,8 +387,8 @@ export class HospitalsService {
         promptType: 'AUTO_GENERATED' as const,
         specialtyCategory: dto.specialtyType,
         regionKeywords: [
-          dto.regionSido, 
-          dto.regionSigungu, 
+          dto.regionSido,
+          dto.regionSigungu,
           dto.regionDong,
           ...(dto.targetRegions || []),
         ].filter(Boolean) as string[],
@@ -392,6 +397,131 @@ export class HospitalsService {
     });
 
     return { created: uniqueTemplates.length, prompts: uniqueTemplates };
+  }
+
+  /**
+   * ④ 증상/상황 기반 질문 (진료과목별 특화)
+   */
+  private getSymptomQuestions(type: string, region: string, name: string, treatments: string[]): string[] {
+    const q: string[] = [];
+    switch (type) {
+      case 'DENTAL':
+        q.push(
+          `이가 너무 아픈데 ${region} ${name} 어디 가면 좋을까?`,
+          `앞니가 부러졌는데 ${region}에서 급하게 볼 수 있는 ${name} 있어?`,
+          `잇몸에서 피가 나는데 ${region} ${name} 추천해줘`,
+          `오래된 충치 치료 안 해서 심해졌는데 ${region} ${name} 어디가 좋아?`,
+        );
+        if (treatments.some(t => t.includes('임플란트'))) {
+          q.push(`이빨 빠진 자리에 임플란트 해야 하는데 ${region}에서 잘하는 ${name} 알려줘`);
+        }
+        if (treatments.some(t => t.includes('교정') || t.includes('투명'))) {
+          q.push(`치아 삐뚤어서 교정하고 싶은데 ${region} 교정 잘하는 ${name} 어디야?`);
+        }
+        break;
+      case 'DERMATOLOGY':
+        q.push(
+          `얼굴에 여드름이 계속 나는데 ${region} ${name} 추천해줘`,
+          `기미가 갑자기 심해졌는데 ${region} ${name} 어디가 좋아?`,
+          `피부가 너무 건조하고 가려운데 ${region} ${name} 알려줘`,
+          `등에 여드름 자국이 심한데 ${region}에서 치료 잘하는 ${name} 있어?`,
+        );
+        break;
+      case 'PLASTIC_SURGERY':
+        q.push(
+          `코가 낮아서 고민인데 ${region} ${name} 자연스럽게 잘하는 곳 추천해줘`,
+          `쌍꺼풀 수술 자연스럽게 잘하는 ${region} ${name} 알려줘`,
+          `나이 들면서 처진 피부 리프팅 잘하는 ${region} ${name} 어디야?`,
+        );
+        break;
+      case 'OPHTHALMOLOGY':
+        q.push(
+          `눈이 침침하고 잘 안 보이는데 ${region} ${name} 추천해줘`,
+          `시력 나빠서 라식이나 라섹 하고 싶은데 ${region} ${name} 어디가 좋아?`,
+          `눈이 자주 건조하고 뻑뻑한데 ${region} ${name} 알려줘`,
+        );
+        break;
+      case 'KOREAN_MEDICINE':
+        q.push(
+          `허리가 너무 아픈데 ${region} ${name} 추천해줘`,
+          `목이랑 어깨가 항상 뻣뻣한데 ${region} ${name} 잘하는 곳 알려줘`,
+          `체중이 잘 안 빠지는데 ${region} 한방다이어트 잘하는 ${name} 있어?`,
+        );
+        break;
+      default:
+        q.push(
+          `몸이 안 좋은데 ${region} ${name} 추천해줘`,
+          `건강검진 받고 싶은데 ${region} ${name} 어디가 좋아?`,
+        );
+    }
+    return q;
+  }
+
+  /**
+   * ⑤ 공포/불안 해소 질문
+   */
+  private getAnxietyQuestions(type: string, region: string, name: string): string[] {
+    const q: string[] = [];
+    switch (type) {
+      case 'DENTAL':
+        q.push(
+          `${name} 무서워서 못 가겠는데 ${region}에 무통 치료 잘하는 곳 있어?`,
+          `치과 공포증 있는데 ${region}에서 편하게 치료받을 수 있는 ${name} 추천해줘`,
+        );
+        break;
+      case 'PLASTIC_SURGERY':
+        q.push(
+          `성형 부작용 걱정되는데 ${region}에서 안전하게 잘하는 ${name} 추천해줘`,
+          `재수술 무서운데 ${region} ${name} 중에 경험 많은 곳 알려줘`,
+        );
+        break;
+      case 'OPHTHALMOLOGY':
+        q.push(
+          `라식 부작용 걱정되는데 ${region}에서 안전하게 잘하는 ${name} 추천해줘`,
+        );
+        break;
+      default:
+        q.push(
+          `병원 가기 무서운데 ${region}에서 친절하고 편한 ${name} 추천해줘`,
+        );
+    }
+    return q;
+  }
+
+  /**
+   * ⑦ 조건 필터 질문
+   */
+  private getConditionQuestions(type: string, region: string, name: string): string[] {
+    const q: string[] = [];
+    q.push(
+      `${region} ${name} 야간 진료 되는 곳 있어?`,
+      `${region} ${name} 주말에도 진료하는 곳 알려줘`,
+    );
+    switch (type) {
+      case 'DENTAL':
+        q.push(
+          `${region} ${name} 일요일에도 하는 곳 있어?`,
+          `아이 데리고 가기 좋은 ${region} 소아 전문 ${name} 추천해줘`,
+        );
+        break;
+      case 'DERMATOLOGY':
+        q.push(
+          `${region} ${name} 남자도 가기 편한 곳 알려줘`,
+          `상담 꼼꼼하게 해주는 ${region} ${name} 추천해줘`,
+        );
+        break;
+      case 'PLASTIC_SURGERY':
+        q.push(
+          `${region} ${name} 상담 무료인 곳 있어?`,
+          `원장님이 직접 수술하는 ${region} ${name} 알려줘`,
+        );
+        break;
+      default:
+        q.push(
+          `${region} ${name} 주차 편한 곳 추천해줘`,
+        );
+    }
+    return q;
   }
 
   private getSpecialtyName(type: string): string {
