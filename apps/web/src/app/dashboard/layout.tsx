@@ -4,13 +4,14 @@ import { useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
+import { hospitalApi } from '@/lib/api';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, user, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, user, updateUser, _hasHydrated } = useAuthStore();
   const router = useRouter();
 
   // 인증 체크 후 리다이렉트 - Zustand persist hydration 완료 후에만 실행
@@ -27,6 +28,19 @@ export default function DashboardLayout({
       return;
     }
   }, [_hasHydrated, isAuthenticated, user, router]);
+
+  // 대시보드 진입 시 서버에서 최신 hospital 정보 동기화 (planType 등)
+  useEffect(() => {
+    if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) return;
+
+    hospitalApi.get(user.hospitalId).then(({ data }) => {
+      if (data && data.planType !== user.hospital?.planType) {
+        updateUser({ hospital: data });
+      }
+    }).catch(() => {
+      // 네트워크 에러 시 무시 (캐시된 데이터 유지)
+    });
+  }, [_hasHydrated, isAuthenticated, user?.hospitalId]);
 
   // Zustand persist hydration 완료 전이거나 인증 체크 중
   if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) {
