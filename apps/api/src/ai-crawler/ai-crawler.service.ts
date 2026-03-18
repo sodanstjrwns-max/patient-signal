@@ -1141,6 +1141,138 @@ JSON 형식으로만 답변:
     return gaps;
   }
 
+  // ==================== 개선5-2: 콘텐츠 갭 → 블로그 초안 생성 (Claude 4 Sonnet) ====================
+
+  /**
+   * 【개선5-2】콘텐츠 갭 기반 블로그 초안 생성
+   * Claude 4 Sonnet을 사용하여 치과 전문 블로그 글을 생성합니다.
+   */
+  async generateBlogDraft(hospitalId: string, gapId: string): Promise<any> {
+    if (!this.anthropic) {
+      throw new Error('Anthropic API가 초기화되지 않았습니다. ANTHROPIC_API_KEY를 확인해주세요.');
+    }
+
+    // 콘텐츠 갭 데이터 조회
+    const contentGap = await this.prisma.contentGap.findUnique({
+      where: { id: gapId },
+    });
+
+    if (!contentGap || contentGap.hospitalId !== hospitalId) {
+      throw new Error('콘텐츠 갭을 찾을 수 없습니다');
+    }
+
+    // 병원 정보 조회
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+    });
+
+    if (!hospital) {
+      throw new Error('병원 정보를 찾을 수 없습니다');
+    }
+
+    const regionFull = [hospital.regionSido, hospital.regionSigungu, hospital.regionDong]
+      .filter(Boolean).join(' ');
+    const specialties = (hospital.subSpecialties as string[] || []).join(', ') || '일반 치과';
+    const procedures = (hospital.keyProcedures as string[] || []).join(', ') || '';
+    const competitorNames = (contentGap.competitorNames as string[] || []).join(', ') || '경쟁사';
+
+    this.logger.log(`[Blog Draft] 생성 시작: "${contentGap.topic}" for ${hospital.name}`);
+
+    try {
+      const message = await this.anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'user',
+            content: `당신은 한국 치과 마케팅 전문 블로그 작가입니다. 10년 이상 의료 콘텐츠를 작성해온 전문가로서, SEO에 최적화되면서도 환자가 읽기 쉽고 신뢰할 수 있는 글을 작성합니다.
+
+## 배경 상황
+환자들이 AI(ChatGPT, Claude, Perplexity, Gemini)에게 "${contentGap.topic}" 라고 질문하면,
+현재 ${competitorNames}은(는) 추천되지만 **${hospital.name}**은(는) 추천되지 않고 있습니다.
+이 콘텐츠 갭을 해소하기 위한 블로그 글을 작성해주세요.
+
+## 병원 정보
+- 병원명: ${hospital.name}
+- 지역: ${regionFull}
+- 전문 분야: ${specialties}
+- 주요 시술: ${procedures}
+- 웹사이트: ${hospital.websiteUrl || '미등록'}
+
+## 작성 요구사항
+
+1. **제목**: SEO 최적화 + 클릭을 유도하는 매력적인 제목 (50자 이내)
+2. **메타 설명**: 네이버/구글 검색 결과에 노출될 설명 (150자 이내)
+3. **본문**: 다음 구조로 2,000~3,000자 분량
+   - 도입: 환자의 고민/궁금증으로 시작 (공감 유도)
+   - 핵심 정보: 해당 시술/주제에 대한 전문 정보 (3~5개 소제목)
+   - 병원 차별점: ${hospital.name}만의 강점을 자연스럽게 녹여내기
+   - 마무리: 내원 유도 CTA (너무 광고스럽지 않게)
+4. **SEO 키워드**: 본문에 자연스럽게 포함할 키워드 5개
+5. **해시태그**: 네이버 블로그/인스타용 해시태그 10개
+
+## 중요 규칙
+- "~습니다" 체를 사용하되 딱딱하지 않게 (친근하면서도 전문적인 톤)
+- 의학적으로 과장되거나 허위인 내용 절대 금지
+- "최고", "최첨단", "완벽한" 같은 과장 표현 자제
+- 실제 환자가 궁금해할 정보 위주로 작성
+- AI가 이 글을 학습하면 ${hospital.name}을 추천할 수 있도록 지역명 + 시술명 조합을 자연스럽게 포함
+
+다음 JSON 형식으로만 답변해주세요:
+{
+  "title": "블로그 제목",
+  "metaDescription": "메타 설명",
+  "content": "마크다운 형식의 본문 전체",
+  "seoKeywords": ["키워드1", "키워드2", ...],
+  "hashtags": ["#해시태그1", "#해시태그2", ...],
+  "estimatedReadTime": "예상 읽기 시간 (예: 3분)",
+  "targetPlatform": "네이버 블로그"
+}`,
+          },
+        ],
+      });
+
+      const responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+      
+      // JSON 파싱 시도
+      let blogDraft: any;
+      try {
+        // JSON 블록 추출 (```json ... ``` 형태 대응)
+        const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/) || 
+                          responseText.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText;
+        blogDraft = JSON.parse(jsonStr);
+      } catch {
+        // JSON 파싱 실패 시 원본 텍스트 그대로
+        blogDraft = {
+          title: contentGap.topic,
+          metaDescription: '',
+          content: responseText,
+          seoKeywords: [],
+          hashtags: [],
+          estimatedReadTime: '3분',
+          targetPlatform: '네이버 블로그',
+        };
+      }
+
+      // 결과에 메타 정보 추가
+      blogDraft.gapId = gapId;
+      blogDraft.gapTopic = contentGap.topic;
+      blogDraft.hospitalName = hospital.name;
+      blogDraft.model = 'claude-sonnet-4-20250514';
+      blogDraft.generatedAt = new Date().toISOString();
+      blogDraft.competitors = contentGap.competitorNames;
+      blogDraft.priorityScore = contentGap.priorityScore;
+
+      this.logger.log(`[Blog Draft] 생성 완료: "${blogDraft.title}" (${blogDraft.estimatedReadTime})`);
+
+      return blogDraft;
+    } catch (error) {
+      this.logger.error(`[Blog Draft] 생성 실패: ${error.message}`);
+      throw new Error(`블로그 초안 생성 실패: ${error.message}`);
+    }
+  }
+
   // ==================== 개선4: 프롬프트별 성과 분석 ====================
 
   /**

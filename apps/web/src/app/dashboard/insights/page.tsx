@@ -163,6 +163,7 @@ export default function InsightsPage() {
                 data={contentGapData}
                 isLoading={contentGapLoading}
                 onRun={() => runContentGap()}
+                hospitalId={hospitalId!}
               />
             )}
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
@@ -1296,8 +1297,11 @@ function ActionReport({ data }: { data: any }) {
 }
 
 // ==================== 7. 콘텐츠 갭 분석 ====================
-function ContentGapAnalysis({ data, isLoading, onRun }: { data: any; isLoading: boolean; onRun: () => void }) {
+function ContentGapAnalysis({ data, isLoading, onRun, hospitalId }: { data: any; isLoading: boolean; onRun: () => void; hospitalId: string }) {
   const [expandedGaps, setExpandedGaps] = useState<Set<number>>(new Set());
+  const [blogDrafts, setBlogDrafts] = useState<Record<string, any>>({});
+  const [generatingDrafts, setGeneratingDrafts] = useState<Set<string>>(new Set());
+  const [viewingDraft, setViewingDraft] = useState<string | null>(null);
 
   const toggleExpand = (index: number) => {
     setExpandedGaps(prev => {
@@ -1306,6 +1310,24 @@ function ContentGapAnalysis({ data, isLoading, onRun }: { data: any; isLoading: 
       else next.add(index);
       return next;
     });
+  };
+
+  const handleGenerateBlogDraft = async (gapId: string) => {
+    if (generatingDrafts.has(gapId)) return;
+    setGeneratingDrafts(prev => new Set(prev).add(gapId));
+    try {
+      const res = await crawlerApi.generateBlogDraft(hospitalId, gapId);
+      setBlogDrafts(prev => ({ ...prev, [gapId]: res.data.draft }));
+      setViewingDraft(gapId);
+    } catch (err: any) {
+      console.error('블로그 초안 생성 실패:', err);
+    } finally {
+      setGeneratingDrafts(prev => {
+        const next = new Set(prev);
+        next.delete(gapId);
+        return next;
+      });
+    }
   };
 
   const gaps = data?.gaps || [];
@@ -1614,6 +1636,46 @@ function ContentGapAnalysis({ data, isLoading, onRun }: { data: any; isLoading: 
                       </div>
                     </div>
                   </div>
+
+                  {/* 블로그 초안 생성 */}
+                  <div className="mt-4 pt-3 border-t border-gray-200/40">
+                    {!blogDrafts[gap.id] && !generatingDrafts.has(gap.id) && (
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); handleGenerateBlogDraft(gap.id); }}
+                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg"
+                      >
+                        <PenTool className="h-4 w-4 mr-2" />
+                        블로그 초안 생성 (Claude 4 Sonnet)
+                      </Button>
+                    )}
+
+                    {generatingDrafts.has(gap.id) && (
+                      <div className="bg-purple-50 rounded-xl p-6 text-center border border-purple-200">
+                        <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-3" />
+                        <p className="text-sm font-bold text-purple-800 mb-1">Claude 4 Sonnet이 블로그 초안을 작성 중...</p>
+                        <p className="text-xs text-purple-500">치과 전문 SEO 최적화 글을 생성하고 있습니다 (약 15~30초)</p>
+                      </div>
+                    )}
+
+                    {blogDrafts[gap.id] && (
+                      <div className="space-y-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); setViewingDraft(viewingDraft === gap.id ? null : gap.id); }}
+                          className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          {viewingDraft === gap.id ? '블로그 초안 접기' : '블로그 초안 보기'}
+                          {viewingDraft === gap.id ? <ChevronUp className="h-4 w-4 ml-2" /> : <ChevronDown className="h-4 w-4 ml-2" />}
+                        </Button>
+
+                        {viewingDraft === gap.id && (
+                          <BlogDraftViewer draft={blogDrafts[gap.id]} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1646,6 +1708,108 @@ function ContentGapAnalysis({ data, isLoading, onRun }: { data: any; isLoading: 
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ==================== 8. 블로그 초안 뷰어 ====================
+function BlogDraftViewer({ draft }: { draft: any }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      const fullText = `${draft.title}\n\n${draft.metaDescription}\n\n${draft.content}\n\n키워드: ${(draft.seoKeywords || []).join(', ')}\n\n${(draft.hashtags || []).join(' ')}`;
+      await navigator.clipboard.writeText(fullText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-purple-200 shadow-sm overflow-hidden">
+      {/* 헤더 */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-5 py-4 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-purple-200 mb-1 flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              Claude 4 Sonnet 생성 · {draft.estimatedReadTime || '3분'} 읽기
+            </p>
+            <h3 className="text-lg font-bold">{draft.title}</h3>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="border-white/30 text-white hover:bg-white/20 flex-shrink-0"
+          >
+            {copied ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                복사됨!
+              </>
+            ) : (
+              <>
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                전체 복사
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* 메타 설명 */}
+      {draft.metaDescription && (
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
+          <p className="text-xs text-gray-500 mb-1 font-medium">📝 메타 설명 (SEO)</p>
+          <p className="text-sm text-gray-700">{draft.metaDescription}</p>
+        </div>
+      )}
+
+      {/* 본문 */}
+      <div className="px-5 py-5">
+        <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+          {(draft.content || '').split('\n').map((line: string, i: number) => {
+            if (line.startsWith('### ')) return <h3 key={i} className="text-base font-bold text-gray-900 mt-5 mb-2">{line.replace('### ', '')}</h3>;
+            if (line.startsWith('## ')) return <h2 key={i} className="text-lg font-bold text-gray-900 mt-6 mb-3 pb-2 border-b">{line.replace('## ', '')}</h2>;
+            if (line.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-gray-900 mt-6 mb-3">{line.replace('# ', '')}</h1>;
+            if (line.startsWith('- ') || line.startsWith('* ')) return <li key={i} className="ml-4 text-sm text-gray-700 mb-1">{line.replace(/^[-*] /, '')}</li>;
+            if (line.startsWith('**') && line.endsWith('**')) return <p key={i} className="text-sm font-bold text-gray-900 mt-3 mb-1">{line.replace(/\*\*/g, '')}</p>;
+            if (line.trim() === '') return <div key={i} className="h-3" />;
+            return <p key={i} className="text-sm text-gray-700 mb-2">{line}</p>;
+          })}
+        </div>
+      </div>
+
+      {/* SEO 키워드 + 해시태그 */}
+      <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
+        {draft.seoKeywords && draft.seoKeywords.length > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-1.5">🔍 SEO 키워드</p>
+            <div className="flex flex-wrap gap-1.5">
+              {draft.seoKeywords.map((kw: string, i: number) => (
+                <span key={i} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{kw}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {draft.hashtags && draft.hashtags.length > 0 && (
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-1.5"># 해시태그</p>
+            <div className="flex flex-wrap gap-1.5">
+              {draft.hashtags.map((tag: string, i: number) => (
+                <span key={i} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">{tag}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 푸터 */}
+      <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+        <span>모델: {draft.model || 'Claude 4 Sonnet'}</span>
+        <span>생성: {draft.generatedAt ? new Date(draft.generatedAt).toLocaleString('ko-KR') : '-'}</span>
+      </div>
     </div>
   );
 }

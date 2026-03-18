@@ -1268,6 +1268,27 @@ export class AICrawlerController {
     };
   }
 
+  // ==================== 개선5-2: 블로그 초안 생성 (Claude 4 Sonnet) ====================
+
+  @Post('content-gap/:hospitalId/blog-draft/:gapId')
+  @PlanLimit({ feature: 'contentGap' })
+  @ApiOperation({ 
+    summary: '【개선5-2】콘텐츠 갭 → 블로그 초안 자동 생성',
+    description: 'Claude 4 Sonnet을 사용하여 콘텐츠 갭을 해소할 치과 전문 블로그 글을 자동 생성합니다. PRO 플랜 전용.' 
+  })
+  async generateBlogDraft(
+    @Param('hospitalId') hospitalId: string,
+    @Param('gapId') gapId: string,
+  ) {
+    const draft = await this.aiCrawlerService.generateBlogDraft(hospitalId, gapId);
+    return {
+      hospitalId,
+      gapId,
+      draft,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   // ==================== 개선10: 환각 검증 ====================
 
   @Get('verify-hospital/:hospitalName')

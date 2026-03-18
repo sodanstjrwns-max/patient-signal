@@ -220,6 +220,8 @@ export const crawlerApi = {
   // Phase 2: 콘텐츠 갭 분석
   analyzeContentGap: (hospitalId: string) =>
     api.post(`/ai-crawler/content-gap/${hospitalId}`),
+  generateBlogDraft: (hospitalId: string, gapId: string) =>
+    api.post(`/ai-crawler/content-gap/${hospitalId}/blog-draft/${gapId}`),
 };
 
 // Scores API
