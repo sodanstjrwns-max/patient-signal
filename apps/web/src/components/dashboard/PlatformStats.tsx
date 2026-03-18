@@ -1,7 +1,10 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, CheckCircle2, XCircle, Lock } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth';
+import { getPlanLimits } from '@/components/plan/PlanGate';
+import Link from 'next/link';
 
 interface PlatformDetail {
   platform: string;
@@ -29,6 +32,7 @@ interface PlatformDetail {
 
 interface PlatformStatsProps {
   data: Record<string, number> | PlatformDetail[];
+  planType?: string;
 }
 
 const platformColors: Record<string, string> = {
@@ -45,21 +49,28 @@ const platformNames: Record<string, string> = {
   GEMINI: 'Gemini',
 };
 
-export function PlatformStats({ data }: PlatformStatsProps) {
+export function PlatformStats({ data, planType: propPlanType }: PlatformStatsProps) {
+  const { user } = useAuthStore();
+  const planType = propPlanType || (user as any)?.hospital?.planType || 'STARTER';
+  const planLimits = getPlanLimits(planType);
+  const allowedPlatforms = planLimits.platforms;
+
   // 상세 데이터인지 확인
   const isDetailedData = Array.isArray(data);
   
   if (isDetailedData) {
-    return <DetailedPlatformStats data={data as PlatformDetail[]} />;
+    return <DetailedPlatformStats data={data as PlatformDetail[]} allowedPlatforms={allowedPlatforms} />;
   }
   
   // 기존 간단한 형식 처리 - 항상 4개 플랫폼 표시
   const allPlatforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'];
   const scoreData = data as Record<string, number>;
   const platforms = allPlatforms.map(platform => ({
+    key: platform,
     name: platformNames[platform] || platform,
     score: scoreData[platform.toLowerCase()] ?? scoreData[platform] ?? 0,
     color: platformColors[platform] || '#6B7280',
+    isLocked: !allowedPlatforms.includes(platform),
   }));
 
   return (
@@ -70,23 +81,31 @@ export function PlatformStats({ data }: PlatformStatsProps) {
       <CardContent>
         <div className="space-y-4">
           {platforms.map((platform) => (
-            <div key={platform.name} className="space-y-2">
+            <div key={platform.name} className={`space-y-2 relative ${platform.isLocked ? '' : ''}`}>
+              {platform.isLocked && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-lg">
+                  <Link href={`/dashboard/billing?plan=STANDARD`} className="flex items-center gap-1.5 bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs shadow-lg hover:bg-gray-700 transition-colors">
+                    <Lock className="w-3 h-3" />
+                    <span>Standard 업그레이드</span>
+                  </Link>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: platform.color }}
+                    style={{ backgroundColor: platform.isLocked ? '#D1D5DB' : platform.color }}
                   />
                   <span className="text-sm font-medium">{platform.name}</span>
                 </div>
-                <span className="text-sm font-semibold">{platform.score}점</span>
+                <span className="text-sm font-semibold">{platform.isLocked ? '—' : `${platform.score}점`}</span>
               </div>
               <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
-                    width: `${platform.score}%`,
-                    backgroundColor: platform.color,
+                    width: platform.isLocked ? '35%' : `${platform.score}%`,
+                    backgroundColor: platform.isLocked ? '#D1D5DB' : platform.color,
                   }}
                 />
               </div>
@@ -103,7 +122,7 @@ export function PlatformStats({ data }: PlatformStatsProps) {
   );
 }
 
-function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
+function DetailedPlatformStats({ data, allowedPlatforms }: { data: PlatformDetail[]; allowedPlatforms: string[] }) {
   const TrendIcon = ({ direction }: { direction: 'UP' | 'DOWN' | 'STABLE' }) => {
     if (direction === 'UP') return <TrendingUp className="w-4 h-4 text-green-500" />;
     if (direction === 'DOWN') return <TrendingDown className="w-4 h-4 text-red-500" />;
@@ -128,9 +147,18 @@ function DetailedPlatformStats({ data }: { data: PlatformDetail[] }) {
             {data.map((platform) => {
               const color = platformColors[platform.platform] || '#6B7280';
               const hasData = (platform as any).hasData !== false && platform.totalQueries > 0;
+              const isLocked = !allowedPlatforms.includes(platform.platform);
               
               return (
-                <div key={platform.platform} className={`space-y-3 ${!hasData ? 'opacity-60' : ''}`}>
+                <div key={platform.platform} className={`space-y-3 relative ${!hasData ? 'opacity-60' : ''}`}>
+                  {isLocked && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-lg">
+                      <Link href={`/dashboard/billing?plan=STANDARD`} className="flex items-center gap-1.5 bg-gray-800 text-white px-3 py-1.5 rounded-full text-xs shadow-lg hover:bg-gray-700 transition-colors">
+                        <Lock className="w-3 h-3" />
+                        <span>Standard 플랜에서 {platform.platformName} 분석 가능</span>
+                      </Link>
+                    </div>
+                  )}
                   {/* 플랫폼 헤더 */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

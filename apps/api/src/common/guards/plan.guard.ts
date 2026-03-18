@@ -26,8 +26,8 @@ export class PlanGuard implements CanActivate {
   static readonly PLAN_LIMITS = {
     STARTER: {
       maxPrompts: 5,
-      maxCompetitors: 0,           // 무료는 경쟁사 분석 불가
-      platforms: ['CHATGPT', 'PERPLEXITY'],  // 2개 플랫폼
+      maxCompetitors: 1,           // 경쟁사 1개 맛보기
+      platforms: ['PERPLEXITY', 'GEMINI'],  // API 저렴한 2개
       crawlsPerMonth: 4,           // 월 4회 (주 1회)
       exportEnabled: false,
       aiRecommendations: false,
@@ -35,8 +35,8 @@ export class PlanGuard implements CanActivate {
       competitorAEO: false,
     },
     STANDARD: {
-      maxPrompts: 14,
-      maxCompetitors: 1,
+      maxPrompts: 15,
+      maxCompetitors: 5,
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
       crawlsPerMonth: 8,           // 월 8회 (주 2회)
       exportEnabled: true,
@@ -45,8 +45,8 @@ export class PlanGuard implements CanActivate {
       competitorAEO: true,
     },
     PRO: {
-      maxPrompts: 34,
-      maxCompetitors: 3,
+      maxPrompts: 35,
+      maxCompetitors: 10,
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
       crawlsPerMonth: 30,          // 매일
       exportEnabled: true,
