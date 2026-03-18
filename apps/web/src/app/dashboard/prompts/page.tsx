@@ -223,7 +223,7 @@ export default function PromptsPage() {
             />
           </div>
           <p className="text-sm text-gray-500">
-            크롤링은 주 2회 자동으로 실행됩니다
+            크롤링은 매일 자동으로 실행됩니다
           </p>
         </div>
 

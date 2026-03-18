@@ -62,7 +62,7 @@ export default function RegisterPage() {
           </h2>
           <p className="text-blue-200 text-base leading-relaxed mb-10">
             가입 → 병원 등록 → 질문 설정<br />
-            이후엔 매주 자동으로 분석해드립니다.
+            이후엔 매일 자동으로 분석해드립니다.
           </p>
 
           {/* 혜택 리스트 */}
@@ -70,7 +70,7 @@ export default function RegisterPage() {
             {[
               { icon: <Zap className="h-5 w-5" />, title: '무료로 시작', desc: '신용카드 없이 바로 이용 가능' },
               { icon: <Bot className="h-5 w-5" />, title: '4개 AI 플랫폼', desc: 'ChatGPT, Perplexity, Claude, Gemini' },
-              { icon: <BarChart3 className="h-5 w-5" />, title: '주 2회 자동 분석', desc: '설정 후 자동으로 추적 & 리포트' },
+              { icon: <BarChart3 className="h-5 w-5" />, title: '매일 자동 분석', desc: '설정 후 자동으로 추적 & 리포트' },
               { icon: <Shield className="h-5 w-5" />, title: '경쟁사 비교', desc: '같은 지역 병원 대비 AI 노출 현황' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">

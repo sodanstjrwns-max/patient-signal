@@ -117,7 +117,7 @@ export function UpgradeModal({
   const planFeatures: Record<string, string[]> = {
     STANDARD: [
       '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
-      '주 2회 자동 크롤링 (월 8회)',
+      '매일 자동 크롤링 (월 30회)',
       '모니터링 질문 15개',
       '경쟁사 5개 비교 분석',
       'AI 질문 변형 생성',

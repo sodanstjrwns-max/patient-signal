@@ -165,7 +165,7 @@ export default function ResponsesPage() {
                     </p>
                     <div className="flex items-center justify-center gap-2 text-sm text-blue-600 mb-6">
                       <Calendar className="h-4 w-4" />
-                      <span>매주 월/목 자동 크롤링 예정</span>
+                      <span>매일 자동 크롤링 예정</span>
                     </div>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                       <Link href="/dashboard/prompts">

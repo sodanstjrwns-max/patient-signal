@@ -109,7 +109,7 @@ function LoginForm() {
               </div>
               <div>
                 <p className="font-medium text-sm">AI 가시성 점수 추적</p>
-                <p className="text-xs text-blue-300">매주 자동으로 측정 & 리포트</p>
+                <p className="text-xs text-blue-300">매일 자동으로 측정 & 리포트</p>
               </div>
             </div>
             <div className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">

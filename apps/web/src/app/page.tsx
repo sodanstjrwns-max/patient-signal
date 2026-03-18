@@ -140,7 +140,7 @@ export default function HomePage() {
               <div className="text-sm font-bold text-green-600 mb-2">STEP 2</div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">자동 크롤링</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                매주 2회, 4개 AI 플랫폼에<br />
+                매일, 4개 AI 플랫폼에<br />
                 자동으로 질문하고 응답을<br />
                 수집·분석합니다
               </p>
@@ -179,7 +179,7 @@ export default function HomePage() {
               <h3 className="font-bold text-gray-900 mb-2">AI 가시성 점수</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
                 ChatGPT, Perplexity, Claude, Gemini에서 우리 병원이 언급되는 빈도, 
-                순위, 감성을 종합한 점수를 매주 추적합니다.
+                순위, 감성을 종합한 점수를 매일 추적합니다.
               </p>
             </div>
             <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
@@ -208,7 +208,7 @@ export default function HomePage() {
               </div>
               <h3 className="font-bold text-gray-900 mb-2">주간 인사이트 리포트</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                매주 자동으로 분석 리포트를 생성합니다. 
+                매일 자동으로 분석 리포트를 생성합니다. 
                 점수 변동, 새로운 언급, 개선 포인트를 쉽게 확인하세요.
               </p>
             </div>
