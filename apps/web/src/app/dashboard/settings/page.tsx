@@ -15,7 +15,7 @@ import {
   MapPin,
   Globe,
   CreditCard,
-  Bell,
+
   Shield,
   Loader2,
   Save,
@@ -493,39 +493,6 @@ export default function SettingsPage() {
                   </div>
                 );
               })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ==================== 알림 설정 ==================== */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Bell className="h-5 w-5" /> 알림 설정</CardTitle>
-            <CardDescription>이메일 및 푸시 알림을 설정합니다</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">주간 ABHS 리포트</p>
-                  <p className="text-sm text-gray-500">매주 월요일 AI 가시성 리포트를 이메일로 받습니다</p>
-                </div>
-                <Button variant="outline" size="sm">설정</Button>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">부정 언급 긴급 알림</p>
-                  <p className="text-sm text-gray-500">AI 플랫폼에서 부정적 언급이 감지되면 즉시 알림</p>
-                </div>
-                <Button variant="outline" size="sm">설정</Button>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <p className="font-medium">경쟁사 급등 알림</p>
-                  <p className="text-sm text-gray-500">경쟁사 ABHS 점수가 10점 이상 상승하면 알림</p>
-                </div>
-                <Button variant="outline" size="sm">설정</Button>
-              </div>
             </div>
           </CardContent>
         </Card>
