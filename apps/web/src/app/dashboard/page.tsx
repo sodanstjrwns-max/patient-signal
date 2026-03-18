@@ -183,7 +183,10 @@ export default function DashboardPage() {
             <ScoreChart data={dashboard?.scoreHistory || []} />
           </div>
           {/* 플랫폼별 상세 데이터 우선 사용 (항상 4개 플랫폼 반환) */}
-          <PlatformStats data={platformDetails || (dashboard?.platformScores || {})} />
+          <PlatformStats 
+            data={platformDetails || (dashboard?.platformScores || {})} 
+            planType={(user as any)?.hospital?.planType || 'STARTER'}
+          />
         </div>
 
         {/* 하단 영역 */}
