@@ -225,8 +225,17 @@ export class AICrawlerService {
           const result = await this.queryPlatform(platform, promptText, hospitalName);
           result.repeatIndex = repeatIdx;
           
-          // 【개선10】환각 필터링 - 경쟁사 이름 검증
-          const verifiedCompetitors = await this.verifyCompetitors(result.competitorsMentioned);
+          // 【고도화 #5】환각 필터링 - 등록된 경쟁사 DB와 대조 + 패턴 기반
+          const registeredCompetitors = await this.prisma.competitor.findMany({
+            where: { hospitalId, isActive: true },
+            select: { competitorName: true },
+          });
+          const registeredNames = registeredCompetitors.map(c => c.competitorName);
+          
+          const verifiedCompetitors = await this.verifyCompetitorsEnhanced(
+            result.competitorsMentioned, 
+            registeredNames,
+          );
           result.competitorsMentioned = verifiedCompetitors.verified;
           result.isVerified = true;
           result.verificationSource = 'keyword_pattern';
@@ -302,7 +311,7 @@ export class AICrawlerService {
         }
       }
       
-      // 플랫폼 간 딜레이 (2초)
+      // 【고도화 #3】플랫폼 간 딜레이 (2초) + 에러 시 리트라이 보호
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
@@ -330,6 +339,55 @@ export class AICrawlerService {
   }
 
   /**
+   * 【고도화 #3】리트라이 래퍼 - 타임아웃 + 레이트리밋 + 지수 백오프
+   */
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    label: string,
+    maxRetries: number = 2,
+    baseDelay: number = 3000,
+  ): Promise<T> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        // 타임아웃 30초
+        const result = await Promise.race([
+          fn(),
+          new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error(`${label} 타임아웃 (30초)`)), 30000)
+          ),
+        ]);
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        const isRetryable = 
+          error.message?.includes('timeout') ||
+          error.message?.includes('타임아웃') ||
+          error.message?.includes('429') ||
+          error.message?.includes('rate_limit') ||
+          error.message?.includes('overloaded') ||
+          error.message?.includes('503') ||
+          error.message?.includes('502') ||
+          error.status === 429 ||
+          error.status === 503 ||
+          error.status === 502;
+
+        if (attempt < maxRetries && isRetryable) {
+          const delay = baseDelay * Math.pow(2, attempt); // 3s → 6s → 12s
+          this.logger.warn(`[${label}] 시도 ${attempt + 1}/${maxRetries + 1} 실패 (${error.message}), ${delay}ms 후 재시도`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        } else if (attempt < maxRetries) {
+          this.logger.warn(`[${label}] 시도 ${attempt + 1} 비재시도 에러: ${error.message}`);
+          break; // 재시도 불가능한 에러는 바로 종료
+        }
+      }
+    }
+    
+    throw lastError || new Error(`${label} 최대 재시도 초과`);
+  }
+
+  /**
    * 개별 플랫폼 질의
    */
   private async queryPlatform(
@@ -339,13 +397,13 @@ export class AICrawlerService {
   ): Promise<AIQueryResult> {
     switch (platform) {
       case 'CHATGPT':
-        return this.queryChatGPT(promptText, hospitalName);
+        return this.withRetry(() => this.queryChatGPT(promptText, hospitalName), 'ChatGPT');
       case 'CLAUDE':
-        return this.queryClaude(promptText, hospitalName);
+        return this.withRetry(() => this.queryClaude(promptText, hospitalName), 'Claude');
       case 'PERPLEXITY':
-        return this.queryPerplexity(promptText, hospitalName);
+        return this.withRetry(() => this.queryPerplexity(promptText, hospitalName), 'Perplexity');
       case 'GEMINI':
-        return this.queryGemini(promptText, hospitalName);
+        return this.withRetry(() => this.queryGemini(promptText, hospitalName), 'Gemini');
       default:
         throw new Error(`지원하지 않는 플랫폼: ${platform}`);
     }
@@ -815,8 +873,43 @@ JSON만 답변:
   // ==================== 개선10: AI 환각 필터링 ====================
 
   /**
-   * 【개선10】경쟁사 이름 환각 필터링
-   * AI가 생성한 가짜 병원명을 필터링
+   * 【고도화 #5】경쟁사 이름 환각 필터링 (강화)
+   * 1단계: DB 등록 경쟁사와 유사도 매칭 (무조건 통과)
+   * 2단계: 패턴 기반 실존 가능성 판단
+   */
+  private async verifyCompetitorsEnhanced(
+    competitorNames: string[],
+    registeredNames: string[],
+  ): Promise<{ verified: string[]; filtered: string[] }> {
+    const verified: string[] = [];
+    const filtered: string[] = [];
+    
+    for (const name of competitorNames) {
+      // 1단계: DB 등록 경쟁사와 유사도 비교 (0.6 이상이면 통과)
+      const isRegistered = registeredNames.some(registered => {
+        const similarity = this.calculateNameSimilarity(name, registered);
+        return similarity >= 0.6;
+      });
+      
+      if (isRegistered) {
+        verified.push(name);
+        continue;
+      }
+      
+      // 2단계: 패턴 기반 검증
+      if (this.isLikelyRealHospital(name)) {
+        verified.push(name);
+      } else {
+        filtered.push(name);
+        this.logger.log(`[환각 필터] 의심 병원명 제거: "${name}"`);
+      }
+    }
+    
+    return { verified, filtered };
+  }
+
+  /**
+   * 【개선10】경쟁사 이름 환각 필터링 (기존 호환)
    */
   private async verifyCompetitors(
     competitorNames: string[],
@@ -1552,15 +1645,31 @@ JSON 형식으로만 답변:
     let mentionPosition: number | null = null;
     let totalRecommendations: number | null = null;
     
-    const listPattern = /(\d+)[.\)]\s*([^\n]+)/g;
-    const matches = [...response.matchAll(listPattern)];
+    // 【고도화 #1】다양한 리스트 패턴 지원 (번호, 볼드, 마크다운 헤딩, 불릿)
+    const listPatterns = [
+      /(\d+)[.\)\.]\s*\**([^\n]+)/g,           // 1. 또는 1) 패턴 (볼드 포함)
+      /[-•\*]\s*\**([^\n]+)/g,                   // 불릿 리스트
+      /#{1,3}\s*\d*\.?\s*\**([^\n]+)/g,          // ### 1. 헤딩 패턴
+    ];
+    
+    // 1순위: 번호 리스트에서 추출
+    const numberedPattern = /(\d+)[.\)\.]\s*\**([^\n]+)/g;
+    const numberedMatches = [...response.matchAll(numberedPattern)];
+    
+    // 2순위: 볼드 패턴 (번호 리스트 없을 때)
+    const boldPattern = /\*\*([^*]+(?:치과|병원|의원|클리닉|덴탈)[^*]*)\*\*/g;
+    const boldMatches = [...response.matchAll(boldPattern)];
     
     const hospitalVariants = this.generateHospitalNameVariants(hospitalName);
+    
+    // 번호 리스트 우선 사용, 없으면 볼드 패턴
+    const matches = numberedMatches.length > 0 ? numberedMatches : [];
+    const matchTextIndex = numberedMatches.length > 0 ? 2 : 1;
     
     if (matches.length > 0) {
       totalRecommendations = matches.length;
       for (let i = 0; i < matches.length; i++) {
-        const listItem = matches[i][2].toLowerCase();
+        const listItem = matches[i][matchTextIndex]?.toLowerCase() || '';
         const isMatch = hospitalVariants.some(variant => 
           listItem.includes(variant.toLowerCase())
         );
@@ -1569,23 +1678,68 @@ JSON 형식으로만 답변:
           break;
         }
       }
+    } else if (boldMatches.length > 0) {
+      // 볼드 패턴에서 순위 탐지
+      totalRecommendations = boldMatches.length;
+      for (let i = 0; i < boldMatches.length; i++) {
+        const boldText = boldMatches[i][1]?.toLowerCase() || '';
+        const isMatch = hospitalVariants.some(variant => 
+          boldText.includes(variant.toLowerCase())
+        );
+        if (isMatch) {
+          mentionPosition = i + 1;
+          break;
+        }
+      }
+    }
+    
+    // 언급은 됐는데 순위를 못 잡은 경우: 본문 위치 기반 순위 추정
+    if (isMentioned && mentionPosition === null) {
+      const responseLength = response.length;
+      if (mentionResult.matchedVariant) {
+        const idx = response.toLowerCase().indexOf(mentionResult.matchedVariant.toLowerCase());
+        if (idx !== -1) {
+          const relativePos = idx / responseLength;
+          if (relativePos < 0.2) mentionPosition = 1;
+          else if (relativePos < 0.4) mentionPosition = 2;
+          else if (relativePos < 0.6) mentionPosition = 3;
+          else if (relativePos < 0.8) mentionPosition = 4;
+          else mentionPosition = 5;
+        }
+      }
     }
 
+    // 경쟁사 추출 개선: 번호 리스트 + 볼드 + 본문 내 병원명 패턴
     const competitorsMentioned: string[] = [];
-    for (const match of matches) {
-      const name = match[2].trim();
+    const allListItems = [
+      ...numberedMatches.map(m => m[2]?.trim() || ''),
+      ...boldMatches.map(m => m[1]?.trim() || ''),
+    ];
+    
+    for (const name of allListItems) {
       const isOurHospital = hospitalVariants.some(variant => 
         name.toLowerCase().includes(variant.toLowerCase())
       );
       if (!isOurHospital) {
-        const hospitalNameMatch = name.match(/([가-힣]+(?:치과|병원|의원|클리닉))/);
+        const hospitalNameMatch = name.match(/([가-힣a-zA-Z]+(?:치과의원|치과병원|치과|병원|의원|클리닉|덴탈|메디컬))/);
         if (hospitalNameMatch) {
           competitorsMentioned.push(hospitalNameMatch[1]);
         }
       }
     }
+    
+    // 본문에서 추가 병원명 탐지 (리스트에 없는 경우)
+    const inlineHospitalPattern = /([가-힣]{2,10}(?:치과의원|치과병원|치과|병원|의원|클리닉|덴탈))/g;
+    const inlineMatches = response.match(inlineHospitalPattern) || [];
+    for (const name of inlineMatches) {
+      const isOurHospital = hospitalVariants.some(variant => 
+        name.toLowerCase().includes(variant.toLowerCase())
+      );
+      if (!isOurHospital && !competitorsMentioned.includes(name)) {
+        competitorsMentioned.push(name);
+      }
+    }
 
-    // 【개선7】기본 감성 분석은 키워드 기반으로 유지 (AI 감성 분석은 호출부에서 오버라이드)
     const sentimentResult = this.analyzeSentimentWithVariants(response, hospitalVariants);
     const citedSources = this.extractCitedSources(response);
 
@@ -1768,7 +1922,42 @@ JSON 형식으로만 답변:
       include: { prompt: true },
     });
 
-    if (responses.length === 0) return 0;
+    // 【고도화 #6】데이터 부족 시 처리 + 신뢰도 표시
+    if (responses.length === 0) {
+      // 데이터 없을 때: 이전 점수를 유지하거나 -1 반환
+      const lastScore = await this.prisma.dailyScore.findFirst({
+        where: { hospitalId, scoreDate: { lt: startOfDay } },
+        orderBy: { scoreDate: 'desc' },
+      });
+      if (lastScore) {
+        // 이전 점수 유지 (데이터 없는 날은 마지막 점수 그대로)
+        await this.prisma.dailyScore.upsert({
+          where: { hospitalId_scoreDate: { hospitalId, scoreDate: startOfDay } },
+          update: { 
+            overallScore: lastScore.overallScore,
+            platformScores: lastScore.platformScores as any,
+            specialtyScores: lastScore.specialtyScores as any,
+            mentionCount: 0,
+            positiveRatio: lastScore.positiveRatio,
+          },
+          create: {
+            hospitalId,
+            scoreDate: startOfDay,
+            overallScore: lastScore.overallScore,
+            platformScores: lastScore.platformScores as any,
+            specialtyScores: lastScore.specialtyScores as any,
+            mentionCount: 0,
+            positiveRatio: lastScore.positiveRatio,
+          },
+        });
+        return lastScore.overallScore;
+      }
+      return 0;
+    }
+    
+    // 【고도화 #6】신뢰도 계산: 데이터가 적으면 점수에 패널티
+    const minReliableCount = 8; // 최소 8개 응답 (4플랫폼 × 2프롬프트)
+    const reliabilityFactor = Math.min(1, responses.length / minReliableCount);
 
     // 1. 언급률 (0~100) - 같은 프롬프트+플랫폼의 다수결 (REPEAT_COUNT > 1 시 활용)
     const promptPlatformGroups = new Map<string, boolean[]>();
@@ -1816,12 +2005,24 @@ JSON 형식으로만 답변:
     const citationScores = responses.map(r => Math.min(100, (r.citedSources?.length || 0) * 20));
     const avgCitationScore = citationScores.reduce((a, b) => a + b, 0) / citationScores.length;
 
+    // 【고도화 #2】가시성 점수 리밸런싱
+    // 인용(citation)은 Perplexity만 유리하므로 가중치 축소
+    // 대신 '플랫폼 커버리지'(몇 개 플랫폼에서 언급되는가) 추가
+    const platformsCovered = new Set(responses.filter(r => r.isMentioned).map(r => r.aiPlatform)).size;
+    const totalPlatformsUsed = new Set(responses.map(r => r.aiPlatform)).size;
+    const coverageScore = totalPlatformsUsed > 0 ? (platformsCovered / totalPlatformsUsed) * 100 : 0;
+
     const overallScore = Math.round(
-      mentionRate * 0.4 +
-      avgPositionScore * 0.3 +
-      avgSentimentScore * 0.2 +
-      avgCitationScore * 0.1
+      mentionRate * 0.35 +         // 언급률 35% (기존 40% → 약간 축소)
+      avgPositionScore * 0.25 +    // 포지션 25% (기존 30% → 약간 축소)
+      avgSentimentScore * 0.15 +   // 감성 15% (기존 20% → 축소)
+      coverageScore * 0.20 +       // 플랫폼 커버리지 20% (신규)
+      avgCitationScore * 0.05      // 인용 5% (기존 10% → 절반 축소)
     );
+    
+    // 【고도화 #6】신뢰도 보정: 데이터가 적으면 점수를 보수적으로 조정
+    // 8개 미만이면 실제 점수의 비율만 반영 (예: 4개면 50% 반영)
+    const adjustedScore = Math.round(overallScore * reliabilityFactor);
 
     // 플랫폼별 점수 (다수결 기반)
     const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
@@ -1876,7 +2077,7 @@ JSON 형식으로만 답변:
         },
       },
       update: {
-        overallScore,
+        overallScore: adjustedScore,
         platformScores,
         specialtyScores,
         mentionCount: mentionedGroups,
@@ -1891,7 +2092,7 @@ JSON 형식으로만 답변:
       create: {
         hospitalId,
         scoreDate: startOfDay,
-        overallScore,
+        overallScore: adjustedScore,
         platformScores,
         specialtyScores,
         mentionCount: mentionedGroups,
@@ -1905,7 +2106,7 @@ JSON 형식으로만 답변:
       },
     });
 
-    return overallScore;
+    return adjustedScore;
   }
 
   // ==================== 초고도화: ABHS 집계 헬퍼 ====================

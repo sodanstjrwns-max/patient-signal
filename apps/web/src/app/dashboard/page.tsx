@@ -65,11 +65,12 @@ export default function DashboardPage() {
     setShowTutorial(false);
   };
 
-  // 대시보드 데이터 조회
+  // 【고도화 #4】대시보드 데이터 조회 - staleTime으로 불필요한 재요청 방지
   const { data: dashboard, isLoading: dashboardLoading, refetch } = useQuery({
     queryKey: ['dashboard', hospitalId],
     queryFn: () => hospitalApi.getDashboard(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
+    staleTime: 2 * 60 * 1000, // 2분간 캐시
   });
 
   // 주간 하이라이트
@@ -77,6 +78,7 @@ export default function DashboardPage() {
     queryKey: ['weekly', hospitalId],
     queryFn: () => scoresApi.getWeekly(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000, // 5분간 캐시 (자주 안 바뀜)
   });
 
   // 경쟁사 비교 (Starter는 competitorComparison 기능 없으므로 호출 안 함)
@@ -84,6 +86,7 @@ export default function DashboardPage() {
     queryKey: ['comparison', hospitalId],
     queryFn: () => competitorsApi.getComparison(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId && canUseFeature(planType, 'competitorComparison'),
+    staleTime: 5 * 60 * 1000,
   });
 
   // 플랫폼별 상세 분석
@@ -91,6 +94,7 @@ export default function DashboardPage() {
     queryKey: ['platforms', hospitalId],
     queryFn: () => scoresApi.getPlatforms(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
+    staleTime: 2 * 60 * 1000,
   });
 
   // Phase 1: 인사이트 요약 데이터
@@ -98,12 +102,14 @@ export default function DashboardPage() {
     queryKey: ['insights-mention-summary', hospitalId],
     queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: sourceInsight } = useQuery({
     queryKey: ['insights-source-summary', hospitalId],
     queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const handleRefresh = () => {

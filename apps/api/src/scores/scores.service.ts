@@ -136,10 +136,12 @@ export class ScoresService {
         ? (positiveCount * 100 + neutralCount * 50) / totalQueries
         : 0;
       
+      // 【고도화 #2】플랫폼별 가시성 점수 리밸런싱
+      // 인용은 Perplexity만 유리하므로 감성 비중을 올리고 인용 제거
       const visibilityScore = Math.round(
-        mentionRate * 100 * 0.4 + 
-        positionScore * 0.3 + 
-        sentimentScore * 0.3
+        mentionRate * 100 * 0.45 +   // 언급률 45% (핵심 지표)
+        positionScore * 0.30 +       // 포지션 30%
+        sentimentScore * 0.25        // 감성 25% (인용 제거 후 재분배)
       );
 
       // 트렌드 계산

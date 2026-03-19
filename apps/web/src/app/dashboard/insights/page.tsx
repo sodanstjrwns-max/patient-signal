@@ -67,23 +67,26 @@ export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions' | 'contentGap'>('mention');
   const queryClient = useQueryClient();
 
-  // Phase 1 APIs
+  // 【고도화 #4】Phase 1 APIs - staleTime으로 탭 전환 시 재요청 방지
   const { data: mentionData, isLoading: mentionLoading } = useQuery({
     queryKey: ['insights-mention', hospitalId],
     queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: trendData, isLoading: trendLoading } = useQuery({
     queryKey: ['insights-trend', hospitalId],
     queryFn: () => crawlerApi.getResponseTrend(hospitalId!, 60).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: sourceData, isLoading: sourceLoading } = useQuery({
     queryKey: ['insights-sources', hospitalId],
     queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   // Phase 2 APIs
@@ -91,18 +94,21 @@ export default function InsightsPage() {
     queryKey: ['insights-positioning', hospitalId],
     queryFn: () => crawlerApi.getPositioningMap(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: sourceQualityData, isLoading: sourceQualityLoading } = useQuery({
     queryKey: ['insights-source-quality', hospitalId],
     queryFn: () => crawlerApi.getSourceQuality(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: actionData, isLoading: actionLoading } = useQuery({
     queryKey: ['insights-actions', hospitalId],
     queryFn: () => crawlerApi.getActionReport(hospitalId!).then(r => r.data),
     enabled: !!hospitalId,
+    staleTime: 3 * 60 * 1000,
   });
 
   // 콘텐츠 갭 분석 (POST - mutation)
