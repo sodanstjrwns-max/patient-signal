@@ -311,12 +311,31 @@ export class AICrawlerService {
               platformWeight: this.getPlatformWeight(platform),
               abhsContribution,
               citedUrl,
-              // 할루시네이션 감소: 신뢰도 필드
-              confidenceScore: result.confidenceScore ?? null,
-              confidenceFactors: result.confidenceFactors ?? undefined,
-              isLowConfidence: result.isLowConfidence ?? false,
             },
           });
+
+          // 신뢰도 필드는 별도 업데이트 (DB 컬럼이 없을 수 있으므로)
+          if (result.confidenceScore !== undefined) {
+            try {
+              const created = await this.prisma.aIResponse.findFirst({
+                where: { hospitalId, promptId, aiPlatform: platform },
+                orderBy: { createdAt: 'desc' },
+                select: { id: true },
+              });
+              if (created) {
+                await this.prisma.aIResponse.update({
+                  where: { id: created.id },
+                  data: {
+                    confidenceScore: result.confidenceScore ?? null,
+                    confidenceFactors: result.confidenceFactors as any,
+                    isLowConfidence: result.isLowConfidence ?? false,
+                  },
+                });
+              }
+            } catch (confErr) {
+              this.logger.warn(`[신뢰도] DB 컬럼 미존재 - 신뢰도 저장 생략: ${confErr.message}`);
+            }
+          }
 
           // API 레이트 리밋 방지 (측정 사이 1.5초 딜레이)
           if (repeatIdx < this.REPEAT_COUNT - 1) {
@@ -1196,7 +1215,16 @@ JSON만 답변:
         responseDate: { gte: last30Days },
         competitorsMentioned: { isEmpty: false },
       },
-      include: { prompt: true },
+      select: {
+        id: true,
+        promptId: true,
+        aiPlatform: true,
+        responseText: true,
+        responseDate: true,
+        competitorsMentioned: true,
+        isMentioned: true,
+        prompt: { select: { id: true, promptText: true, specialtyCategory: true } },
+      },
       orderBy: { responseDate: 'desc' },
     });
     
@@ -2330,8 +2358,6 @@ JSON 형식으로만 답변:
         queryIntent: true,
         platformWeight: true,
         abhsContribution: true,
-        confidenceScore: true,
-        isLowConfidence: true,
         prompt: { select: { specialtyCategory: true } },
       },
     });
@@ -2435,7 +2461,8 @@ JSON 형식으로만 답변:
     );
     
     // 【할루시네이션 감소】저신뢰 응답이 많으면 점수에 할인 적용
-    const lowConfResponses = responses.filter(r => r.isLowConfidence);
+    // Note: confidenceScore/isLowConfidence 컬럼이 DB에 아직 없을 수 있으므로 안전하게 처리
+    const lowConfResponses = responses.filter(r => (r as any).isLowConfidence === true);
     const lowConfRatio = responses.length > 0 ? lowConfResponses.length / responses.length : 0;
     const confidencePenalty = lowConfRatio > 0.5 ? 0.85 : lowConfRatio > 0.3 ? 0.92 : 1.0;
     

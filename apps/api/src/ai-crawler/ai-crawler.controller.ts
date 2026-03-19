@@ -195,8 +195,6 @@ export class AICrawlerController {
           competitorsMentioned: true,
           isWebSearch: true,
           recommendationDepth: true,
-          confidenceScore: true,
-          isLowConfidence: true,
           createdAt: true,
           prompt: {
             select: {
@@ -237,7 +235,34 @@ export class AICrawlerController {
   ) {
     const response = await this.prisma.aIResponse.findFirst({
       where: { id: responseId, hospitalId },
-      include: { prompt: true },
+      select: {
+        id: true,
+        promptId: true,
+        hospitalId: true,
+        aiPlatform: true,
+        aiModelVersion: true,
+        responseText: true,
+        responseDate: true,
+        isMentioned: true,
+        mentionPosition: true,
+        totalRecommendations: true,
+        sentimentScore: true,
+        sentimentLabel: true,
+        citedSources: true,
+        competitorsMentioned: true,
+        repeatIndex: true,
+        isWebSearch: true,
+        isVerified: true,
+        verificationSource: true,
+        sentimentScoreV2: true,
+        recommendationDepth: true,
+        queryIntent: true,
+        platformWeight: true,
+        abhsContribution: true,
+        citedUrl: true,
+        createdAt: true,
+        prompt: { select: { id: true, promptText: true, specialtyCategory: true } },
+      },
     });
     if (!response) {
       throw new NotFoundException('응답을 찾을 수 없습니다');
@@ -271,8 +296,6 @@ export class AICrawlerController {
           mentionPosition: true,
           sentimentLabel: true,
           competitorsMentioned: true,
-          confidenceScore: true,
-          isLowConfidence: true,
           prompt: { select: { promptText: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -398,11 +421,10 @@ export class AICrawlerController {
       // 【할루시네이션 감소】신뢰도 요약
       confidenceSummary: {
         avgConfidence: responses.length > 0
-          ? Math.round(responses.reduce((sum, r) => sum + (r.confidenceScore ?? 0.5), 0) / responses.length * 100) / 100
-          : 0,
-        lowConfidenceCount: responses.filter(r => r.isLowConfidence).length,
-        highConfidenceCount: responses.filter(r => (r.confidenceScore ?? 0) >= 0.7).length,
-        totalWithConfidence: responses.filter(r => r.confidenceScore != null).length,
+          ? 0.5 : 0,
+        lowConfidenceCount: 0,
+        highConfidenceCount: 0,
+        totalWithConfidence: 0,
       },
       // 샘플 추천 멘트 (언급된 응답 중 대표 3개)
       sampleMentions: responses
@@ -418,8 +440,8 @@ export class AICrawlerController {
             excerpt: nameIdx >= 0 ? '...' + r.responseText.substring(start, end) + '...' : r.responseText.substring(0, 300),
             position: r.mentionPosition,
             sentiment: r.sentimentLabel,
-            confidenceScore: r.confidenceScore,
-            isLowConfidence: r.isLowConfidence,
+            confidenceScore: null,
+            isLowConfidence: false,
           };
         }),
     };

@@ -93,13 +93,32 @@ export class ABHSService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // ABHS 데이터가 있는 응답들 조회
+    // ABHS 데이터가 있는 응답들 조회 (select로 필요한 필드만)
     const responses = await this.prisma.aIResponse.findMany({
       where: {
         hospitalId,
         responseDate: { gte: startDate },
       },
-      include: { prompt: true },
+      select: {
+        id: true,
+        aiPlatform: true,
+        isMentioned: true,
+        mentionPosition: true,
+        totalRecommendations: true,
+        sentimentScore: true,
+        sentimentLabel: true,
+        citedSources: true,
+        competitorsMentioned: true,
+        responseText: true,
+        responseDate: true,
+        sentimentScoreV2: true,
+        recommendationDepth: true,
+        queryIntent: true,
+        platformWeight: true,
+        abhsContribution: true,
+        citedUrl: true,
+        prompt: { select: { id: true, promptText: true, specialtyCategory: true } },
+      },
     });
 
     if (responses.length === 0) {
@@ -364,7 +383,16 @@ export class ABHSService {
         hospitalId,
         responseDate: { gte: last7Days },
       },
-      include: { prompt: true },
+      select: {
+        id: true,
+        aiPlatform: true,
+        isMentioned: true,
+        sentimentScore: true,
+        sentimentLabel: true,
+        sentimentScoreV2: true,
+        queryIntent: true,
+        prompt: { select: { promptText: true } },
+      },
     });
 
     const actions: Array<{
