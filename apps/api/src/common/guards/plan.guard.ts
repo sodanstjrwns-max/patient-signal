@@ -96,8 +96,8 @@ export class PlanGuard implements CanActivate {
         name: true,
         _count: {
           select: {
-            prompts: true,
-            competitors: true,
+            prompts: { where: { isActive: true } },
+            competitors: { where: { isActive: true } },
           },
         },
       },
