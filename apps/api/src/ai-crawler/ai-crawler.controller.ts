@@ -996,13 +996,51 @@ export class AICrawlerController {
     const mentionedResponses = responses.filter(r => r.isMentioned);
     const mentionRate = totalResponses > 0 ? Math.round((mentionedResponses.length / totalResponses) * 100) : 0;
 
-    // 플랫폼별 언급률
-    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+    // 【최적화 R3】응답 데이터를 한 번만 순회하며 모든 통계 계산 (필터 중복 제거)
     const platformStats: Record<string, { total: number; mentioned: number; rate: number }> = {};
-    for (const p of platforms) {
-      const pTotal = responses.filter(r => r.aiPlatform === p).length;
-      const pMentioned = responses.filter(r => r.aiPlatform === p && r.isMentioned).length;
-      platformStats[p] = { total: pTotal, mentioned: pMentioned, rate: pTotal > 0 ? Math.round((pMentioned / pTotal) * 100) : 0 };
+    const competitorFreq: Record<string, number> = {};
+    const promptMap = new Map<string, { text: string; mentioned: string[]; notMentioned: string[] }>();
+    const allSources: string[] = [];
+    let positiveCount = 0;
+    let negativeCount = 0;
+
+    for (const r of responses) {
+      // 플랫폼별 통계
+      if (!platformStats[r.aiPlatform]) {
+        platformStats[r.aiPlatform] = { total: 0, mentioned: 0, rate: 0 };
+      }
+      platformStats[r.aiPlatform].total++;
+      if (r.isMentioned) platformStats[r.aiPlatform].mentioned++;
+
+      // 경쟁사 빈도
+      for (const comp of (r.competitorsMentioned || [])) {
+        competitorFreq[comp] = (competitorFreq[comp] || 0) + 1;
+      }
+
+      // 프롬프트 갭
+      const pId = r.promptId;
+      if (!promptMap.has(pId)) {
+        promptMap.set(pId, { text: r.prompt?.promptText || '', mentioned: [], notMentioned: [] });
+      }
+      if (r.isMentioned) {
+        promptMap.get(pId)!.mentioned.push(r.aiPlatform);
+      } else {
+        promptMap.get(pId)!.notMentioned.push(r.aiPlatform);
+      }
+
+      // 출처 수집
+      if (r.citedSources?.length > 0) allSources.push(...r.citedSources);
+      if (r.citedUrl) allSources.push(r.citedUrl);
+
+      // 감성
+      if (r.sentimentLabel === 'POSITIVE') positiveCount++;
+      else if (r.sentimentLabel === 'NEGATIVE') negativeCount++;
+    }
+
+    // 플랫폼별 rate 계산
+    for (const p of Object.keys(platformStats)) {
+      const s = platformStats[p];
+      s.rate = s.total > 0 ? Math.round((s.mentioned / s.total) * 100) : 0;
     }
 
     // 가장 약한 플랫폼
@@ -1015,21 +1053,7 @@ export class AICrawlerController {
       .filter(([, s]) => s.total > 0)
       .sort(([, a], [, b]) => b.rate - a.rate)[0];
 
-    // 안 언급되는 질문 (Content Gap)
     const promptGaps: { question: string; platforms: string[] }[] = [];
-    const promptMap = new Map<string, { text: string; mentioned: string[]; notMentioned: string[] }>();
-    
-    for (const r of responses) {
-      const pId = r.promptId;
-      if (!promptMap.has(pId)) {
-        promptMap.set(pId, { text: r.prompt?.promptText || '', mentioned: [], notMentioned: [] });
-      }
-      if (r.isMentioned) {
-        promptMap.get(pId)!.mentioned.push(r.aiPlatform);
-      } else {
-        promptMap.get(pId)!.notMentioned.push(r.aiPlatform);
-      }
-    }
 
     for (const [, data] of promptMap) {
       if (data.mentioned.length === 0 && data.notMentioned.length > 0) {
@@ -1037,26 +1061,16 @@ export class AICrawlerController {
       }
     }
 
-    // 경쟁사 빈도
-    const competitorFreq: Record<string, number> = {};
-    for (const r of responses) {
-      for (const comp of (r.competitorsMentioned || [])) {
-        competitorFreq[comp] = (competitorFreq[comp] || 0) + 1;
-      }
-    }
     const topCompetitors = Object.entries(competitorFreq).sort(([, a], [, b]) => b - a).slice(0, 3);
 
-    // 출처 현황
-    const allSources = responses.flatMap(r => [...(r.citedSources || []), ...(r.citedUrl ? [r.citedUrl] : [])]);
+    // 출처 현황 (위의 루프에서 수집 완료)
     const hasOfficialSite = allSources.some(s => {
       try { const d = new URL(s).hostname; return d.includes('치과') || d.includes('dental') || d.includes('clinic'); } catch { return false; }
     });
     const hasBlog = allSources.some(s => s.includes('blog.naver.com'));
     const hasYoutube = allSources.some(s => s.includes('youtube.com'));
 
-    // 감성 분석
-    const positiveCount = responses.filter(r => r.sentimentLabel === 'POSITIVE').length;
-    const negativeCount = responses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+    // 감성 분석 (위의 루프에서 수집 완료)
     const sentimentRate = totalResponses > 0 ? Math.round((positiveCount / totalResponses) * 100) : 0;
 
     // --- 액션 플랜 생성 (GPT 없이 룰 기반) ---

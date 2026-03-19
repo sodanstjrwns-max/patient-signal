@@ -182,40 +182,24 @@ export class HospitalsService {
       throw new NotFoundException('병원을 찾을 수 없습니다');
     }
 
-    // 최근 언급 통계
+    // 【최적화 R3】순차 3개 쿼리 → 병렬화
     const last7Days = new Date();
     last7Days.setDate(last7Days.getDate() - 7);
-
-    const recentMentions = await this.prisma.aIResponse.count({
-      where: {
-        hospitalId,
-        isMentioned: true,
-        responseDate: { gte: last7Days },
-      },
-    });
-
-    const totalResponses = await this.prisma.aIResponse.count({
-      where: {
-        hospitalId,
-        responseDate: { gte: last7Days },
-      },
-    });
-
-    // 감성 분석 통계 (최근 30일)
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
 
-    const sentimentResponses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        responseDate: { gte: last30Days },
-        sentimentLabel: { not: null },
-      },
-      select: {
-        sentimentLabel: true,
-        isMentioned: true,
-      },
-    });
+    const [recentMentions, totalResponses, sentimentResponses] = await Promise.all([
+      this.prisma.aIResponse.count({
+        where: { hospitalId, isMentioned: true, responseDate: { gte: last7Days } },
+      }),
+      this.prisma.aIResponse.count({
+        where: { hospitalId, responseDate: { gte: last7Days } },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, responseDate: { gte: last30Days }, sentimentLabel: { not: null } },
+        select: { sentimentLabel: true, isMentioned: true },
+      }),
+    ]);
 
     const totalSentiment = sentimentResponses.length;
     const positiveCount = sentimentResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;

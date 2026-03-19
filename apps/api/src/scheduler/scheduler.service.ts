@@ -122,12 +122,13 @@ export class SchedulerService {
             failed++;
             this.logger.error(`[${hospital.name}] 프롬프트 실패: ${error.message}`);
           }
-
-          await this.prisma.crawlJob.update({
-            where: { id: crawlJob.id },
-            data: { completed, failed },
-          });
         }
+
+        // 【최적화 R3】crawlJob 업데이트를 루프 밖에서 1회만 실행 (기존 매 프롬프트마다 → 1회)
+        await this.prisma.crawlJob.update({
+          where: { id: crawlJob.id },
+          data: { completed, failed },
+        });
 
         // 작업 완료 처리
         await this.prisma.crawlJob.update({

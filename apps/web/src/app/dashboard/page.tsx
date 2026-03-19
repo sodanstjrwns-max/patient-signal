@@ -97,16 +97,16 @@ export default function DashboardPage() {
     staleTime: 2 * 60 * 1000,
   });
 
-  // Phase 1: 인사이트 요약 데이터
+  // Phase 1: 인사이트 요약 데이터 - 【최적화 R3】queryKey를 인사이트 페이지와 통일하여 캐시 공유
   const { data: mentionInsight } = useQuery({
-    queryKey: ['insights-mention-summary', hospitalId],
+    queryKey: ['insights-mention', hospitalId],
     queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
   });
 
   const { data: sourceInsight } = useQuery({
-    queryKey: ['insights-source-summary', hospitalId],
+    queryKey: ['insights-sources', hospitalId],
     queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,

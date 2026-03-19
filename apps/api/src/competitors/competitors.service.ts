@@ -377,7 +377,7 @@ export class CompetitorsService {
       },
     });
 
-    // 갭 분석 - 경쟁사는 언급되는데 우리는 안 되는 질문
+    // 【최적화 R3】갭 분석 - select 최소화 (responseText 등 불필요 필드 제외)
     const gaps = await this.prisma.aIResponse.findMany({
       where: {
         hospitalId,
@@ -386,7 +386,12 @@ export class CompetitorsService {
       },
       orderBy: { responseDate: 'desc' },
       take: 20,
-      include: { prompt: true },
+      select: {
+        promptId: true,
+        competitorsMentioned: true,
+        aiPlatform: true,
+        prompt: { select: { promptText: true } },
+      },
     });
 
     return {

@@ -228,11 +228,13 @@ export class ScoresService {
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
 
+    // 【최적화 R3】include 전체 → select 최소화 (responseText 제외)
     const prompts = await this.prisma.prompt.findMany({
       where: { hospitalId },
       include: {
         aiResponses: {
           where: { responseDate: { gte: last30Days } },
+          select: { isMentioned: true, sentimentLabel: true },
         },
       },
     });
@@ -273,41 +275,24 @@ export class ScoresService {
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
-    const thisWeekScore = await this.prisma.dailyScore.findFirst({
-      where: {
-        hospitalId,
-        scoreDate: { gte: lastWeek },
-      },
-      orderBy: { scoreDate: 'desc' },
-    });
-
-    const lastWeekScore = await this.prisma.dailyScore.findFirst({
-      where: {
-        hospitalId,
-        scoreDate: {
-          gte: twoWeeksAgo,
-          lt: lastWeek,
-        },
-      },
-      orderBy: { scoreDate: 'desc' },
-    });
-
-    const newMentions = await this.prisma.aIResponse.count({
-      where: {
-        hospitalId,
-        isMentioned: true,
-        responseDate: { gte: lastWeek },
-      },
-    });
-
-    const competitorMentions = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        responseDate: { gte: lastWeek },
-        competitorsMentioned: { isEmpty: false },
-      },
-      select: { competitorsMentioned: true },
-    });
+    // 【최적화 R3】4개 독립 쿼리를 Promise.all로 병렬화
+    const [thisWeekScore, lastWeekScore, newMentions, competitorMentions] = await Promise.all([
+      this.prisma.dailyScore.findFirst({
+        where: { hospitalId, scoreDate: { gte: lastWeek } },
+        orderBy: { scoreDate: 'desc' },
+      }),
+      this.prisma.dailyScore.findFirst({
+        where: { hospitalId, scoreDate: { gte: twoWeeksAgo, lt: lastWeek } },
+        orderBy: { scoreDate: 'desc' },
+      }),
+      this.prisma.aIResponse.count({
+        where: { hospitalId, isMentioned: true, responseDate: { gte: lastWeek } },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, responseDate: { gte: lastWeek }, competitorsMentioned: { isEmpty: false } },
+        select: { competitorsMentioned: true },
+      }),
+    ]);
 
     const competitorCounts: Record<string, number> = {};
     for (const r of competitorMentions) {

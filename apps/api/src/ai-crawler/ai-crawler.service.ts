@@ -1179,6 +1179,12 @@ JSON만 답변:
 
     const gaps: any[] = [];
     
+    // 【최적화 R3】병원 조회를 루프 밖으로 이동 (N+1 방지)
+    const hospital = this.openai ? await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { name: true },
+    }) : null;
+    
     for (const [promptId, gapData] of promptGaps) {
       const uniqueCompetitors = [...new Set(gapData.competitors)].slice(0, 5);
       const uniquePlatforms = [...new Set(gapData.platforms)];
@@ -1187,10 +1193,6 @@ JSON만 답변:
       let aiGuide = '';
       if (this.openai) {
         try {
-          const hospital = await this.prisma.hospital.findUnique({
-            where: { id: hospitalId },
-          });
-          
           const completion = await this.openai.chat.completions.create({
             model: 'gpt-4o-mini',
             messages: [
@@ -1402,11 +1404,20 @@ JSON 형식으로만 답변:
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
 
+    // 【최적화 R3】select절로 필요 필드만 가져오기 (responseText 제외)
     const prompts = await this.prisma.prompt.findMany({
       where: { hospitalId, isActive: true },
       include: {
         aiResponses: {
           where: { responseDate: { gte: last30Days } },
+          select: {
+            aiPlatform: true,
+            isMentioned: true,
+            mentionPosition: true,
+            sentimentLabel: true,
+            competitorsMentioned: true,
+            repeatIndex: true,
+          },
           orderBy: { responseDate: 'desc' },
         },
       },
