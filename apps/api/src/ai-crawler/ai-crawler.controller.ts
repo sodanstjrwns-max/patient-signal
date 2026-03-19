@@ -143,25 +143,72 @@ export class AICrawlerController {
   }
 
   @Get('responses/:hospitalId')
-  @ApiOperation({ summary: 'AI 응답 목록 조회 (반복 인덱스, 웹검색 여부 포함)' })
+  @ApiOperation({ summary: 'AI 응답 목록 조회 (페이지네이션, 필터링 지원)' })
+  @ApiQuery({ name: 'platform', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'offset', required: false })
+  @ApiQuery({ name: 'mentioned', required: false, description: 'true/false - 언급 여부 필터' })
   async getResponses(
     @Param('hospitalId') hospitalId: string,
     @Query('platform') platform?: string,
     @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('mentioned') mentioned?: string,
   ) {
-    const responses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        ...(platform && { aiPlatform: platform as any }),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(limit || '100'),
-      include: {
-        prompt: true,
-      },
-    });
+    try {
+      const take = Math.min(parseInt(limit || '50'), 100);
+      const skip = parseInt(offset || '0') || 0;
 
-    return responses;
+      const where: any = { hospitalId };
+      if (platform) where.aiPlatform = platform as any;
+      if (mentioned === 'true') where.isMentioned = true;
+      if (mentioned === 'false') where.isMentioned = false;
+
+      const [responses, total] = await Promise.all([
+        this.prisma.aIResponse.findMany({
+          where,
+          orderBy: { responseDate: 'desc' },
+          take,
+          skip,
+          select: {
+            id: true,
+            aiPlatform: true,
+            aiModelVersion: true,
+            responseText: true,
+            responseDate: true,
+            isMentioned: true,
+            mentionPosition: true,
+            totalRecommendations: true,
+            sentimentScore: true,
+            sentimentLabel: true,
+            citedSources: true,
+            competitorsMentioned: true,
+            isWebSearch: true,
+            isVerified: true,
+            recommendationDepth: true,
+            confidenceScore: true,
+            isLowConfidence: true,
+            createdAt: true,
+            prompt: {
+              select: {
+                promptText: true,
+                specialtyCategory: true,
+              },
+            },
+          },
+        }),
+        this.prisma.aIResponse.count({ where }),
+      ]);
+
+      return {
+        data: responses,
+        total,
+        hasMore: skip + take < total,
+      };
+    } catch (error) {
+      this.logger.error(`[getResponses] 조회 실패: ${error.message}`);
+      return { data: [], total: 0, hasMore: false };
+    }
   }
 
   // ==================== Phase 1: 인사이트 분석 API ====================

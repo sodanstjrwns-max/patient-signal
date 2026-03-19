@@ -74,17 +74,26 @@ export default function ResponsesPage() {
   const [mentionFilter, setMentionFilter] = useState<'all' | 'mentioned' | 'not_mentioned'>('all');
 
   // AI 응답 목록 조회
-  const { data: responses, isLoading } = useQuery({
-    queryKey: ['responses', hospitalId, selectedPlatform],
-    queryFn: () =>
-      crawlerApi.getResponses(hospitalId!, selectedPlatform || undefined).then((res) => res.data),
+  const { data: responseData, isLoading, error: queryError } = useQuery({
+    queryKey: ['responses', hospitalId, selectedPlatform, mentionFilter],
+    queryFn: async () => {
+      const params: any = { limit: 100 };
+      if (selectedPlatform) params.platform = selectedPlatform;
+      if (mentionFilter === 'mentioned') params.mentioned = 'true';
+      if (mentionFilter === 'not_mentioned') params.mentioned = 'false';
+      const res = await crawlerApi.getResponses(hospitalId!, params);
+      return res.data;
+    },
     enabled: !!hospitalId,
+    staleTime: 1000 * 60 * 2, // 2분 캐시
+    retry: 2,
   });
 
+  // 새 API 포맷 지원 (data 배열 또는 직접 배열 둘 다 호환)
+  const responses = Array.isArray(responseData) ? responseData : (responseData?.data || []);
+
   const filteredResponses = (responses || []).filter((response: any) => {
-    if (selectedPlatform && response.aiPlatform !== selectedPlatform) return false;
-    if (mentionFilter === 'mentioned' && !response.isMentioned) return false;
-    if (mentionFilter === 'not_mentioned' && response.isMentioned) return false;
+    // 서버 사이드 필터링 적용되었으므로 검색만 프론트에서 처리
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -94,7 +103,7 @@ export default function ResponsesPage() {
   });
 
   // 통계 계산
-  const totalCount = responses?.length || 0;
+  const totalCount = responseData?.total || responses?.length || 0;
   const mentionedCount = (responses || []).filter((r: any) => r.isMentioned).length;
   const webSearchCount = (responses || []).filter((r: any) => r.isWebSearch).length;
 
@@ -244,6 +253,27 @@ export default function ResponsesPage() {
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
+        ) : queryError ? (
+          /* Error State */
+          <Card>
+            <CardContent className="p-8 sm:p-16 text-center">
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+                  <XCircle className="h-8 w-8 text-red-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                  응답 데이터를 불러올 수 없습니다
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.
+                </p>
+                <Button onClick={() => window.location.reload()}>
+                  <Loader2 className="h-4 w-4 mr-2" />
+                  새로고침
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         ) : filteredResponses.length === 0 ? (
           /* Empty State */
           <Card>

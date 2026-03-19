@@ -199,8 +199,8 @@ export const crawlerApi = {
     api.post(`/ai-crawler/crawl/${hospitalId}`),
   getJobStatus: (jobId: string) =>
     api.get(`/ai-crawler/job/${jobId}`),
-  getResponses: (hospitalId: string, platform?: string) =>
-    api.get(`/ai-crawler/responses/${hospitalId}`, { params: { platform, limit: 100 } }),
+  getResponses: (hospitalId: string, params?: { platform?: string; limit?: number; offset?: number; mentioned?: string }) =>
+    api.get(`/ai-crawler/responses/${hospitalId}`, { params: { limit: 50, ...params } }),
   calculateScore: (hospitalId: string) =>
     api.post(`/ai-crawler/score/${hospitalId}`),
   // Phase 1: 인사이트 분석
