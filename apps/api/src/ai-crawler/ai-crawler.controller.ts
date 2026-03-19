@@ -176,16 +176,26 @@ export class AICrawlerController {
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
 
-    const responses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        createdAt: { gte: since },
-      },
-      include: { prompt: true },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
+    // 【최적화 R2】병렬 쿼리 + select절 최소화
+    const [responses, hospital] = await Promise.all([
+      this.prisma.aIResponse.findMany({
+        where: {
+          hospitalId,
+          createdAt: { gte: since },
+        },
+        select: {
+          responseText: true,
+          aiPlatform: true,
+          isMentioned: true,
+          mentionPosition: true,
+          sentimentLabel: true,
+          competitorsMentioned: true,
+          prompt: { select: { promptText: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { name: true } }),
+    ]);
     const hospitalName = hospital?.name || '';
 
     // --- 1. 추천 키워드 추출 ---
@@ -632,13 +642,21 @@ export class AICrawlerController {
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
 
-    const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
+    // 【최적화 R2】병렬 쿼리 + select절 최소화 (포지셔닝 맵)
+    const [hospital, responses] = await Promise.all([
+      this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { name: true } }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, createdAt: { gte: since } },
+        select: {
+          responseText: true,
+          aiPlatform: true,
+          isMentioned: true,
+          competitorsMentioned: true,
+          prompt: { select: { promptText: true } },
+        },
+      }),
+    ]);
     const hospitalName = hospital?.name || '';
-
-    const responses = await this.prisma.aIResponse.findMany({
-      where: { hospitalId, createdAt: { gte: since } },
-      include: { prompt: true },
-    });
 
     // 5축 정의
     const axes = {
@@ -951,16 +969,27 @@ export class AICrawlerController {
   async getActionReport(
     @Param('hospitalId') hospitalId: string,
   ) {
-    const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
-    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
-
     const since = new Date();
     since.setDate(since.getDate() - 30);
 
-    const responses = await this.prisma.aIResponse.findMany({
-      where: { hospitalId, createdAt: { gte: since } },
-      include: { prompt: true },
-    });
+    // 【최적화 R2】병렬 쿼리 + select 최소화 (액션 리포트)
+    const [hospital, responses] = await Promise.all([
+      this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { name: true } }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, createdAt: { gte: since } },
+        select: {
+          promptId: true,
+          aiPlatform: true,
+          isMentioned: true,
+          sentimentLabel: true,
+          competitorsMentioned: true,
+          citedSources: true,
+          citedUrl: true,
+          prompt: { select: { promptText: true } },
+        },
+      }),
+    ]);
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
     // --- 데이터 수집 ---
     const totalResponses = responses.length;

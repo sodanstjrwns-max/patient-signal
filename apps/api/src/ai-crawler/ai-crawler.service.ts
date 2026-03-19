@@ -224,7 +224,9 @@ export class AICrawlerService {
     });
     const registeredNames = registeredCompetitors.map(c => c.competitorName);
 
-    for (const platform of availablePlatforms) {
+    // 【최적화 R2】플랫폼별 질의를 병렬로 실행 (API 레이트 리밋은 withRetry에서 처리)
+    const platformPromises = availablePlatforms.map(async (platform) => {
+      const platformResults: AIQueryResult[] = [];
       for (let repeatIdx = 0; repeatIdx < this.REPEAT_COUNT; repeatIdx++) {
         try {
           this.logger.log(`🔄 ${platform} [${repeatIdx + 1}/${this.REPEAT_COUNT}] 질의 시작`);
@@ -233,7 +235,6 @@ export class AICrawlerService {
           result.repeatIndex = repeatIdx;
           
           // 【고도화 #5】환각 필터링 - 등록된 경쟁사 DB와 대조 + 패턴 기반
-          
           const verifiedCompetitors = await this.verifyCompetitorsEnhanced(
             result.competitorsMentioned, 
             registeredNames,
@@ -243,7 +244,7 @@ export class AICrawlerService {
           result.verificationSource = 'keyword_pattern';
           
           this.logger.log(`✅ ${platform} [${repeatIdx + 1}] 응답 받음, 언급: ${result.isMentioned}`);
-          allResults.push(result);
+          platformResults.push(result);
 
           // 【초고도화】ABHS 통합 분석 (감성V2 + 추천깊이 + 질문의도)
           let sentimentV2: number | null = null;
@@ -312,9 +313,15 @@ export class AICrawlerService {
           this.logger.error(`❌ ${platform} [${repeatIdx + 1}] 실패: ${error.message}`);
         }
       }
-      
-      // 【고도화 #3】플랫폼 간 딜레이 (2초) + 에러 시 리트라이 보호
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      return platformResults;
+    });
+
+    // 모든 플랫폼 병렬 실행 후 결과 합산 (개별 실패는 빈 배열로 처리)
+    const platformResultArrays = await Promise.allSettled(platformPromises);
+    for (const settled of platformResultArrays) {
+      if (settled.status === 'fulfilled') {
+        allResults.push(...settled.value);
+      }
     }
 
     return allResults;
@@ -1951,6 +1958,7 @@ JSON 형식으로만 답변:
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
+    // 【최적화 R2】select절로 필요한 필드만 가져오기 (responseText 제외 = 대용량 텍스트 절약)
     const responses = await this.prisma.aIResponse.findMany({
       where: {
         hospitalId,
@@ -1959,7 +1967,20 @@ JSON 형식으로만 답변:
           lte: endOfDay,
         },
       },
-      include: { prompt: true },
+      select: {
+        promptId: true,
+        aiPlatform: true,
+        isMentioned: true,
+        mentionPosition: true,
+        sentimentScore: true,
+        citedSources: true,
+        sentimentScoreV2: true,
+        recommendationDepth: true,
+        queryIntent: true,
+        platformWeight: true,
+        abhsContribution: true,
+        prompt: { select: { specialtyCategory: true } },
+      },
     });
 
     // 【고도화 #6】데이터 부족 시 처리 + 신뢰도 표시

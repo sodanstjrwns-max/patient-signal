@@ -53,7 +53,7 @@ export class HospitalsService {
         },
       });
     } catch (err) {
-      console.warn('Subscription 생성 실패 (무시됨):', err?.message);
+      this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }
 
     // ── 경쟁 병원 등록 (온보딩 시 입력된 경쟁사) ──
@@ -70,7 +70,7 @@ export class HospitalsService {
             },
           });
         } catch (err) {
-          console.warn(`경쟁사 등록 실패 (${name}):`, err?.message);
+          this.logger.warn(`경쟁사 등록 실패 (${name}): ${err?.message}`);
         }
       }
     }

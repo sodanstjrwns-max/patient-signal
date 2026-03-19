@@ -55,36 +55,30 @@ export class ScoresService {
     const last7Days = new Date();
     last7Days.setDate(last7Days.getDate() - 7);
 
-    const allResponses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        responseDate: { gte: last30Days },
-      },
-      select: {
-        aiPlatform: true,
-        isMentioned: true,
-        mentionPosition: true,
-        totalRecommendations: true,
-        sentimentLabel: true,
-        sentimentScore: true,
-        responseDate: true,
-        repeatIndex: true,    // 【개선1】반복 인덱스
-        isWebSearch: true,    // 【개선8】웹 검색 여부
-        isVerified: true,     // 【개선10】검증 여부
-      },
-    });
+    const prev7Start = new Date(last7Days);
+    prev7Start.setDate(prev7Start.getDate() - 7);
 
-    const last7DaysResponses = allResponses.filter(
-      r => new Date(r.responseDate) >= last7Days
-    );
-    const prev7DaysResponses = allResponses.filter(
-      r => {
-        const date = new Date(r.responseDate);
-        const prev7Start = new Date(last7Days);
-        prev7Start.setDate(prev7Start.getDate() - 7);
-        return date >= prev7Start && date < last7Days;
-      }
-    );
+    // 【최적화 R2】DB에서 기간별로 분리 조회 (JS 필터링 → DB where절)
+    const selectFields = {
+      aiPlatform: true, isMentioned: true, mentionPosition: true,
+      totalRecommendations: true, sentimentLabel: true, sentimentScore: true,
+      responseDate: true, repeatIndex: true, isWebSearch: true, isVerified: true,
+    } as const;
+
+    const [allResponses, last7DaysResponses, prev7DaysResponses] = await Promise.all([
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, responseDate: { gte: last30Days } },
+        select: selectFields,
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, responseDate: { gte: last7Days } },
+        select: { aiPlatform: true, isMentioned: true },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, responseDate: { gte: prev7Start, lt: last7Days } },
+        select: { aiPlatform: true, isMentioned: true },
+      }),
+    ]);
 
     // 찐 AI 4개 플랫폼만
     const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
