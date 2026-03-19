@@ -1,12 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import {
+  useMentionInsight,
+  useTrendInsight,
+  useSourceInsight,
+  usePositioningInsight,
+  useSourceQualityInsight,
+  useActionInsight,
+  useHospitalId,
+} from '@/hooks/useQueries';
 import {
   Lightbulb,
   TrendingUp,
@@ -63,60 +72,18 @@ const platformBgColors: Record<string, string> = {
 
 export default function InsightsPage() {
   const { user } = useAuthStore();
-  const hospitalId = user?.hospitalId;
+  const hospitalId = useHospitalId();
   const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions' | 'contentGap'>('mention');
   const queryClient = useQueryClient();
 
-  // 【고도화 #4】Phase 1 APIs - staleTime으로 탭 전환 시 재요청 방지 + retry로 일시적 실패 대응
-  // 【최적화 R2】활성 탭 데이터만 로딩 (enabled 조건에 activeTab 추가)
-  const { data: mentionData, isLoading: mentionLoading } = useQuery({
-    queryKey: ['insights-mention', hospitalId],
-    queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId && activeTab === 'mention',
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  const { data: trendData, isLoading: trendLoading } = useQuery({
-    queryKey: ['insights-trend', hospitalId],
-    queryFn: () => crawlerApi.getResponseTrend(hospitalId!, 60).then(r => r.data),
-    enabled: !!hospitalId && activeTab === 'trend',
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  const { data: sourceData, isLoading: sourceLoading } = useQuery({
-    queryKey: ['insights-sources', hospitalId],
-    queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId && activeTab === 'sources',
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  // Phase 2 APIs
-  const { data: positionData, isLoading: positionLoading } = useQuery({
-    queryKey: ['insights-positioning', hospitalId],
-    queryFn: () => crawlerApi.getPositioningMap(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId && activeTab === 'positioning',
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  const { data: sourceQualityData, isLoading: sourceQualityLoading } = useQuery({
-    queryKey: ['insights-source-quality', hospitalId],
-    queryFn: () => crawlerApi.getSourceQuality(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId && activeTab === 'sourceQuality',
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-
-  const { data: actionData, isLoading: actionLoading } = useQuery({
-    queryKey: ['insights-actions', hospitalId],
-    queryFn: () => crawlerApi.getActionReport(hospitalId!).then(r => r.data),
-    enabled: !!hospitalId && (activeTab === 'actions'),
-    staleTime: 3 * 60 * 1000,
-    retry: 1,
-  });
+  // 【캐싱 통합 완료】공유 훅 사용 → 대시보드에서 프리페치된 데이터 자동 활용
+  // lazy 파라미터로 비활성 탭은 fetch 안 함 (이미 캐시 있으면 즉시 표시)
+  const { data: mentionData, isLoading: mentionLoading } = useMentionInsight(activeTab !== 'mention');
+  const { data: trendData, isLoading: trendLoading } = useTrendInsight(activeTab !== 'trend');
+  const { data: sourceData, isLoading: sourceLoading } = useSourceInsight(activeTab !== 'sources');
+  const { data: positionData, isLoading: positionLoading } = usePositioningInsight(activeTab !== 'positioning');
+  const { data: sourceQualityData, isLoading: sourceQualityLoading } = useSourceQualityInsight(activeTab !== 'sourceQuality');
+  const { data: actionData, isLoading: actionLoading } = useActionInsight(activeTab !== 'actions');
 
   // 콘텐츠 갭 분석 (POST - mutation)
   const { data: contentGapData, isPending: contentGapLoading, mutate: runContentGap } = useMutation({
@@ -124,7 +91,7 @@ export default function InsightsPage() {
     mutationKey: ['content-gap', hospitalId],
   });
 
-  // 【최적화 R2】현재 활성 탭의 로딩 상태만 확인
+  // 현재 활성 탭의 로딩 상태만 확인
   const isLoading = (
     (activeTab === 'mention' && mentionLoading) ||
     (activeTab === 'trend' && trendLoading) ||

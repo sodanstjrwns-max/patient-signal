@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { ScoreCard } from '@/components/dashboard/ScoreCard';
 import { ScoreChart } from '@/components/dashboard/ScoreChart';
@@ -11,8 +11,18 @@ import { CompetitorComparison } from '@/components/dashboard/CompetitorCompariso
 import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { hospitalApi, scoresApi, competitorsApi, crawlerApi } from '@/lib/api';
+import { crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import { queryKeys } from '@/lib/queryKeys';
+import {
+  useHospital,
+  useDashboard,
+  useWeeklyScore,
+  usePlatformScores,
+  useCompetitorComparison,
+  useMentionInsight,
+  useSourceInsight,
+} from '@/hooks/useQueries';
 import { 
   Activity, 
   Eye, 
@@ -41,14 +51,8 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
 
-  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
-  const { data: hospitalData } = useQuery({
-    queryKey: ['hospital', hospitalId],
-    queryFn: () => hospitalApi.get(hospitalId!).then(r => r.data),
-    enabled: !!hospitalId,
-    staleTime: 60 * 1000,
-  });
-
+  // 【캐싱 통합】공유 훅으로 교체 - queryKey & staleTime 중앙 관리
+  const { data: hospitalData } = useHospital();
   const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
   const [showTutorial, setShowTutorial] = useState(false);
 
@@ -65,58 +69,23 @@ export default function DashboardPage() {
     setShowTutorial(false);
   };
 
-  // 【고도화 #4】대시보드 데이터 조회 - staleTime으로 불필요한 재요청 방지
-  const { data: dashboard, isLoading: dashboardLoading, refetch } = useQuery({
-    queryKey: ['dashboard', hospitalId],
-    queryFn: () => hospitalApi.getDashboard(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-    staleTime: 2 * 60 * 1000, // 2분간 캐시
-  });
-
-  // 주간 하이라이트
-  const { data: weekly } = useQuery({
-    queryKey: ['weekly', hospitalId],
-    queryFn: () => scoresApi.getWeekly(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-    staleTime: 5 * 60 * 1000, // 5분간 캐시 (자주 안 바뀜)
-  });
-
-  // 경쟁사 비교 (Starter는 competitorComparison 기능 없으므로 호출 안 함)
-  const { data: comparison } = useQuery({
-    queryKey: ['comparison', hospitalId],
-    queryFn: () => competitorsApi.getComparison(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId && canUseFeature(planType, 'competitorComparison'),
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // 플랫폼별 상세 분석
-  const { data: platformDetails } = useQuery({
-    queryKey: ['platforms', hospitalId],
-    queryFn: () => scoresApi.getPlatforms(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-    staleTime: 2 * 60 * 1000,
-  });
-
-  // Phase 1: 인사이트 요약 데이터 - 【최적화 R3】queryKey를 인사이트 페이지와 통일하여 캐시 공유
-  const { data: mentionInsight } = useQuery({
-    queryKey: ['insights-mention', hospitalId],
-    queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const { data: sourceInsight } = useQuery({
-    queryKey: ['insights-sources', hospitalId],
-    queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
-    enabled: !!hospitalId,
-    staleTime: 5 * 60 * 1000,
-  });
+  // 【캐싱 통합 완료】공유 커스텀 훅 사용 → 인사이트/분석 페이지와 100% 캐시 공유
+  const { data: dashboard, isLoading: dashboardLoading, refetch } = useDashboard();
+  const { data: weekly } = useWeeklyScore();
+  const { data: comparison } = useCompetitorComparison(canUseFeature(planType, 'competitorComparison'));
+  const { data: platformDetails } = usePlatformScores();
+  const { data: mentionInsight } = useMentionInsight();
+  const { data: sourceInsight } = useSourceInsight();
 
   const handleRefresh = () => {
     refetch();
-    queryClient.invalidateQueries({ queryKey: ['weekly'] });
-    queryClient.invalidateQueries({ queryKey: ['comparison'] });
-    queryClient.invalidateQueries({ queryKey: ['platforms'] });
+    if (hospitalId) {
+      queryClient.invalidateQueries({ queryKey: queryKeys.scores.weekly(hospitalId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scores.platforms(hospitalId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.insights.mention(hospitalId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.insights.sources(hospitalId) });
+    }
   };
 
   if (dashboardLoading) {

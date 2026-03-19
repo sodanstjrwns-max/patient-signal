@@ -1,10 +1,16 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { scoresApi, hospitalApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import {
+  useScoreHistory,
+  usePlatformScores,
+  useWeeklyScore,
+  useABHS,
+  useCompetitiveShare,
+  useActionIntelligence,
+} from '@/hooks/useQueries';
 import {
   BarChart3,
   TrendingUp,
@@ -77,43 +83,13 @@ export default function AnalyticsPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
 
-  // 기존 데이터
-  const { data: history, isLoading: historyLoading } = useQuery({
-    queryKey: ['scoreHistory', hospitalId],
-    queryFn: () => scoresApi.getHistory(hospitalId!, 30).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: platforms, isLoading: platformsLoading } = useQuery({
-    queryKey: ['platforms', hospitalId],
-    queryFn: () => scoresApi.getPlatforms(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: weekly, isLoading: weeklyLoading } = useQuery({
-    queryKey: ['weekly', hospitalId],
-    queryFn: () => scoresApi.getWeekly(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  // 초고도화 ABHS 데이터
-  const { data: abhs, isLoading: abhsLoading } = useQuery({
-    queryKey: ['abhs', hospitalId],
-    queryFn: () => scoresApi.getABHS(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: competitiveShare, isLoading: csLoading } = useQuery({
-    queryKey: ['competitiveShare', hospitalId],
-    queryFn: () => scoresApi.getCompetitiveShare(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: actions, isLoading: actionsLoading } = useQuery({
-    queryKey: ['actions', hospitalId],
-    queryFn: () => scoresApi.getActionIntelligence(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
+  // 【캐싱 통합 완료】공유 커스텀 훅 사용 → 대시보드와 캐시 공유
+  const { data: history, isLoading: historyLoading } = useScoreHistory(30);
+  const { data: platforms, isLoading: platformsLoading } = usePlatformScores();
+  const { data: weekly, isLoading: weeklyLoading } = useWeeklyScore();
+  const { data: abhs, isLoading: abhsLoading } = useABHS();
+  const { data: competitiveShare, isLoading: csLoading } = useCompetitiveShare();
+  const { data: actions, isLoading: actionsLoading } = useActionIntelligence();
 
   const isLoading = historyLoading || platformsLoading || weeklyLoading || abhsLoading;
 
