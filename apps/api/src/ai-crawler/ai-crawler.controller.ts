@@ -278,6 +278,7 @@ export class AICrawlerController {
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
   ) {
+    try {
     const daysNum = parseInt(days || '30');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
@@ -445,6 +446,22 @@ export class AICrawlerController {
           };
         }),
     };
+    } catch (error) {
+      this.logger.error(`[getMentionAnalysis] 실패: ${error.message}`, error.stack);
+      return {
+        totalResponses: 0,
+        mentionRate: 0,
+        mentionedResponses: 0,
+        recommendationKeywords: [],
+        recommendationContext: { primaryRecommend: 0, listRecommend: 0, conditionalRecommend: 0, notMentioned: 0 },
+        platformContext: {},
+        ourStrengthProfile: {},
+        competitorComparison: [],
+        confidenceSummary: { avgConfidence: 0, lowConfidenceCount: 0, highConfidenceCount: 0, totalWithConfidence: 0 },
+        sampleMentions: [],
+        error: error.message,
+      };
+    }
   }
 
   @Get('insights/trend/:hospitalId')
@@ -453,6 +470,7 @@ export class AICrawlerController {
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
   ) {
+    try {
     const daysNum = parseInt(days || '60');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
@@ -587,6 +605,10 @@ export class AICrawlerController {
         overallMentionRate: responses.length > 0 ? Math.round((responses.filter(r => r.isMentioned).length / responses.length) * 100) : 0,
       },
     };
+    } catch (error) {
+      this.logger.error(`[getResponseTrend] 실패: ${error.message}`, error.stack);
+      return { dailyData: [], weeklyData: [], platformTrend: {}, summary: { totalResponses: 0, totalMentions: 0, overallMentionRate: 0 }, error: error.message };
+    }
   }
 
   @Get('insights/sources/:hospitalId')
@@ -754,6 +776,7 @@ export class AICrawlerController {
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
   ) {
+    try {
     const daysNum = parseInt(days || '30');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
@@ -876,6 +899,10 @@ export class AICrawlerController {
       competitors: competitorPositions,
       insights,
     };
+    } catch (error) {
+      this.logger.error(`[getPositioningMap] 실패: ${error.message}`, error.stack);
+      return { hospitalName: '', period: '', axes: {}, ourPosition: { scores: {}, counts: {}, totalMentions: 0 }, competitors: [], insights: [], error: error.message };
+    }
   }
 
   // ==================== Phase 2-5: 출처 품질 분석 (강화) ====================

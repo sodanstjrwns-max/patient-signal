@@ -213,18 +213,18 @@ export const crawlerApi = {
     api.post(`/ai-crawler/score/${hospitalId}`),
   // Phase 1: 인사이트 분석
   getMentionAnalysis: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/mention-analysis/${hospitalId}`, { params: { days } }),
+    api.get(`/ai-crawler/insights/mention-analysis/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getResponseTrend: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days } }),
+    api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getSourceAnalysis: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days } }),
+    api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days }, timeout: 60000 }),
   // Phase 2: 심화 인사이트
   getPositioningMap: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days } }),
+    api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getSourceQuality: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/source-quality/${hospitalId}`, { params: { days } }),
+    api.get(`/ai-crawler/insights/source-quality/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getActionReport: (hospitalId: string) =>
-    api.get(`/ai-crawler/insights/action-report/${hospitalId}`),
+    api.get(`/ai-crawler/insights/action-report/${hospitalId}`, { timeout: 60000 }),
   // Phase 2: 콘텐츠 갭 분석
   analyzeContentGap: (hospitalId: string) =>
     api.post(`/ai-crawler/content-gap/${hospitalId}`),

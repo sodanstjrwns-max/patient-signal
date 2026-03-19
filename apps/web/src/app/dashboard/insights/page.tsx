@@ -78,18 +78,28 @@ export default function InsightsPage() {
 
   // 【캐싱 통합 완료】공유 훅 사용 → 대시보드에서 프리페치된 데이터 자동 활용
   // lazy 파라미터로 비활성 탭은 fetch 안 함 (이미 캐시 있으면 즉시 표시)
-  const { data: mentionData, isLoading: mentionLoading } = useMentionInsight(activeTab !== 'mention');
-  const { data: trendData, isLoading: trendLoading } = useTrendInsight(activeTab !== 'trend');
-  const { data: sourceData, isLoading: sourceLoading } = useSourceInsight(activeTab !== 'sources');
-  const { data: positionData, isLoading: positionLoading } = usePositioningInsight(activeTab !== 'positioning');
-  const { data: sourceQualityData, isLoading: sourceQualityLoading } = useSourceQualityInsight(activeTab !== 'sourceQuality');
-  const { data: actionData, isLoading: actionLoading } = useActionInsight(activeTab !== 'actions');
+  const { data: mentionData, isLoading: mentionLoading, error: mentionError } = useMentionInsight(activeTab !== 'mention');
+  const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend');
+  const { data: sourceData, isLoading: sourceLoading, error: sourceError } = useSourceInsight(activeTab !== 'sources');
+  const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
+  const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
+  const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
 
   // 콘텐츠 갭 분석 (POST - mutation) + 에러 핸들링
   const { data: contentGapData, isPending: contentGapLoading, error: contentGapError, mutate: runContentGap } = useMutation({
     mutationFn: () => crawlerApi.analyzeContentGap(hospitalId!).then(r => r.data),
     mutationKey: ['content-gap', hospitalId],
   });
+
+  // 현재 활성 탭의 에러 상태
+  const currentError = (
+    (activeTab === 'mention' && mentionError) ||
+    (activeTab === 'trend' && trendError) ||
+    (activeTab === 'sources' && sourceError) ||
+    (activeTab === 'positioning' && positionError) ||
+    (activeTab === 'sourceQuality' && sourceQualityError) ||
+    (activeTab === 'actions' && actionError)
+  ) as any;
 
   // 현재 활성 탭의 로딩 상태만 확인
   const isLoading = (
@@ -143,6 +153,31 @@ export default function InsightsPage() {
           <div className="flex justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           </div>
+        ) : currentError ? (
+          <Card className="border-red-200 bg-red-50/50">
+            <CardContent className="p-6 sm:p-8 text-center">
+              <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
+              <h3 className="text-base font-semibold text-red-800 mb-1">
+                분석 데이터를 불러오지 못했습니다
+              </h3>
+              <p className="text-sm text-red-600 mb-4">
+                {currentError?.code === 'ECONNABORTED' 
+                  ? '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
+                  : currentError?.response?.status === 500
+                  ? '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+                  : '네트워크 오류가 발생했습니다.'}
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => queryClient.invalidateQueries()}
+                className="border-red-300 text-red-700 hover:bg-red-100"
+              >
+                <RefreshCw className="h-4 w-4 mr-1.5" />
+                다시 시도
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <>
             {activeTab === 'actions' && actionData && <ActionReport data={actionData} />}
