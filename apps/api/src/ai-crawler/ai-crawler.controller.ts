@@ -190,12 +190,10 @@ export class AICrawlerController {
           isMentioned: true,
           mentionPosition: true,
           totalRecommendations: true,
-          sentimentScore: true,
           sentimentLabel: true,
           citedSources: true,
           competitorsMentioned: true,
           isWebSearch: true,
-          isVerified: true,
           recommendationDepth: true,
           confidenceScore: true,
           isLowConfidence: true,
@@ -203,16 +201,24 @@ export class AICrawlerController {
           prompt: {
             select: {
               promptText: true,
-              specialtyCategory: true,
             },
           },
         },
       });
 
-      this.logger.log(`[getResponses] ${responses.length}건 반환 (skip=${skip}, take=${take})`);
+      // responseText를 미리보기 길이로 제한 (메모리/전송량 최적화)
+      const trimmedResponses = responses.map(r => ({
+        ...r,
+        responseText: r.responseText?.length > 800
+          ? r.responseText.substring(0, 800) + '...'
+          : r.responseText,
+        responseTextFull: r.responseText?.length > 800, // 전체 텍스트 있음 표시
+      }));
+
+      this.logger.log(`[getResponses] ${trimmedResponses.length}건 반환 (skip=${skip}, take=${take})`);
 
       return {
-        data: responses,
+        data: trimmedResponses,
         total,
         hasMore: skip + take < total,
       };
@@ -221,6 +227,22 @@ export class AICrawlerController {
       // 에러 시에도 빈 결과 반환 (프론트 크래시 방지)
       return { data: [], total: 0, hasMore: false, error: error.message };
     }
+  }
+
+  @Get('responses/:hospitalId/:responseId')
+  @ApiOperation({ summary: '개별 AI 응답 상세 조회 (전체 텍스트 포함)' })
+  async getResponseDetail(
+    @Param('hospitalId') hospitalId: string,
+    @Param('responseId') responseId: string,
+  ) {
+    const response = await this.prisma.aIResponse.findFirst({
+      where: { id: responseId, hospitalId },
+      include: { prompt: true },
+    });
+    if (!response) {
+      throw new NotFoundException('응답을 찾을 수 없습니다');
+    }
+    return response;
   }
 
   // ==================== Phase 1: 인사이트 분석 API ====================
