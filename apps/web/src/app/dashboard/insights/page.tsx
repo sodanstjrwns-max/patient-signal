@@ -85,8 +85,8 @@ export default function InsightsPage() {
   const { data: sourceQualityData, isLoading: sourceQualityLoading } = useSourceQualityInsight(activeTab !== 'sourceQuality');
   const { data: actionData, isLoading: actionLoading } = useActionInsight(activeTab !== 'actions');
 
-  // 콘텐츠 갭 분석 (POST - mutation)
-  const { data: contentGapData, isPending: contentGapLoading, mutate: runContentGap } = useMutation({
+  // 콘텐츠 갭 분석 (POST - mutation) + 에러 핸들링
+  const { data: contentGapData, isPending: contentGapLoading, error: contentGapError, mutate: runContentGap } = useMutation({
     mutationFn: () => crawlerApi.analyzeContentGap(hospitalId!).then(r => r.data),
     mutationKey: ['content-gap', hospitalId],
   });
@@ -150,6 +150,7 @@ export default function InsightsPage() {
               <ContentGapAnalysis
                 data={contentGapData}
                 isLoading={contentGapLoading}
+                error={contentGapError}
                 onRun={() => runContentGap()}
                 hospitalId={hospitalId!}
               />
@@ -170,9 +171,29 @@ export default function InsightsPage() {
 function MentionAnalysis({ data }: { data: any }) {
   const ctx = data.recommendationContext || {};
   const totalMentioned = ctx.primaryRecommend + ctx.listRecommend + ctx.conditionalRecommend;
+  const conf = data.confidenceSummary;
 
   return (
     <div className="space-y-6">
+      {/* 신뢰도 경고 배너 */}
+      {conf && conf.lowConfidenceCount > 0 && (
+        <Card className="border-amber-300 bg-amber-50/50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                신뢰도 알림: {conf.lowConfidenceCount}개 응답이 저신뢰 (40% 미만)
+              </p>
+              <p className="text-xs text-amber-600 mt-1">
+                평균 신뢰도 {Math.round((conf.avgConfidence || 0) * 100)}% · 
+                고신뢰(≥70%) {conf.highConfidenceCount}개 / 전체 {conf.totalWithConfidence}개 · 
+                AI 응답의 불확실성이 높은 항목은 직접 확인을 권장합니다
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
@@ -375,6 +396,23 @@ function MentionAnalysis({ data }: { data: any }) {
                   <p className="text-sm text-gray-700 italic leading-relaxed">
                     "{mention.excerpt}"
                   </p>
+                  {mention.confidenceScore != null && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        mention.confidenceScore >= 0.7 ? 'bg-green-100 text-green-700' :
+                        mention.confidenceScore >= 0.4 ? 'bg-amber-100 text-amber-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        신뢰도 {Math.round(mention.confidenceScore * 100)}%
+                      </div>
+                      {mention.isLowConfidence && (
+                        <span className="text-xs text-red-500 flex items-center gap-0.5">
+                          <AlertCircle className="h-3 w-3" />
+                          검증 필요
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1285,7 +1323,7 @@ function ActionReport({ data }: { data: any }) {
 }
 
 // ==================== 7. 콘텐츠 갭 분석 ====================
-function ContentGapAnalysis({ data, isLoading, onRun, hospitalId }: { data: any; isLoading: boolean; onRun: () => void; hospitalId: string }) {
+function ContentGapAnalysis({ data, isLoading, error, onRun, hospitalId }: { data: any; isLoading: boolean; error: Error | null; onRun: () => void; hospitalId: string }) {
   const [expandedGaps, setExpandedGaps] = useState<Set<number>>(new Set());
   const [blogDrafts, setBlogDrafts] = useState<Record<string, any>>({});
   const [generatingDrafts, setGeneratingDrafts] = useState<Set<string>>(new Set());
@@ -1339,6 +1377,30 @@ function ContentGapAnalysis({ data, isLoading, onRun, hospitalId }: { data: any;
     if (priority === 'medium') return 'border-l-amber-400 bg-amber-50/40';
     return 'border-l-blue-400 bg-blue-50/40';
   };
+
+  // 에러 상태
+  if (error && !data && !isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-red-200 bg-red-50/50">
+          <CardContent className="p-6 text-center">
+            <AlertTriangle className="h-12 w-12 text-red-400 mx-auto mb-3" />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">분석 중 오류가 발생했습니다</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {(error as any)?.response?.data?.message || error.message || '콘텐츠 갭 분석에 실패했습니다. 잠시 후 다시 시도해 주세요.'}
+            </p>
+            <Button onClick={onRun} className="bg-red-600 hover:bg-red-700 text-white">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              다시 시도
+            </Button>
+            <p className="text-[10px] text-gray-400 mt-3">
+              AI API 할당량 초과 또는 네트워크 문제일 수 있습니다
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // 아직 분석을 안 한 경우
   if (!data && !isLoading) {
