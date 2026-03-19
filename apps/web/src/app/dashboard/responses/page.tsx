@@ -82,22 +82,27 @@ export default function ResponsesPage() {
       if (mentionFilter === 'mentioned') params.mentioned = 'true';
       if (mentionFilter === 'not_mentioned') params.mentioned = 'false';
       
+      const startTime = Date.now();
+      console.log('[AI 응답] API 호출 시작', { hospitalId, params });
+      
       const res = await crawlerApi.getResponses(hospitalId!, params);
-      console.log('[AI 응답 API 결과]', {
+      const elapsed = Date.now() - startTime;
+      
+      console.log('[AI 응답] API 응답', {
+        elapsed: `${elapsed}ms`,
         status: res.status,
         dataType: typeof res.data,
         isArray: Array.isArray(res.data),
-        hasDataProp: !!res.data?.data,
         total: res.data?.total,
-        dataLength: Array.isArray(res.data) ? res.data.length : res.data?.data?.length,
-        raw: JSON.stringify(res.data).substring(0, 200),
+        dataLen: Array.isArray(res.data) ? res.data.length : res.data?.data?.length,
+        raw200: JSON.stringify(res.data).substring(0, 200),
       });
       return res.data;
     },
     enabled: !!hospitalId,
     staleTime: 1000 * 60 * 2,
-    retry: 2,
-    retryDelay: 1000,
+    retry: 1, // 타임아웃 시 재시도 최소화
+    retryDelay: 2000,
   });
 
   // 새 API 포맷 지원 (data 배열 또는 직접 배열 둘 다 호환)
@@ -171,11 +176,18 @@ export default function ResponsesPage() {
           <p>🔍 hospitalId: {hospitalId || 'null'}</p>
           <p>📡 queryStatus: {queryStatus} | fetchStatus: {fetchStatus}</p>
           <p>📦 responseData type: {typeof responseData} | isArray: {String(Array.isArray(responseData))}</p>
-          <p>📊 responseData?.data?.length: {responseData?.data?.length ?? 'N/A'} | responseData?.total: {responseData?.total ?? 'N/A'}</p>
-          <p>🔢 responses.length: {responses?.length ?? 0} | filteredResponses: {filteredResponses?.length ?? 0}</p>
-          {queryError && <p className="text-red-600">❌ Error: {(queryError as any)?.message || String(queryError)}</p>}
-          {responseData?.error && <p className="text-red-600">⚠️ API Error: {responseData.error}</p>}
-          <p className="text-gray-400">raw: {JSON.stringify(responseData)?.substring(0, 300)}</p>
+          <p>📊 data.length: {responseData?.data?.length ?? 'N/A'} | total: {responseData?.total ?? 'N/A'}</p>
+          <p>🔢 responses: {responses?.length ?? 0} | filtered: {filteredResponses?.length ?? 0}</p>
+          {queryError && (
+            <div className="text-red-600 space-y-1">
+              <p>❌ Error: {(queryError as any)?.message}</p>
+              <p>❌ Status: {(queryError as any)?.response?.status || 'N/A'}</p>
+              <p>❌ Code: {(queryError as any)?.code || 'N/A'}</p>
+              <p>❌ Data: {JSON.stringify((queryError as any)?.response?.data)?.substring(0, 200) || 'N/A'}</p>
+            </div>
+          )}
+          {responseData?.error && <p className="text-amber-600">⚠️ API Error: {responseData.error}</p>}
+          <p className="text-gray-400 break-all">raw: {JSON.stringify(responseData)?.substring(0, 300) || 'undefined'}</p>
         </div>
 
         {/* 상단 통계 요약 */}

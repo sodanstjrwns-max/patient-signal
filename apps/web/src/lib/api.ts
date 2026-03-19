@@ -6,6 +6,7 @@ const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30초 타임아웃
   headers: {
     'Content-Type': 'application/json',
   },
