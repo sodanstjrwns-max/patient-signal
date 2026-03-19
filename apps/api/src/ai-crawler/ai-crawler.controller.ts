@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Query, Req } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, Query, Req, Logger, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AICrawlerService } from './ai-crawler.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,6 +19,8 @@ const platformNames: Record<string, string> = {
 @UseGuards(JwtAuthGuard, PlanGuard)
 @ApiBearerAuth()
 export class AICrawlerController {
+  private readonly logger = new Logger(AICrawlerController.name);
+
   constructor(
     private aiCrawlerService: AICrawlerService,
     private prisma: PrismaService,
@@ -91,7 +93,7 @@ export class AICrawlerController {
     });
 
     if (!hospital) {
-      throw new Error('병원을 찾을 수 없습니다');
+      throw new NotFoundException('병원을 찾을 수 없습니다');
     }
 
     const prompts = await this.prisma.prompt.findMany({
@@ -136,7 +138,7 @@ export class AICrawlerController {
     const job = await this.prisma.crawlJob.findUnique({
       where: { id: jobId },
     });
-    if (!job) throw new Error('작업을 찾을 수 없습니다');
+    if (!job) throw new NotFoundException('작업을 찾을 수 없습니다');
     return job;
   }
 
@@ -877,7 +879,7 @@ export class AICrawlerController {
       if (domain.includes('치과') || domain.includes('dental') || domain.includes('clinic') || domain.includes('hospital')) {
         return '병원 공식사이트';
       }
-    } catch {}
+    } catch { /* invalid URL - skip */ }
 
     return '기타 웹사이트';
   }
@@ -950,7 +952,7 @@ export class AICrawlerController {
     @Param('hospitalId') hospitalId: string,
   ) {
     const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
-    if (!hospital) throw new Error('병원을 찾을 수 없습니다');
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
@@ -1181,7 +1183,7 @@ export class AICrawlerController {
       where: { id: competitorId },
     });
 
-    if (!competitor) throw new Error('경쟁사를 찾을 수 없습니다');
+    if (!competitor) throw new NotFoundException('경쟁사를 찾을 수 없습니다');
 
     const result = await this.aiCrawlerService.measureCompetitorAEO(
       hospitalId,
@@ -1317,11 +1319,11 @@ export class AICrawlerController {
     
     // 플랜에 따라 허용된 플랫폼만 사용
     const platforms: any[] = allowedPlatforms || ['CHATGPT', 'PERPLEXITY'];
-    console.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개, 플랫폼: ${platforms.join(', ')}`);
+    this.logger.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개, 플랫폼: ${platforms.join(', ')}`);
 
     for (const prompt of prompts) {
       try {
-        console.log(`[Crawl] 프롬프트: ${prompt.promptText.substring(0, 30)}...`);
+        this.logger.log(`[Crawl] 프롬프트: ${prompt.promptText.substring(0, 30)}...`);
         const results = await this.aiCrawlerService.queryAllPlatforms(
           prompt.id,
           hospital.id,
@@ -1329,7 +1331,7 @@ export class AICrawlerController {
           prompt.promptText,
           platforms,
         );
-        console.log(`[Crawl] 결과: ${results.length}개 응답`);
+        this.logger.log(`[Crawl] 결과: ${results.length}개 응답`);
         
         if (results.length > 0) {
           completed++;
@@ -1340,7 +1342,7 @@ export class AICrawlerController {
       } catch (error) {
         failed++;
         errors.push(`${prompt.promptText.substring(0, 20)}: ${error.message}`);
-        console.error(`[Crawl] 에러: ${error.message}`);
+        this.logger.error(`[Crawl] 에러: ${error.message}`);
       }
 
       await this.prisma.crawlJob.update({
@@ -1359,7 +1361,7 @@ export class AICrawlerController {
       },
     });
     
-    console.log(`[Crawl] 완료: completed=${completed}, failed=${failed}`);
+    this.logger.log(`[Crawl] 완료: completed=${completed}, failed=${failed}`);
 
     if (completed > 0) {
       await this.aiCrawlerService.calculateDailyScore(hospital.id);

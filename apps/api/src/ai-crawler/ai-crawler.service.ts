@@ -217,6 +217,13 @@ export class AICrawlerService {
       this.logger.warn('사용 가능한 AI 플랫폼이 없습니다.');
     }
 
+    // 【최적화】경쟁사 DB 조회를 루프 밖으로 이동 (N+1 쿼리 방지)
+    const registeredCompetitors = await this.prisma.competitor.findMany({
+      where: { hospitalId, isActive: true },
+      select: { competitorName: true },
+    });
+    const registeredNames = registeredCompetitors.map(c => c.competitorName);
+
     for (const platform of availablePlatforms) {
       for (let repeatIdx = 0; repeatIdx < this.REPEAT_COUNT; repeatIdx++) {
         try {
@@ -226,11 +233,6 @@ export class AICrawlerService {
           result.repeatIndex = repeatIdx;
           
           // 【고도화 #5】환각 필터링 - 등록된 경쟁사 DB와 대조 + 패턴 기반
-          const registeredCompetitors = await this.prisma.competitor.findMany({
-            where: { hospitalId, isActive: true },
-            select: { competitorName: true },
-          });
-          const registeredNames = registeredCompetitors.map(c => c.competitorName);
           
           const verifiedCompetitors = await this.verifyCompetitorsEnhanced(
             result.competitorsMentioned, 
@@ -769,7 +771,8 @@ export class AICrawlerService {
       // 비용 절감: 응답 텍스트가 너무 길면 병원명 주변만 추출
       let contextText = responseText;
       const lowerResponse = responseText.toLowerCase();
-      const hospitalVariants = this.generateHospitalNameVariants(hospitalName);
+      // 【최적화】캐시된 변형 사용
+      const hospitalVariants = this.getCachedVariants(hospitalName);
       
       let firstIdx = -1;
       for (const variant of hospitalVariants) {
@@ -835,19 +838,23 @@ JSON만 답변:
       
       const jsonMatch = aiResponse.match(/\{[^}]+\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        const sentimentV2 = Math.max(-2, Math.min(2, parseInt(parsed.sentiment) || 0));
-        const depth = ['R0', 'R1', 'R2', 'R3'].includes(parsed.depth) ? parsed.depth : 'R0';
-        const intent = ['RESERVATION', 'COMPARISON', 'INFORMATION', 'REVIEW', 'FEAR'].includes(parsed.intent) ? parsed.intent : 'INFORMATION';
-        
-        // V2 → 기존 호환 변환
-        const score = sentimentV2 / 2; // -2~+2 → -1~+1
-        let label: SentimentLabel = 'NEUTRAL';
-        if (sentimentV2 >= 1) label = 'POSITIVE';
-        else if (sentimentV2 <= -1) label = 'NEGATIVE';
-        
-        this.logger.log(`[ABHS분석] ${hospitalName}: sent=${sentimentV2}, depth=${depth}, intent=${intent}, reason=${parsed.reason}`);
-        return { score, label, sentimentV2, recommendationDepth: depth, queryIntent: intent };
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const sentimentV2 = Math.max(-2, Math.min(2, parseInt(parsed.sentiment) || 0));
+          const depth = ['R0', 'R1', 'R2', 'R3'].includes(parsed.depth) ? parsed.depth : 'R0';
+          const intent = ['RESERVATION', 'COMPARISON', 'INFORMATION', 'REVIEW', 'FEAR'].includes(parsed.intent) ? parsed.intent : 'INFORMATION';
+          
+          // V2 → 기존 호환 변환
+          const score = sentimentV2 / 2; // -2~+2 → -1~+1
+          let label: SentimentLabel = 'NEUTRAL';
+          if (sentimentV2 >= 1) label = 'POSITIVE';
+          else if (sentimentV2 <= -1) label = 'NEGATIVE';
+          
+          this.logger.log(`[ABHS분석] ${hospitalName}: sent=${sentimentV2}, depth=${depth}, intent=${intent}`);
+          return { score, label, sentimentV2, recommendationDepth: depth, queryIntent: intent };
+        } catch (parseError) {
+          this.logger.warn(`[ABHS분석] JSON 파싱 실패: ${parseError.message}`);
+        }
       }
     } catch (error) {
       this.logger.warn(`[ABHS분석] 실패, 폴백: ${error.message}`);
@@ -1219,6 +1226,19 @@ JSON 형식으로만 답변:
         },
       });
 
+      // 【버그 수정】JSON 파싱 실패 시 안전하게 처리
+      let parsedGuide: any = null;
+      if (aiGuide) {
+        try {
+          const jsonMatch = aiGuide.match(/```json\s*([\s\S]*?)\s*```/) || aiGuide.match(/\{[\s\S]*\}/);
+          const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : aiGuide;
+          parsedGuide = JSON.parse(jsonStr);
+        } catch (parseError) {
+          this.logger.warn(`[Content Gap] AI 가이드 JSON 파싱 실패: ${parseError.message}`);
+          parsedGuide = { strategies: [{ title: '전략 생성됨', description: aiGuide.substring(0, 200), priority: 'medium', expectedImpact: '재분석 필요' }] };
+        }
+      }
+
       gaps.push({
         id: contentGap.id,
         promptText: gapData.promptText,
@@ -1226,7 +1246,7 @@ JSON 형식으로만 답변:
         competitors: uniqueCompetitors,
         platforms: uniquePlatforms,
         priorityScore: contentGap.priorityScore,
-        aiGuide: aiGuide ? JSON.parse(aiGuide) : null,
+        aiGuide: parsedGuide,
       });
     }
 
@@ -1599,19 +1619,40 @@ JSON 형식으로만 답변:
     return Array.from(variants).filter(v => v.length >= 2);
   }
 
+  // 【최적화】병원명 변형 캐시 (같은 병원에 대해 반복 생성 방지)
+  private variantCache = new Map<string, string[]>();
+
+  private getCachedVariants(hospitalName: string): string[] {
+    if (!this.variantCache.has(hospitalName)) {
+      this.variantCache.set(hospitalName, this.generateHospitalNameVariants(hospitalName));
+      // 캐시 사이즈 제한 (100개 초과 시 오래된 것 제거)
+      if (this.variantCache.size > 100) {
+        const firstKey = this.variantCache.keys().next().value;
+        if (firstKey) this.variantCache.delete(firstKey);
+      }
+    }
+    return this.variantCache.get(hospitalName)!;
+  }
+
   private checkMentionWithVariants(
     response: string,
     hospitalName: string,
   ): { isMentioned: boolean; matchedVariant: string | null; mentionCount: number } {
-    const variants = this.generateHospitalNameVariants(hospitalName);
+    const variants = this.getCachedVariants(hospitalName);
     
     let totalMentionCount = 0;
     let firstMatchedVariant: string | null = null;
     
-    const sortedVariants = variants.sort((a, b) => b.length - a.length);
+    // 【최적화】긴 변형부터 매칭 (더 정확한 매칭 우선)
+    const sortedVariants = [...variants].sort((a, b) => b.length - a.length);
+    const lowerResponse = response.toLowerCase();
     
     for (const variant of sortedVariants) {
-      const regex = new RegExp(this.escapeRegex(variant.toLowerCase()), 'gi');
+      const lowerVariant = variant.toLowerCase();
+      // 【최적화】간단한 indexOf로 먼저 존재 여부 확인 (regex보다 10x 빠름)
+      if (!lowerResponse.includes(lowerVariant)) continue;
+      
+      const regex = new RegExp(this.escapeRegex(lowerVariant), 'gi');
       const matches = response.match(regex);
       
       if (matches && matches.length > 0) {
@@ -1645,13 +1686,6 @@ JSON 형식으로만 답변:
     let mentionPosition: number | null = null;
     let totalRecommendations: number | null = null;
     
-    // 【고도화 #1】다양한 리스트 패턴 지원 (번호, 볼드, 마크다운 헤딩, 불릿)
-    const listPatterns = [
-      /(\d+)[.\)\.]\s*\**([^\n]+)/g,           // 1. 또는 1) 패턴 (볼드 포함)
-      /[-•\*]\s*\**([^\n]+)/g,                   // 불릿 리스트
-      /#{1,3}\s*\d*\.?\s*\**([^\n]+)/g,          // ### 1. 헤딩 패턴
-    ];
-    
     // 1순위: 번호 리스트에서 추출
     const numberedPattern = /(\d+)[.\)\.]\s*\**([^\n]+)/g;
     const numberedMatches = [...response.matchAll(numberedPattern)];
@@ -1660,7 +1694,8 @@ JSON 형식으로만 답변:
     const boldPattern = /\*\*([^*]+(?:치과|병원|의원|클리닉|덴탈)[^*]*)\*\*/g;
     const boldMatches = [...response.matchAll(boldPattern)];
     
-    const hospitalVariants = this.generateHospitalNameVariants(hospitalName);
+    // 【최적화】캐시된 변형 사용 (generateHospitalNameVariants 중복 호출 제거)
+    const hospitalVariants = this.getCachedVariants(hospitalName);
     
     // 번호 리스트 우선 사용, 없으면 볼드 패턴
     const matches = numberedMatches.length > 0 ? numberedMatches : [];
@@ -1742,6 +1777,11 @@ JSON 형식으로만 답변:
 
     const sentimentResult = this.analyzeSentimentWithVariants(response, hospitalVariants);
     const citedSources = this.extractCitedSources(response);
+    
+    // 【최적화】중복 경쟁사 제거 + 자기 자신 제거 방어
+    const uniqueCompetitors = [...new Set(competitorsMentioned)]
+      .filter(name => !hospitalVariants.some(v => name.toLowerCase().includes(v.toLowerCase())))
+      .slice(0, 10);
 
     return {
       platform,
@@ -1750,7 +1790,7 @@ JSON 형식으로만 답변:
       isMentioned,
       mentionPosition,
       totalRecommendations,
-      competitorsMentioned: [...new Set(competitorsMentioned)].slice(0, 10),
+      competitorsMentioned: uniqueCompetitors,
       citedSources,
       sentimentScore: sentimentResult.score,
       sentimentLabel: sentimentResult.label,

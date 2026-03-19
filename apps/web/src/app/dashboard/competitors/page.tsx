@@ -171,7 +171,7 @@ export default function CompetitorsPage() {
       competitorsApi.acceptSuggestion(hospitalId!, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['competitors'] });
-      setDismissedSuggestions((prev) => new Set([...prev, variables.competitorName]));
+      setDismissedSuggestions((prev) => new Set(Array.from(prev).concat(variables.competitorName)));
       toast.success(`${variables.competitorName}이(가) 경쟁사로 등록되었습니다!`);
     },
     onError: (error: any) => {
@@ -422,7 +422,7 @@ export default function CompetitorsPage() {
                               variant="ghost"
                               className="text-gray-400 hover:text-gray-600"
                               onClick={() => {
-                                setDismissedSuggestions((prev) => new Set([...prev, suggestion.name]));
+                                setDismissedSuggestions((prev) => new Set(Array.from(prev).concat(suggestion.name)));
                               }}
                             >
                               건너뛰기

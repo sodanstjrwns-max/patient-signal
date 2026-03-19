@@ -67,12 +67,13 @@ export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions' | 'contentGap'>('mention');
   const queryClient = useQueryClient();
 
-  // 【고도화 #4】Phase 1 APIs - staleTime으로 탭 전환 시 재요청 방지
+  // 【고도화 #4】Phase 1 APIs - staleTime으로 탭 전환 시 재요청 방지 + retry로 일시적 실패 대응
   const { data: mentionData, isLoading: mentionLoading } = useQuery({
     queryKey: ['insights-mention', hospitalId],
     queryFn: () => crawlerApi.getMentionAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: trendData, isLoading: trendLoading } = useQuery({
@@ -80,6 +81,7 @@ export default function InsightsPage() {
     queryFn: () => crawlerApi.getResponseTrend(hospitalId!, 60).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: sourceData, isLoading: sourceLoading } = useQuery({
@@ -87,6 +89,7 @@ export default function InsightsPage() {
     queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   // Phase 2 APIs
@@ -95,6 +98,7 @@ export default function InsightsPage() {
     queryFn: () => crawlerApi.getPositioningMap(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: sourceQualityData, isLoading: sourceQualityLoading } = useQuery({
@@ -102,6 +106,7 @@ export default function InsightsPage() {
     queryFn: () => crawlerApi.getSourceQuality(hospitalId!, 30).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 
   const { data: actionData, isLoading: actionLoading } = useQuery({
@@ -109,6 +114,7 @@ export default function InsightsPage() {
     queryFn: () => crawlerApi.getActionReport(hospitalId!).then(r => r.data),
     enabled: !!hospitalId,
     staleTime: 3 * 60 * 1000,
+    retry: 1,
   });
 
   // 콘텐츠 갭 분석 (POST - mutation)

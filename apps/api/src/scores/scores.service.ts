@@ -419,7 +419,7 @@ export class ScoresService {
         try {
           const domain = new URL(url).hostname;
           domainCounts[domain] = (domainCounts[domain] || 0) + 1;
-        } catch {}
+        } catch { /* invalid URL - skip */ }
       }
     }
 

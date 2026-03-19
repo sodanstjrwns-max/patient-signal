@@ -689,7 +689,7 @@ function generatePreviewQuestions(formData: {
     questions.push(`${r0} 근처 ${t0} 잘하는 ${name} 있어?`);
   }
 
-  return [...new Set(questions)];
+  return Array.from(new Set(questions));
 }
 
 /**
