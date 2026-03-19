@@ -74,7 +74,7 @@ export default function ResponsesPage() {
   const [mentionFilter, setMentionFilter] = useState<'all' | 'mentioned' | 'not_mentioned'>('all');
 
   // AI 응답 목록 조회
-  const { data: responseData, isLoading, error: queryError } = useQuery({
+  const { data: responseData, isLoading, error: queryError, status: queryStatus, fetchStatus } = useQuery({
     queryKey: ['responses', hospitalId, selectedPlatform, mentionFilter],
     queryFn: async () => {
       const params: Record<string, any> = {};
@@ -82,16 +82,20 @@ export default function ResponsesPage() {
       if (mentionFilter === 'mentioned') params.mentioned = 'true';
       if (mentionFilter === 'not_mentioned') params.mentioned = 'false';
       
-      try {
-        const res = await crawlerApi.getResponses(hospitalId!, params);
-        return res.data;
-      } catch (err: any) {
-        console.error('[AI 응답 조회 실패]', err?.response?.status, err?.message);
-        throw err;
-      }
+      const res = await crawlerApi.getResponses(hospitalId!, params);
+      console.log('[AI 응답 API 결과]', {
+        status: res.status,
+        dataType: typeof res.data,
+        isArray: Array.isArray(res.data),
+        hasDataProp: !!res.data?.data,
+        total: res.data?.total,
+        dataLength: Array.isArray(res.data) ? res.data.length : res.data?.data?.length,
+        raw: JSON.stringify(res.data).substring(0, 200),
+      });
+      return res.data;
     },
     enabled: !!hospitalId,
-    staleTime: 1000 * 60 * 2, // 2분 캐시
+    staleTime: 1000 * 60 * 2,
     retry: 2,
     retryDelay: 1000,
   });
@@ -162,6 +166,18 @@ export default function ResponsesPage() {
       <Header title="AI 응답" description="AI 플랫폼들의 응답 내역을 확인합니다" />
 
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* 디버그 정보 (임시) */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs font-mono space-y-1">
+          <p>🔍 hospitalId: {hospitalId || 'null'}</p>
+          <p>📡 queryStatus: {queryStatus} | fetchStatus: {fetchStatus}</p>
+          <p>📦 responseData type: {typeof responseData} | isArray: {String(Array.isArray(responseData))}</p>
+          <p>📊 responseData?.data?.length: {responseData?.data?.length ?? 'N/A'} | responseData?.total: {responseData?.total ?? 'N/A'}</p>
+          <p>🔢 responses.length: {responses?.length ?? 0} | filteredResponses: {filteredResponses?.length ?? 0}</p>
+          {queryError && <p className="text-red-600">❌ Error: {(queryError as any)?.message || String(queryError)}</p>}
+          {responseData?.error && <p className="text-red-600">⚠️ API Error: {responseData.error}</p>}
+          <p className="text-gray-400">raw: {JSON.stringify(responseData)?.substring(0, 300)}</p>
+        </div>
+
         {/* 상단 통계 요약 */}
         {totalCount > 0 && (
           <div className="grid grid-cols-3 gap-3">
