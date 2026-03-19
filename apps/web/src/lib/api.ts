@@ -199,8 +199,15 @@ export const crawlerApi = {
     api.post(`/ai-crawler/crawl/${hospitalId}`),
   getJobStatus: (jobId: string) =>
     api.get(`/ai-crawler/job/${jobId}`),
-  getResponses: (hospitalId: string, params?: { platform?: string; limit?: number; offset?: number; mentioned?: string }) =>
-    api.get(`/ai-crawler/responses/${hospitalId}`, { params: { limit: 50, ...params } }),
+  getResponses: (hospitalId: string, params?: { platform?: string; limit?: number; offset?: number; mentioned?: string }) => {
+    // undefined/null 파라미터 제거
+    const cleanParams: Record<string, any> = { limit: 50 };
+    if (params?.platform) cleanParams.platform = params.platform;
+    if (params?.limit) cleanParams.limit = params.limit;
+    if (params?.offset) cleanParams.offset = params.offset;
+    if (params?.mentioned) cleanParams.mentioned = params.mentioned;
+    return api.get(`/ai-crawler/responses/${hospitalId}`, { params: cleanParams });
+  },
   calculateScore: (hospitalId: string) =>
     api.post(`/ai-crawler/score/${hospitalId}`),
   // Phase 1: 인사이트 분석

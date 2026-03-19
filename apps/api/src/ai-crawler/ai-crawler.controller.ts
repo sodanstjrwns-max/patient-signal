@@ -156,49 +156,60 @@ export class AICrawlerController {
     @Query('mentioned') mentioned?: string,
   ) {
     try {
+      this.logger.log(`[getResponses] hospitalId=${hospitalId}, platform=${platform}, limit=${limit}, offset=${offset}, mentioned=${mentioned}`);
+      
       const take = Math.min(parseInt(limit || '50'), 100);
       const skip = parseInt(offset || '0') || 0;
 
       const where: any = { hospitalId };
-      if (platform) where.aiPlatform = platform as any;
+      if (platform && platform !== 'undefined' && platform !== 'null') {
+        where.aiPlatform = platform as any;
+      }
       if (mentioned === 'true') where.isMentioned = true;
       if (mentioned === 'false') where.isMentioned = false;
 
-      const [responses, total] = await Promise.all([
-        this.prisma.aIResponse.findMany({
-          where,
-          orderBy: { responseDate: 'desc' },
-          take,
-          skip,
-          select: {
-            id: true,
-            aiPlatform: true,
-            aiModelVersion: true,
-            responseText: true,
-            responseDate: true,
-            isMentioned: true,
-            mentionPosition: true,
-            totalRecommendations: true,
-            sentimentScore: true,
-            sentimentLabel: true,
-            citedSources: true,
-            competitorsMentioned: true,
-            isWebSearch: true,
-            isVerified: true,
-            recommendationDepth: true,
-            confidenceScore: true,
-            isLowConfidence: true,
-            createdAt: true,
-            prompt: {
-              select: {
-                promptText: true,
-                specialtyCategory: true,
-              },
+      // 먼저 카운트만 빠르게 조회
+      const total = await this.prisma.aIResponse.count({ where });
+      this.logger.log(`[getResponses] 총 ${total}건 발견`);
+
+      if (total === 0) {
+        return { data: [], total: 0, hasMore: false };
+      }
+
+      const responses = await this.prisma.aIResponse.findMany({
+        where,
+        orderBy: { responseDate: 'desc' },
+        take,
+        skip,
+        select: {
+          id: true,
+          aiPlatform: true,
+          aiModelVersion: true,
+          responseText: true,
+          responseDate: true,
+          isMentioned: true,
+          mentionPosition: true,
+          totalRecommendations: true,
+          sentimentScore: true,
+          sentimentLabel: true,
+          citedSources: true,
+          competitorsMentioned: true,
+          isWebSearch: true,
+          isVerified: true,
+          recommendationDepth: true,
+          confidenceScore: true,
+          isLowConfidence: true,
+          createdAt: true,
+          prompt: {
+            select: {
+              promptText: true,
+              specialtyCategory: true,
             },
           },
-        }),
-        this.prisma.aIResponse.count({ where }),
-      ]);
+        },
+      });
+
+      this.logger.log(`[getResponses] ${responses.length}건 반환 (skip=${skip}, take=${take})`);
 
       return {
         data: responses,
@@ -206,8 +217,9 @@ export class AICrawlerController {
         hasMore: skip + take < total,
       };
     } catch (error) {
-      this.logger.error(`[getResponses] 조회 실패: ${error.message}`);
-      return { data: [], total: 0, hasMore: false };
+      this.logger.error(`[getResponses] 조회 실패: ${error.message}`, error.stack);
+      // 에러 시에도 빈 결과 반환 (프론트 크래시 방지)
+      return { data: [], total: 0, hasMore: false, error: error.message };
     }
   }
 

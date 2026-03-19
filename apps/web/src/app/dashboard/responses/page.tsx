@@ -77,16 +77,23 @@ export default function ResponsesPage() {
   const { data: responseData, isLoading, error: queryError } = useQuery({
     queryKey: ['responses', hospitalId, selectedPlatform, mentionFilter],
     queryFn: async () => {
-      const params: any = { limit: 100 };
+      const params: Record<string, any> = {};
       if (selectedPlatform) params.platform = selectedPlatform;
       if (mentionFilter === 'mentioned') params.mentioned = 'true';
       if (mentionFilter === 'not_mentioned') params.mentioned = 'false';
-      const res = await crawlerApi.getResponses(hospitalId!, params);
-      return res.data;
+      
+      try {
+        const res = await crawlerApi.getResponses(hospitalId!, params);
+        return res.data;
+      } catch (err: any) {
+        console.error('[AI 응답 조회 실패]', err?.response?.status, err?.message);
+        throw err;
+      }
     },
     enabled: !!hospitalId,
     staleTime: 1000 * 60 * 2, // 2분 캐시
     retry: 2,
+    retryDelay: 1000,
   });
 
   // 새 API 포맷 지원 (data 배열 또는 직접 배열 둘 다 호환)
