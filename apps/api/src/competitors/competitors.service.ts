@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 export interface CompetitorSuggestion {
@@ -15,12 +15,109 @@ export interface CompetitorSuggestion {
 
 @Injectable()
 export class CompetitorsService {
+  private readonly logger = new Logger(CompetitorsService.name);
   constructor(private prisma: PrismaService) {}
 
+  // ===== 한국어 치과명 정규화 및 유사도 매칭 =====
+
   /**
-   * 경쟁사 추가
+   * 치과명 정규화 - 지역명 접두사, 공백, 접미사 통일
+   * 예: "천안 우리가족 치과의원" → "우리가족치과"
+   *     "우리가족치과의원" → "우리가족치과"
+   */
+  private normalizeDentalName(name: string): string {
+    let normalized = name.trim();
+    // 공백 제거
+    normalized = normalized.replace(/\s+/g, '');
+    // 지역명 접두사 제거 (시/군/구 이름 패턴)
+    normalized = normalized.replace(
+      /^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|천안|수원|성남|고양|용인|청주|전주|포항|창원|안양|안산|김포|화성|남양주|시흥|파주|의정부|양주|평택|광명|구리|군포|오산|이천|양평|하남|동탄|분당|일산|판교|위례|송도|검단)/,
+      ''
+    );
+    // 접미사 통일: 치과의원/치과병원/치과 → 치과
+    normalized = normalized.replace(/(치과)(의원|병원|클리닉)?$/, '치과');
+    return normalized;
+  }
+
+  /**
+   * 두 치과명이 동일한 곳인지 판별
+   * - 정규화 후 완전 일치
+   * - 한쪽이 다른 쪽을 포함 (짧은 쪽 기준 80% 이상)
+   */
+  private isSameDentalClinic(nameA: string, nameB: string): boolean {
+    const normA = this.normalizeDentalName(nameA);
+    const normB = this.normalizeDentalName(nameB);
+
+    // 정규화 후 완전 일치
+    if (normA === normB) return true;
+
+    // 한쪽이 다른 쪽을 포함
+    if (normA.includes(normB) || normB.includes(normA)) return true;
+
+    // 치과 접미사 제거 후 핵심 이름 비교
+    const coreA = normA.replace(/치과$/, '');
+    const coreB = normB.replace(/치과$/, '');
+    if (coreA.length >= 2 && coreB.length >= 2) {
+      if (coreA === coreB) return true;
+      if (coreA.includes(coreB) || coreB.includes(coreA)) return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * AI 응답의 경쟁사명과 등록된 경쟁사명을 퍼지 매칭
+   * 여러 변형 이름의 언급 횟수를 합산
+   */
+  private countFuzzyMentions(
+    competitorName: string,
+    competitorRegion: string | null,
+    mentionCounts: Record<string, number>,
+  ): number {
+    let total = 0;
+    for (const [aiName, count] of Object.entries(mentionCounts)) {
+      if (this.isSameDentalClinic(competitorName, aiName)) {
+        total += count;
+        continue;
+      }
+      // 지역+핵심 이름 조합 매칭
+      if (competitorRegion) {
+        const combined = competitorRegion + competitorName;
+        if (this.isSameDentalClinic(combined, aiName)) {
+          total += count;
+        }
+      }
+    }
+    return total;
+  }
+
+  /**
+   * 경쟁사 추가 (중복 체크 포함)
    */
   async create(hospitalId: string, dto: { competitorName: string; competitorRegion?: string }) {
+    // 기존 경쟁사 중복 체크 (정규화 기반)
+    const existingCompetitors = await this.prisma.competitor.findMany({
+      where: { hospitalId },
+      select: { id: true, competitorName: true, isActive: true },
+    });
+
+    const duplicate = existingCompetitors.find(
+      (c) => this.isSameDentalClinic(c.competitorName, dto.competitorName),
+    );
+
+    if (duplicate) {
+      if (!duplicate.isActive) {
+        // 비활성 상태면 재활성화
+        return this.prisma.competitor.update({
+          where: { id: duplicate.id },
+          data: { isActive: true },
+        });
+      }
+      throw new ConflictException(
+        `이미 유사한 경쟁사가 등록되어 있습니다: ${duplicate.competitorName}`,
+      );
+    }
+
     return this.prisma.competitor.create({
       data: {
         hospitalId,
@@ -186,18 +283,24 @@ export class CompetitorsService {
       }
     }
 
-    // 기존 등록된 경쟁사 목록
+    // 기존 등록된 경쟁사 목록 (정규화 매칭으로 중복 필터링)
     const existingCompetitors = await this.prisma.competitor.findMany({
       where: { hospitalId },
       select: { competitorName: true, isActive: true },
     });
-    const existingNames = new Set(
-      existingCompetitors.map((c) => c.competitorName),
-    );
+
+    // ===== 분석 전: AI 응답에서 나온 유사 이름들을 병합 =====
+    // 예: "우리가족치과의원"과 "천안우리가족치과의원"을 하나로 합침
+    const mergedAnalysis = this.mergeSimialarCompetitors(competitorAnalysis);
 
     // ===== 위협도 점수 계산 + 제안 생성 =====
-    const suggestions: CompetitorSuggestion[] = Object.entries(competitorAnalysis)
-      .filter(([name]) => !existingNames.has(name))
+    const suggestions: CompetitorSuggestion[] = Object.entries(mergedAnalysis)
+      .filter(([name]) => {
+        // 정규화 기반으로 이미 등록된 경쟁사 필터링
+        return !existingCompetitors.some(
+          (c) => this.isSameDentalClinic(c.competitorName, name),
+        );
+      })
       .map(([name, data]) => {
         // 위협 점수 계산 (0~100)
         let threatScore = 0;
@@ -267,29 +370,31 @@ export class CompetitorsService {
   }
 
   /**
-   * 제안된 경쟁사 수락 (선택적으로 추가)
+   * 제안된 경쟁사 수락 (선택적으로 추가, 정규화 기반 중복 체크)
    */
   async acceptSuggestion(
     hospitalId: string,
     dto: { competitorName: string; competitorRegion?: string },
   ) {
-    // 이미 존재하는지 체크
-    const existing = await this.prisma.competitor.findFirst({
-      where: {
-        hospitalId,
-        competitorName: dto.competitorName,
-      },
+    // 정규화 기반 중복 체크 (정확한 이름 + 유사 이름 모두)
+    const allCompetitors = await this.prisma.competitor.findMany({
+      where: { hospitalId },
+      select: { id: true, competitorName: true, isActive: true },
     });
 
-    if (existing) {
+    const duplicate = allCompetitors.find(
+      (c) => this.isSameDentalClinic(c.competitorName, dto.competitorName),
+    );
+
+    if (duplicate) {
       // 비활성이었으면 재활성화
-      if (!existing.isActive) {
+      if (!duplicate.isActive) {
         return this.prisma.competitor.update({
-          where: { id: existing.id },
+          where: { id: duplicate.id },
           data: { isActive: true },
         });
       }
-      return existing;
+      return duplicate;
     }
 
     return this.prisma.competitor.create({
@@ -301,6 +406,77 @@ export class CompetitorsService {
         isActive: true,
       },
     });
+  }
+
+  /**
+   * AI 응답에서 추출된 유사 경쟁사명 병합
+   * 예: "우리가족치과의원" + "천안우리가족치과의원" → 대표명으로 통합
+   */
+  private mergeSimialarCompetitors(
+    analysis: Record<string, {
+      mentionCount: number;
+      coMentionCount: number;
+      soloMentionCount: number;
+      positions: number[];
+      platforms: Set<string>;
+      beatUsCount: number;
+      recentMentions: number;
+    }>,
+  ): Record<string, typeof analysis[string]> {
+    const entries = Object.entries(analysis);
+    const merged: Record<string, typeof analysis[string]> = {};
+    const usedKeys = new Set<string>();
+
+    for (let i = 0; i < entries.length; i++) {
+      const [nameA, dataA] = entries[i];
+      if (usedKeys.has(nameA)) continue;
+
+      // 이 이름과 유사한 다른 이름들 찾기
+      const group: [string, typeof dataA][] = [[nameA, dataA]];
+      for (let j = i + 1; j < entries.length; j++) {
+        const [nameB] = entries[j];
+        if (usedKeys.has(nameB)) continue;
+        if (this.isSameDentalClinic(nameA, nameB)) {
+          group.push(entries[j] as [string, typeof dataA]);
+          usedKeys.add(nameB);
+        }
+      }
+
+      // 대표명 선정: 가장 많이 언급된 이름 사용
+      const representativeName = group.sort((a, b) => b[1].mentionCount - a[1].mentionCount)[0][0];
+
+      // 데이터 병합
+      const mergedData = {
+        mentionCount: 0,
+        coMentionCount: 0,
+        soloMentionCount: 0,
+        positions: [] as number[],
+        platforms: new Set<string>(),
+        beatUsCount: 0,
+        recentMentions: 0,
+      };
+
+      for (const [, data] of group) {
+        mergedData.mentionCount += data.mentionCount;
+        mergedData.coMentionCount += data.coMentionCount;
+        mergedData.soloMentionCount += data.soloMentionCount;
+        mergedData.positions.push(...data.positions);
+        data.platforms.forEach((p) => mergedData.platforms.add(p));
+        mergedData.beatUsCount += data.beatUsCount;
+        mergedData.recentMentions += data.recentMentions;
+      }
+
+      merged[representativeName] = mergedData;
+      usedKeys.add(nameA);
+
+      if (group.length > 1) {
+        this.logger.log(
+          `[중복 병합] ${group.map(([n]) => n).join(' + ')} → ${representativeName} (총 ${mergedData.mentionCount}회)`,
+        );
+      }
+    }
+
+    return merged;
   }
 
   /**
@@ -419,6 +595,14 @@ export class CompetitorsService {
       },
     });
 
+    // 전체 AI 응답 수 (언급률 계산용)
+    const allResponsesCount = await this.prisma.aIResponse.count({
+      where: {
+        hospitalId,
+        responseDate: { gte: thirtyDaysAgo },
+      },
+    });
+
     return {
       myHospital: {
         name: hospital.name,
@@ -429,24 +613,22 @@ export class CompetitorsService {
         const directScore = c.competitorScores[0]?.overallScore ?? 0;
         const directMentionCount = c.competitorScores[0]?.mentionCount ?? 0;
         
-        // 직접 측정 점수가 없으면 AI 응답 데이터에서 간접 추정
+        // 직접 측정 점수가 없으면 AI 응답 데이터에서 간접 추정 (정규화 퍼지 매칭)
         let estimatedScore = directScore;
         let estimatedMentionCount = directMentionCount;
         
         if (directScore === 0 && totalResponses > 0) {
-          // 경쟁사 이름과 유사한 이름 매칭 (부분 일치)
-          const matchingCount = Object.entries(competitorMentionCounts)
-            .filter(([name]) => 
-              name.includes(c.competitorName) || 
-              c.competitorName.includes(name) ||
-              (c.competitorRegion && name.includes(c.competitorRegion) && name.includes(c.competitorName.replace(/치과.*$/, '')))
-            )
-            .reduce((sum, [, count]) => sum + count, 0);
+          const matchingCount = this.countFuzzyMentions(
+            c.competitorName,
+            c.competitorRegion,
+            competitorMentionCounts,
+          );
           
           if (matchingCount > 0) {
             estimatedMentionCount = matchingCount;
-            // 언급률 기반 간접 점수 (100점 만점)
-            estimatedScore = Math.min(100, Math.round((matchingCount / totalResponses) * 100 * 1.5));
+            // 언급률 기반 점수 (allResponsesCount 기준)
+            const mentionRate = matchingCount / (allResponsesCount || totalResponses);
+            estimatedScore = Math.min(100, Math.round(mentionRate * 100 * 1.5));
           }
         }
         
@@ -458,7 +640,9 @@ export class CompetitorsService {
           isAutoDetected: c.isAutoDetected,
           isEstimated: directScore === 0 && estimatedScore > 0,
         };
-      }),
+      })
+      // 점수 높은 순 정렬
+      .sort((a, b) => b.score - a.score),
       gaps: gaps.map((g) => ({
         promptId: g.promptId,
         promptText: g.prompt.promptText,

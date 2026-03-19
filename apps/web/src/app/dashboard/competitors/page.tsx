@@ -129,6 +129,9 @@ export default function CompetitorsPage() {
       if (errData?.error === 'PLAN_LIMIT_REACHED' || errData?.error === 'PLAN_UPGRADE_REQUIRED') {
         setUpgradeFeature('maxCompetitors');
         setShowUpgradeModal(true);
+      } else if (error.response?.status === 409) {
+        // 중복 경쟁사
+        toast.error(errData?.message || '이미 유사한 이름의 경쟁사가 등록되어 있습니다.');
       } else {
         toast.error(errData?.message || '경쟁사 추가에 실패했습니다.');
       }
@@ -570,44 +573,69 @@ export default function CompetitorsPage() {
                   <TrendingUp className="h-5 w-5" />
                   경쟁사 점수 비교
                 </CardTitle>
+                <p className="text-xs text-gray-500 mt-1">
+                  ≈ 표시는 AI 응답 데이터 기반 추정 점수입니다
+                </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {/* 내 병원 */}
                   <div className="flex items-center gap-3">
-                    <div className="w-32 font-medium text-blue-600">
+                    <div className="w-36 font-medium text-blue-600 truncate" title={comparison.myHospital?.name}>
                       {comparison.myHospital?.name || '우리 병원'}
                     </div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-4">
+                    <div className="flex-1 bg-gray-100 rounded-full h-5">
                       <div
-                        className="bg-blue-500 rounded-full h-4 transition-all"
-                        style={{ width: `${comparison.myHospital?.score || 0}%` }}
-                      />
+                        className="bg-blue-500 rounded-full h-5 transition-all flex items-center justify-end pr-2"
+                        style={{ width: `${Math.max(comparison.myHospital?.score || 0, 8)}%` }}
+                      >
+                        <span className="text-[10px] text-white font-bold">
+                          {comparison.myHospital?.score || 0}
+                        </span>
+                      </div>
                     </div>
-                    <div className="w-12 text-right font-semibold">
+                    <div className="w-14 text-right font-semibold text-sm">
                       {comparison.myHospital?.score || 0}점
                     </div>
                   </div>
 
-                  {/* 경쟁사들 */}
-                  {comparison.competitors?.map((comp: any, index: number) => (
+                  {/* 경쟁사들 (점수순 정렬) */}
+                  {[...comparison.competitors]
+                    .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
+                    .map((comp: any, index: number) => (
                     <div key={index} className="flex items-center gap-3">
-                      <div className="w-32 text-sm text-gray-600 truncate" title={comp.name}>
+                      <div className="w-36 text-sm text-gray-600 truncate" title={comp.name}>
                         {comp.name}
                         {comp.isEstimated && (
-                          <span className="text-xs text-amber-500 ml-1">~</span>
+                          <span className="text-xs text-amber-500 ml-1" title="AI 응답 기반 추정치">≈</span>
                         )}
                       </div>
-                      <div className="flex-1 bg-gray-100 rounded-full h-4">
+                      <div className="flex-1 bg-gray-100 rounded-full h-5">
                         <div
-                          className={`rounded-full h-4 transition-all ${comp.isEstimated ? 'bg-orange-300' : 'bg-orange-400'}`}
-                          style={{ width: `${Math.max(comp.score || 0, comp.score > 0 ? 5 : 0)}%` }}
-                        />
+                          className={`rounded-full h-5 transition-all flex items-center justify-end pr-2 ${
+                            comp.score > 0
+                              ? comp.isEstimated ? 'bg-orange-300' : 'bg-orange-400'
+                              : 'bg-gray-200'
+                          }`}
+                          style={{ width: `${Math.max(comp.score || 0, comp.score > 0 ? 8 : 3)}%` }}
+                        >
+                          {comp.score > 0 && (
+                            <span className="text-[10px] text-white font-bold">
+                              {comp.score}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="w-16 text-right text-sm flex items-center justify-end gap-1">
-                        <span>{comp.score || 0}점</span>
-                        {comp.isEstimated && (
-                          <span className="text-xs text-amber-500" title="AI 응답 기반 추정치">≈</span>
+                      <div className="w-14 text-right text-sm flex items-center justify-end gap-1">
+                        {comp.score === 0 ? (
+                          <span className="text-gray-400 text-xs">데이터 없음</span>
+                        ) : (
+                          <>
+                            <span>{comp.score}점</span>
+                            {comp.isEstimated && (
+                              <span className="text-xs text-amber-500" title="AI 응답 기반 추정치">≈</span>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
