@@ -4,7 +4,7 @@
  * - 데모 계정으로 실제 API 호출
  */
 
-const API_BASE = 'https://patient-signal-1.onrender.com/api';
+const API_BASE = 'https://patient-signal.onrender.com/api';
 
 // 데모 계정으로 로그인하여 토큰 획득
 async function getAuthToken(): Promise<{ token: string; hospitalId: string }> {

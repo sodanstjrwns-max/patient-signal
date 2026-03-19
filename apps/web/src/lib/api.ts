@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from '@/hooks/useToast';
 
 // Production API URL
-const API_BASE_URL = 'https://patient-signal-1.onrender.com/api';
+const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

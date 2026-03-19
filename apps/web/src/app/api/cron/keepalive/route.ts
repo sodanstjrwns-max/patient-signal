@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // Keep-alive Cron - 10분마다 API 서버 깨우기 (콜드스타트 방지)
 // Render 무료 플랜은 15분 비활동 시 서버가 꺼짐
 
-const API_BASE_URL = 'https://patient-signal-1.onrender.com/api';
+const API_BASE_URL = 'https://patient-signal.onrender.com/api';
 
 export async function GET(request: NextRequest) {
   try {

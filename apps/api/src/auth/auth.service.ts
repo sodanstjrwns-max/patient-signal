@@ -243,7 +243,7 @@ export class AuthService {
   async googleCallbackLogin(code: string) {
     const clientId = this.configService.get('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID;
     const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = 'https://patient-signal-1.onrender.com/api/auth/google/callback';
+    const redirectUri = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
     this.logger.log(`Google callback: starting token exchange`);
     this.logger.log(`Google callback: clientId=${clientId?.substring(0, 20)}..., secretLen=${clientSecret?.length}, redirectUri=${redirectUri}`);

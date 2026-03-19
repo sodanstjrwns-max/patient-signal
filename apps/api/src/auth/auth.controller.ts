@@ -79,7 +79,7 @@ export class AuthController {
         code: 'test_invalid_code',
         client_id: clientId || '',
         client_secret: clientSecret || '',
-        redirect_uri: 'https://patient-signal-1.onrender.com/api/auth/google/callback',
+        redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
         grant_type: 'authorization_code',
       });
       const testRes = await fetch('https://oauth2.googleapis.com/token', {
@@ -102,7 +102,7 @@ export class AuthController {
       clientSecretPreview: clientSecret ? clientSecret.substring(0, 8) + '...' : 'NOT SET',
       clientSecretLength: clientSecret?.length || 0,
       frontendUrl: frontendUrl || 'NOT SET (using fallback: patient-signal-web-2bbe.vercel.app)',
-      redirectUri: 'https://patient-signal-1.onrender.com/api/auth/google/callback',
+      redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
       tokenEndpointTest,
       tokenEndpointTestNote: 'invalid_grant = credentials OK (expected with fake code), invalid_client = credentials WRONG',
       timestamp: new Date().toISOString(),

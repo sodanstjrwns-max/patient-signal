@@ -12,7 +12,7 @@ import { useAuthStore } from '@/stores/auth';
 
 // Google OAuth 설정
 const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.googleusercontent.com';
-const GOOGLE_REDIRECT_URI = 'https://patient-signal-1.onrender.com/api/auth/google/callback';
+const GOOGLE_REDIRECT_URI = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_auth_failed: 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
