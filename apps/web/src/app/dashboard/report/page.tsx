@@ -1,10 +1,15 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { scoresApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import {
+  useABHS,
+  useCompetitiveShare,
+  useActionIntelligence,
+  useWeeklyScore,
+  useMentionInsight,
+} from '@/hooks/useQueries';
 import {
   FileText,
   TrendingUp,
@@ -21,8 +26,13 @@ import {
   Calendar,
   BarChart3,
   Download,
+  ArrowRight,
+  Lightbulb,
+  CheckCircle2,
+  Quote,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini',
@@ -73,29 +83,12 @@ export default function WeeklyReportPage() {
   const hospitalId = user?.hospitalId;
   const weekRange = getWeekRange();
 
-  const { data: abhs, isLoading: abhsLoading } = useQuery({
-    queryKey: ['abhs', hospitalId],
-    queryFn: () => scoresApi.getABHS(hospitalId!, 7).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: competitiveShare } = useQuery({
-    queryKey: ['competitiveShare', hospitalId],
-    queryFn: () => scoresApi.getCompetitiveShare(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: actions } = useQuery({
-    queryKey: ['actions', hospitalId],
-    queryFn: () => scoresApi.getActionIntelligence(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
-
-  const { data: weekly } = useQuery({
-    queryKey: ['weekly', hospitalId],
-    queryFn: () => scoresApi.getWeekly(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId,
-  });
+  // 【캐싱 통합 완료】공유 훅으로 교체 → 대시보드/분석 페이지와 캐시 100% 공유
+  const { data: abhs, isLoading: abhsLoading } = useABHS();
+  const { data: competitiveShare } = useCompetitiveShare();
+  const { data: actions } = useActionIntelligence();
+  const { data: weekly } = useWeeklyScore();
+  const { data: mentionInsight } = useMentionInsight();
 
   if (!hospitalId) {
     return (
@@ -364,6 +357,76 @@ export default function WeeklyReportPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* 추천 키워드 요약 */}
+        {mentionInsight?.recommendationKeywords?.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Quote className="h-4 w-4" /> AI 추천 키워드 TOP 5
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {mentionInsight.recommendationKeywords.slice(0, 5).map((kw: any) => (
+                  <span key={kw.keyword} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-medium">
+                    {kw.keyword}
+                    <span className="text-xs bg-blue-100 px-1.5 py-0.5 rounded-full">{kw.count}회</span>
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 다음 단계 가이드 */}
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-sm text-blue-700">
+              <Lightbulb className="h-4 w-4" /> 이번 주 추천 액션
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <Link href="/dashboard/insights">
+                <div className="p-4 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-semibold text-gray-900">AI 인사이트 확인</span>
+                  </div>
+                  <p className="text-xs text-gray-500">추천 키워드와 트렌드를 분석하고 콘텐츠 갭을 파악하세요.</p>
+                  <span className="text-xs text-blue-600 mt-2 inline-flex items-center gap-1">
+                    바로가기 <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </Link>
+              <Link href="/dashboard/analytics">
+                <div className="p-4 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BarChart3 className="h-4 w-4 text-indigo-600" />
+                    <span className="text-sm font-semibold text-gray-900">ABHS 심층 분석</span>
+                  </div>
+                  <p className="text-xs text-gray-500">플랫폼별 기여도와 추천 깊이를 자세히 확인하세요.</p>
+                  <span className="text-xs text-indigo-600 mt-2 inline-flex items-center gap-1">
+                    바로가기 <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </Link>
+              <Link href="/dashboard/competitors">
+                <div className="p-4 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-semibold text-gray-900">경쟁사 비교</span>
+                  </div>
+                  <p className="text-xs text-gray-500">경쟁 병원 대비 포지셔닝을 점검하세요.</p>
+                  <span className="text-xs text-orange-600 mt-2 inline-flex items-center gap-1">
+                    바로가기 <ArrowRight className="h-3 w-3" />
+                  </span>
+                </div>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* 리포트 푸터 */}
         <div className="text-center py-6 text-xs text-gray-400">

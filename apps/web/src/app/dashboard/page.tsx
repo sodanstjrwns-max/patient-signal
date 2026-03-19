@@ -22,6 +22,7 @@ import {
   useCompetitorComparison,
   useMentionInsight,
   useSourceInsight,
+  useABHS,
 } from '@/hooks/useQueries';
 import { 
   Activity, 
@@ -41,6 +42,12 @@ import {
   Globe,
   TrendingUp,
   Target,
+  Shield,
+  FileText,
+  BarChart3,
+  CheckCircle2,
+  AlertTriangle as AlertTriangleIcon,
+  ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
 import { getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -76,6 +83,7 @@ export default function DashboardPage() {
   const { data: platformDetails } = usePlatformScores();
   const { data: mentionInsight } = useMentionInsight();
   const { data: sourceInsight } = useSourceInsight();
+  const { data: abhs } = useABHS();
 
   const handleRefresh = () => {
     refetch();
@@ -219,6 +227,86 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* ========== AI 건강 진단 위젯 ========== */}
+        {abhs && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-5 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    <span className="font-semibold">AI 가시성 건강 진단</span>
+                  </div>
+                  <Link href="/dashboard/analytics">
+                    <span className="text-xs text-blue-200 hover:text-white flex items-center gap-1 transition-colors">
+                      상세 분석 <ChevronRight className="h-3 w-3" />
+                    </span>
+                  </Link>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-blue-200">ABHS 종합</p>
+                    <p className="text-2xl font-bold">{abhs.abhsScore ?? 0}<span className="text-sm text-blue-200">/100</span></p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-200">Voice Share</p>
+                    <p className="text-2xl font-bold">{abhs.sovPercent ?? 0}%</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-200">평균 감성</p>
+                    <p className={`text-2xl font-bold ${(abhs.avgSentimentV2 ?? 0) >= 0.5 ? 'text-green-300' : (abhs.avgSentimentV2 ?? 0) <= -0.5 ? 'text-red-300' : 'text-blue-100'}`}>
+                      {(abhs.avgSentimentV2 ?? 0) > 0 ? '+' : ''}{(abhs.avgSentimentV2 ?? 0).toFixed(1)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* 신뢰도 + 추천 깊이 요약 */}
+              <div className="p-4 flex items-center justify-between bg-gray-50">
+                <div className="flex items-center gap-4">
+                  {mentionInsight?.confidenceSummary ? (
+                    <div className="flex items-center gap-2">
+                      {mentionInsight.confidenceSummary.lowConfidenceCount > 0 ? (
+                        <AlertTriangleIcon className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                      <span className="text-sm text-gray-600">
+                        신뢰도 {mentionInsight.confidenceSummary.avgConfidence
+                          ? `${Math.round(mentionInsight.confidenceSummary.avgConfidence * 100)}%`
+                          : '측정 중'}
+                        {mentionInsight.confidenceSummary.lowConfidenceCount > 0 && (
+                          <span className="text-amber-600 ml-1">
+                            · 저신뢰 {mentionInsight.confidenceSummary.lowConfidenceCount}건
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400">신뢰도 데이터 수집 중</span>
+                  )}
+                  {abhs.depthDistribution && (
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                      <span>R3</span>
+                      <span className="font-semibold text-green-600">{abhs.depthDistribution.R3 ?? 0}</span>
+                      <span className="text-gray-300">|</span>
+                      <span>R2</span>
+                      <span className="font-semibold text-blue-600">{abhs.depthDistribution.R2 ?? 0}</span>
+                      <span className="text-gray-300">|</span>
+                      <span>R1</span>
+                      <span className="font-semibold text-yellow-600">{abhs.depthDistribution.R1 ?? 0}</span>
+                    </div>
+                  )}
+                </div>
+                <Link href="/dashboard/report">
+                  <span className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                    <FileText className="h-3 w-3" /> 주간 리포트
+                  </span>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* AI 인사이트 요약 */}
         {(mentionInsight || sourceInsight) && (
           <div className="space-y-2">
@@ -310,8 +398,53 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* 빠른 액션 */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* ========== 사용자 여정 네비게이터 ========== */}
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            AI 가시성 개선 여정
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+            {[
+              { href: '/dashboard/prompts', step: '1', label: '질문 설정', desc: '모니터링 질문 관리', icon: MessageSquare, color: 'blue', done: (dashboard?.stats?.totalPrompts || 0) > 0 },
+              { href: '/dashboard/insights', step: '2', label: 'AI 인사이트', desc: '키워드·트렌드 분석', icon: Lightbulb, color: 'amber', done: !!mentionInsight },
+              { href: '/dashboard/analytics', step: '3', label: 'ABHS 분석', desc: '심층 점수 분석', icon: BarChart3, color: 'indigo', done: !!abhs },
+              { href: '/dashboard/competitors', step: '4', label: '경쟁사 비교', desc: '포지셔닝 점검', icon: Users, color: 'orange', done: (dashboard?.stats?.totalCompetitors || 0) > 0 },
+              { href: '/dashboard/report', step: '5', label: '주간 리포트', desc: '성과 확인·공유', icon: FileText, color: 'green', done: !!abhs },
+            ].map((item, idx) => (
+              <Link key={item.href} href={item.href}>
+                <Card className={`hover:shadow-md transition-all cursor-pointer relative overflow-hidden ${item.done ? 'border-gray-200' : 'border-dashed border-gray-300'}`}>
+                  {/* Step indicator line */}
+                  {idx < 4 && (
+                    <div className="hidden md:block absolute top-1/2 -right-2 w-4 h-0.5 bg-gray-200 z-10" />
+                  )}
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`relative p-2 rounded-lg bg-${item.color}-100`}>
+                        <item.icon className={`h-5 w-5 text-${item.color}-600`} />
+                        {item.done && (
+                          <CheckCircle2 className="absolute -top-1 -right-1 h-3.5 w-3.5 text-green-500 bg-white rounded-full" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-xs font-bold ${item.done ? 'text-green-600' : 'text-gray-400'}`}>
+                            STEP {item.step}
+                          </span>
+                        </div>
+                        <p className="font-medium text-gray-900 text-sm">{item.label}</p>
+                        <p className="text-xs text-gray-500">{item.desc}</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* 빠른 액션 (크롤링 + 가이드) */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <Link href="/guide">
             <Card className="hover:shadow-md transition-shadow cursor-pointer">
               <CardContent className="p-4 flex items-center justify-between">
@@ -328,54 +461,20 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/dashboard/prompts">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-100">
-                    <MessageSquare className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">질문 관리</p>
-                    <p className="text-sm text-gray-500">모니터링 질문 추가</p>
-                  </div>
+          <Card className="bg-gray-50 border-dashed">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-100">
+                  <Calendar className="h-5 w-5 text-green-600" />
                 </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/dashboard/insights">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-100">
-                    <Lightbulb className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">AI 인사이트</p>
-                    <p className="text-sm text-gray-500">심층 분석 보기</p>
-                  </div>
+                <div>
+                  <p className="font-medium text-gray-900">자동 크롤링</p>
+                  <p className="text-sm text-gray-500">매일 자동 실행</p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/dashboard/competitors">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-orange-100">
-                    <Users className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">경쟁사 관리</p>
-                    <p className="text-sm text-gray-500">경쟁사 추가/분석</p>
-                  </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-gray-400" />
-              </CardContent>
-            </Card>
-          </Link>
+              </div>
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">ON</span>
+            </CardContent>
+          </Card>
           <CrawlCard user={user} hospitalId={hospitalId} onComplete={handleRefresh} />
         </div>
       </div>

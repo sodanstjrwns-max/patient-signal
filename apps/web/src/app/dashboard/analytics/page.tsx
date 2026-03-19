@@ -10,6 +10,7 @@ import {
   useABHS,
   useCompetitiveShare,
   useActionIntelligence,
+  useMentionInsight,
 } from '@/hooks/useQueries';
 import {
   BarChart3,
@@ -25,7 +26,14 @@ import {
   Zap,
   PieChart,
   Activity,
+  CheckCircle2,
+  AlertTriangle as AlertTriangleWarn,
+  ArrowRight,
+  FileText,
+  Lightbulb,
+  ChevronRight,
 } from 'lucide-react';
+import Link from 'next/link';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT',
@@ -90,6 +98,7 @@ export default function AnalyticsPage() {
   const { data: abhs, isLoading: abhsLoading } = useABHS();
   const { data: competitiveShare, isLoading: csLoading } = useCompetitiveShare();
   const { data: actions, isLoading: actionsLoading } = useActionIntelligence();
+  const { data: mentionInsight } = useMentionInsight();
 
   const isLoading = historyLoading || platformsLoading || weeklyLoading || abhsLoading;
 
@@ -131,6 +140,45 @@ export default function AnalyticsPage() {
           </div>
         ) : (
           <>
+            {/* ========== 신뢰도 요약 배너 ========== */}
+            {mentionInsight?.confidenceSummary && (
+              <Card className={`border-l-4 ${
+                mentionInsight.confidenceSummary.lowConfidenceCount > 0
+                  ? 'border-l-amber-400 bg-amber-50/50'
+                  : 'border-l-green-400 bg-green-50/50'
+              }`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {mentionInsight.confidenceSummary.lowConfidenceCount > 0 ? (
+                        <AlertTriangleWarn className="h-5 w-5 text-amber-500" />
+                      ) : (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      )}
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          AI 응답 신뢰도: {mentionInsight.confidenceSummary.avgConfidence
+                            ? `${Math.round(mentionInsight.confidenceSummary.avgConfidence * 100)}%`
+                            : '측정 중'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          전체 {mentionInsight.totalResponses}건 중 저신뢰 {mentionInsight.confidenceSummary.lowConfidenceCount}건
+                          {mentionInsight.confidenceSummary.lowConfidenceCount > 0 && (
+                            <span className="text-amber-600"> · 할루시네이션 감소 필터 적용됨</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                    <Link href="/dashboard/insights">
+                      <span className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                        상세 <ChevronRight className="h-3 w-3" />
+                      </span>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* ========== ABHS 종합 점수 섹션 ========== */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* ABHS 종합 점수 */}
@@ -530,6 +578,45 @@ export default function AnalyticsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ========== 다음 단계 가이드 ========== */}
+            <Card className="border-blue-200 bg-blue-50/30">
+              <CardContent className="p-5">
+                <h3 className="text-sm font-semibold text-blue-700 mb-3 flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" />
+                  ABHS 점수 기반 추천 다음 단계
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Link href="/dashboard/insights?tab=contentGap">
+                    <div className="p-3 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-900">콘텐츠 갭 분석</span>
+                        <ArrowRight className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <p className="text-xs text-gray-500">경쟁사는 있지만 우리가 없는 영역을 찾아 콘텐츠를 보강하세요.</p>
+                    </div>
+                  </Link>
+                  <Link href="/dashboard/report">
+                    <div className="p-3 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-900">주간 리포트</span>
+                        <ArrowRight className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <p className="text-xs text-gray-500">이번 주 성과를 리포트로 확인하고 팀에 공유하세요.</p>
+                    </div>
+                  </Link>
+                  <Link href="/dashboard">
+                    <div className="p-3 bg-white rounded-lg border border-blue-100 hover:shadow-md transition-all cursor-pointer">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-900">대시보드로 돌아가기</span>
+                        <ArrowRight className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <p className="text-xs text-gray-500">전체 현황을 한눈에 파악하세요.</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </>
         )}
       </div>
