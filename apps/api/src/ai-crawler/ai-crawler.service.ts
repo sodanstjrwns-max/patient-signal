@@ -22,6 +22,9 @@ interface AIQueryResult {
   isWebSearch?: boolean;       // 개선8: 웹 검색 모드 사용 여부
   isVerified?: boolean;        // 개선10: 환각 필터링 통과 여부
   verificationSource?: string; // 개선10: 검증 소스
+  confidenceScore?: number;    // 할루시네이션 감소: 응답 신뢰도 (0.0~1.0)
+  confidenceFactors?: Record<string, number>; // 신뢰도 세부 팩터
+  isLowConfidence?: boolean;   // 신뢰도 < 0.4 플래그
 }
 
 // 측정 결과 집계 (REPEAT_COUNT 변경 시 확장 가능)
@@ -242,8 +245,14 @@ export class AICrawlerService {
           result.competitorsMentioned = verifiedCompetitors.verified;
           result.isVerified = true;
           result.verificationSource = 'keyword_pattern';
+
+          // 【할루시네이션 감소】응답 신뢰도 점수 계산
+          const confidence = this.calculateConfidenceScore(result, promptText);
+          result.confidenceScore = confidence.confidenceScore;
+          result.confidenceFactors = confidence.confidenceFactors;
+          result.isLowConfidence = confidence.isLowConfidence;
           
-          this.logger.log(`✅ ${platform} [${repeatIdx + 1}] 응답 받음, 언급: ${result.isMentioned}`);
+          this.logger.log(`✅ ${platform} [${repeatIdx + 1}] 응답 받음, 언급: ${result.isMentioned}, 신뢰도: ${(confidence.confidenceScore * 100).toFixed(0)}%`);
           platformResults.push(result);
 
           // 【초고도화】ABHS 통합 분석 (감성V2 + 추천깊이 + 질문의도)
@@ -302,6 +311,10 @@ export class AICrawlerService {
               platformWeight: this.getPlatformWeight(platform),
               abhsContribution,
               citedUrl,
+              // 할루시네이션 감소: 신뢰도 필드
+              confidenceScore: result.confidenceScore ?? null,
+              confidenceFactors: result.confidenceFactors ?? undefined,
+              isLowConfidence: result.isLowConfidence ?? false,
             },
           });
 
@@ -321,6 +334,45 @@ export class AICrawlerService {
     for (const settled of platformResultArrays) {
       if (settled.status === 'fulfilled') {
         allResults.push(...settled.value);
+      }
+    }
+
+    // 【할루시네이션 감소】교차 검증 적용 - 다중 플랫폼 간 일관성 검증
+    if (allResults.length >= 2) {
+      this.applyCrossValidation(allResults);
+      
+      // 교차 검증 후 DB 업데이트 (confidenceScore 재계산)
+      for (const result of allResults) {
+        if (result.confidenceScore !== undefined) {
+          try {
+            // 가장 최근 생성된 레코드를 찾아 업데이트
+            const latestResponse = await this.prisma.aIResponse.findFirst({
+              where: {
+                hospitalId,
+                promptId,
+                aiPlatform: result.platform,
+              },
+              orderBy: { createdAt: 'desc' },
+            });
+            if (latestResponse) {
+              await this.prisma.aIResponse.update({
+                where: { id: latestResponse.id },
+                data: {
+                  confidenceScore: result.confidenceScore,
+                  confidenceFactors: result.confidenceFactors as any,
+                  isLowConfidence: result.isLowConfidence ?? false,
+                },
+              });
+            }
+          } catch (updateError) {
+            this.logger.warn(`[교차검증] DB 업데이트 실패: ${updateError.message}`);
+          }
+        }
+      }
+
+      const lowConfCount = allResults.filter(r => r.isLowConfidence).length;
+      if (lowConfCount > 0) {
+        this.logger.warn(`[할루시네이션] ${allResults.length}개 응답 중 ${lowConfCount}개가 저신뢰(< 40%)`);
       }
     }
 
@@ -1880,7 +1932,295 @@ JSON 형식으로만 답변:
     return [...new Set(urls)].slice(0, 10);
   }
 
-  // ==================== 초고도화: ABHS 헬퍼 메서드 ====================
+  // ==================== 할루시네이션 감소 3단계 시스템 ====================
+
+  /**
+   * 응답 신뢰도 점수 계산 (0.0 ~ 1.0)
+   * 
+   * 1단계: 불확실성 마커 탐지 (uncertainty markers)
+   * 2단계: 출처 기반 신뢰도 (source grounding)
+   * 3단계: 응답 구조적 일관성 (structural consistency)
+   * 
+   * @returns confidenceScore, confidenceFactors, isLowConfidence
+   */
+  calculateConfidenceScore(
+    result: AIQueryResult,
+    promptText: string,
+  ): { confidenceScore: number; confidenceFactors: Record<string, number>; isLowConfidence: boolean } {
+    const response = result.response;
+    const factors: Record<string, number> = {};
+
+    // ── 1단계: 불확실성 마커 탐지 (가중치 0.30) ──
+    const uncertaintyScore = this.detectUncertaintyMarkers(response);
+    factors.uncertaintyMarker = uncertaintyScore;
+
+    // ── 2단계: 출처 기반 신뢰도 (가중치 0.30) ──
+    const sourceScore = this.evaluateSourceGrounding(result);
+    factors.sourceGrounding = sourceScore;
+
+    // ── 3단계: 응답 구조적 일관성 (가중치 0.20) ──
+    const structuralScore = this.evaluateStructuralConsistency(response, promptText);
+    factors.structuralConsistency = structuralScore;
+
+    // ── 4단계: 플랫폼 신뢰도 보정 (가중치 0.10) ──
+    const platformScore = this.getPlatformReliability(result.platform, result.isWebSearch);
+    factors.platformReliability = platformScore;
+
+    // ── 5단계: 세부 정보 검증 (가중치 0.10) ──
+    const specificityScore = this.evaluateSpecificity(response, result.isMentioned);
+    factors.specificity = specificityScore;
+
+    // 가중 평균 계산
+    const confidenceScore = Math.min(1, Math.max(0,
+      factors.uncertaintyMarker * 0.30 +
+      factors.sourceGrounding * 0.30 +
+      factors.structuralConsistency * 0.20 +
+      factors.platformReliability * 0.10 +
+      factors.specificity * 0.10
+    ));
+
+    const isLowConfidence = confidenceScore < 0.4;
+
+    if (isLowConfidence) {
+      this.logger.warn(
+        `[신뢰도 경고] ${result.platform} 응답 신뢰도 ${(confidenceScore * 100).toFixed(0)}% - ` +
+        `불확실성=${(factors.uncertaintyMarker * 100).toFixed(0)}%, 출처=${(factors.sourceGrounding * 100).toFixed(0)}%`
+      );
+    }
+
+    return { confidenceScore: Math.round(confidenceScore * 100) / 100, confidenceFactors: factors, isLowConfidence };
+  }
+
+  /**
+   * 1단계: 불확실성 마커 탐지
+   * - AI가 확신이 없을 때 사용하는 헤지 표현 탐지
+   * - 높은 불확실성 → 낮은 신뢰도
+   */
+  private detectUncertaintyMarkers(response: string): number {
+    const lowerResponse = response.toLowerCase();
+    
+    // 강한 불확실성 마커 (-0.15 per hit, max 5개)
+    const strongUncertainty = [
+      '정확한 정보는 직접 확인', '실제 정보와 다를 수 있', '정확하지 않을 수 있',
+      '확인이 필요합니다', '보장할 수 없', '정보가 부정확할 수',
+      '최신 정보가 아닐 수', '실제와 다를 수', '검증되지 않은',
+      '확실하지 않', '알 수 없', '파악되지 않',
+    ];
+    
+    // 약한 불확실성 마커 (-0.08 per hit, max 8개)
+    const mildUncertainty = [
+      '일 수 있습니다', '것으로 보입니다', '것으로 알려져',
+      '것으로 추정', '수도 있습니다', '가능성이 있',
+      '정확한 정보는', '직접 문의', '전화로 확인',
+      '홈페이지를 참고', '참고하시기 바랍', '변동될 수',
+    ];
+    
+    // 확신 마커 (+0.10 per hit, 신뢰도 boost)
+    const confidenceMarkers = [
+      '공식 홈페이지에 따르면', '네이버 플레이스 기준', '실제 후기에 따르면',
+      '건강보험심사평가원', '대한치과의사협회', '검색 결과에 따르면',
+      '최신 정보에 의하면', '리뷰 분석 결과', '평점',
+    ];
+
+    let score = 1.0;
+    let strongHits = 0;
+    let mildHits = 0;
+    let confidenceHits = 0;
+
+    for (const marker of strongUncertainty) {
+      if (lowerResponse.includes(marker)) {
+        strongHits++;
+        if (strongHits <= 5) score -= 0.15;
+      }
+    }
+
+    for (const marker of mildUncertainty) {
+      if (lowerResponse.includes(marker)) {
+        mildHits++;
+        if (mildHits <= 8) score -= 0.08;
+      }
+    }
+
+    for (const marker of confidenceMarkers) {
+      if (lowerResponse.includes(marker)) {
+        confidenceHits++;
+        if (confidenceHits <= 3) score += 0.10;
+      }
+    }
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  /**
+   * 2단계: 출처 기반 신뢰도
+   * - URL 인용이 있으면 높은 신뢰도
+   * - 웹검색 모드면 추가 보너스
+   */
+  private evaluateSourceGrounding(result: AIQueryResult): number {
+    let score = 0.3; // 기본 베이스
+
+    // 인용 URL 수에 따른 점수
+    const sourceCount = result.citedSources?.length || 0;
+    if (sourceCount >= 3) score += 0.5;
+    else if (sourceCount >= 1) score += 0.3;
+    else if (sourceCount === 0) score += 0.0;
+
+    // 웹검색 모드 보너스
+    if (result.isWebSearch) score += 0.2;
+
+    // 인용 URL에 공신력 있는 도메인이 있으면 보너스
+    const trustedDomains = [
+      'naver.com', 'kakao.com', 'hira.or.kr', 'kda.or.kr',
+      'nhis.or.kr', 'gangnam.go.kr', 'modoo.at',
+    ];
+    const hasTrustedSource = result.citedSources?.some(url =>
+      trustedDomains.some(domain => url.includes(domain))
+    );
+    if (hasTrustedSource) score += 0.1;
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  /**
+   * 3단계: 응답 구조적 일관성
+   * - 번호 리스트가 있으면 구조화된 응답 → 높은 신뢰도
+   * - 질문과 응답의 관련성
+   */
+  private evaluateStructuralConsistency(response: string, promptText: string): number {
+    let score = 0.5; // 기본 베이스
+
+    // 번호 리스트 존재 (+0.2)
+    const hasNumberedList = /\d+[.\)]\s/.test(response);
+    if (hasNumberedList) score += 0.15;
+
+    // 볼드/헤딩 구조 (+0.1)
+    const hasStructure = /\*\*[^*]+\*\*/.test(response) || /#{1,3}\s/.test(response);
+    if (hasStructure) score += 0.1;
+
+    // 응답 길이 적절성 (200~3000자가 이상적)
+    const responseLength = response.length;
+    if (responseLength >= 200 && responseLength <= 3000) score += 0.1;
+    else if (responseLength < 50 || responseLength > 5000) score -= 0.15;
+
+    // 질문 키워드가 응답에 반영되었는지
+    const keywords = promptText.split(/\s+/).filter(w => w.length >= 2);
+    const matchedKeywords = keywords.filter(kw => response.includes(kw));
+    const relevanceRatio = keywords.length > 0 ? matchedKeywords.length / keywords.length : 0.5;
+    score += relevanceRatio * 0.15;
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  /**
+   * 4단계: 플랫폼별 기본 신뢰도
+   * - Perplexity(웹검색) > ChatGPT(search-preview) > Gemini > Claude
+   */
+  private getPlatformReliability(platform: AIPlatform, isWebSearch?: boolean): number {
+    const baseReliability: Record<string, number> = {
+      PERPLEXITY: 0.85,   // 항상 웹검색 + 출처 인용
+      CHATGPT: 0.70,      // gpt-4o-search-preview 사용 시 높음
+      GEMINI: 0.65,       // Google 검색 통합 가능
+      CLAUDE: 0.55,       // 웹검색 없음, 학습 데이터 기반
+    };
+
+    let score = baseReliability[platform] || 0.5;
+    
+    // 웹검색 모드이면 보너스
+    if (isWebSearch) score = Math.min(1, score + 0.15);
+
+    return score;
+  }
+
+  /**
+   * 5단계: 세부 정보(구체성) 평가
+   * - 구체적 주소, 전화번호, 운영시간 등이 있으면 높은 신뢰도
+   * - 일반적인 설명만 있으면 낮은 신뢰도
+   */
+  private evaluateSpecificity(response: string, isMentioned: boolean): number {
+    if (!isMentioned) return 0.5; // 미언급은 중립
+
+    let score = 0.3;
+
+    // 주소 패턴
+    if (/서울|강남|송파|마포|종로|부산|대구|인천/.test(response) && /[구동로길]/.test(response)) {
+      score += 0.15;
+    }
+
+    // 전화번호 패턴
+    if (/0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}/.test(response)) {
+      score += 0.15;
+    }
+
+    // 운영시간 패턴
+    if (/평일|월요일|화요일|오전|오후|시~|시\s*~|시\s*-|:00/.test(response)) {
+      score += 0.1;
+    }
+
+    // 구체적 시술/서비스 언급
+    const specificTerms = ['임플란트', '교정', '라미네이트', '충치', '스케일링', '사랑니', '보철', '미백', 'CT', '디지털'];
+    const specificCount = specificTerms.filter(t => response.includes(t)).length;
+    score += Math.min(0.2, specificCount * 0.05);
+
+    // "일반적인" 내용만 있는 패턴 감점
+    const genericPatterns = ['다양한 진료', '친절한 상담', '편안한 환경', '최신 장비', '풍부한 경험'];
+    const genericCount = genericPatterns.filter(p => response.includes(p)).length;
+    if (genericCount >= 3) score -= 0.15; // 너무 일반적이면 감점
+
+    return Math.max(0, Math.min(1, score));
+  }
+
+  /**
+   * 교차 검증: 같은 질문에 대한 다중 플랫폼 응답 일관성 검증
+   * - 여러 플랫폼이 동일 병원을 언급하면 높은 신뢰도
+   * - 하나만 언급하면 낮은 신뢰도
+   * 
+   * @returns 각 플랫폼 결과에 crossValidation 팩터 추가
+   */
+  applyCrossValidation(
+    results: AIQueryResult[],
+  ): AIQueryResult[] {
+    if (results.length < 2) return results;
+
+    // 같은 promptId에 대한 결과들끼리 비교
+    const mentionPlatforms = results.filter(r => r.isMentioned).map(r => r.platform);
+    const totalPlatforms = results.length;
+    const mentionRatio = mentionPlatforms.length / totalPlatforms;
+
+    for (const result of results) {
+      if (!result.confidenceFactors) result.confidenceFactors = {};
+      
+      if (result.isMentioned) {
+        // 다수 플랫폼이 언급 → 높은 교차 신뢰도
+        if (mentionRatio >= 0.75) {
+          result.confidenceFactors.crossValidation = 1.0;
+        } else if (mentionRatio >= 0.5) {
+          result.confidenceFactors.crossValidation = 0.8;
+        } else if (mentionRatio >= 0.25) {
+          result.confidenceFactors.crossValidation = 0.5;
+        } else {
+          // 하나만 언급 → 할루시네이션 의심
+          result.confidenceFactors.crossValidation = 0.3;
+          this.logger.warn(
+            `[교차검증 경고] ${result.platform}만 언급 (${mentionPlatforms.length}/${totalPlatforms}) - 할루시네이션 의심`
+          );
+        }
+      } else {
+        // 미언급은 교차검증 해당 없음
+        result.confidenceFactors.crossValidation = 0.5;
+      }
+
+      // 교차 검증 결과를 confidenceScore에 반영 (10% 가중치)
+      if (result.confidenceScore !== undefined) {
+        const crossFactor = result.confidenceFactors.crossValidation;
+        result.confidenceScore = Math.round(
+          (result.confidenceScore * 0.85 + crossFactor * 0.15) * 100
+        ) / 100;
+        result.isLowConfidence = result.confidenceScore < 0.4;
+      }
+    }
+
+    return results;
+  }
 
   /**
    * 플랫폼별 가중치
@@ -1990,6 +2330,8 @@ JSON 형식으로만 답변:
         queryIntent: true,
         platformWeight: true,
         abhsContribution: true,
+        confidenceScore: true,
+        isLowConfidence: true,
         prompt: { select: { specialtyCategory: true } },
       },
     });
@@ -2092,9 +2434,14 @@ JSON 형식으로만 답변:
       avgCitationScore * 0.05      // 인용 5% (기존 10% → 절반 축소)
     );
     
+    // 【할루시네이션 감소】저신뢰 응답이 많으면 점수에 할인 적용
+    const lowConfResponses = responses.filter(r => r.isLowConfidence);
+    const lowConfRatio = responses.length > 0 ? lowConfResponses.length / responses.length : 0;
+    const confidencePenalty = lowConfRatio > 0.5 ? 0.85 : lowConfRatio > 0.3 ? 0.92 : 1.0;
+    
     // 【고도화 #6】신뢰도 보정: 데이터가 적으면 점수를 보수적으로 조정
     // 8개 미만이면 실제 점수의 비율만 반영 (예: 4개면 50% 반영)
-    const adjustedScore = Math.round(overallScore * reliabilityFactor);
+    const adjustedScore = Math.round(overallScore * reliabilityFactor * confidencePenalty);
 
     // 플랫폼별 점수 (다수결 기반)
     const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;

@@ -222,6 +222,10 @@ model AIResponse {
   platformWeight       Float?        @map("platform_weight")      // 플랫폼 가중치 (1.0~1.4)
   abhsContribution     Float?        @map("abhs_contribution")    // 이 응답의 ABHS 기여분
   citedUrl             String?       @map("cited_url")            // Perplexity 인용 URL (대표)
+  // 할루시네이션 감소 신뢰도 필드
+  confidenceScore      Float?        @map("confidence_score")     // 0.0~1.0 응답 신뢰도
+  confidenceFactors    Json?         @map("confidence_factors")   // {crossValidation, uncertaintyMarker, sourceGrounding, ...}
+  isLowConfidence      Boolean       @default(false) @map("is_low_confidence") // 신뢰도 < 0.4 플래그
   createdAt            DateTime      @default(now()) @map("created_at")
 
   prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)

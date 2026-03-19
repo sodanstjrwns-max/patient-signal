@@ -190,6 +190,8 @@ export class AICrawlerController {
           mentionPosition: true,
           sentimentLabel: true,
           competitorsMentioned: true,
+          confidenceScore: true,
+          isLowConfidence: true,
           prompt: { select: { promptText: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -312,6 +314,15 @@ export class AICrawlerController {
       platformContext,
       ourStrengthProfile: ourAttributes,
       competitorComparison,
+      // 【할루시네이션 감소】신뢰도 요약
+      confidenceSummary: {
+        avgConfidence: responses.length > 0
+          ? Math.round(responses.reduce((sum, r) => sum + (r.confidenceScore ?? 0.5), 0) / responses.length * 100) / 100
+          : 0,
+        lowConfidenceCount: responses.filter(r => r.isLowConfidence).length,
+        highConfidenceCount: responses.filter(r => (r.confidenceScore ?? 0) >= 0.7).length,
+        totalWithConfidence: responses.filter(r => r.confidenceScore != null).length,
+      },
       // 샘플 추천 멘트 (언급된 응답 중 대표 3개)
       sampleMentions: responses
         .filter(r => r.isMentioned && r.responseText)
@@ -326,6 +337,8 @@ export class AICrawlerController {
             excerpt: nameIdx >= 0 ? '...' + r.responseText.substring(start, end) + '...' : r.responseText.substring(0, 300),
             position: r.mentionPosition,
             sentiment: r.sentimentLabel,
+            confidenceScore: r.confidenceScore,
+            isLowConfidence: r.isLowConfidence,
           };
         }),
     };
