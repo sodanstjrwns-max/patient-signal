@@ -377,6 +377,31 @@ export class CompetitorsService {
       },
     });
 
+    // 경쟁사 점수가 없는 경우, AI 응답 데이터에서 간접 추정
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const aiResponses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        responseDate: { gte: thirtyDaysAgo },
+        competitorsMentioned: { isEmpty: false },
+      },
+      select: {
+        competitorsMentioned: true,
+        isMentioned: true,
+      },
+    });
+
+    // 경쟁사별 언급 횟수 집계 (AI 응답에서 추출)
+    const competitorMentionCounts: Record<string, number> = {};
+    const totalResponses = aiResponses.length;
+    for (const resp of aiResponses) {
+      for (const name of resp.competitorsMentioned) {
+        competitorMentionCounts[name] = (competitorMentionCounts[name] || 0) + 1;
+      }
+    }
+
     // 【최적화 R3】갭 분석 - select 최소화 (responseText 등 불필요 필드 제외)
     const gaps = await this.prisma.aIResponse.findMany({
       where: {
@@ -400,13 +425,40 @@ export class CompetitorsService {
         score: myScore?.overallScore ?? 0,
         mentionCount: myScore?.mentionCount ?? 0,
       },
-      competitors: competitors.map((c) => ({
-        id: c.id,
-        name: c.competitorName,
-        score: c.competitorScores[0]?.overallScore ?? 0,
-        mentionCount: c.competitorScores[0]?.mentionCount ?? 0,
-        isAutoDetected: c.isAutoDetected,
-      })),
+      competitors: competitors.map((c) => {
+        const directScore = c.competitorScores[0]?.overallScore ?? 0;
+        const directMentionCount = c.competitorScores[0]?.mentionCount ?? 0;
+        
+        // 직접 측정 점수가 없으면 AI 응답 데이터에서 간접 추정
+        let estimatedScore = directScore;
+        let estimatedMentionCount = directMentionCount;
+        
+        if (directScore === 0 && totalResponses > 0) {
+          // 경쟁사 이름과 유사한 이름 매칭 (부분 일치)
+          const matchingCount = Object.entries(competitorMentionCounts)
+            .filter(([name]) => 
+              name.includes(c.competitorName) || 
+              c.competitorName.includes(name) ||
+              (c.competitorRegion && name.includes(c.competitorRegion) && name.includes(c.competitorName.replace(/치과.*$/, '')))
+            )
+            .reduce((sum, [, count]) => sum + count, 0);
+          
+          if (matchingCount > 0) {
+            estimatedMentionCount = matchingCount;
+            // 언급률 기반 간접 점수 (100점 만점)
+            estimatedScore = Math.min(100, Math.round((matchingCount / totalResponses) * 100 * 1.5));
+          }
+        }
+        
+        return {
+          id: c.id,
+          name: c.competitorName,
+          score: estimatedScore,
+          mentionCount: estimatedMentionCount,
+          isAutoDetected: c.isAutoDetected,
+          isEstimated: directScore === 0 && estimatedScore > 0,
+        };
+      }),
       gaps: gaps.map((g) => ({
         promptId: g.promptId,
         promptText: g.prompt.promptText,

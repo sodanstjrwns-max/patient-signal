@@ -9,6 +9,11 @@ import { Input } from '@/components/ui/input';
 import { competitorsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
+  useHospital,
+  useCompetitorComparison,
+} from '@/hooks/useQueries';
+import { queryKeys } from '@/lib/queryKeys';
+import {
   Plus,
   Trash2,
   Users,
@@ -32,7 +37,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
-import { LockedFeature, UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
+import { UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
 
 interface Suggestion {
   name: string;
@@ -82,13 +87,8 @@ export default function CompetitorsPage() {
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
 
-  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
-  const { data: hospitalData } = useQuery({
-    queryKey: ['hospital', hospitalId],
-    queryFn: () => import('@/lib/api').then(m => m.hospitalApi.get(hospitalId!)).then(r => r.data),
-    enabled: !!hospitalId,
-    staleTime: 60 * 1000, // 1분 캐시
-  });
+  // 【캐싱 통합】공유 훅으로 planType 안정적 로딩
+  const { data: hospitalData, isLoading: hospitalLoading } = useHospital();
 
   const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
   const planLimits = getPlanLimits(planType);
@@ -100,19 +100,15 @@ export default function CompetitorsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
-  // 경쟁사 목록 조회
+  // 경쟁사 목록 조회 - 공유 queryKey 사용
   const { data: competitors, isLoading } = useQuery({
-    queryKey: ['competitors', hospitalId],
+    queryKey: queryKeys.competitors.list(hospitalId!),
     queryFn: () => competitorsApi.list(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
   });
 
-  // 경쟁사 비교 데이터
-  const { data: comparison } = useQuery({
-    queryKey: ['comparison', hospitalId],
-    queryFn: () => competitorsApi.getComparison(hospitalId!).then((res) => res.data),
-    enabled: !!hospitalId && canUseFeature(planType, 'competitorComparison'),
-  });
+  // 경쟁사 비교 데이터 - 공유 훅 사용
+  const { data: comparison } = useCompetitorComparison();
 
   // 경쟁사 추가
   const addMutation = useMutation({
@@ -122,7 +118,8 @@ export default function CompetitorsPage() {
         competitorRegion: newRegion || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
       setNewCompetitor('');
       setNewRegion('');
       toast.success('경쟁사가 추가되었습니다.');
@@ -142,7 +139,8 @@ export default function CompetitorsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => competitorsApi.remove(id, hospitalId!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
       toast.success('경쟁사가 삭제되었습니다.');
     },
   });
@@ -170,7 +168,8 @@ export default function CompetitorsPage() {
     mutationFn: (data: { competitorName: string }) =>
       competitorsApi.acceptSuggestion(hospitalId!, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['competitors'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
       setDismissedSuggestions((prev) => new Set(Array.from(prev).concat(variables.competitorName)));
       toast.success(`${variables.competitorName}이(가) 경쟁사로 등록되었습니다!`);
     },
@@ -252,20 +251,12 @@ export default function CompetitorsPage() {
                 label="경쟁사 등록"
                 planType={planType}
               />
-              {planType === 'STARTER' && (
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <Lock className="w-3 h-3" />
-                  경쟁사 분석은 Standard 플랜부터 사용 가능합니다.
-                  <a href="/dashboard/settings" className="text-blue-600 underline ml-1">업그레이드</a>
-                </p>
-              )}
             </CardContent>
           </Card>
         )}
 
         {/* 경쟁사 추가 */}
-        <LockedFeature feature="maxCompetitors" currentPlan={planType}>
-          <Card>
+        <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
@@ -329,7 +320,6 @@ export default function CompetitorsPage() {
               </div>
             </CardContent>
           </Card>
-        </LockedFeature>
 
         {/* ========== AI 제안 결과 ========== */}
         {showSuggestions && (suggestions.length > 0 || analysisInfo) && (
@@ -573,8 +563,7 @@ export default function CompetitorsPage() {
         </div>
 
         {/* 비교 요약 */}
-        <LockedFeature feature="competitorComparison" currentPlan={planType}>
-          {comparison && comparison.competitors?.length > 0 && (
+        {comparison && comparison.competitors?.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -603,17 +592,23 @@ export default function CompetitorsPage() {
                   {/* 경쟁사들 */}
                   {comparison.competitors?.map((comp: any, index: number) => (
                     <div key={index} className="flex items-center gap-3">
-                      <div className="w-32 text-sm text-gray-600 truncate">
+                      <div className="w-32 text-sm text-gray-600 truncate" title={comp.name}>
                         {comp.name}
+                        {comp.isEstimated && (
+                          <span className="text-xs text-amber-500 ml-1">~</span>
+                        )}
                       </div>
                       <div className="flex-1 bg-gray-100 rounded-full h-4">
                         <div
-                          className="bg-orange-400 rounded-full h-4 transition-all"
-                          style={{ width: `${comp.score || 0}%` }}
+                          className={`rounded-full h-4 transition-all ${comp.isEstimated ? 'bg-orange-300' : 'bg-orange-400'}`}
+                          style={{ width: `${Math.max(comp.score || 0, comp.score > 0 ? 5 : 0)}%` }}
                         />
                       </div>
-                      <div className="w-12 text-right text-sm">
-                        {comp.score || 0}점
+                      <div className="w-16 text-right text-sm flex items-center justify-end gap-1">
+                        <span>{comp.score || 0}점</span>
+                        {comp.isEstimated && (
+                          <span className="text-xs text-amber-500" title="AI 응답 기반 추정치">≈</span>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -621,7 +616,6 @@ export default function CompetitorsPage() {
               </CardContent>
             </Card>
           )}
-        </LockedFeature>
       </div>
 
       {/* 업그레이드 모달 */}
