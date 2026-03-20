@@ -12,25 +12,48 @@ export class HospitalsService {
 
   async create(userId: string, dto: CreateHospitalDto) {
     // 병원 생성 (무료 플랜)
-    const hospital = await this.prisma.hospital.create({
-      data: {
-        name: dto.name,
-        businessNumber: dto.businessNumber,
-        specialtyType: dto.specialtyType,
-        subSpecialties: dto.subSpecialties || [],
-        coreTreatments: dto.coreTreatments || [],
-        targetRegions: dto.targetRegions || [],
-        hospitalStrengths: dto.hospitalStrengths || [],
-        regionSido: dto.regionSido,
-        regionSigungu: dto.regionSigungu,
-        regionDong: dto.regionDong,
-        address: dto.address,
-        websiteUrl: dto.websiteUrl,
-        naverPlaceId: dto.naverPlaceId,
-        planType: 'FREE',
-        subscriptionStatus: 'ACTIVE',
-      },
-    });
+    // 새 필드(coreTreatments 등)가 DB에 아직 없을 수 있으므로 fallback 처리
+    let hospital;
+    try {
+      hospital = await this.prisma.hospital.create({
+        data: {
+          name: dto.name,
+          businessNumber: dto.businessNumber,
+          specialtyType: dto.specialtyType,
+          subSpecialties: dto.subSpecialties || [],
+          coreTreatments: dto.coreTreatments || [],
+          targetRegions: dto.targetRegions || [],
+          hospitalStrengths: dto.hospitalStrengths || [],
+          regionSido: dto.regionSido,
+          regionSigungu: dto.regionSigungu,
+          regionDong: dto.regionDong,
+          address: dto.address,
+          websiteUrl: dto.websiteUrl,
+          naverPlaceId: dto.naverPlaceId,
+          planType: 'FREE',
+          subscriptionStatus: 'ACTIVE',
+        },
+      });
+    } catch (err) {
+      // DB에 새 컬럼이 없는 경우 fallback (prisma db push 전)
+      this.logger.warn(`병원 생성 fallback (새 필드 미반영): ${err?.message}`);
+      hospital = await this.prisma.hospital.create({
+        data: {
+          name: dto.name,
+          businessNumber: dto.businessNumber,
+          specialtyType: dto.specialtyType,
+          subSpecialties: dto.subSpecialties || [],
+          regionSido: dto.regionSido,
+          regionSigungu: dto.regionSigungu,
+          regionDong: dto.regionDong,
+          address: dto.address,
+          websiteUrl: dto.websiteUrl,
+          naverPlaceId: dto.naverPlaceId,
+          planType: 'FREE',
+          subscriptionStatus: 'ACTIVE',
+        },
+      });
+    }
 
     // 사용자와 병원 연결
     await this.prisma.user.update({
@@ -83,8 +106,12 @@ export class HospitalsService {
     }
 
     // 자동 프롬프트 생성 (주력 진료 + 내원 지역 + 기본 지역 기반)
-    // 플랜별 질문 수 제한 적용
-    await this.createAutoPrompts(hospital.id, dto, 'FREE');
+    // 플랜별 질문 수 제한 적용 (실패해도 온보딩은 진행)
+    try {
+      await this.createAutoPrompts(hospital.id, dto, 'FREE');
+    } catch (err) {
+      this.logger.warn(`자동 프롬프트 생성 실패 (무시됨): ${err?.message}`);
+    }
 
     return hospital;
   }

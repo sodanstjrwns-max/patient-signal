@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, UseGuards, Headers, Logger } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { HospitalsService } from './hospitals.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
@@ -10,6 +10,7 @@ import { Public } from '../auth/decorators/public.decorator';
 @ApiTags('병원')
 @Controller('hospitals')
 export class HospitalsController {
+  private readonly logger = new Logger(HospitalsController.name);
   constructor(private hospitalsService: HospitalsService) {}
 
   @Public()
@@ -33,7 +34,15 @@ export class HospitalsController {
     @CurrentUser('id') userId: string,
     @Body() dto: CreateHospitalDto,
   ) {
-    return this.hospitalsService.create(userId, dto);
+    this.logger.log(`[병원등록] userId=${userId}, name=${dto.name}, specialty=${dto.specialtyType}`);
+    try {
+      const result = await this.hospitalsService.create(userId, dto);
+      this.logger.log(`[병원등록 성공] hospitalId=${result.id}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[병원등록 실패] ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   @UseGuards(JwtAuthGuard)
