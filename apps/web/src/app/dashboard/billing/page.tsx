@@ -415,7 +415,7 @@ function BillingContent() {
               </div>
               <div>
                 <h4 className="font-bold text-green-800">{couponResult.coupon.name}</h4>
-                <p className="text-sm text-green-600">{couponResult.coupon.description}</p>
+                <p className="text-sm text-green-600">{couponResult.coupon.description?.replace(/\s*\(?\d+장\s*한정\)?\s*/g, '')}</p>
               </div>
             </div>
 
