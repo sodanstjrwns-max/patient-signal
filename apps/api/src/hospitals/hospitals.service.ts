@@ -18,6 +18,9 @@ export class HospitalsService {
         businessNumber: dto.businessNumber,
         specialtyType: dto.specialtyType,
         subSpecialties: dto.subSpecialties || [],
+        coreTreatments: dto.coreTreatments || [],
+        targetRegions: dto.targetRegions || [],
+        hospitalStrengths: dto.hospitalStrengths || [],
         regionSido: dto.regionSido,
         regionSigungu: dto.regionSigungu,
         regionDong: dto.regionDong,
@@ -56,17 +59,21 @@ export class HospitalsService {
       this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }
 
-    // ── 경쟁 병원 등록 (온보딩 시 입력된 경쟁사) ──
+    // ── 경쟁 병원 등록 (FREE 플랜은 경쟁사 0개이므로 스킵, 유료 전환 시 활성화) ──
     if (dto.competitorNames && dto.competitorNames.length > 0) {
+      const planLimits = PlanGuard.PLAN_LIMITS['FREE'];
+      const maxCompetitors = planLimits.maxCompetitors;
       const competitorRegion = `${dto.regionSido} ${dto.regionSigungu}`;
-      for (const name of dto.competitorNames.slice(0, 5)) { // 최대 5개
+      
+      // FREE 플랜이라도 데이터는 저장 (비활성), 업그레이드 시 활성화
+      for (const name of dto.competitorNames.slice(0, 5)) {
         try {
           await this.prisma.competitor.create({
             data: {
               hospitalId: hospital.id,
               competitorName: name.trim(),
               competitorRegion: competitorRegion,
-              isActive: true,
+              isActive: maxCompetitors > 0, // FREE=false, 유료=true
             },
           });
         } catch (err) {
@@ -855,9 +862,9 @@ export class HospitalsService {
       regionSido: hospital.regionSido,
       regionSigungu: hospital.regionSigungu,
       regionDong: hospital.regionDong || undefined,
-      coreTreatments: (hospital as any).coreTreatments || [],
-      targetRegions: (hospital as any).targetRegions || [],
-      hospitalStrengths: (hospital as any).hospitalStrengths || [],
+      coreTreatments: hospital.coreTreatments || [],
+      targetRegions: hospital.targetRegions || [],
+      hospitalStrengths: hospital.hospitalStrengths || [],
     };
 
     // CUSTOM 질문은 유지하므로, 그 수를 뺀 만큼만 자동 생성
@@ -937,9 +944,9 @@ export class HospitalsService {
         regionSido: hospital.regionSido,
         regionSigungu: hospital.regionSigungu,
         regionDong: hospital.regionDong || undefined,
-        coreTreatments: (hospital as any).coreTreatments || [],
-        targetRegions: (hospital as any).targetRegions || [],
-        hospitalStrengths: (hospital as any).hospitalStrengths || [],
+        coreTreatments: hospital.coreTreatments || [],
+        targetRegions: hospital.targetRegions || [],
+        hospitalStrengths: hospital.hospitalStrengths || [],
       };
 
       // 기존 질문 텍스트 가져오기 (중복 방지)
