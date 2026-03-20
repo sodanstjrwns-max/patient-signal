@@ -243,11 +243,11 @@ export class CouponsService {
       {
         code: 'PF2026-STARTER-FREE',
         name: '원장님 스타터 1년 무료',
-        description: '원장님 전용 Starter 플랜 12개월 무료 체험 쿠폰 (17장 한정)',
+        description: '페이션트퍼널 수강생 전용 Starter 플랜 12개월 무료 쿠폰',
         couponType: 'FREE_PERIOD' as const,
         freeMonths: 12,
         applicablePlans: ['STARTER' as PlanType],
-        maxUses: 17,       // 17장 한정 발행
+        maxUses: 0,           // 무제한
         maxUsesPerUser: 1,
         expiresAt: new Date('2027-03-31'),
       },
