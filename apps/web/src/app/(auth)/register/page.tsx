@@ -187,7 +187,7 @@ export default function RegisterPage() {
                     <span className="text-sm font-medium text-gray-900">
                       페이션트퍼널 수강생입니다
                     </span>
-                    <p className="text-xs text-gray-500 mt-0.5">수강생은 PRO 기능을 무료로 이용할 수 있습니다</p>
+                    <p className="text-xs text-gray-500 mt-0.5">수강생은 Starter 기능을 무료로 이용할 수 있습니다</p>
                   </div>
                 </label>
 
