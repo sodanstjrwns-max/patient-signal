@@ -17,7 +17,7 @@ function BillingSuccessContent() {
     const processBilling = async () => {
       const authKey = searchParams.get('authKey');
       const customerKey = searchParams.get('customerKey');
-      const plan = searchParams.get('plan') || 'STARTER';
+      const plan = searchParams.get('plan') || 'STARTER';  // 빌링키 등록은 유료 플랜만
 
       if (!authKey || !customerKey || !hospitalId) {
         setStatus('error');

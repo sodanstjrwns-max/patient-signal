@@ -5,6 +5,19 @@ import { Lock, Sparkles, X, ArrowRight, Check } from 'lucide-react';
 
 // 플랜별 기능 제한 (백엔드 PlanGuard.PLAN_LIMITS와 동기화)
 export const PLAN_LIMITS = {
+  FREE: {
+    maxPrompts: 1,
+    maxCompetitors: 0,
+    platforms: ['PERPLEXITY'],
+    crawlsPerMonth: 4,
+    exportEnabled: false,
+    aiRecommendations: false,
+    contentGap: false,
+    competitorAEO: false,
+    competitorComparison: false,
+    queryFanouts: false,
+    autoDetect: false,
+  },
   STARTER: {
     maxPrompts: 5,
     maxCompetitors: 1,
@@ -62,7 +75,7 @@ export const PLAN_LIMITS = {
 export type PlanType = keyof typeof PLAN_LIMITS;
 
 export function getPlanLimits(planType: string) {
-  return PLAN_LIMITS[planType as PlanType] || PLAN_LIMITS.STARTER;
+  return PLAN_LIMITS[planType as PlanType] || PLAN_LIMITS.FREE;
 }
 
 export function canUseFeature(planType: string, feature: string): boolean {
@@ -249,7 +262,7 @@ export function UsageBar({
   limit,
   label,
   showUpgrade = true,
-  planType = 'STARTER',
+  planType = 'FREE',
 }: {
   used: number;
   limit: number;

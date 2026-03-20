@@ -4,6 +4,7 @@ import { PlanType } from '@prisma/client';
 
 // 플랜별 가격 (Single Source of Truth)
 export const PLAN_PRICES: Record<string, number> = {
+  FREE: 0,             // 무료
   STARTER: 120000,     // 12만원/월
   STANDARD: 290000,    // 29만원/월
   PRO: 590000,         // 59만원/월
@@ -238,6 +239,17 @@ export class CouponsService {
         maxUses: 100,
         maxUsesPerUser: 1,
         expiresAt: new Date('2026-06-30'),
+      },
+      {
+        code: 'PF2026-STARTER-FREE',
+        name: '원장님 스타터 1년 무료',
+        description: '원장님 전용 Starter 플랜 12개월 무료 체험 쿠폰 (17장 한정)',
+        couponType: 'FREE_PERIOD' as const,
+        freeMonths: 12,
+        applicablePlans: ['STARTER' as PlanType],
+        maxUses: 17,       // 17장 한정 발행
+        maxUsesPerUser: 1,
+        expiresAt: new Date('2027-03-31'),
       },
     ];
 

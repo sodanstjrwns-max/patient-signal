@@ -79,7 +79,7 @@ export class SchedulerService {
         let failed = 0;
 
         // 플랜별 플랫폼 제한 적용
-        const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.STARTER;
+        const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
         const sessionPlatforms = this.getPlatformsForSession(session);
         // 플랜 허용 플랫폼과 세션 플랫폼의 교집합
         const platforms = sessionPlatforms.filter((p: string) => planLimits.platforms.includes(p));

@@ -89,16 +89,18 @@ export function Sidebar() {
               <p className={`text-xs font-medium ${
                 user.hospital.planType === 'PRO' ? 'text-purple-600' :
                 user.hospital.planType === 'STANDARD' ? 'text-blue-600' :
+                user.hospital.planType === 'STARTER' ? 'text-green-600' :
                 'text-gray-500'
               }`}>
                 {user.hospital.planType === 'PRO' ? 'Pro 플랜' :
                  user.hospital.planType === 'STANDARD' ? 'Standard 플랜' :
                  user.hospital.planType === 'ENTERPRISE' ? 'Enterprise 플랜' :
-                 'Starter 플랜'}
+                 user.hospital.planType === 'STARTER' ? 'Starter 플랜' :
+                 'Free 플랜'}
               </p>
             </div>
           </div>
-          {(!user.hospital.planType || user.hospital.planType === 'STARTER') && (
+          {(!user.hospital.planType || user.hospital.planType === 'FREE' || user.hospital.planType === 'STARTER') && (
             <Link
               href="/dashboard/billing"
               className="mt-2 flex items-center justify-center gap-1 w-full py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"

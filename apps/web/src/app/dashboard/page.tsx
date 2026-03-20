@@ -60,7 +60,7 @@ export default function DashboardPage() {
 
   // 【캐싱 통합】공유 훅으로 교체 - queryKey & staleTime 중앙 관리
   const { data: hospitalData } = useHospital();
-  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'FREE';
   const [showTutorial, setShowTutorial] = useState(false);
 
   // 첫 방문 시 튜토리얼 표시
@@ -209,7 +209,7 @@ export default function DashboardPage() {
           {/* 플랫폼별 상세 데이터 우선 사용 (항상 4개 플랫폼 반환) */}
           <PlatformStats 
             data={platformDetails || (dashboard?.platformScores || {})} 
-            planType={(user as any)?.hospital?.planType || 'STARTER'}
+            planType={(user as any)?.hospital?.planType || 'FREE'}
           />
         </div>
 

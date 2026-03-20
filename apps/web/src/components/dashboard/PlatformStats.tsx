@@ -51,7 +51,7 @@ const platformNames: Record<string, string> = {
 
 export function PlatformStats({ data, planType: propPlanType }: PlatformStatsProps) {
   const { user } = useAuthStore();
-  const planType = propPlanType || (user as any)?.hospital?.planType || 'STARTER';
+  const planType = propPlanType || (user as any)?.hospital?.planType || 'FREE';
   const planLimits = getPlanLimits(planType);
   const allowedPlatforms = planLimits.platforms;
 

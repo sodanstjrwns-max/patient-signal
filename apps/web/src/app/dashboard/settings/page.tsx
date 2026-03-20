@@ -55,6 +55,28 @@ const intentWeights: Record<string, number> = {
 // 요금제 정보
 const PLANS = [
   {
+    id: 'FREE',
+    name: 'Free',
+    price: 0,
+    priceText: '무료',
+    description: '무료 체험 - 기본 모니터링',
+    features: [
+      '모니터링 질문 1개',
+      '1개 AI 플랫폼 (Perplexity)',
+      '주 1회 크롤링 (월 4회)',
+      'ABHS 기본 점수',
+    ],
+    notIncluded: [
+      '경쟁사 분석',
+      'ChatGPT / Claude / Gemini 분석',
+      'AI 질문 변형 생성',
+      'Content Gap 분석',
+      '데이터 내보내기',
+    ],
+    isPopular: false,
+    badge: '',
+  },
+  {
     id: 'STARTER',
     name: 'Starter',
     price: 120000,
@@ -420,10 +442,10 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {PLANS.map((plan) => {
                 const isCurrent = (
-                  plan.id === (hospital?.planType || 'STARTER')
+                  plan.id === (hospital?.planType || 'FREE')
                 );
                 const isActiveSub = hospital?.subscriptionStatus === 'ACTIVE' || hospital?.subscriptionStatus === 'TRIAL';
                 return (

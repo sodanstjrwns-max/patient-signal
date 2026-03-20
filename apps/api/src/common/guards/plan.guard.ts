@@ -24,6 +24,16 @@ export class PlanGuard implements CanActivate {
 
   // 플랜별 기능 제한 정의 (Single Source of Truth)
   static readonly PLAN_LIMITS = {
+    FREE: {
+      maxPrompts: 1,               // 질문 1개만
+      maxCompetitors: 0,           // 경쟁사 분석 없음
+      platforms: ['PERPLEXITY'],   // 가장 저렴한 1개만
+      crawlsPerMonth: 4,           // 주 1회 (월 4회)
+      exportEnabled: false,
+      aiRecommendations: false,
+      contentGap: false,
+      competitorAEO: false,
+    },
     STARTER: {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
@@ -107,8 +117,8 @@ export class PlanGuard implements CanActivate {
       throw new ForbiddenException('병원을 찾을 수 없습니다.');
     }
 
-    const planType = hospital.planType || 'STARTER';
-    const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    const planType = hospital.planType || 'FREE';
+    const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.FREE;
 
     this.logger.debug(
       `[PlanGuard] ${hospital.name} | 플랜: ${planType} | 기능: ${options.feature || options.minPlan || 'check'}`,
@@ -116,7 +126,7 @@ export class PlanGuard implements CanActivate {
 
     // 1. 최소 플랜 체크
     if (options.minPlan) {
-      const planOrder = { STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
+      const planOrder = { FREE: 0, STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
       if ((planOrder[planType] || 1) < (planOrder[options.minPlan] || 1)) {
         throw new ForbiddenException({
           statusCode: 403,

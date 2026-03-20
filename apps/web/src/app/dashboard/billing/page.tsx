@@ -35,6 +35,20 @@ const PLAN_INFO: Record<string, {
   features: string[];
   color: string;
 }> = {
+  FREE: {
+    name: 'Free',
+    price: 0,
+    priceText: '무료',
+    description: '무료 체험 - 기본 모니터링',
+    features: [
+      '모니터링 질문 1개',
+      '1개 AI 플랫폼 (Perplexity)',
+      '주 1회 크롤링 (월 4회)',
+      '경쟁사 분석 없음',
+      'ABHS 기본 점수 확인',
+    ],
+    color: 'gray',
+  },
   STARTER: {
     name: 'Starter',
     price: 120000,
@@ -88,7 +102,7 @@ function BillingContent() {
   const hospitalId = user?.hospitalId;
 
   // URL params
-  const selectedPlanId = searchParams.get('plan') || 'STARTER';
+  const selectedPlanId = searchParams.get('plan') || 'FREE';
   const showCouponParam = searchParams.get('coupon') === 'true';
 
   // State
@@ -115,7 +129,7 @@ function BillingContent() {
     }
   }, [showCouponParam]);
 
-  const planInfo = PLAN_INFO[selectedPlan] || PLAN_INFO.STARTER;
+  const planInfo = PLAN_INFO[selectedPlan] || PLAN_INFO.FREE;
   const finalPrice = couponResult?.pricing?.finalPrice ?? planInfo.price;
   const freeMonths = couponResult?.pricing?.freeMonths || 0;
 
@@ -256,7 +270,7 @@ function BillingContent() {
   const renderPlanStep = () => (
     <div className="space-y-6">
       {/* 플랜 선택 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Object.entries(PLAN_INFO).map(([planId, info]) => {
           const isSelected = selectedPlan === planId;
           const isCurrent = planId === (subscriptionData?.subscription?.planType);
@@ -317,11 +331,12 @@ function BillingContent() {
         </button>
         <button
           onClick={() => setCurrentStep('payment')}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium"
+          disabled={selectedPlan === 'FREE'}
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <CreditCard className="h-5 w-5" />
-          <span>결제하기</span>
-          <ChevronRight className="h-4 w-4" />
+          <span>{selectedPlan === 'FREE' ? '무료 플랜은 결제 불필요' : '결제하기'}</span>
+          {selectedPlan !== 'FREE' && <ChevronRight className="h-4 w-4" />}
         </button>
       </div>
     </div>

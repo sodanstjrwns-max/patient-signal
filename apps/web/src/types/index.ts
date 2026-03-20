@@ -5,7 +5,7 @@ export type AIPlatform = 'CHATGPT' | 'PERPLEXITY' | 'CLAUDE' | 'GEMINI' | 'GOOGL
 export type SentimentLabel = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
 
 // 플랜 타입
-export type PlanType = 'STARTER' | 'STANDARD' | 'PRO' | 'ENTERPRISE';
+export type PlanType = 'FREE' | 'STARTER' | 'STANDARD' | 'PRO' | 'ENTERPRISE';
 
 // 구독 상태
 export type SubscriptionStatus = 'TRIAL' | 'ACTIVE' | 'CANCELLED' | 'EXPIRED';
@@ -24,7 +24,7 @@ export interface Hospital {
   address?: string;
   websiteUrl?: string;
   naverPlaceId?: string;
-  planType: PlanType;
+  planType: PlanType;  // FREE | STARTER | STANDARD | PRO | ENTERPRISE
   subscriptionStatus: SubscriptionStatus;
   createdAt: string;
 }

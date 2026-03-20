@@ -24,7 +24,7 @@ export class HospitalsService {
         address: dto.address,
         websiteUrl: dto.websiteUrl,
         naverPlaceId: dto.naverPlaceId,
-        planType: 'STARTER',
+        planType: 'FREE',
         subscriptionStatus: 'ACTIVE',
       },
     });
@@ -46,7 +46,7 @@ export class HospitalsService {
       await this.prisma.subscription.create({
         data: {
           hospitalId: hospital.id,
-          planType: 'STARTER',
+          planType: 'FREE',
           status: 'ACTIVE',
           currentPeriodStart: now,
           currentPeriodEnd: farFuture,
@@ -77,7 +77,7 @@ export class HospitalsService {
 
     // 자동 프롬프트 생성 (주력 진료 + 내원 지역 + 기본 지역 기반)
     // 플랜별 질문 수 제한 적용
-    await this.createAutoPrompts(hospital.id, dto, 'STARTER');
+    await this.createAutoPrompts(hospital.id, dto, 'FREE');
 
     return hospital;
   }
@@ -254,8 +254,8 @@ export class HospitalsService {
    * @param planType - 현재 플랜 (질문 수 제한 적용)
    * @param existingCount - 이미 생성된 질문 수 (업그레이드 시 추가분만 계산)
    */
-  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'STARTER', existingCount: number = 0) {
-    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'FREE', existingCount: number = 0) {
+    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.FREE;
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
     const availableSlots = Math.max(0, maxPrompts - existingCount);
 
@@ -864,7 +864,7 @@ export class HospitalsService {
     const customCount = await this.prisma.prompt.count({
       where: { hospitalId, promptType: 'CUSTOM' },
     });
-    const result = await this.createAutoPrompts(hospitalId, dto, hospital.planType || 'STARTER', customCount);
+    const result = await this.createAutoPrompts(hospitalId, dto, hospital.planType || 'FREE', customCount);
 
     return {
       deleted: deleted.count,
@@ -920,8 +920,8 @@ export class HospitalsService {
 
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
-    const prevLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[previousPlan] || PlanGuard.PLAN_LIMITS.STARTER;
-    const newLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[newPlan] || PlanGuard.PLAN_LIMITS.STARTER;
+    const prevLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[previousPlan] || PlanGuard.PLAN_LIMITS.FREE;
+    const newLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[newPlan] || PlanGuard.PLAN_LIMITS.FREE;
 
     // ── 1. 추가 질문 자동 생성 ──
     const currentPromptCount = await this.prisma.prompt.count({ where: { hospitalId } });

@@ -35,7 +35,7 @@ export default function PromptsPage() {
     staleTime: 60 * 1000,
   });
 
-  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'FREE';
   const planLimits = getPlanLimits(planType);
   const MAX_PROMPTS = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
   const [newPrompt, setNewPrompt] = useState('');

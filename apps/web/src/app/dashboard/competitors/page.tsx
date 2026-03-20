@@ -90,7 +90,7 @@ export default function CompetitorsPage() {
   // 【캐싱 통합】공유 훅으로 planType 안정적 로딩
   const { data: hospitalData, isLoading: hospitalLoading } = useHospital();
 
-  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'STARTER';
+  const planType = hospitalData?.planType || (user as any)?.hospital?.planType || 'FREE';
   const planLimits = getPlanLimits(planType);
   const [newCompetitor, setNewCompetitor] = useState('');
   const [newRegion, setNewRegion] = useState('');
@@ -475,7 +475,7 @@ export default function CompetitorsPage() {
                     {searchTerm ? '검색 결과가 없습니다' : '등록된 경쟁사가 없습니다'}
                   </p>
                   <p className="text-sm text-gray-400 mt-1">
-                    {planType === 'STARTER'
+                    {planType === 'FREE' || planType === 'STARTER'
                       ? 'Standard 플랜으로 업그레이드하여 경쟁사 분석을 시작하세요'
                       : '경쟁사를 추가하거나 AI 제안을 사용해보세요'}
                   </p>

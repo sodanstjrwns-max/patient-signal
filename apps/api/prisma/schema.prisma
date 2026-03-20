@@ -30,6 +30,7 @@ enum SpecialtyType {
 }
 
 enum PlanType {
+  FREE
   STARTER
   STANDARD
   PRO
@@ -156,7 +157,7 @@ model Hospital {
   address            String?
   websiteUrl         String?            @map("website_url")
   naverPlaceId       String?            @map("naver_place_id")
-  planType           PlanType           @default(STARTER) @map("plan_type")
+  planType           PlanType           @default(FREE) @map("plan_type")
   subscriptionStatus SubscriptionStatus @default(TRIAL) @map("subscription_status")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")

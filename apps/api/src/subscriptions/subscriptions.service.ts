@@ -85,7 +85,7 @@ export class SubscriptionsService {
       return {
         hasSubscription: false,
         status: 'NONE',
-        planType: 'STARTER',
+        planType: 'FREE',
       };
     }
 
@@ -185,7 +185,7 @@ export class SubscriptionsService {
     }
 
     // 플랜 순서 확인
-    const planOrder = { STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
+    const planOrder = { FREE: 0, STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
     if (planOrder[newPlan] <= planOrder[subscription.planType]) {
       throw new BadRequestException('현재 플랜보다 높은 플랜만 선택할 수 있습니다.');
     }
@@ -310,7 +310,7 @@ export class SubscriptionsService {
           where: { id: subscription.hospitalId },
           data: {
             subscriptionStatus: 'EXPIRED',
-            planType: 'STARTER', // 기본 플랜으로 다운그레이드
+            planType: 'FREE', // 무료 플랜으로 다운그레이드
           },
         });
 
@@ -365,7 +365,7 @@ export class SubscriptionsService {
   getPlanLimits(planType: PlanType) {
     // PlanGuard의 PLAN_LIMITS를 사용
     const { PlanGuard } = require('../common/guards/plan.guard');
-    return PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    return PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.FREE;
   }
 
   /**
@@ -390,7 +390,7 @@ export class SubscriptionsService {
     }
 
     const { PlanGuard } = require('../common/guards/plan.guard');
-    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
 
     // 이번 달 크롤링 횟수
     const now = new Date();

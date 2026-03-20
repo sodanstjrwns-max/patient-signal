@@ -15,8 +15,8 @@ export class PromptsService {
       where: { id: hospitalId },
       select: { planType: true },
     });
-    const planType = hospital?.planType || 'STARTER';
-    const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.STARTER;
+    const planType = hospital?.planType || 'FREE';
+    const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.FREE;
     return limits.maxPrompts === -1 ? 999 : limits.maxPrompts;
   }
 
