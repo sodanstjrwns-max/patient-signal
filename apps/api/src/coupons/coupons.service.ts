@@ -247,7 +247,7 @@ export class CouponsService {
         couponType: 'FREE_PERIOD' as const,
         freeMonths: 12,
         applicablePlans: ['STARTER' as PlanType],
-        maxUses: 0,           // 무제한
+        maxUses: 17,          // 내부 수량 제한 (UI 미노출)
         maxUsesPerUser: 1,
         expiresAt: new Date('2027-03-31'),
       },
