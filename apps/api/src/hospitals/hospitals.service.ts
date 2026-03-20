@@ -11,6 +11,9 @@ export class HospitalsService {
   constructor(private prisma: PrismaService) {}
 
   async create(userId: string, dto: CreateHospitalDto) {
+    // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)
+    const sanitize = (val?: string) => val?.trim() || null;
+
     // 병원 생성 (무료 플랜)
     // 새 필드(coreTreatments 등)가 DB에 아직 없을 수 있으므로 fallback 처리
     let hospital;
@@ -18,7 +21,7 @@ export class HospitalsService {
       hospital = await this.prisma.hospital.create({
         data: {
           name: dto.name,
-          businessNumber: dto.businessNumber,
+          businessNumber: sanitize(dto.businessNumber),
           specialtyType: dto.specialtyType,
           subSpecialties: dto.subSpecialties || [],
           coreTreatments: dto.coreTreatments || [],
@@ -40,7 +43,7 @@ export class HospitalsService {
       hospital = await this.prisma.hospital.create({
         data: {
           name: dto.name,
-          businessNumber: dto.businessNumber,
+          businessNumber: sanitize(dto.businessNumber),
           specialtyType: dto.specialtyType,
           subSpecialties: dto.subSpecialties || [],
           regionSido: dto.regionSido,
@@ -177,7 +180,7 @@ export class HospitalsService {
       where: { id: hospitalId },
       data: {
         name: dto.name,
-        businessNumber: dto.businessNumber,
+        businessNumber: dto.businessNumber?.trim() || null,
         specialtyType: dto.specialtyType,
         subSpecialties: dto.subSpecialties,
         regionSido: dto.regionSido,

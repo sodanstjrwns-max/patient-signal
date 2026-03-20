@@ -122,7 +122,16 @@ export default function OnboardingPage() {
     setLoading(true);
 
     try {
-      const { data } = await hospitalApi.create(formData);
+      // 빈 문자열을 undefined로 변환 (unique 제약 충돌 방지)
+      const cleanData = {
+        ...formData,
+        businessNumber: formData.businessNumber?.trim() || undefined,
+        address: formData.address?.trim() || undefined,
+        websiteUrl: formData.websiteUrl?.trim() || undefined,
+        naverPlaceId: formData.naverPlaceId?.trim() || undefined,
+        regionDong: formData.regionDong?.trim() || undefined,
+      };
+      const { data } = await hospitalApi.create(cleanData);
       updateUser({ hospitalId: data.id, hospital: data });
       router.push('/dashboard');
     } catch (err: any) {
