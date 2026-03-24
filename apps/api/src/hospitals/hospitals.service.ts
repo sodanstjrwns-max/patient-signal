@@ -25,6 +25,7 @@ export class HospitalsService {
           specialtyType: dto.specialtyType,
           subSpecialties: dto.subSpecialties || [],
           coreTreatments: dto.coreTreatments || [],
+          keyProcedures: dto.coreTreatments || [], // 온보딩 시 coreTreatments → keyProcedures 동기화
           targetRegions: dto.targetRegions || [],
           hospitalStrengths: dto.hospitalStrengths || [],
           regionSido: dto.regionSido,
@@ -183,6 +184,10 @@ export class HospitalsService {
         businessNumber: dto.businessNumber?.trim() || null,
         specialtyType: dto.specialtyType,
         subSpecialties: dto.subSpecialties,
+        keyProcedures: dto.keyProcedures,
+        coreTreatments: dto.coreTreatments,
+        targetRegions: dto.targetRegions,
+        hospitalStrengths: dto.hospitalStrengths,
         regionSido: dto.regionSido,
         regionSigungu: dto.regionSigungu,
         regionDong: dto.regionDong,
@@ -892,7 +897,8 @@ export class HospitalsService {
       regionSido: hospital.regionSido,
       regionSigungu: hospital.regionSigungu,
       regionDong: hospital.regionDong || undefined,
-      coreTreatments: hospital.coreTreatments || [],
+      // keyProcedures 우선, 없으면 coreTreatments fallback
+      coreTreatments: (hospital.keyProcedures?.length > 0 ? hospital.keyProcedures : hospital.coreTreatments) || [],
       targetRegions: hospital.targetRegions || [],
       hospitalStrengths: hospital.hospitalStrengths || [],
     };

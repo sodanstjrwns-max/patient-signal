@@ -192,8 +192,11 @@ export default function SettingsPage() {
         name: hospital.name || '', address: hospital.address || '',
         websiteUrl: hospital.websiteUrl || '', naverPlaceId: hospital.naverPlaceId || '',
       });
+      // keyProcedures 우선, 없으면 coreTreatments fallback
       if (hospital.keyProcedures?.length > 0) {
         setSelectedProcedures(hospital.keyProcedures);
+      } else if (hospital.coreTreatments?.length > 0) {
+        setSelectedProcedures(hospital.coreTreatments);
       }
     }
   }, [hospital]);
@@ -229,7 +232,11 @@ export default function SettingsPage() {
   // 시술 저장 + 쿼리 생성
   const handleSaveProcedures = async () => {
     if (selectedProcedures.length === 0) { toast.warning('최소 1개의 핵심 시술을 선택해주세요.'); return; }
-    await hospitalApi.update(hospitalId!, { keyProcedures: selectedProcedures });
+    // keyProcedures와 coreTreatments 모두 업데이트 (동기화)
+    await hospitalApi.update(hospitalId!, { 
+      keyProcedures: selectedProcedures,
+      coreTreatments: selectedProcedures,
+    });
     queryClient.invalidateQueries({ queryKey: ['hospital'] });
     generateMutation.mutate();
   };

@@ -60,6 +60,15 @@ export class CreateHospitalDto {
   // ── 신규 온보딩 필드 ──
 
   @ApiPropertyOptional({ 
+    example: ['임플란트', '교정', '잇몸치료'], 
+    description: '핵심 시술 (쿼리 생성에 사용, 최대 3개)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  keyProcedures?: string[];
+
+  @ApiPropertyOptional({ 
     example: ['임플란트', '치아교정', '라미네이트'], 
     description: '주력 진료/시술 (환자 유입 핵심 키워드)' 
   })

@@ -218,12 +218,15 @@ export class QueryTemplatesService {
 
     const region = `${hospital.regionSido} ${hospital.regionSigungu}`;
     const specialty = SPECIALTY_NAMES[hospital.specialtyType] || hospital.specialtyType;
+    // keyProcedures → coreTreatments → 프리셋 순서로 fallback
     const procedures = hospital.keyProcedures?.length > 0
       ? hospital.keyProcedures
-      : (SPECIALTY_PROCEDURES[hospital.specialtyType] || [])
-          .filter(p => p.isPopular)
-          .slice(0, 3)
-          .map(p => p.name);
+      : (hospital.coreTreatments?.length > 0
+        ? hospital.coreTreatments
+        : (SPECIALTY_PROCEDURES[hospital.specialtyType] || [])
+            .filter(p => p.isPopular)
+            .slice(0, 3)
+            .map(p => p.name));
 
     if (procedures.length === 0) {
       this.logger.warn(`병원 ${hospitalId}에 핵심 시술이 설정되지 않았습니다`);
