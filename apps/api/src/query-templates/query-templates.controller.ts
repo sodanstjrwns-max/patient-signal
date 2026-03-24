@@ -59,6 +59,17 @@ export class QueryTemplatesController {
     );
   }
 
+  @Get('suggest/:hospitalId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '병원 맞춤 질문 제안',
+    description: '핵심 진료/지역/진료과/병원 강점 기반 질문 후보 제안 (이미 등록된 질문 제외)',
+  })
+  async suggestQuestions(@Param('hospitalId') hospitalId: string) {
+    return this.queryTemplatesService.suggestQuestionsForHospital(hospitalId);
+  }
+
   // ==================== 시스템 관리 API ====================
 
   @Post('seed/presets')

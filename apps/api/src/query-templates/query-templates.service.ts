@@ -329,6 +329,188 @@ export class QueryTemplatesService {
   }
 
   /**
+   * 병원 맞춤 질문 제안 (저장 없이, 이미 등록된 질문 제외)
+   * 핵심 진료 + 지역 + 진료과 + 병원 강점 기반으로 다양한 패턴의 질문을 제안
+   */
+  async suggestQuestionsForHospital(hospitalId: string): Promise<{
+    total: number;
+    suggestions: Array<{ query: string; category: string; intent: string }>;
+    hospital: { name: string; specialty: string; region: string; procedures: string[] };
+  }> {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+    });
+    if (!hospital) {
+      throw new Error('병원을 찾을 수 없습니다');
+    }
+
+    const region = `${hospital.regionSido} ${hospital.regionSigungu}`;
+    const shortRegion = hospital.regionSigungu.replace(/[시군구]$/, '');
+    const dong = hospital.regionDong || '';
+    const specialty = SPECIALTY_NAMES[hospital.specialtyType] || hospital.specialtyType;
+    
+    // keyProcedures → coreTreatments → 프리셋 순서로 fallback
+    const procedures = hospital.keyProcedures?.length > 0
+      ? hospital.keyProcedures
+      : (hospital.coreTreatments?.length > 0
+        ? hospital.coreTreatments
+        : (SPECIALTY_PROCEDURES[hospital.specialtyType] || [])
+            .filter(p => p.isPopular)
+            .slice(0, 3)
+            .map(p => p.name));
+
+    const strengths = (hospital as any).hospitalStrengths || [];
+    const targetRegions = (hospital as any).targetRegions || [];
+    const regions = [...new Set([shortRegion, ...(dong ? [dong] : []), ...targetRegions.slice(0, 2)])];
+
+    // 다양한 카테고리의 질문 생성
+    const suggestions: Array<{ query: string; category: string; intent: string }> = [];
+
+    // ① 추천 탐색 질문
+    for (const proc of procedures) {
+      for (const r of regions.slice(0, 2)) {
+        suggestions.push({ query: `${r}에서 ${proc} 잘하는 ${specialty} 추천해줘`, category: '추천', intent: 'RESERVATION' });
+      }
+      suggestions.push({ query: `${proc} 전문 ${specialty} ${shortRegion} 근처에 있어?`, category: '추천', intent: 'RESERVATION' });
+      suggestions.push({ query: `${proc} 하려는데 ${shortRegion} 쪽에 괜찮은 ${specialty} 있을까?`, category: '추천', intent: 'RESERVATION' });
+    }
+
+    // ② 비교 질문
+    for (const proc of procedures) {
+      suggestions.push({ query: `${shortRegion} ${proc} 비용 비교해줘. 어디가 가성비 좋아?`, category: '비교', intent: 'COMPARISON' });
+      suggestions.push({ query: `${shortRegion} ${proc} 잘하는 ${specialty} 장단점 분석해줘`, category: '비교', intent: 'COMPARISON' });
+    }
+    if (procedures.length >= 2) {
+      suggestions.push({ query: `${procedures[0]}이랑 ${procedures[1]} 같이 하려는데 ${shortRegion} ${specialty} 어디가 좋아?`, category: '비교', intent: 'COMPARISON' });
+    }
+
+    // ③ 가격 질문
+    for (const proc of procedures) {
+      suggestions.push({ query: `${shortRegion} ${proc} 가격 합리적인 ${specialty} 추천해줘`, category: '가격', intent: 'INFORMATION' });
+      suggestions.push({ query: `${proc} 비용 보통 얼마야? ${shortRegion} 기준으로 알려줘`, category: '가격', intent: 'INFORMATION' });
+    }
+
+    // ④ 증상/상황 기반
+    const symptomQ = this.getSuggestSymptoms(hospital.specialtyType, shortRegion, specialty, procedures);
+    suggestions.push(...symptomQ);
+
+    // ⑤ 후기/리뷰
+    for (const proc of procedures) {
+      suggestions.push({ query: `${shortRegion} ${proc} 후기 좋은 ${specialty} 어디야?`, category: '후기', intent: 'REVIEW' });
+      suggestions.push({ query: `${shortRegion} ${proc} 네이버 평점 높은 ${specialty}`, category: '후기', intent: 'REVIEW' });
+    }
+    suggestions.push({ query: `${shortRegion} ${specialty} 실제 다녀본 사람들 평가 좋은 곳 어디야?`, category: '후기', intent: 'REVIEW' });
+
+    // ⑥ 공포/불안 해소
+    for (const proc of procedures.slice(0, 2)) {
+      suggestions.push({ query: `${proc} 아프다는데 ${shortRegion}에서 안전하게 받을 수 있는 곳은?`, category: '불안해소', intent: 'FEAR' });
+      suggestions.push({ query: `${proc} 부작용이 걱정되는데, ${shortRegion} ${specialty} 중 실력 좋은 곳은?`, category: '불안해소', intent: 'FEAR' });
+    }
+
+    // ⑦ 병원 강점 기반
+    for (const strength of strengths.slice(0, 3)) {
+      suggestions.push({ query: `${shortRegion} ${strength} ${specialty} 어디가 좋아?`, category: '강점', intent: 'RESERVATION' });
+      if (procedures.length > 0) {
+        suggestions.push({ query: `${procedures[0]} 할 건데 ${strength} ${specialty} ${shortRegion}에 있어?`, category: '강점', intent: 'RESERVATION' });
+      }
+    }
+
+    // ⑧ 지역 특화
+    for (const r of targetRegions.slice(0, 2)) {
+      suggestions.push({ query: `${r} 근처 ${specialty} 추천해줘`, category: '지역', intent: 'RESERVATION' });
+      if (procedures.length > 0) {
+        suggestions.push({ query: `${r}에서 ${procedures[0]} 잘하는 ${specialty} 있어?`, category: '지역', intent: 'RESERVATION' });
+      }
+    }
+
+    // ⑨ 플랫폼 특화 질문
+    for (const proc of procedures.slice(0, 2)) {
+      suggestions.push({ query: `${shortRegion} ${proc} ${specialty} 추천. 출처와 근거도 함께 알려줘.`, category: '플랫폼', intent: 'RESERVATION' });
+      suggestions.push({ query: `${shortRegion} ${proc} {specialty} 검색하면 어디가 나와?`.replace('{specialty}', specialty), category: '플랫폼', intent: 'INFORMATION' });
+    }
+
+    // 이미 등록된 질문 텍스트 가져오기
+    const existingPrompts = await this.prisma.prompt.findMany({
+      where: { hospitalId },
+      select: { promptText: true },
+    });
+    const existingSet = new Set(existingPrompts.map(p => p.promptText.trim()));
+
+    // 중복 제거 (이미 등록된 질문 + 자체 중복)
+    const seen = new Set<string>();
+    const filtered = suggestions.filter(s => {
+      const text = s.query.trim();
+      if (existingSet.has(text) || seen.has(text)) return false;
+      seen.add(text);
+      return true;
+    });
+
+    this.logger.log(`병원 ${hospital.name}: 질문 제안 ${filtered.length}개 (후보 ${suggestions.length}개, 기존 ${existingSet.size}개 제외)`);
+
+    return {
+      total: filtered.length,
+      suggestions: filtered,
+      hospital: {
+        name: hospital.name,
+        specialty,
+        region,
+        procedures,
+      },
+    };
+  }
+
+  /**
+   * 진료과별 증상 기반 제안 질문
+   */
+  private getSuggestSymptoms(type: string, region: string, specialty: string, treatments: string[]): Array<{ query: string; category: string; intent: string }> {
+    const q: Array<{ query: string; category: string; intent: string }> = [];
+    const cat = '증상';
+    const intent = 'INFORMATION';
+
+    switch (type) {
+      case 'DENTAL':
+        q.push(
+          { query: `이가 너무 아픈데 ${region} ${specialty} 어디 가면 좋을까?`, category: cat, intent },
+          { query: `앞니가 부러졌는데 ${region}에서 급하게 볼 수 있는 ${specialty} 있어?`, category: cat, intent },
+          { query: `잇몸에서 피가 나는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `충치가 심해졌는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+        );
+        if (treatments.some(t => t.includes('교정'))) {
+          q.push({ query: `치아가 삐뚤어서 교정하고 싶은데 ${region} 교정 잘하는 ${specialty} 어디야?`, category: cat, intent });
+        }
+        if (treatments.some(t => t.includes('사랑니'))) {
+          q.push({ query: `사랑니가 아픈데 ${region}에서 발치 잘하는 ${specialty} 알려줘`, category: cat, intent });
+        }
+        break;
+      case 'DERMATOLOGY':
+        q.push(
+          { query: `얼굴에 여드름이 계속 나는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `기미가 갑자기 심해졌는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+          { query: `피부가 너무 건조하고 가려운데 ${region} ${specialty} 알려줘`, category: cat, intent },
+        );
+        break;
+      case 'ORTHOPEDICS':
+        q.push(
+          { query: `허리가 너무 아픈데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `무릎이 시큰거리는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+          { query: `어깨가 안 올라가는데 ${region} ${specialty} 알려줘`, category: cat, intent },
+        );
+        break;
+      case 'OPHTHALMOLOGY':
+        q.push(
+          { query: `시력이 많이 떨어졌는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `눈이 자주 충혈되는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+        );
+        break;
+      default:
+        q.push(
+          { query: `${region} ${specialty} 처음 가보려는데 추천해줘`, category: cat, intent },
+        );
+    }
+    return q;
+  }
+
+  /**
    * DB에 프리셋 시술 데이터 시드
    */
   async seedSpecialtyPresets(): Promise<{ seeded: number }> {
