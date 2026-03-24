@@ -5,6 +5,22 @@ import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AIPlatform, SentimentLabel } from '@prisma/client';
 
+// 출처 소스 아이템
+interface SourceItem {
+  url: string;
+  title?: string;
+  type: 'citation' | 'grounding' | 'inline_url' | 'hint';  // citation=Perplexity, grounding=Gemini, inline_url=텍스트내URL, hint=추정소스
+  platform: string;  // 어느 AI가 제공한 소스인지
+  domain?: string;   // 도메인 (naver.com, google.com 등)
+}
+
+// 소스 힌트 (ChatGPT/Claude 텍스트에서 추출한 단서)
+interface SourceHints {
+  sources: SourceItem[];
+  hintKeywords: string[];   // "네이버 평점", "블로그 후기" 등 추정 소스 키워드
+  estimatedSources: string[]; // 추정 원본 소스 (네이버 플레이스, 블로그 등)
+}
+
 interface AIQueryResult {
   platform: AIPlatform;
   model: string;
@@ -25,6 +41,7 @@ interface AIQueryResult {
   confidenceScore?: number;    // 할루시네이션 감소: 응답 신뢰도 (0.0~1.0)
   confidenceFactors?: Record<string, number>; // 신뢰도 세부 팩터
   isLowConfidence?: boolean;   // 신뢰도 < 0.4 플래그
+  sourceHints?: SourceHints;   // 출처 분석 데이터
 }
 
 // 측정 결과 집계 (REPEAT_COUNT 변경 시 확장 가능)
@@ -311,6 +328,8 @@ export class AICrawlerService {
               platformWeight: this.getPlatformWeight(platform),
               abhsContribution,
               citedUrl,
+              // 소스 트래킹 데이터
+              sourceHints: result.sourceHints ? JSON.parse(JSON.stringify(result.sourceHints)) : undefined,
             },
           });
 
@@ -569,7 +588,14 @@ export class AICrawlerService {
     const result = this.analyzeResponse(response, hospitalName, 'CHATGPT', model);
     result.isWebSearch = isWebSearch;
     
-    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
+    // 【소스 트래킹】ChatGPT 텍스트에서 소스 힌트 추출
+    const textHints = this.extractSourceHintsFromText(response);
+    const inlineUrls = this.extractInlineUrls(response, 'CHATGPT');
+    result.sourceHints = {
+      sources: inlineUrls,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
+    };
     
     return result;
   }
@@ -679,6 +705,15 @@ export class AICrawlerService {
     const result = this.analyzeResponse(responseText, hospitalName, 'CLAUDE', model);
     result.isWebSearch = isWebSearch;
     
+    // 【소스 트래킹】Claude 텍스트에서 소스 힌트 추출
+    const textHints = this.extractSourceHintsFromText(responseText);
+    const inlineUrls = this.extractInlineUrls(responseText, 'CLAUDE');
+    result.sourceHints = {
+      sources: inlineUrls,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
+    };
+    
     return result;
   }
 
@@ -721,7 +756,7 @@ export class AICrawlerService {
     const text = data.choices?.[0]?.message?.content || '';
     
     // Perplexity citations 추출
-    const citations = data.citations || [];
+    const citations: string[] = data.citations || [];
     
     const result = this.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar');
     result.isWebSearch = true; // Perplexity는 항상 웹 검색 기반
@@ -731,7 +766,24 @@ export class AICrawlerService {
       result.citedSources = [...new Set([...result.citedSources, ...citations])].slice(0, 15);
     }
     
-    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
+    // 【소스 트래킹】Perplexity citations 구조화
+    const sourceItems: SourceItem[] = citations.map(url => ({
+      url,
+      type: 'citation' as const,
+      platform: 'PERPLEXITY',
+      domain: this.extractDomain(url),
+    }));
+    
+    // 텍스트 내 소스 힌트도 추출
+    const textHints = this.extractSourceHintsFromText(text);
+    
+    result.sourceHints = {
+      sources: sourceItems,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(sourceItems, textHints.hintKeywords),
+    };
+    
+    this.logger.log(`[Perplexity] 소스 ${sourceItems.length}개 추출, 힌트 키워드: ${textHints.hintKeywords.join(', ')}`);
     
     return result;
   }
@@ -746,6 +798,7 @@ export class AICrawlerService {
     
     let text = '';
     let isWebSearch = false;
+    let geminiSources: SourceItem[] = [];
 
     try {
       // 【개선8】Google Search grounding 활성화
@@ -782,10 +835,28 @@ export class AICrawlerService {
       text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
       isWebSearch = true;
       
-      // grounding metadata에서 인용 소스 추출
+      // 【소스 트래킹】grounding metadata에서 인용 소스 추출
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+      const geminiSources: SourceItem[] = [];
+      
       if (groundingMetadata?.groundingChunks) {
-        // 추가 인용 소스 처리는 analyzeResponse에서 진행
+        for (const chunk of groundingMetadata.groundingChunks) {
+          if (chunk.web?.uri) {
+            geminiSources.push({
+              url: chunk.web.uri,
+              title: chunk.web.title || undefined,
+              type: 'grounding',
+              platform: 'GEMINI',
+              domain: this.extractDomain(chunk.web.uri),
+            });
+          }
+        }
+        this.logger.log(`[Gemini] grounding 소스 ${geminiSources.length}개 추출`);
+      }
+      
+      // searchEntryPoint에서 검색 쿼리 정보도 저장
+      if (groundingMetadata?.searchEntryPoint?.renderedContent) {
+        this.logger.log(`[Gemini] Google Search grounding 활성 확인`);
       }
       
     } catch (groundingError) {
@@ -819,7 +890,16 @@ export class AICrawlerService {
     const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.0-flash');
     result.isWebSearch = isWebSearch;
     
-    // 【초고도화】ABHS 통합 분석은 queryAllPlatforms에서 일괄 처리
+    // 【소스 트래킹】Gemini 소스 구조화
+    if (geminiSources.length > 0) {
+      result.citedSources = [...new Set([...result.citedSources, ...geminiSources.map(s => s.url)])].slice(0, 15);
+    }
+    const textHints = this.extractSourceHintsFromText(text);
+    result.sourceHints = {
+      sources: geminiSources,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(geminiSources, textHints.hintKeywords),
+    };
     
     return result;
   }
@@ -1958,6 +2038,147 @@ JSON 형식으로만 답변:
     const urlPattern = /https?:\/\/[^\s\)\]]+/g;
     const urls = response.match(urlPattern) || [];
     return [...new Set(urls)].slice(0, 10);
+  }
+
+  // ==================== 소스 트래킹 시스템 ====================
+
+  /**
+   * URL에서 도메인 추출
+   */
+  private extractDomain(url: string): string {
+    try {
+      const u = new URL(url);
+      return u.hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * 응답 텍스트에서 인라인 URL 추출 (ChatGPT/Claude용)
+   */
+  private extractInlineUrls(text: string, platform: string): SourceItem[] {
+    const urlPattern = /https?:\/\/[^\s\)\]\>\"]+/g;
+    const urls = text.match(urlPattern) || [];
+    return [...new Set(urls)].slice(0, 10).map(url => ({
+      url,
+      type: 'inline_url' as const,
+      platform,
+      domain: this.extractDomain(url),
+    }));
+  }
+
+  /**
+   * 응답 텍스트에서 소스 힌트 키워드 추출
+   * ChatGPT/Claude가 출처를 직접 안 주지만, 텍스트에서 단서를 찾을 수 있음
+   * 예: "네이버 평점 4.8점" → 네이버 플레이스 참조 추정
+   */
+  private extractSourceHintsFromText(text: string): { hintKeywords: string[] } {
+    const lowerText = text.toLowerCase();
+    const hints: string[] = [];
+
+    // 네이버 관련
+    const naverPatterns: [RegExp, string][] = [
+      [/네이버\s*(평점|별점|리뷰|후기|평가|스토어|지도|플레이스)/gi, '네이버 플레이스'],
+      [/네이버\s*블로그/gi, '네이버 블로그'],
+      [/네이버\s*카페/gi, '네이버 카페'],
+      [/place\.naver|naver\.me/gi, '네이버 플레이스'],
+      [/blog\.naver/gi, '네이버 블로그'],
+    ];
+
+    // 카카오맵/다음
+    const kakaoPatterns: [RegExp, string][] = [
+      [/카카오\s*맵|카카오맵|다음\s*지도/gi, '카카오맵'],
+      [/카카오\s*(평점|별점|리뷰|후기)/gi, '카카오맵'],
+    ];
+
+    // 구글 관련
+    const googlePatterns: [RegExp, string][] = [
+      [/구글\s*(리뷰|평점|별점|후기|지도|맵|maps)/gi, '구글 리뷰'],
+      [/google\s*(reviews?|maps?|rating)/gi, '구글 리뷰'],
+    ];
+
+    // 의료 정보 사이트
+    const medicalPatterns: [RegExp, string][] = [
+      [/굿닥|모두닥|닥톡|바비톡|강남언니/gi, '의료 플랫폼'],
+      [/건강보험심사평가원|심평원|hira/gi, '심평원'],
+      [/대한\w+학회|대한\w+협회/gi, '학회/협회'],
+    ];
+
+    // 블로그/커뮤니티
+    const communityPatterns: [RegExp, string][] = [
+      [/블로그\s*(후기|리뷰|포스팅|글)/gi, '블로그'],
+      [/맘카페|맘스홀릭|육아\s*카페/gi, '맘카페'],
+      [/지식인|지식\s*in/gi, '네이버 지식인'],
+      [/에브리타임|대학\s*커뮤니티/gi, '커뮤니티'],
+    ];
+
+    // SNS
+    const snsPatterns: [RegExp, string][] = [
+      [/인스타그램|인스타|instagram/gi, '인스타그램'],
+      [/유튜브|youtube/gi, '유튜브'],
+    ];
+
+    // 정량적 데이터 단서
+    const dataPatterns: [RegExp, string][] = [
+      [/평점\s*[\d.]+\s*(점|\/)/gi, '평점 데이터'],
+      [/리뷰\s*[\d,]+\s*건/gi, '리뷰 데이터'],
+      [/(공식|홈페이지|웹사이트|사이트)/gi, '공식 웹사이트'],
+    ];
+
+    const allPatterns = [
+      ...naverPatterns, ...kakaoPatterns, ...googlePatterns,
+      ...medicalPatterns, ...communityPatterns, ...snsPatterns, ...dataPatterns,
+    ];
+
+    for (const [pattern, label] of allPatterns) {
+      if (pattern.test(text)) {
+        if (!hints.includes(label)) {
+          hints.push(label);
+        }
+      }
+    }
+
+    return { hintKeywords: hints };
+  }
+
+  /**
+   * 소스 아이템 + 힌트 키워드를 기반으로 추정 소스 분류
+   */
+  private classifySources(sources: SourceItem[], hintKeywords: string[]): string[] {
+    const estimated: Set<string> = new Set(hintKeywords);
+
+    // URL 도메인 기반 분류
+    const domainMap: Record<string, string> = {
+      'naver.com': '네이버',
+      'blog.naver.com': '네이버 블로그',
+      'place.naver.com': '네이버 플레이스',
+      'map.naver.com': '네이버 지도',
+      'cafe.naver.com': '네이버 카페',
+      'kin.naver.com': '네이버 지식인',
+      'map.kakao.com': '카카오맵',
+      'maps.google.com': '구글맵',
+      'google.com': '구글',
+      'youtube.com': '유튜브',
+      'instagram.com': '인스타그램',
+      'modoodoc.com': '모두닥',
+      'goodoc.co.kr': '굿닥',
+      'babitalk.com': '바비톡',
+      'gangnamunni.com': '강남언니',
+      'hira.or.kr': '심평원',
+    };
+
+    for (const source of sources) {
+      const domain = source.domain || '';
+      for (const [key, label] of Object.entries(domainMap)) {
+        if (domain.includes(key)) {
+          estimated.add(label);
+          break;
+        }
+      }
+    }
+
+    return [...estimated];
   }
 
   // ==================== 할루시네이션 감소 3단계 시스템 ====================

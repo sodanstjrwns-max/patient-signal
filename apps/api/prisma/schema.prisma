@@ -226,6 +226,8 @@ model AIResponse {
   platformWeight       Float?        @map("platform_weight")      // 플랫폼 가중치 (1.0~1.4)
   abhsContribution     Float?        @map("abhs_contribution")    // 이 응답의 ABHS 기여분
   citedUrl             String?       @map("cited_url")            // Perplexity 인용 URL (대표)
+  // 출처 분석 (소스 트래킹)
+  sourceHints          Json?         @map("source_hints")         // {sources: [{url, title, type, platform}], hintKeywords: ["네이버 평점", ...]}
   // 할루시네이션 감소 신뢰도 필드
   confidenceScore      Float?        @map("confidence_score")     // 0.0~1.0 응답 신뢰도
   confidenceFactors    Json?         @map("confidence_factors")   // {crossValidation, uncertaintyMarker, sourceGrounding, ...}
