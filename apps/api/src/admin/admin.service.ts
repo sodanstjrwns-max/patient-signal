@@ -123,35 +123,43 @@ export class AdminService {
       include: {
         redemptions: {
           orderBy: { redeemedAt: 'desc' },
-          include: {
-            user: {
-              select: { name: true, email: true },
-            },
-            hospital: {
-              select: { name: true },
-            },
-          },
         },
       },
     });
 
+    // 각 redemption에 user/hospital 정보 조회
+    const enrichedCoupons = await Promise.all(
+      coupons.map(async (c) => {
+        const enrichedRedemptions = await Promise.all(
+          c.redemptions.map(async (r: any) => {
+            const [user, hospital] = await Promise.all([
+              this.prisma.user.findUnique({ where: { id: r.userId }, select: { name: true, email: true } }).catch(() => null),
+              this.prisma.hospital.findUnique({ where: { id: r.hospitalId }, select: { name: true } }).catch(() => null),
+            ]);
+            return {
+              user: user?.name || '알 수 없음',
+              email: user?.email || '-',
+              hospital: hospital?.name || '-',
+              date: r.redeemedAt,
+            };
+          }),
+        );
+        return {
+          code: c.code,
+          name: c.name,
+          type: c.couponType,
+          maxUses: c.maxUses,
+          currentUses: c.currentUses,
+          remaining: c.maxUses > 0 ? c.maxUses - c.currentUses : '무제한',
+          expiresAt: c.expiresAt,
+          redemptions: enrichedRedemptions,
+        };
+      }),
+    );
+
     return {
-      total: coupons.length,
-      coupons: coupons.map((c) => ({
-        code: c.code,
-        name: c.name,
-        type: c.couponType,
-        maxUses: c.maxUses,
-        currentUses: c.currentUses,
-        remaining: c.maxUses > 0 ? c.maxUses - c.currentUses : '무제한',
-        expiresAt: c.expiresAt,
-        redemptions: c.redemptions.map((r) => ({
-          user: r.user?.name || '알 수 없음',
-          email: r.user?.email,
-          hospital: r.hospital?.name || '-',
-          date: r.redeemedAt,
-        })),
-      })),
+      total: enrichedCoupons.length,
+      coupons: enrichedCoupons,
     };
   }
 }
