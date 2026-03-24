@@ -23,14 +23,14 @@ export class PromptsService {
   async create(hospitalId: string, dto: CreatePromptDto) {
     const maxPrompts = await this.getPromptLimit(hospitalId);
 
-    // 질문 개수 제한 체크 (플랜별)
+    // 질문 개수 제한 체크 (활성 질문만 카운트)
     const currentCount = await this.prisma.prompt.count({
-      where: { hospitalId },
+      where: { hospitalId, isActive: true },
     });
 
     if (currentCount >= maxPrompts) {
       throw new ForbiddenException(
-        `현재 플랜에서는 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다. 플랜을 업그레이드하거나 기존 질문을 삭제해주세요.`
+        `현재 플랜에서는 활성 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다. 플랜을 업그레이드하거나 기존 질문을 비활성화/삭제해주세요.`
       );
     }
 
@@ -49,15 +49,15 @@ export class PromptsService {
   async bulkCreate(hospitalId: string, dto: BulkCreatePromptsDto) {
     const maxPrompts = await this.getPromptLimit(hospitalId);
 
-    // 질문 개수 제한 체크 (플랜별)
+    // 질문 개수 제한 체크 (활성 질문만 카운트)
     const currentCount = await this.prisma.prompt.count({
-      where: { hospitalId },
+      where: { hospitalId, isActive: true },
     });
 
     const remainingSlots = maxPrompts - currentCount;
     if (remainingSlots <= 0) {
       throw new ForbiddenException(
-        `현재 플랜에서는 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다.`
+        `현재 플랜에서는 활성 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다.`
       );
     }
 
@@ -202,9 +202,9 @@ export class PromptsService {
       isActive: true,
     }));
 
-    // 질문 개수 제한 체크
+    // 질문 개수 제한 체크 (활성 질문만 카운트)
     const currentCount = await this.prisma.prompt.count({
-      where: { hospitalId },
+      where: { hospitalId, isActive: true },
     });
 
     const remainingSlots = maxPrompts - currentCount;
@@ -247,10 +247,10 @@ export class PromptsService {
       (v) => v !== baseText,
     );
 
-    // 질문 개수 제한 체크 (플랜별)
+    // 질문 개수 제한 체크 (활성 질문만 카운트)
     const maxPrompts = await this.getPromptLimit(prompt.hospitalId);
     const currentCount = await this.prisma.prompt.count({
-      where: { hospitalId: prompt.hospitalId },
+      where: { hospitalId: prompt.hospitalId, isActive: true },
     });
 
     const remainingSlots = maxPrompts - currentCount;

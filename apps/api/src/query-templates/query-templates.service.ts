@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SpecialtyType, QueryIntent, AIPlatform } from '@prisma/client';
+import { PlanGuard } from '../common/guards/plan.guard';
 
 // ==================== 7개 진료과 프리셋 시술 DB ====================
 
@@ -229,14 +230,25 @@ export class QueryTemplatesService {
       return { created: 0, queries: [] };
     }
 
-    // 기존 PRESET/AUTO_GENERATED 쿼리 비활성화
-    await this.prisma.prompt.updateMany({
+    // 기존 PRESET/AUTO_GENERATED 쿼리 삭제 (비활성화 대신 삭제하여 슬롯 확보)
+    const deleted = await this.prisma.prompt.deleteMany({
       where: {
         hospitalId,
         promptType: { in: ['PRESET', 'AUTO_GENERATED'] },
       },
-      data: { isActive: false },
     });
+    this.logger.log(`기존 자동 질문 ${deleted.count}개 삭제`);
+
+    // 플랜별 한도 체크
+    const planType = hospital.planType || 'FREE';
+    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.FREE;
+    const maxPrompts = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
+    
+    // 커스텀 질문 수 확인 (남은 슬롯 계산)
+    const customCount = await this.prisma.prompt.count({
+      where: { hospitalId, isActive: true },
+    });
+    const availableSlots = Math.max(0, maxPrompts - customCount);
 
     const templates = includeMonthly
       ? [...WEEKLY_QUERY_TEMPLATES, ...MONTHLY_EXTRA_TEMPLATES]
@@ -266,15 +278,16 @@ export class QueryTemplatesService {
       }
     }
 
-    // 대량 삽입
-    if (promptsToCreate.length > 0) {
-      await this.prisma.prompt.createMany({ data: promptsToCreate });
+    // 대량 삽입 (플랜 한도 적용)
+    const promptsLimited = promptsToCreate.slice(0, availableSlots);
+    if (promptsLimited.length > 0) {
+      await this.prisma.prompt.createMany({ data: promptsLimited });
     }
 
-    this.logger.log(`병원 ${hospital.name}: ${promptsToCreate.length}개 쿼리 생성 완료 (시술 ${procedures.length}개 × 템플릿 ${templates.length}개)`);
+    this.logger.log(`병원 ${hospital.name}: ${promptsLimited.length}개 쿼리 생성 완료 (한도 ${maxPrompts}, 커스텀 ${customCount}, 슬롯 ${availableSlots})`);
 
     return {
-      created: promptsToCreate.length,
+      created: promptsLimited.length,
       queries: generatedQueries.slice(0, 20), // 미리보기용 상위 20개
     };
   }
