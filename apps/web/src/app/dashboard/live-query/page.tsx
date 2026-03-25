@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,10 @@ import {
   Target,
   TrendingUp,
   RotateCcw,
+  Gauge,
+  Clock,
+  ArrowUpCircle,
+  Shield,
 } from 'lucide-react';
 
 const platformColors: Record<string, string> = {
@@ -43,6 +47,14 @@ const platformNames: Record<string, string> = {
   CLAUDE: 'Claude',
   PERPLEXITY: 'Perplexity',
   GEMINI: 'Gemini',
+};
+
+const planDisplayNames: Record<string, string> = {
+  FREE: '무료',
+  STARTER: 'Starter',
+  STANDARD: 'Standard',
+  PRO: 'Pro',
+  ENTERPRISE: 'Enterprise',
 };
 
 const getSentimentIcon = (label: string) => {
@@ -64,6 +76,13 @@ const exampleQuestions = [
   '라미네이트 후기 좋은 치과',
 ];
 
+interface UsageInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+  isUnlimited?: boolean;
+}
+
 export default function LiveQueryPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
@@ -76,6 +95,28 @@ export default function LiveQueryPage() {
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // 사용량 상태
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
+  const [planType, setPlanType] = useState<string>('FREE');
+  const [cooldownError, setCooldownError] = useState<string | null>(null);
+  const [limitReachedError, setLimitReachedError] = useState<any>(null);
+
+  // 사용량 조회
+  const fetchUsage = useCallback(async () => {
+    if (!hospitalId) return;
+    try {
+      const res = await crawlerApi.getLiveQueryUsage(hospitalId);
+      setUsage(res.data.usage);
+      setPlanType(res.data.planType);
+    } catch {
+      // 실패 시 무시 (UI에 사용량 미표시)
+    }
+  }, [hospitalId]);
+
+  useEffect(() => {
+    fetchUsage();
+  }, [fetchUsage]);
 
   const togglePlatform = (platform: string) => {
     setPlatforms(prev =>
@@ -95,6 +136,8 @@ export default function LiveQueryPage() {
 
     setLoading(true);
     setError(null);
+    setCooldownError(null);
+    setLimitReachedError(null);
     setResults(null);
     setExpandedPlatform(null);
     if (queryText) setQuestion(queryText);
@@ -104,10 +147,51 @@ export default function LiveQueryPage() {
         question: q.trim(),
         platforms,
       });
-      setResults(res.data);
-      setHistory(prev => [res.data, ...prev].slice(0, 10));
+
+      const data = res.data;
+
+      // 에러 응답 체크 (200이지만 success: false)
+      if (data.success === false) {
+        if (data.error === 'DAILY_LIMIT_REACHED') {
+          setLimitReachedError(data);
+          // 사용량 갱신
+          if (data.usage) {
+            setUsage({
+              used: data.usage.used,
+              limit: data.usage.limit,
+              remaining: 0,
+              isUnlimited: false,
+            });
+          }
+        } else if (data.error === 'COOLDOWN_ACTIVE') {
+          setCooldownError(data.message);
+          if (data.usage) {
+            setUsage({
+              used: data.usage.used,
+              limit: data.usage.limit,
+              remaining: data.usage.remaining,
+              isUnlimited: data.usage.limit === -1,
+            });
+          }
+        } else {
+          setError(data.message || data.error || 'AI 질의 중 오류가 발생했습니다');
+        }
+        return;
+      }
+
+      setResults(data);
+      setHistory(prev => [data, ...prev].slice(0, 10));
+
+      // 사용량 업데이트
+      if (data.usage) {
+        setUsage(data.usage);
+      } else {
+        // fallback: 서버에서 usage를 반환하지 않으면 재조회
+        fetchUsage();
+      }
+
       // 첫 번째 성공한 플랫폼 자동 펼치기
-      const firstSuccess = res.data.responses?.find((r: any) => r.success);
+      const firstSuccess = data.responses?.find((r: any) => r.success);
       if (firstSuccess) setExpandedPlatform(firstSuccess.platform);
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'AI 질의 중 오류가 발생했습니다');
@@ -115,6 +199,15 @@ export default function LiveQueryPage() {
       setLoading(false);
     }
   };
+
+  // 사용량 바 퍼센트
+  const usagePercent = usage 
+    ? usage.isUnlimited 
+      ? 0 
+      : Math.min(100, Math.round((usage.used / usage.limit) * 100))
+    : 0;
+
+  const isLimitReached = usage && !usage.isUnlimited && usage.remaining <= 0;
 
   if (!hospitalId) {
     return (
@@ -139,6 +232,88 @@ export default function LiveQueryPage() {
       <Header title="실시간 AI 질문" description="원하는 질문을 AI에게 직접 물어보고 우리 병원이 언급되는지 확인하세요" />
 
       <div className="p-4 sm:p-6 space-y-6">
+
+        {/* 사용량 배너 */}
+        {usage && (
+          <Card className={`border ${
+            isLimitReached
+              ? 'border-red-200 bg-red-50/50'
+              : usagePercent >= 80
+              ? 'border-yellow-200 bg-yellow-50/30'
+              : 'border-gray-200 bg-white'
+          }`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Gauge className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-700">오늘 사용량</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    planType === 'PRO' || planType === 'ENTERPRISE'
+                      ? 'bg-purple-100 text-purple-700'
+                      : planType === 'STANDARD' || planType === 'STARTER'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {planDisplayNames[planType] || planType}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {usage.isUnlimited ? (
+                    <span className="text-sm font-bold text-purple-600 flex items-center gap-1">
+                      <Shield className="h-3.5 w-3.5" />
+                      무제한
+                    </span>
+                  ) : (
+                    <span className={`text-sm font-bold ${
+                      isLimitReached ? 'text-red-600' : usagePercent >= 80 ? 'text-yellow-600' : 'text-gray-800'
+                    }`}>
+                      {usage.used} / {usage.limit}회
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 프로그래스 바 */}
+              {!usage.isUnlimited && (
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      isLimitReached
+                        ? 'bg-red-500'
+                        : usagePercent >= 80
+                        ? 'bg-yellow-500'
+                        : 'bg-gradient-to-r from-purple-500 to-blue-500'
+                    }`}
+                    style={{ width: `${usagePercent}%` }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                {!usage.isUnlimited && (
+                  <p className={`text-xs ${isLimitReached ? 'text-red-600' : 'text-gray-500'}`}>
+                    {isLimitReached
+                      ? '오늘 사용량을 모두 소진했어요. 내일 자정에 초기화됩니다.'
+                      : `남은 횟수: ${usage.remaining}회`
+                    }
+                  </p>
+                )}
+                {usage.isUnlimited && (
+                  <p className="text-xs text-purple-600">Enterprise 플랜은 무제한으로 이용 가능합니다</p>
+                )}
+                {planType !== 'ENTERPRISE' && planType !== 'PRO' && (
+                  <button
+                    onClick={() => window.location.href = '/dashboard/settings'}
+                    className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                  >
+                    <ArrowUpCircle className="h-3 w-3" />
+                    업그레이드
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 질문 입력 카드 */}
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/30 shadow-sm">
@@ -185,18 +360,23 @@ export default function LiveQueryPage() {
                   placeholder="예: 강남역 임플란트 잘하는 치과 추천해줘"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleQuery()}
+                  onKeyDown={(e) => e.key === 'Enter' && !isLimitReached && handleQuery()}
                   className="pl-10 pr-4 h-12 text-sm border-purple-200 focus:border-purple-400 focus:ring-purple-400"
-                  disabled={loading}
+                  disabled={loading || !!isLimitReached}
                 />
               </div>
               <Button
                 onClick={() => handleQuery()}
-                disabled={!question.trim() || loading || platforms.length === 0}
-                className="h-12 px-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/20"
+                disabled={!question.trim() || loading || platforms.length === 0 || !!isLimitReached}
+                className="h-12 px-6 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/20 disabled:opacity-50"
               >
                 {loading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isLimitReached ? (
+                  <>
+                    <XCircle className="h-4 w-4 mr-1.5" />
+                    소진
+                  </>
                 ) : (
                   <>
                     <Send className="h-4 w-4 mr-1.5" />
@@ -207,7 +387,7 @@ export default function LiveQueryPage() {
             </div>
 
             {/* 예시 질문 */}
-            {!results && !loading && (
+            {!results && !loading && !isLimitReached && (
               <div className="mt-4">
                 <p className="text-xs text-gray-500 mb-2">예시 질문</p>
                 <div className="flex flex-wrap gap-2">
@@ -225,6 +405,64 @@ export default function LiveQueryPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* 일일 제한 도달 안내 */}
+        {limitReachedError && (
+          <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50/30">
+            <CardContent className="p-6 text-center">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-red-100 mb-4">
+                <AlertCircle className="h-7 w-7 text-red-500" />
+              </div>
+              <h3 className="text-lg font-bold text-red-800 mb-2">오늘 사용량을 모두 소진했어요</h3>
+              <p className="text-sm text-red-600 mb-1">
+                {limitReachedError.message}
+              </p>
+              <p className="text-xs text-gray-500 mb-4">
+                매일 자정(00:00)에 사용량이 초기화됩니다.
+              </p>
+              {limitReachedError.upgradeHint && (
+                <div className="bg-white/80 border border-red-100 rounded-xl p-4 inline-block">
+                  <p className="text-xs text-gray-600 mb-3">
+                    {limitReachedError.upgradeHint}
+                  </p>
+                  <div className="flex items-center justify-center gap-3 text-xs">
+                    <span className="text-gray-400">현재: {planDisplayNames[limitReachedError.usage?.planType] || '무료'}</span>
+                    <span className="text-gray-300">→</span>
+                    <span className="text-purple-600 font-bold">
+                      {limitReachedError.usage?.planType === 'FREE' ? 'Starter (10회/일)' :
+                       limitReachedError.usage?.planType === 'STARTER' ? 'Standard (10회/일)' :
+                       limitReachedError.usage?.planType === 'STANDARD' ? 'Pro (30회/일)' : 'Enterprise (무제한)'}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="mt-3 bg-gradient-to-r from-purple-600 to-blue-600"
+                    onClick={() => window.location.href = '/dashboard/settings'}
+                  >
+                    <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />
+                    플랜 업그레이드
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 쿨다운 안내 */}
+        {cooldownError && (
+          <Card className="border-yellow-200 bg-yellow-50/50">
+            <CardContent className="p-5 flex items-start gap-3">
+              <Clock className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-yellow-800">잠깐! 같은 질문 쿨다운 중</p>
+                <p className="text-xs text-yellow-600 mt-1">{cooldownError}</p>
+                <p className="text-xs text-gray-500 mt-2">
+                  다른 질문을 해보시거나, 잠시 후 다시 시도해주세요.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* 로딩 상태 */}
         {loading && (
@@ -288,9 +526,16 @@ export default function LiveQueryPage() {
                     <Target className="h-5 w-5 text-purple-500" />
                     <span className="font-bold text-gray-900">질문 결과</span>
                   </div>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(results.timestamp).toLocaleString('ko-KR')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {usage && !usage.isUnlimited && (
+                      <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {usage.remaining}회 남음
+                      </span>
+                    )}
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(results.timestamp).toLocaleString('ko-KR')}
+                    </span>
+                  </div>
                 </div>
 
                 {/* 질문 표시 */}
@@ -476,6 +721,8 @@ export default function LiveQueryPage() {
                   setResults(null);
                   setQuestion('');
                   setExpandedPlatform(null);
+                  setLimitReachedError(null);
+                  setCooldownError(null);
                   inputRef.current?.focus();
                 }}
                 className="text-purple-600 border-purple-200 hover:bg-purple-50"

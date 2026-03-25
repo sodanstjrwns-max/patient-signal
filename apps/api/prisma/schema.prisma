@@ -496,6 +496,19 @@ model Report {
   @@map("reports")
 }
 
+// 실시간 질문 사용량 테이블
+model LiveQueryUsage {
+  id          String   @id @default(uuid())
+  hospitalId  String   @map("hospital_id")
+  queryText   String   @map("query_text")
+  platforms   String[] // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
+  platformCount Int    @default(4) @map("platform_count") // 실제 질의한 플랫폼 수
+  usedAt      DateTime @default(now()) @map("used_at")
+
+  @@index([hospitalId, usedAt])
+  @@map("live_query_usages")
+}
+
 // 크롤링 작업 테이블
 model CrawlJob {
   id           String      @id @default(uuid())

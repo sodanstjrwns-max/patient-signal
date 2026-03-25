@@ -233,6 +233,8 @@ export const crawlerApi = {
   // 실시간 AI 질문
   liveQuery: (hospitalId: string, data: { question: string; platforms?: string[] }) =>
     api.post(`/ai-crawler/live-query/${hospitalId}`, data, { timeout: 120000 }),
+  getLiveQueryUsage: (hospitalId: string) =>
+    api.get(`/ai-crawler/live-query/usage/${hospitalId}`),
 };
 
 // Scores API

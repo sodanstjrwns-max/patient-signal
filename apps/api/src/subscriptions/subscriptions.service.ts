@@ -403,6 +403,21 @@ export class SubscriptionsService {
       },
     });
 
+    // 오늘 실시간 질문 사용량
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const liveQueryCount = await this.prisma.liveQueryUsage.count({
+      where: {
+        hospitalId,
+        usedAt: { gte: todayStart, lte: todayEnd },
+      },
+    });
+
+    const maxDailyLiveQueries = (limits as any).maxDailyLiveQueries ?? 3;
+
     return {
       planType: hospital.planType,
       usage: {
@@ -420,6 +435,12 @@ export class SubscriptionsService {
           used: crawlCount,
           limit: limits.crawlsPerMonth,
           remaining: limits.crawlsPerMonth === -1 ? -1 : Math.max(0, limits.crawlsPerMonth - crawlCount),
+        },
+        liveQueries: {
+          used: liveQueryCount,
+          limit: maxDailyLiveQueries,
+          remaining: maxDailyLiveQueries === -1 ? -1 : Math.max(0, maxDailyLiveQueries - liveQueryCount),
+          isDaily: true,
         },
       },
       features: {

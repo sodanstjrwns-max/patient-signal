@@ -1346,12 +1346,70 @@ export class AICrawlerController {
     };
   }
 
-  // ==================== 실시간 질문 ====================
+  // ==================== 실시간 질문 (일일 사용량 제한 적용) ====================
+
+  /**
+   * 실시간 질문 사용량 조회 API
+   */
+  @Get('live-query/usage/:hospitalId')
+  @ApiOperation({
+    summary: '실시간 질문 사용량 조회',
+    description: '오늘 사용한 실시간 질문 횟수와 플랜별 제한을 조회합니다',
+  })
+  async getLiveQueryUsage(@Param('hospitalId') hospitalId: string) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, planType: true },
+    });
+
+    if (!hospital) {
+      throw new NotFoundException('병원을 찾을 수 없습니다');
+    }
+
+    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
+    const maxDaily = (limits as any).maxDailyLiveQueries ?? 3;
+
+    // 오늘 사용량 조회
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayCount = await this.prisma.liveQueryUsage.count({
+      where: {
+        hospitalId,
+        usedAt: { gte: todayStart, lte: todayEnd },
+      },
+    });
+
+    // 최근 질문 시간 (쿨다운 체크용)
+    const lastQuery = await this.prisma.liveQueryUsage.findFirst({
+      where: { hospitalId },
+      orderBy: { usedAt: 'desc' },
+      select: { queryText: true, usedAt: true },
+    });
+
+    const isUnlimited = maxDaily === -1;
+
+    return {
+      planType: hospital.planType,
+      usage: {
+        used: todayCount,
+        limit: maxDaily,
+        remaining: isUnlimited ? -1 : Math.max(0, maxDaily - todayCount),
+        isUnlimited,
+      },
+      cooldown: {
+        lastQueryAt: lastQuery?.usedAt || null,
+        cooldownSeconds: 300, // 5분
+      },
+    };
+  }
 
   @Post('live-query/:hospitalId')
   @ApiOperation({ 
-    summary: '실시간 AI 질문',
-    description: '사용자가 원하는 질문을 선택한 AI 플랫폼에 실시간으로 물어보고 결과를 즉시 반환합니다' 
+    summary: '실시간 AI 질문 (사용량 제한 적용)',
+    description: '사용자가 원하는 질문을 선택한 AI 플랫폼에 실시간으로 물어보고 결과를 즉시 반환합니다. 플랜별 일일 사용량 제한과 5분 쿨다운이 적용됩니다.' 
   })
   async liveQuery(
     @Param('hospitalId') hospitalId: string,
@@ -1360,7 +1418,7 @@ export class AICrawlerController {
   ) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, planType: true },
     });
 
     if (!hospital) {
@@ -1372,14 +1430,92 @@ export class AICrawlerController {
       return { success: false, error: '질문을 입력해주세요' };
     }
 
+    // ── 1. 플랜별 일일 사용량 제한 체크 ──
+    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
+    const maxDaily = (limits as any).maxDailyLiveQueries ?? 3;
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const todayCount = await this.prisma.liveQueryUsage.count({
+      where: {
+        hospitalId,
+        usedAt: { gte: todayStart, lte: todayEnd },
+      },
+    });
+
+    if (maxDaily !== -1 && todayCount >= maxDaily) {
+      const planNames: Record<string, string> = {
+        FREE: '무료',
+        STARTER: 'Starter',
+        STANDARD: 'Standard',
+        PRO: 'Pro',
+        ENTERPRISE: 'Enterprise',
+      };
+      return {
+        success: false,
+        error: 'DAILY_LIMIT_REACHED',
+        message: `오늘의 실시간 질문 횟수(${maxDaily}회)를 모두 사용했습니다.`,
+        usage: {
+          used: todayCount,
+          limit: maxDaily,
+          remaining: 0,
+          planType: hospital.planType,
+          planName: planNames[hospital.planType] || hospital.planType,
+        },
+        upgradeHint: hospital.planType !== 'ENTERPRISE'
+          ? `플랜을 업그레이드하면 더 많은 질문이 가능해요!`
+          : null,
+      };
+    }
+
+    // ── 2. 쿨다운 체크 (같은 질문 5분 이내 재질문 방지) ──
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    const recentSameQuery = await this.prisma.liveQueryUsage.findFirst({
+      where: {
+        hospitalId,
+        queryText: question.trim(),
+        usedAt: { gte: fiveMinutesAgo },
+      },
+    });
+
+    if (recentSameQuery) {
+      const cooldownRemaining = Math.ceil(
+        (recentSameQuery.usedAt.getTime() + 5 * 60 * 1000 - Date.now()) / 1000,
+      );
+      return {
+        success: false,
+        error: 'COOLDOWN_ACTIVE',
+        message: `같은 질문은 5분 후에 다시 할 수 있어요. (${Math.ceil(cooldownRemaining / 60)}분 ${cooldownRemaining % 60}초 남음)`,
+        cooldownRemaining,
+        usage: {
+          used: todayCount,
+          limit: maxDaily,
+          remaining: maxDaily === -1 ? -1 : Math.max(0, maxDaily - todayCount),
+        },
+      };
+    }
+
     // 플랫폼 선택 (기본: 전체)
     const selectedPlatforms = (platforms && platforms.length > 0) 
       ? platforms.filter((p: string) => ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'].includes(p))
       : ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
 
-    this.logger.log(`[LiveQuery] 질문: "${question.substring(0, 50)}", 플랫폼: ${selectedPlatforms.join(', ')}`);
+    this.logger.log(`[LiveQuery] 질문: "${question.substring(0, 50)}", 플랫폼: ${selectedPlatforms.join(', ')}, 사용량: ${todayCount + 1}/${maxDaily === -1 ? '∞' : maxDaily}`);
 
-    // 각 플랫폼에 병렬로 질의
+    // ── 3. 사용량 기록 (질의 전에 기록 → 실패해도 카운트) ──
+    await this.prisma.liveQueryUsage.create({
+      data: {
+        hospitalId,
+        queryText: question.trim(),
+        platforms: selectedPlatforms,
+        platformCount: selectedPlatforms.length,
+      },
+    });
+
+    // ── 4. 각 플랫폼에 병렬로 질의 ──
     const results = await Promise.allSettled(
       selectedPlatforms.map(async (platform: string) => {
         try {
@@ -1424,6 +1560,7 @@ export class AICrawlerController {
     // 요약 통계
     const successCount = responses.filter(r => r.success).length;
     const mentionedCount = responses.filter(r => r.success && r.isMentioned).length;
+    const newUsed = todayCount + 1;
 
     return {
       question: question.trim(),
@@ -1434,6 +1571,13 @@ export class AICrawlerController {
       mentionedCount,
       mentionRate: successCount > 0 ? Math.round((mentionedCount / successCount) * 100) : 0,
       responses,
+      // 사용량 정보 함께 반환
+      usage: {
+        used: newUsed,
+        limit: maxDaily,
+        remaining: maxDaily === -1 ? -1 : Math.max(0, maxDaily - newUsed),
+        isUnlimited: maxDaily === -1,
+      },
     };
   }
 
