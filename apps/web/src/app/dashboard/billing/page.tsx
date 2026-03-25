@@ -56,7 +56,7 @@ const PLAN_INFO: Record<string, {
     description: '기본 AI 가시성 모니터링',
     features: [
       '모니터링 질문 5개',
-      '2개 AI 플랫폼 (Perplexity, Gemini)',
+      '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
       '매일 크롤링 (월 30회)',
       '경쟁사 1개 비교 분석',
       'ABHS 점수 & 주간 리포트',

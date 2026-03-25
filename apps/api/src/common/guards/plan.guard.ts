@@ -38,7 +38,7 @@ export class PlanGuard implements CanActivate {
     STARTER: {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
-      platforms: ['PERPLEXITY', 'GEMINI'],  // API 저렴한 2개
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // 4개 AI 전체 개방 (데이터 품질 > 비용 절감)
       crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
       maxDailyLiveQueries: 5,      // 실시간 질문 5회/일
       exportEnabled: false,
