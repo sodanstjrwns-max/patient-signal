@@ -128,50 +128,6 @@ export default function ResponsesPage() {
     }
   };
 
-  // === 실시간 질문 상태 ===
-  const [liveQuestion, setLiveQuestion] = useState('');
-  const [liveLoading, setLiveLoading] = useState(false);
-  const [liveResults, setLiveResults] = useState<any>(null);
-  const [liveError, setLiveError] = useState<string | null>(null);
-  const [livePlatforms, setLivePlatforms] = useState<string[]>(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI']);
-  const [liveExpandedPlatform, setLiveExpandedPlatform] = useState<string | null>(null);
-  const [liveHistory, setLiveHistory] = useState<any[]>([]);
-  const liveInputRef = useRef<HTMLInputElement>(null);
-
-  const toggleLivePlatform = (platform: string) => {
-    setLivePlatforms(prev => 
-      prev.includes(platform) 
-        ? prev.filter(p => p !== platform) 
-        : [...prev, platform]
-    );
-  };
-
-  const handleLiveQuery = async () => {
-    if (!hospitalId || !liveQuestion.trim() || liveLoading) return;
-    if (livePlatforms.length === 0) {
-      setLiveError('최소 1개 이상의 AI 플랫폼을 선택해주세요');
-      return;
-    }
-
-    setLiveLoading(true);
-    setLiveError(null);
-    setLiveResults(null);
-
-    try {
-      const res = await crawlerApi.liveQuery(hospitalId, {
-        question: liveQuestion.trim(),
-        platforms: livePlatforms,
-      });
-      setLiveResults(res.data);
-      // 히스토리에 추가 (최근 5개)
-      setLiveHistory(prev => [res.data, ...prev].slice(0, 5));
-    } catch (err: any) {
-      setLiveError(err?.response?.data?.message || err?.message || 'AI 질의 중 오류가 발생했습니다');
-    } finally {
-      setLiveLoading(false);
-    }
-  };
-
   if (!hospitalId) {
     return (
       <div className="min-h-screen">
