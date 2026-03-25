@@ -230,6 +230,9 @@ export const crawlerApi = {
     api.post(`/ai-crawler/content-gap/${hospitalId}`),
   generateBlogDraft: (hospitalId: string, gapId: string) =>
     api.post(`/ai-crawler/content-gap/${hospitalId}/blog-draft/${gapId}`),
+  // 실시간 AI 질문
+  liveQuery: (hospitalId: string, data: { question: string; platforms?: string[] }) =>
+    api.post(`/ai-crawler/live-query/${hospitalId}`, data, { timeout: 120000 }),
 };
 
 // Scores API

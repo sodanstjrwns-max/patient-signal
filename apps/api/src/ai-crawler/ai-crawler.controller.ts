@@ -1346,6 +1346,97 @@ export class AICrawlerController {
     };
   }
 
+  // ==================== 실시간 질문 ====================
+
+  @Post('live-query/:hospitalId')
+  @ApiOperation({ 
+    summary: '실시간 AI 질문',
+    description: '사용자가 원하는 질문을 선택한 AI 플랫폼에 실시간으로 물어보고 결과를 즉시 반환합니다' 
+  })
+  async liveQuery(
+    @Param('hospitalId') hospitalId: string,
+    @Body() body: { question: string; platforms?: string[] },
+    @Req() req: any,
+  ) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true },
+    });
+
+    if (!hospital) {
+      throw new NotFoundException('병원을 찾을 수 없습니다');
+    }
+
+    const { question, platforms } = body;
+    if (!question || question.trim().length === 0) {
+      return { success: false, error: '질문을 입력해주세요' };
+    }
+
+    // 플랫폼 선택 (기본: 전체)
+    const selectedPlatforms = (platforms && platforms.length > 0) 
+      ? platforms.filter((p: string) => ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'].includes(p))
+      : ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+
+    this.logger.log(`[LiveQuery] 질문: "${question.substring(0, 50)}", 플랫폼: ${selectedPlatforms.join(', ')}`);
+
+    // 각 플랫폼에 병렬로 질의
+    const results = await Promise.allSettled(
+      selectedPlatforms.map(async (platform: string) => {
+        try {
+          const result = await this.aiCrawlerService.queryPlatformPublic(
+            platform as any,
+            question.trim(),
+            hospital.name,
+          );
+          return {
+            platform,
+            platformName: platformNames[platform] || platform,
+            success: true,
+            isMentioned: result.isMentioned,
+            mentionPosition: result.mentionPosition,
+            totalRecommendations: result.totalRecommendations,
+            response: result.response,
+            competitorsMentioned: result.competitorsMentioned,
+            citedSources: result.citedSources,
+            sentimentLabel: result.sentimentLabel || 'NEUTRAL',
+            sourceHints: result.sourceHints || null,
+          };
+        } catch (error) {
+          return {
+            platform,
+            platformName: platformNames[platform] || platform,
+            success: false,
+            error: error.message,
+          };
+        }
+      }),
+    );
+
+    const responses = results.map(r => 
+      r.status === 'fulfilled' ? r.value : { 
+        platform: 'UNKNOWN', 
+        platformName: 'Unknown', 
+        success: false, 
+        error: 'Request failed' 
+      }
+    );
+
+    // 요약 통계
+    const successCount = responses.filter(r => r.success).length;
+    const mentionedCount = responses.filter(r => r.success && r.isMentioned).length;
+
+    return {
+      question: question.trim(),
+      hospitalName: hospital.name,
+      timestamp: new Date().toISOString(),
+      totalPlatforms: selectedPlatforms.length,
+      successCount,
+      mentionedCount,
+      mentionRate: successCount > 0 ? Math.round((mentionedCount / successCount) * 100) : 0,
+      responses,
+    };
+  }
+
   @Post('score/:hospitalId')
   @ApiOperation({ summary: '일일 점수 계산 (개선: 다수결 기반)' })
   async calculateScore(@Param('hospitalId') hospitalId: string) {

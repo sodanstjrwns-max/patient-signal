@@ -15,7 +15,7 @@ interface SourceItem {
 }
 
 // 소스 힌트 (ChatGPT/Claude 텍스트에서 추출한 단서)
-interface SourceHints {
+export interface SourceHints {
   sources: SourceItem[];
   hintKeywords: string[];   // "네이버 평점", "블로그 후기" 등 추정 소스 키워드
   estimatedSources: string[]; // 추정 원본 소스 (네이버 플레이스, 블로그 등)
@@ -484,6 +484,17 @@ export class AICrawlerService {
     }
     
     throw lastError || new Error(`${label} 최대 재시도 초과`);
+  }
+
+  /**
+   * 실시간 질문용 - 외부에서 호출 가능한 단일 플랫폼 질의
+   */
+  async queryPlatformPublic(
+    platform: AIPlatform,
+    promptText: string,
+    hospitalName: string,
+  ): Promise<AIQueryResult> {
+    return this.queryPlatform(platform, promptText, hospitalName);
   }
 
   /**
