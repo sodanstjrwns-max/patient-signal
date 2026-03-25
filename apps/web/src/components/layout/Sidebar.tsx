@@ -18,6 +18,7 @@ import {
   X,
   CreditCard,
   Lightbulb,
+  Zap,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -26,6 +27,7 @@ const navigation = [
   { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
   { name: '질문 관리', href: '/dashboard/prompts', icon: MessageSquare },
   { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
+  { name: '실시간 질문', href: '/dashboard/live-query', icon: Zap },
   { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
   { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
   { name: '경쟁사', href: '/dashboard/competitors', icon: Users },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,12 +25,6 @@ import {
   CheckCircle,
   XCircle,
   Filter,
-  Zap,
-  Send,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-  Link2,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -492,309 +486,25 @@ export default function ResponsesPage() {
           </div>
         )}
 
-        {/* ============================== */}
-        {/* 실시간 AI 질문 섹션 */}
-        {/* ============================== */}
-        <div className="mt-8 pt-6 border-t-2 border-dashed border-blue-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-              <Zap className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">실시간 AI 질문</h2>
-              <p className="text-xs text-gray-500">원하는 질문을 AI에게 직접 물어보고 실시간으로 확인하세요</p>
-            </div>
-          </div>
-
-          <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/50">
-            <CardContent className="p-4 sm:p-6">
-              {/* 플랫폼 선택 */}
-              <div className="mb-4">
-                <p className="text-xs font-medium text-gray-600 mb-2">질문할 AI 플랫폼 선택</p>
-                <div className="flex flex-wrap gap-2">
-                  {(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'] as const).map((platform) => (
-                    <button
-                      key={platform}
-                      onClick={() => toggleLivePlatform(platform)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                        livePlatforms.includes(platform)
-                          ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm`
-                          : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                      }`}
-                    >
-                      {platformNames[platform]}
-                      {livePlatforms.includes(platform) && (
-                        <CheckCircle className="inline h-3 w-3 ml-1" />
-                      )}
-                    </button>
-                  ))}
+        {/* 실시간 질문 안내 배너 */}
+        <Link href="/dashboard/live-query">
+          <Card className="mt-6 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-md transition-all cursor-pointer group">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">AI에게 직접 질문해보기</p>
+                  <p className="text-xs text-gray-500">원하는 질문을 실시간으로 4개 AI에 동시에 물어보세요</p>
                 </div>
               </div>
-
-              {/* 질문 입력 */}
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-400" />
-                  <Input
-                    ref={liveInputRef}
-                    placeholder="예: 강남역 임플란트 잘하는 치과 추천해줘"
-                    value={liveQuestion}
-                    onChange={(e) => setLiveQuestion(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleLiveQuery()}
-                    className="pl-10 pr-4 h-11 border-purple-200 focus:border-purple-400 focus:ring-purple-400"
-                    disabled={liveLoading}
-                  />
-                </div>
-                <Button
-                  onClick={handleLiveQuery}
-                  disabled={!liveQuestion.trim() || liveLoading || livePlatforms.length === 0}
-                  className="h-11 px-5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg shadow-purple-500/20"
-                >
-                  {liveLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 mr-1.5" />
-                      질문하기
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* 로딩 상태 */}
-              {liveLoading && (
-                <div className="mt-4 p-6 bg-white/70 rounded-xl border border-purple-100">
-                  <div className="flex items-center justify-center gap-3">
-                    <div className="relative">
-                      <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-                      <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1 animate-pulse" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-gray-800">AI에게 질문하는 중...</p>
-                      <p className="text-xs text-gray-500">
-                        {livePlatforms.map(p => platformNames[p]).join(', ')}에 동시에 질문하고 있어요
-                      </p>
-                    </div>
-                  </div>
-                  {/* 플랫폼별 로딩 인디케이터 */}
-                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {livePlatforms.map((platform) => (
-                      <div key={platform} className="flex items-center gap-2 bg-gray-50 rounded-lg p-2">
-                        <div className="h-2 w-2 rounded-full bg-purple-400 animate-pulse" />
-                        <span className="text-xs text-gray-600">{platformNames[platform]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 에러 */}
-              {liveError && (
-                <div className="mt-4 p-4 bg-red-50 rounded-xl border border-red-200 flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-red-800">질의 실패</p>
-                    <p className="text-xs text-red-600 mt-1">{liveError}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 결과 */}
-              {liveResults && !liveLoading && (
-                <div className="mt-4 space-y-3">
-                  {/* 요약 카드 */}
-                  <div className="p-4 bg-white rounded-xl border border-purple-100 shadow-sm">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                        <span className="text-sm font-bold text-gray-900">질문 결과</span>
-                      </div>
-                      <span className="text-[10px] text-gray-400">
-                        {new Date(liveResults.timestamp).toLocaleString('ko-KR')}
-                      </span>
-                    </div>
-                    <div className="bg-purple-50 rounded-lg p-3 mb-3">
-                      <p className="text-sm font-medium text-purple-900">
-                        Q: {liveResults.question}
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-gray-800">{liveResults.successCount}/{liveResults.totalPlatforms}</p>
-                        <p className="text-[10px] text-gray-500">응답 성공</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-green-600">{liveResults.mentionedCount}</p>
-                        <p className="text-[10px] text-gray-500">우리 병원 언급</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-2">
-                        <p className="text-lg font-bold text-blue-600">{liveResults.mentionRate}%</p>
-                        <p className="text-[10px] text-gray-500">언급률</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 플랫폼별 결과 */}
-                  {liveResults.responses?.map((resp: any) => (
-                    <div
-                      key={resp.platform}
-                      className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${
-                        resp.success && resp.isMentioned
-                          ? 'border-l-4 border-l-green-400 border-green-100'
-                          : resp.success
-                          ? 'border-gray-200'
-                          : 'border-red-200 bg-red-50/50'
-                      }`}
-                    >
-                      {/* 플랫폼 헤더 */}
-                      <button
-                        className="w-full p-3 sm:p-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
-                        onClick={() => setLiveExpandedPlatform(
-                          liveExpandedPlatform === resp.platform ? null : resp.platform
-                        )}
-                      >
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${platformColors[resp.platform]}`}>
-                            {resp.platformName}
-                          </span>
-                          {resp.success ? (
-                            resp.isMentioned ? (
-                              <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
-                                <Award className="h-4 w-4" />
-                                {resp.mentionPosition ? `${resp.mentionPosition}위 추천` : '언급됨'}
-                              </span>
-                            ) : (
-                              <span className="text-sm text-gray-400">언급 안됨</span>
-                            )
-                          ) : (
-                            <span className="text-sm text-red-500 flex items-center gap-1">
-                              <XCircle className="h-3.5 w-3.5" />
-                              응답 실패
-                            </span>
-                          )}
-                          {resp.success && resp.sentimentLabel && (
-                            <span className="hidden sm:flex items-center gap-1">
-                              {getSentimentIcon(resp.sentimentLabel)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {resp.success && resp.totalRecommendations > 0 && (
-                            <span className="text-xs text-gray-500 hidden sm:block">
-                              총 {resp.totalRecommendations}곳 추천
-                            </span>
-                          )}
-                          {liveExpandedPlatform === resp.platform ? (
-                            <ChevronUp className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-gray-400" />
-                          )}
-                        </div>
-                      </button>
-
-                      {/* 펼쳐진 응답 내용 */}
-                      {liveExpandedPlatform === resp.platform && resp.success && (
-                        <div className="px-3 sm:px-4 pb-4 border-t border-gray-100">
-                          <div className="mt-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg p-3 max-h-96 overflow-y-auto">
-                            {resp.response}
-                          </div>
-
-                          {/* 함께 언급된 경쟁사 */}
-                          {resp.competitorsMentioned?.length > 0 && (
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                              <span className="text-xs text-gray-500 mr-1">함께 언급:</span>
-                              {resp.competitorsMentioned.map((comp: string, i: number) => (
-                                <span key={i} className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
-                                  {comp}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* 출처 링크 */}
-                          {resp.citedSources?.length > 0 && (
-                            <div className="mt-3">
-                              <p className="text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
-                                <Link2 className="h-3 w-3" />
-                                출처
-                              </p>
-                              <div className="space-y-1">
-                                {resp.citedSources.slice(0, 5).map((url: string, i: number) => (
-                                  <a
-                                    key={i}
-                                    href={url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline truncate"
-                                  >
-                                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                                    <span className="truncate">{url}</span>
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {/* 다시 질문 */}
-                  <div className="flex justify-center pt-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setLiveResults(null);
-                        setLiveQuestion('');
-                        liveInputRef.current?.focus();
-                      }}
-                      className="text-purple-600 border-purple-200 hover:bg-purple-50"
-                    >
-                      <Zap className="h-3.5 w-3.5 mr-1.5" />
-                      새 질문하기
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* 최근 질문 히스토리 */}
-              {liveHistory.length > 1 && !liveLoading && (
-                <div className="mt-6 pt-4 border-t border-purple-100">
-                  <p className="text-xs font-medium text-gray-500 mb-2">최근 질문</p>
-                  <div className="space-y-1.5">
-                    {liveHistory.slice(1).map((item, idx) => (
-                      <button
-                        key={idx}
-                        className="w-full text-left p-2.5 bg-white/60 rounded-lg hover:bg-white transition-colors border border-transparent hover:border-purple-100"
-                        onClick={() => {
-                          setLiveResults(item);
-                          setLiveQuestion(item.question);
-                        }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-700 truncate flex-1 mr-2">
-                            {item.question}
-                          </span>
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`text-xs font-medium ${
-                              item.mentionRate > 50 ? 'text-green-600' : item.mentionRate > 0 ? 'text-yellow-600' : 'text-gray-400'
-                            }`}>
-                              {item.mentionRate}%
-                            </span>
-                            <span className="text-[10px] text-gray-400">
-                              {item.mentionedCount}/{item.successCount}
-                            </span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
+                질문하기
+              </Button>
             </CardContent>
           </Card>
-        </div>
+        </Link>
 
       </div>
     </div>
