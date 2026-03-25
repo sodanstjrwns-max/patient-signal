@@ -262,7 +262,7 @@ export default function LiveQueryPage() {
           className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl hover:from-purple-100 hover:to-blue-100 transition-all group"
         >
           <div className="flex items-center gap-2.5">
-            <PieChart className="h-4.5 w-4.5 text-purple-500" />
+            <PieChart className="h-4 w-4 text-purple-500" />
             <span className="text-sm font-semibold text-gray-800">카테고리별 성과 분석</span>
             <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">실시간 + 크롤링 통합</span>
           </div>
@@ -270,7 +270,6 @@ export default function LiveQueryPage() {
         </button>
 
         {/* ==================== 질문 영역 ==================== */}
-        <>
             {/* 질문 입력 카드 */}
             <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/30 shadow-sm">
               <CardContent className="p-5 sm:p-6">
@@ -548,8 +547,6 @@ export default function LiveQueryPage() {
                 </CardContent>
               </Card>
             )}
-          </>
-        </>
 
       </div>
     </div>
