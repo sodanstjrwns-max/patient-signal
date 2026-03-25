@@ -12,7 +12,6 @@ import {
   TrendingUp,
   TrendingDown,
   AlertCircle,
-  Activity,
   Stethoscope,
   Heart,
   DollarSign,
@@ -21,15 +20,14 @@ import {
   GitCompare,
   HelpCircle,
   Zap,
-  BarChart3,
-  Target,
   Star,
   ChevronDown,
   ChevronUp,
-  Sparkles,
   ArrowRight,
   Tag,
   Database,
+  Settings,
+  Crosshair,
 } from 'lucide-react';
 
 const categoryConfig: Record<string, { name: string; icon: any; color: string; bgColor: string; borderColor: string; barColor: string; emoji: string; description: string }> = {
@@ -225,6 +223,124 @@ export default function CategoryAnalysisPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* ==================== 진료별 드릴다운 ==================== */}
+            {data.myProcedures?.length > 0 && (
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50/40 to-indigo-50/20">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Crosshair className="h-5 w-5 text-blue-600" />
+                      <h3 className="font-bold text-gray-900">내 핵심 진료별 성과</h3>
+                    </div>
+                    <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                      등록된 진료 {data.myProcedures.length}개
+                    </span>
+                  </div>
+
+                  {data.procedureDrilldown?.length > 0 ? (
+                    <div className="space-y-3">
+                      {data.procedureDrilldown.map((proc: any) => {
+                        const hasData = proc.totalQueries > 0;
+                        return (
+                          <div key={proc.procedure} className={`rounded-xl border p-4 bg-white ${hasData ? 'border-gray-200' : 'border-dashed border-gray-300'}`}>
+                            {/* 진료명 + 언급률 */}
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base">🦷</span>
+                                <span className="text-sm font-bold text-gray-900">{proc.procedure}</span>
+                                {hasData && (
+                                  <span className="text-[10px] text-gray-400">
+                                    {proc.totalQueries}회 ({proc.liveQueries > 0 ? `실시간 ${proc.liveQueries}` : ''}{proc.liveQueries > 0 && proc.crawlQueries > 0 ? ' + ' : ''}{proc.crawlQueries > 0 ? `크롤링 ${proc.crawlQueries}` : ''})
+                                  </span>
+                                )}
+                              </div>
+                              {hasData ? (
+                                <span className={`text-xl font-bold ${proc.avgMentionRate >= 50 ? 'text-green-600' : proc.avgMentionRate > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
+                                  {proc.avgMentionRate}%
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">데이터 없음</span>
+                              )}
+                            </div>
+
+                            {hasData && (
+                              <>
+                                {/* 프로그래스 바 */}
+                                <div className="w-full bg-gray-100 rounded-full h-2.5 mb-3">
+                                  <div
+                                    className={`h-2.5 rounded-full transition-all ${proc.avgMentionRate >= 50 ? 'bg-green-400' : proc.avgMentionRate > 0 ? 'bg-yellow-400' : 'bg-gray-300'}`}
+                                    style={{ width: `${proc.avgMentionRate}%` }}
+                                  />
+                                </div>
+
+                                {/* 실시간 vs 크롤링 비교 */}
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                  <div className="bg-purple-50/70 rounded-lg px-3 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Zap className="h-3 w-3 text-purple-500" />
+                                      <span className="text-sm font-bold text-purple-700">{proc.liveAvgRate}%</span>
+                                    </div>
+                                    <p className="text-[9px] text-purple-500 mt-0.5">실시간 ({proc.liveQueries})</p>
+                                  </div>
+                                  <div className="bg-blue-50/70 rounded-lg px-3 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Database className="h-3 w-3 text-blue-500" />
+                                      <span className="text-sm font-bold text-blue-700">{proc.crawlAvgRate}%</span>
+                                    </div>
+                                    <p className="text-[9px] text-blue-500 mt-0.5">크롤링 ({proc.crawlQueries})</p>
+                                  </div>
+                                </div>
+
+                                {/* 대표 질문 */}
+                                {proc.sampleQuestions?.length > 0 && (
+                                  <div className="space-y-1">
+                                    {proc.sampleQuestions.slice(0, 3).map((q: any, i: number) => (
+                                      <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-1.5">
+                                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                                          <span className="text-[10px]">{q.type === 'live' ? '⚡' : '🔄'}</span>
+                                          <span className="text-[11px] text-gray-600 truncate">{q.text}</span>
+                                        </div>
+                                        <span className={`text-[11px] font-bold ml-2 ${q.mentionRate > 0 ? 'text-green-600' : 'text-gray-400'}`}>{q.mentionRate}%</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                            {!hasData && (
+                              <p className="text-xs text-gray-400 mt-1">
+                                이 진료에 대한 질문이나 크롤링 데이터가 아직 없어요.
+                                <button onClick={() => window.location.href = '/dashboard/live-query'} className="text-purple-600 hover:underline ml-1">질문해보기</button>
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="text-sm text-gray-500">등록된 진료에 대한 데이터를 수집 중이에요</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* 핵심 진료 미등록 시 안내 */}
+            {(!data.myProcedures || data.myProcedures.length === 0) && (
+              <Card className="border-dashed border-2 border-blue-200 bg-blue-50/20">
+                <CardContent className="p-5 text-center">
+                  <Settings className="h-8 w-8 text-blue-400 mx-auto mb-3" />
+                  <h4 className="text-sm font-bold text-gray-800 mb-1">핵심 진료를 등록하면 진료별 성과를 볼 수 있어요</h4>
+                  <p className="text-xs text-gray-500 mb-3">설정에서 우리 병원의 핵심 시술을 등록해주세요</p>
+                  <Button size="sm" variant="outline" className="border-blue-300 text-blue-600" onClick={() => window.location.href = '/dashboard/settings'}>
+                    <Settings className="h-3.5 w-3.5 mr-1.5" />설정에서 등록하기
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             {/* 카테고리별 상세 카드 */}
             <div>

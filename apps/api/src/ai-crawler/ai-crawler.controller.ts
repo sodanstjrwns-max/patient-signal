@@ -1842,13 +1842,19 @@ export class AICrawlerController {
   ) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, keyProcedures: true, subSpecialties: true },
     });
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
     const daysNum = parseInt(days || '30', 10);
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
+
+    // 병원이 등록한 핵심 진료 목록
+    const myProcedures: string[] = [
+      ...(hospital.keyProcedures || []),
+      ...(hospital.subSpecialties || []),
+    ].filter((v, i, arr) => arr.indexOf(v) === i); // 중복 제거
 
     const categoryDisplayNames: Record<string, string> = {
       PROCEDURE: '시술/진료',
@@ -2014,6 +2020,53 @@ export class AICrawlerController {
     });
     const totalMentionRate = avgRate(allRates);
 
+    // ── 5. 진료별 드릴다운 (PROCEDURE 카테고리 내 병원 핵심진료별 분석) ──
+    const procedureDrilldown = myProcedures.map(proc => {
+      const procLower = proc.toLowerCase();
+
+      // 실시간 질문 중 해당 진료 관련
+      const liveMatched = liveQueries.filter(q => {
+        const tag = (q.categoryTag || '').toLowerCase();
+        const text = (q.queryText || '').toLowerCase();
+        return tag.includes(procLower) || text.includes(procLower);
+      });
+
+      // 크롤링 프롬프트 중 해당 진료 관련
+      const crawlMatched: { mentionRate: number }[] = [];
+      for (const [promptId, info] of promptCategoryMap) {
+        if (info.promptText.toLowerCase().includes(procLower) || info.categoryTag.toLowerCase().includes(procLower)) {
+          const result = promptResultMap.get(promptId);
+          if (result && result.total > 0) {
+            crawlMatched.push({ mentionRate: Math.round((result.mentioned / result.total) * 100) });
+          }
+        }
+      }
+
+      const liveRates = liveMatched.map(q => q.mentionRate);
+      const crawlRates = crawlMatched.map(r => r.mentionRate);
+      const allProcRates = [...liveRates, ...crawlRates];
+
+      return {
+        procedure: proc,
+        totalQueries: liveMatched.length + crawlMatched.length,
+        liveQueries: liveMatched.length,
+        crawlQueries: crawlMatched.length,
+        avgMentionRate: avgRate(allProcRates),
+        liveAvgRate: avgRate(liveRates),
+        crawlAvgRate: avgRate(crawlRates),
+        // 대표 질문
+        sampleQuestions: [
+          ...liveMatched.map(q => ({ text: q.queryText, type: 'live' as const, mentionRate: q.mentionRate })),
+          ...Array.from(promptCategoryMap.entries())
+            .filter(([pid, info]) => info.promptText.toLowerCase().includes(procLower))
+            .map(([pid, info]) => {
+              const r = promptResultMap.get(pid);
+              return { text: info.promptText, type: 'crawl' as const, mentionRate: r ? Math.round((r.mentioned / r.total) * 100) : 0 };
+            }),
+        ].sort((a, b) => b.mentionRate - a.mentionRate).slice(0, 5),
+      };
+    }).sort((a, b) => b.totalQueries - a.totalQueries);
+
     return {
       hospitalName: hospital.name,
       period: `최근 ${daysNum}일`,
@@ -2024,6 +2077,9 @@ export class AICrawlerController {
       categories,
       topTags,
       weakTags,
+      // 진료별 드릴다운 (병원 핵심진료 기반)
+      procedureDrilldown,
+      myProcedures, // 프론트에서 활용
     };
   }
 
