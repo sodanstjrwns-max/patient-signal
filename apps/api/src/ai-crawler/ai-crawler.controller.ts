@@ -1827,6 +1827,206 @@ export class AICrawlerController {
     };
   }
 
+  /**
+   * 통합 카테고리 분석 API (실시간 질문 + 정기 크롤링 데이터)
+   * → /dashboard/category-analysis 페이지에서 사용
+   */
+  @Get('category-analysis/:hospitalId')
+  @ApiOperation({
+    summary: '통합 카테고리 성과 분석 (실시간 + 크롤링)',
+    description: '실시간 질문과 정기 크롤링 프롬프트를 합산하여 카테고리별 AI 언급 성과를 분석합니다',
+  })
+  async getCategoryAnalysis(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true },
+    });
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+
+    const daysNum = parseInt(days || '30', 10);
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const categoryDisplayNames: Record<string, string> = {
+      PROCEDURE: '시술/진료',
+      EMOTION: '감성/경험',
+      COST: '비용/가격',
+      REGION: '지역 기반',
+      REVIEW: '후기/평판',
+      COMPARISON: '비교',
+      GENERAL: '기타',
+    };
+
+    // ── 1. 실시간 질문 데이터 ──
+    const liveQueries = await this.prisma.liveQueryUsage.findMany({
+      where: { hospitalId, usedAt: { gte: since } },
+      orderBy: { usedAt: 'desc' },
+    });
+
+    // ── 2. 정기 크롤링 데이터 (프롬프트 → AI 응답) ──
+    const prompts = await this.prisma.prompt.findMany({
+      where: { hospitalId, isActive: true },
+      select: { id: true, promptText: true },
+    });
+
+    const crawlResponses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        responseDate: { gte: since },
+      },
+      select: {
+        promptId: true,
+        isMentioned: true,
+        aiPlatform: true,
+        responseDate: true,
+      },
+    });
+
+    // 프롬프트별 카테고리 분류 (classifyQueryCategory 재활용)
+    const promptCategoryMap = new Map<string, { category: string; categoryTag: string; promptText: string }>();
+    for (const p of prompts) {
+      const { category, categoryTag } = this.classifyQueryCategory(p.promptText);
+      promptCategoryMap.set(p.id, { category: category as string, categoryTag, promptText: p.promptText });
+    }
+
+    // 프롬프트별 크롤링 결과 집계
+    const promptResultMap = new Map<string, { total: number; mentioned: number; dates: string[] }>();
+    for (const r of crawlResponses) {
+      if (!promptResultMap.has(r.promptId)) {
+        promptResultMap.set(r.promptId, { total: 0, mentioned: 0, dates: [] });
+      }
+      const data = promptResultMap.get(r.promptId)!;
+      data.total++;
+      if (r.isMentioned) data.mentioned++;
+      const dateStr = r.responseDate.toISOString().split('T')[0];
+      if (!data.dates.includes(dateStr)) data.dates.push(dateStr);
+    }
+
+    // ── 3. 통합 카테고리 집계 ──
+    const categoryAgg = new Map<string, {
+      liveQueries: number;
+      crawlQueries: number;
+      liveMentionRates: number[];
+      crawlMentionRates: number[];
+      tags: Map<string, { live: number; crawl: number; liveMention: number[]; crawlMention: number[] }>;
+      sources: { text: string; type: 'live' | 'crawl'; mentionRate: number; tag: string }[];
+    }>();
+
+    const ensureCategory = (cat: string) => {
+      if (!categoryAgg.has(cat)) {
+        categoryAgg.set(cat, {
+          liveQueries: 0, crawlQueries: 0,
+          liveMentionRates: [], crawlMentionRates: [],
+          tags: new Map(),
+          sources: [],
+        });
+      }
+      return categoryAgg.get(cat)!;
+    };
+
+    const ensureTag = (agg: ReturnType<typeof ensureCategory>, tag: string) => {
+      if (!agg.tags.has(tag)) {
+        agg.tags.set(tag, { live: 0, crawl: 0, liveMention: [], crawlMention: [] });
+      }
+      return agg.tags.get(tag)!;
+    };
+
+    // 실시간 질문 데이터 집계
+    for (const q of liveQueries) {
+      const cat = q.category || 'GENERAL';
+      const tag = q.categoryTag || '기타';
+      const agg = ensureCategory(cat);
+      agg.liveQueries++;
+      agg.liveMentionRates.push(q.mentionRate);
+      const tagData = ensureTag(agg, tag);
+      tagData.live++;
+      tagData.liveMention.push(q.mentionRate);
+      agg.sources.push({ text: q.queryText, type: 'live', mentionRate: q.mentionRate, tag });
+    }
+
+    // 크롤링 프롬프트 데이터 집계
+    for (const [promptId, info] of promptCategoryMap) {
+      const result = promptResultMap.get(promptId);
+      if (!result || result.total === 0) continue;
+
+      const mentionRate = Math.round((result.mentioned / result.total) * 100);
+      const agg = ensureCategory(info.category);
+      agg.crawlQueries++;
+      agg.crawlMentionRates.push(mentionRate);
+      const tagData = ensureTag(agg, info.categoryTag);
+      tagData.crawl++;
+      tagData.crawlMention.push(mentionRate);
+      agg.sources.push({ text: info.promptText, type: 'crawl', mentionRate, tag: info.categoryTag });
+    }
+
+    // ── 4. 결과 정리 ──
+    const avgRate = (rates: number[]) => rates.length > 0 ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+
+    const categories = Array.from(categoryAgg.entries()).map(([cat, agg]) => {
+      const allRates = [...agg.liveMentionRates, ...agg.crawlMentionRates];
+      const tags = Array.from(agg.tags.entries()).map(([tag, td]) => {
+        const allTagRates = [...td.liveMention, ...td.crawlMention];
+        return {
+          tag,
+          totalQueries: td.live + td.crawl,
+          liveQueries: td.live,
+          crawlQueries: td.crawl,
+          avgMentionRate: avgRate(allTagRates),
+        };
+      }).sort((a, b) => b.totalQueries - a.totalQueries);
+
+      return {
+        category: cat,
+        categoryName: categoryDisplayNames[cat] || cat,
+        totalQueries: agg.liveQueries + agg.crawlQueries,
+        liveQueries: agg.liveQueries,
+        crawlQueries: agg.crawlQueries,
+        avgMentionRate: avgRate(allRates),
+        liveAvgRate: avgRate(agg.liveMentionRates),
+        crawlAvgRate: avgRate(agg.crawlMentionRates),
+        tags,
+        // 대표 질문 (언급률 높은 순 + 낮은 순)
+        topQuestions: agg.sources.filter(s => s.mentionRate > 0).sort((a, b) => b.mentionRate - a.mentionRate).slice(0, 3),
+        weakQuestions: agg.sources.filter(s => s.mentionRate === 0).slice(0, 3),
+      };
+    }).sort((a, b) => b.totalQueries - a.totalQueries);
+
+    // 전체 태그 강점/약점
+    const allTags = categories.flatMap(c =>
+      c.tags.filter(t => t.totalQueries >= 1).map(t => ({
+        category: c.category,
+        categoryName: c.categoryName,
+        tag: t.tag,
+        totalQueries: t.totalQueries,
+        avgMentionRate: t.avgMentionRate,
+      }))
+    );
+    const topTags = [...allTags].sort((a, b) => b.avgMentionRate - a.avgMentionRate).slice(0, 5);
+    const weakTags = [...allTags].sort((a, b) => a.avgMentionRate - b.avgMentionRate).slice(0, 5);
+
+    // 전체 통계
+    const allRates = categories.flatMap(c => {
+      const agg = categoryAgg.get(c.category)!;
+      return [...agg.liveMentionRates, ...agg.crawlMentionRates];
+    });
+    const totalMentionRate = avgRate(allRates);
+
+    return {
+      hospitalName: hospital.name,
+      period: `최근 ${daysNum}일`,
+      totalQueries: liveQueries.length + Array.from(promptResultMap.values()).filter(r => r.total > 0).length,
+      totalLiveQueries: liveQueries.length,
+      totalCrawlQueries: Array.from(promptResultMap.values()).filter(r => r.total > 0).length,
+      totalMentionRate,
+      categories,
+      topTags,
+      weakTags,
+    };
+  }
+
   @Post('score/:hospitalId')
   @ApiOperation({ summary: '일일 점수 계산 (개선: 다수결 기반)' })
   async calculateScore(@Param('hospitalId') hospitalId: string) {

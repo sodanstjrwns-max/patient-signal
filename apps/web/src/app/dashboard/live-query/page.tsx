@@ -28,17 +28,13 @@ import {
   History,
   Target,
   TrendingUp,
-  TrendingDown,
   RotateCcw,
   Gauge,
   Clock,
   ArrowUpCircle,
   Shield,
-  BarChart3,
-  Tag,
-  Star,
-  AlertTriangle,
-  Activity,
+  PieChart,
+  ArrowRight,
   Stethoscope,
   Heart,
   DollarSign,
@@ -113,9 +109,6 @@ export default function LiveQueryPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
 
-  // 탭 상태
-  const [activeTab, setActiveTab] = useState<'query' | 'stats'>('query');
-
   // 질문 관련 상태
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -132,10 +125,6 @@ export default function LiveQueryPage() {
   const [cooldownError, setCooldownError] = useState<string | null>(null);
   const [limitReachedError, setLimitReachedError] = useState<any>(null);
 
-  // 카테고리 통계 상태
-  const [categoryStats, setCategoryStats] = useState<any>(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-
   // 사용량 조회
   const fetchUsage = useCallback(async () => {
     if (!hospitalId) return;
@@ -146,21 +135,9 @@ export default function LiveQueryPage() {
     } catch { /* 무시 */ }
   }, [hospitalId]);
 
-  // 카테고리 통계 조회
-  const fetchCategoryStats = useCallback(async () => {
-    if (!hospitalId) return;
-    setStatsLoading(true);
-    try {
-      const res = await crawlerApi.getLiveQueryCategoryStats(hospitalId, 30);
-      setCategoryStats(res.data);
-    } catch { /* 무시 */ }
-    finally { setStatsLoading(false); }
-  }, [hospitalId]);
-
   useEffect(() => {
     fetchUsage();
-    fetchCategoryStats();
-  }, [fetchUsage, fetchCategoryStats]);
+  }, [fetchUsage]);
 
   const togglePlatform = (platform: string) => {
     setPlatforms(prev =>
@@ -205,9 +182,6 @@ export default function LiveQueryPage() {
       setHistory(prev => [data, ...prev].slice(0, 10));
       if (data.usage) setUsage(data.usage);
       else fetchUsage();
-
-      // 카테고리 통계 갱신
-      fetchCategoryStats();
 
       const firstSuccess = data.responses?.find((r: any) => r.success);
       if (firstSuccess) setExpandedPlatform(firstSuccess.platform);
@@ -282,30 +256,21 @@ export default function LiveQueryPage() {
           </Card>
         )}
 
-        {/* 탭 네비게이션 */}
-        <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
-          <button
-            onClick={() => setActiveTab('query')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'query' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Zap className="h-4 w-4" />
-            질문하기
-          </button>
-          <button
-            onClick={() => { setActiveTab('stats'); fetchCategoryStats(); }}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${activeTab === 'stats' ? 'bg-white text-purple-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <BarChart3 className="h-4 w-4" />
-            카테고리 성과
-            {categoryStats?.totalQueries > 0 && (
-              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">{categoryStats.totalQueries}</span>
-            )}
-          </button>
-        </div>
+        {/* 카테고리 성과 바로가기 배너 */}
+        <button
+          onClick={() => window.location.href = '/dashboard/category-analysis'}
+          className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl hover:from-purple-100 hover:to-blue-100 transition-all group"
+        >
+          <div className="flex items-center gap-2.5">
+            <PieChart className="h-4.5 w-4.5 text-purple-500" />
+            <span className="text-sm font-semibold text-gray-800">카테고리별 성과 분석</span>
+            <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">실시간 + 크롤링 통합</span>
+          </div>
+          <ArrowRight className="h-4 w-4 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
+        </button>
 
-        {/* ==================== 질문 탭 ==================== */}
-        {activeTab === 'query' && (
-          <>
+        {/* ==================== 질문 영역 ==================== */}
+        <>
             {/* 질문 입력 카드 */}
             <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/30 shadow-sm">
               <CardContent className="p-5 sm:p-6">
@@ -584,197 +549,7 @@ export default function LiveQueryPage() {
               </Card>
             )}
           </>
-        )}
-
-        {/* ==================== 카테고리 성과 탭 ==================== */}
-        {activeTab === 'stats' && (
-          <>
-            {statsLoading && (
-              <Card><CardContent className="p-12 text-center">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-500 mx-auto mb-3" />
-                <p className="text-sm text-gray-500">카테고리별 성과를 분석하고 있어요...</p>
-              </CardContent></Card>
-            )}
-
-            {!statsLoading && (!categoryStats || categoryStats.totalQueries === 0) && (
-              <Card className="border-dashed border-2 border-gray-200">
-                <CardContent className="p-12 text-center">
-                  <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">아직 데이터가 없어요</h3>
-                  <p className="text-sm text-gray-500 mb-4">실시간 질문을 하면 자동으로 카테고리가 분류되고<br/>성과가 쌓여요!</p>
-                  <Button onClick={() => setActiveTab('query')} className="bg-gradient-to-r from-purple-600 to-blue-600">
-                    <Zap className="h-4 w-4 mr-2" />첫 질문 하러 가기
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {!statsLoading && categoryStats && categoryStats.totalQueries > 0 && (
-              <div className="space-y-5">
-
-                {/* 전체 요약 */}
-                <Card className="border-purple-100 bg-gradient-to-br from-purple-50/30 to-blue-50/20">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Activity className="h-5 w-5 text-purple-500" />
-                      <h3 className="font-bold text-gray-900">전체 성과 요약</h3>
-                      <span className="text-xs text-gray-400">{categoryStats.period}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white rounded-xl p-4 border border-gray-100 text-center">
-                        <p className="text-3xl font-bold text-gray-800">{categoryStats.totalQueries}</p>
-                        <p className="text-xs text-gray-500 mt-1">총 질문 수</p>
-                      </div>
-                      <div className={`rounded-xl p-4 border text-center ${categoryStats.totalMentionRate >= 50 ? 'bg-green-50 border-green-100' : categoryStats.totalMentionRate > 0 ? 'bg-yellow-50 border-yellow-100' : 'bg-gray-50 border-gray-100'}`}>
-                        <p className={`text-3xl font-bold ${categoryStats.totalMentionRate >= 50 ? 'text-green-600' : categoryStats.totalMentionRate > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{categoryStats.totalMentionRate}%</p>
-                        <p className="text-xs text-gray-500 mt-1">평균 언급률</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 강점 / 약점 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* 강한 분야 */}
-                  {categoryStats.topTags?.length > 0 && (
-                    <Card className="border-green-100">
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                          <h4 className="text-sm font-bold text-green-800">우리 병원이 강한 분야</h4>
-                        </div>
-                        <div className="space-y-2">
-                          {categoryStats.topTags.filter((t: any) => t.avgMentionRate > 0).slice(0, 4).map((tag: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between bg-green-50/50 rounded-lg p-2.5">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs">{categoryConfig[tag.category]?.emoji || '📋'}</span>
-                                <span className="text-xs font-medium text-gray-700">{tag.tag}</span>
-                                <span className="text-[10px] text-gray-400">{tag.categoryName}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400">{tag.queryCount}회</span>
-                                <span className="text-sm font-bold text-green-600">{tag.avgMentionRate}%</span>
-                              </div>
-                            </div>
-                          ))}
-                          {categoryStats.topTags.filter((t: any) => t.avgMentionRate > 0).length === 0 && (
-                            <p className="text-xs text-gray-400 text-center py-2">아직 언급된 질문이 없어요</p>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* 약한 분야 */}
-                  {categoryStats.weakTags?.length > 0 && (
-                    <Card className="border-red-100">
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-3">
-                          <TrendingDown className="h-4 w-4 text-red-500" />
-                          <h4 className="text-sm font-bold text-red-800">개선이 필요한 분야</h4>
-                        </div>
-                        <div className="space-y-2">
-                          {categoryStats.weakTags.filter((t: any) => t.avgMentionRate < 50).slice(0, 4).map((tag: any, i: number) => (
-                            <div key={i} className="flex items-center justify-between bg-red-50/50 rounded-lg p-2.5">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs">{categoryConfig[tag.category]?.emoji || '📋'}</span>
-                                <span className="text-xs font-medium text-gray-700">{tag.tag}</span>
-                                <span className="text-[10px] text-gray-400">{tag.categoryName}</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400">{tag.queryCount}회</span>
-                                <span className="text-sm font-bold text-red-500">{tag.avgMentionRate}%</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-
-                {/* 카테고리별 상세 */}
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Tag className="h-4 w-4 text-purple-500" />
-                      <h3 className="text-sm font-bold text-gray-900">카테고리별 상세 성과</h3>
-                    </div>
-                    <div className="space-y-4">
-                      {categoryStats.categories.map((cat: any) => {
-                        const config = categoryConfig[cat.category] || categoryConfig.GENERAL;
-                        const Icon = config.icon;
-                        return (
-                          <div key={cat.category} className={`rounded-xl border p-4 ${config.bgColor}`}>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-2">
-                                <Icon className={`h-4 w-4 ${config.color}`} />
-                                <span className="text-sm font-bold text-gray-800">{config.emoji} {cat.categoryName}</span>
-                                <span className="text-xs text-gray-400">{cat.totalQueries}회 질문</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-lg font-bold ${cat.avgMentionRate >= 50 ? 'text-green-600' : cat.avgMentionRate > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>
-                                  {cat.avgMentionRate}%
-                                </span>
-                                <span className="text-xs text-gray-400">평균</span>
-                              </div>
-                            </div>
-
-                            {/* 프로그래스 바 */}
-                            <div className="w-full bg-white/60 rounded-full h-2 mb-3">
-                              <div className={`h-2 rounded-full transition-all ${cat.avgMentionRate >= 50 ? 'bg-green-400' : cat.avgMentionRate > 0 ? 'bg-yellow-400' : 'bg-gray-300'}`}
-                                style={{ width: `${cat.avgMentionRate}%` }} />
-                            </div>
-
-                            {/* 세부 태그 */}
-                            {cat.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5">
-                                {cat.tags.map((tag: any) => (
-                                  <span key={tag.tag} className={`text-xs px-2.5 py-1 rounded-full border bg-white/80 ${tag.avgMentionRate >= 50 ? 'border-green-200 text-green-700' : tag.avgMentionRate > 0 ? 'border-yellow-200 text-yellow-700' : 'border-gray-200 text-gray-500'}`}>
-                                    {tag.tag} <span className="font-bold">{tag.avgMentionRate}%</span>
-                                    <span className="text-gray-400 ml-0.5">({tag.queryCount})</span>
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 최근 질문 기록 (카테고리 포함) */}
-                {categoryStats.recentQueries?.length > 0 && (
-                  <Card>
-                    <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-4">
-                        <History className="h-4 w-4 text-gray-500" />
-                        <h3 className="text-sm font-bold text-gray-700">최근 질문 기록</h3>
-                      </div>
-                      <div className="space-y-2">
-                        {categoryStats.recentQueries.map((q: any, i: number) => (
-                          <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                            <span className="text-sm flex-shrink-0">{categoryConfig[q.category]?.emoji || '📋'}</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-800 truncate">{q.question}</p>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-gray-400">{q.categoryName}</span>
-                                {q.categoryTag && <span className="text-[10px] text-gray-400">· {q.categoryTag}</span>}
-                                <span className="text-[10px] text-gray-400">· {new Date(q.usedAt).toLocaleDateString('ko-KR')}</span>
-                              </div>
-                            </div>
-                            <span className={`text-sm font-bold min-w-[40px] text-right ${q.mentionRate >= 50 ? 'text-green-600' : q.mentionRate > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{q.mentionRate}%</span>
-                          </div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
-          </>
-        )}
+        </>
 
       </div>
     </div>
