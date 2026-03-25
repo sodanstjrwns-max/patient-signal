@@ -496,16 +496,35 @@ model Report {
   @@map("reports")
 }
 
+// 실시간 질문 카테고리
+enum LiveQueryCategory {
+  PROCEDURE       // 시술/진료 (임플란트, 교정, 라미네이트 등)
+  EMOTION         // 감성/경험 (친절한, 무서운데, 편안한 등)
+  COST            // 비용/가격 (저렴한, 가성비, 가격)
+  REGION          // 지역 기반 (강남, 홍대 근처 등)
+  REVIEW          // 후기/평판 (후기 좋은, 유명한 등)
+  COMPARISON      // 비교 (A vs B, 차이, 뭐가 좋아)
+  GENERAL         // 기타
+}
+
 // 실시간 질문 사용량 테이블
 model LiveQueryUsage {
-  id          String   @id @default(uuid())
-  hospitalId  String   @map("hospital_id")
-  queryText   String   @map("query_text")
-  platforms   String[] // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
-  platformCount Int    @default(4) @map("platform_count") // 실제 질의한 플랫폼 수
-  usedAt      DateTime @default(now()) @map("used_at")
+  id              String            @id @default(uuid())
+  hospitalId      String            @map("hospital_id")
+  queryText       String            @map("query_text")
+  platforms       String[]          // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
+  platformCount   Int               @default(4) @map("platform_count")
+  // 카테고리 & 분류
+  category        LiveQueryCategory @default(GENERAL)
+  categoryTag     String?           @map("category_tag")    // 세부 태그 (예: "임플란트", "교정", "친절")
+  // 결과 요약 (카테고리별 성과 분석용)
+  successCount    Int               @default(0) @map("success_count")
+  mentionedCount  Int               @default(0) @map("mentioned_count")
+  mentionRate     Int               @default(0) @map("mention_rate")    // 0~100
+  usedAt          DateTime          @default(now()) @map("used_at")
 
   @@index([hospitalId, usedAt])
+  @@index([hospitalId, category])
   @@map("live_query_usages")
 }
 

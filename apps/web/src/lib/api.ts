@@ -235,6 +235,8 @@ export const crawlerApi = {
     api.post(`/ai-crawler/live-query/${hospitalId}`, data, { timeout: 120000 }),
   getLiveQueryUsage: (hospitalId: string) =>
     api.get(`/ai-crawler/live-query/usage/${hospitalId}`),
+  getLiveQueryCategoryStats: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/live-query/category-stats/${hospitalId}`, { params: { days } }),
 };
 
 // Scores API

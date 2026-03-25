@@ -6,6 +6,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
+import { LiveQueryCategory } from '@prisma/client';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT',
@@ -1505,15 +1506,9 @@ export class AICrawlerController {
 
     this.logger.log(`[LiveQuery] 질문: "${question.substring(0, 50)}", 플랫폼: ${selectedPlatforms.join(', ')}, 사용량: ${todayCount + 1}/${maxDaily === -1 ? '∞' : maxDaily}`);
 
-    // ── 3. 사용량 기록 (질의 전에 기록 → 실패해도 카운트) ──
-    await this.prisma.liveQueryUsage.create({
-      data: {
-        hospitalId,
-        queryText: question.trim(),
-        platforms: selectedPlatforms,
-        platformCount: selectedPlatforms.length,
-      },
-    });
+    // ── 3. 질문 카테고리 자동 분류 ──
+    const { category, categoryTag } = this.classifyQueryCategory(question.trim());
+    this.logger.log(`[LiveQuery] 카테고리: ${category} / 태그: ${categoryTag}`);
 
     // ── 4. 각 플랫폼에 병렬로 질의 ──
     const results = await Promise.allSettled(
@@ -1560,7 +1555,23 @@ export class AICrawlerController {
     // 요약 통계
     const successCount = responses.filter(r => r.success).length;
     const mentionedCount = responses.filter(r => r.success && r.isMentioned).length;
+    const mentionRate = successCount > 0 ? Math.round((mentionedCount / successCount) * 100) : 0;
     const newUsed = todayCount + 1;
+
+    // ── 5. 사용량 + 결과 기록 (질의 후 결과까지 포함) ──
+    await this.prisma.liveQueryUsage.create({
+      data: {
+        hospitalId,
+        queryText: question.trim(),
+        platforms: selectedPlatforms,
+        platformCount: selectedPlatforms.length,
+        category,
+        categoryTag,
+        successCount,
+        mentionedCount,
+        mentionRate,
+      },
+    });
 
     return {
       question: question.trim(),
@@ -1569,7 +1580,9 @@ export class AICrawlerController {
       totalPlatforms: selectedPlatforms.length,
       successCount,
       mentionedCount,
-      mentionRate: successCount > 0 ? Math.round((mentionedCount / successCount) * 100) : 0,
+      mentionRate,
+      category,
+      categoryTag,
       responses,
       // 사용량 정보 함께 반환
       usage: {
@@ -1578,6 +1591,239 @@ export class AICrawlerController {
         remaining: maxDaily === -1 ? -1 : Math.max(0, maxDaily - newUsed),
         isUnlimited: maxDaily === -1,
       },
+    };
+  }
+
+  /**
+   * 질문 텍스트 → 카테고리 자동 분류
+   */
+  private classifyQueryCategory(queryText: string): { category: LiveQueryCategory; categoryTag: string } {
+    const text = queryText.toLowerCase();
+
+    // 시술/진료 카테고리 (PROCEDURE) — 구체적 시술명
+    const procedureKeywords: Record<string, string[]> = {
+      '임플란트': ['임플란트', '임플', 'implant'],
+      '교정': ['교정', '치아교정', '투명교정', '인비절라인', '브라켓'],
+      '라미네이트': ['라미네이트', '심미보철', '비니어'],
+      '미백': ['미백', '화이트닝', 'whitening', '치아미백'],
+      '충치치료': ['충치', '레진', '인레이', '온레이', '크라운'],
+      '스케일링': ['스케일링', '치석', '잇몸치료', '치주'],
+      '발치': ['발치', '사랑니', '매복치'],
+      '틀니': ['틀니', '의치'],
+      '보톡스': ['보톡스', '보톨리늄', '필러'],
+      '신경치료': ['신경치료', '근관치료'],
+      '소아치과': ['소아', '아이', '어린이', '유치'],
+    };
+    for (const [tag, keywords] of Object.entries(procedureKeywords)) {
+      if (keywords.some(kw => text.includes(kw))) {
+        return { category: LiveQueryCategory.PROCEDURE, categoryTag: tag };
+      }
+    }
+
+    // 감성/경험 카테고리 (EMOTION) — 환자 감정 기반
+    const emotionKeywords: Record<string, string[]> = {
+      '친절': ['친절', '친절한', '친절하게', '상냥', '따뜻'],
+      '무통': ['무통', '안아프', '아프지않', '통증없', '무서운데', '무서워', '겁나', '두려운', '공포'],
+      '편안': ['편안', '안심', '쾌적', '좋은분위기', '편한'],
+      '꼼꼼': ['꼼꼼', '세심', '정확', '실력좋', '잘하는'],
+      '빠른': ['빠른', '당일', '즉시', '빠르게', '원데이'],
+    };
+    for (const [tag, keywords] of Object.entries(emotionKeywords)) {
+      if (keywords.some(kw => text.includes(kw))) {
+        return { category: LiveQueryCategory.EMOTION, categoryTag: tag };
+      }
+    }
+
+    // 비용/가격 카테고리 (COST)
+    const costKeywords = ['가격', '비용', '저렴', '싼', '가성비', '합리적', '저렴한', '할인', '이벤트', '얼마'];
+    if (costKeywords.some(kw => text.includes(kw))) {
+      return { category: LiveQueryCategory.COST, categoryTag: '가격' };
+    }
+
+    // 후기/평판 카테고리 (REVIEW)
+    const reviewKeywords = ['후기', '리뷰', '평판', '유명', '평점', '별점', '만족', '추천', '소문'];
+    if (reviewKeywords.some(kw => text.includes(kw))) {
+      return { category: LiveQueryCategory.REVIEW, categoryTag: '후기' };
+    }
+
+    // 비교 카테고리 (COMPARISON)
+    const comparisonKeywords = ['vs', '비교', '차이', '뭐가 좋', '뭐가 나', '어디가 더', '어떤게'];
+    if (comparisonKeywords.some(kw => text.includes(kw))) {
+      return { category: LiveQueryCategory.COMPARISON, categoryTag: '비교' };
+    }
+
+    // 지역 기반 카테고리 (REGION) — 지역명이 포함되면
+    const regionKeywords = [
+      '강남', '서초', '잠실', '송파', '홍대', '신촌', '명동', '종로', '강동', '마포',
+      '영등포', '광화문', '을지로', '건대', '성수', '이태원', '여의도', '목동', '양천',
+      '부산', '대구', '인천', '광주', '대전', '수원', '분당', '판교', '일산', '근처', '역 근처', '주변',
+    ];
+    if (regionKeywords.some(kw => text.includes(kw))) {
+      const matched = regionKeywords.find(kw => text.includes(kw)) || '지역';
+      return { category: LiveQueryCategory.REGION, categoryTag: matched };
+    }
+
+    // 기본: GENERAL
+    return { category: LiveQueryCategory.GENERAL, categoryTag: '일반' };
+  }
+
+  /**
+   * 카테고리별 성과 분석 API
+   */
+  @Get('live-query/category-stats/:hospitalId')
+  @ApiOperation({
+    summary: '실시간 질문 카테고리별 성과 분석',
+    description: '시술/감성/비용/지역/후기/비교 카테고리별로 AI 언급 성과를 분석합니다',
+  })
+  async getLiveQueryCategoryStats(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true },
+    });
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+
+    const daysNum = parseInt(days || '30', 10);
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    // 전체 질문 기록 조회
+    const queries = await this.prisma.liveQueryUsage.findMany({
+      where: {
+        hospitalId,
+        usedAt: { gte: since },
+      },
+      orderBy: { usedAt: 'desc' },
+    });
+
+    if (queries.length === 0) {
+      return {
+        hospitalName: hospital.name,
+        period: `최근 ${daysNum}일`,
+        totalQueries: 0,
+        categories: [],
+        topTags: [],
+        recentQueries: [],
+      };
+    }
+
+    // 카테고리별 집계
+    const categoryMap = new Map<string, {
+      category: string;
+      totalQueries: number;
+      totalMentioned: number;
+      avgMentionRate: number;
+      tags: Map<string, { count: number; mentioned: number; mentionRate: number }>;
+    }>();
+
+    const categoryDisplayNames: Record<string, string> = {
+      PROCEDURE: '시술/진료',
+      EMOTION: '감성/경험',
+      COST: '비용/가격',
+      REGION: '지역 기반',
+      REVIEW: '후기/평판',
+      COMPARISON: '비교',
+      GENERAL: '기타',
+    };
+
+    for (const q of queries) {
+      const cat = q.category || 'GENERAL';
+      if (!categoryMap.has(cat)) {
+        categoryMap.set(cat, {
+          category: cat,
+          totalQueries: 0,
+          totalMentioned: 0,
+          avgMentionRate: 0,
+          tags: new Map(),
+        });
+      }
+      const data = categoryMap.get(cat)!;
+      data.totalQueries++;
+      data.totalMentioned += q.mentionedCount;
+
+      // 태그별 집계
+      const tag = q.categoryTag || '기타';
+      if (!data.tags.has(tag)) {
+        data.tags.set(tag, { count: 0, mentioned: 0, mentionRate: 0 });
+      }
+      const tagData = data.tags.get(tag)!;
+      tagData.count++;
+      if (q.mentionRate > 0) tagData.mentioned++;
+    }
+
+    // 평균 언급률 계산
+    const categories = Array.from(categoryMap.values()).map(cat => {
+      const rates = queries
+        .filter(q => (q.category || 'GENERAL') === cat.category)
+        .map(q => q.mentionRate);
+      cat.avgMentionRate = rates.length > 0 ? Math.round(rates.reduce((a, b) => a + b, 0) / rates.length) : 0;
+
+      // 태그별 평균 언급률
+      const tagsArr = Array.from(cat.tags.entries()).map(([tag, data]) => {
+        const tagRates = queries
+          .filter(q => (q.category || 'GENERAL') === cat.category && (q.categoryTag || '기타') === tag)
+          .map(q => q.mentionRate);
+        return {
+          tag,
+          queryCount: data.count,
+          mentionedCount: data.mentioned,
+          avgMentionRate: tagRates.length > 0 ? Math.round(tagRates.reduce((a, b) => a + b, 0) / tagRates.length) : 0,
+        };
+      }).sort((a, b) => b.queryCount - a.queryCount);
+
+      return {
+        category: cat.category,
+        categoryName: categoryDisplayNames[cat.category] || cat.category,
+        totalQueries: cat.totalQueries,
+        totalMentioned: cat.totalMentioned,
+        avgMentionRate: cat.avgMentionRate,
+        tags: tagsArr,
+      };
+    }).sort((a, b) => b.totalQueries - a.totalQueries);
+
+    // 전체 태그 랭킹 (상위 성과/하위 성과)
+    const allTags = categories.flatMap(c =>
+      c.tags.map(t => ({
+        category: c.category,
+        categoryName: c.categoryName,
+        tag: t.tag,
+        queryCount: t.queryCount,
+        avgMentionRate: t.avgMentionRate,
+      }))
+    ).filter(t => t.queryCount >= 1);
+
+    const topTags = [...allTags].sort((a, b) => b.avgMentionRate - a.avgMentionRate).slice(0, 5);
+    const weakTags = [...allTags].sort((a, b) => a.avgMentionRate - b.avgMentionRate).slice(0, 5);
+
+    // 최근 질문 10개 (히스토리)
+    const recentQueries = queries.slice(0, 10).map(q => ({
+      question: q.queryText,
+      category: q.category,
+      categoryName: categoryDisplayNames[q.category || 'GENERAL'] || q.category,
+      categoryTag: q.categoryTag,
+      mentionRate: q.mentionRate,
+      mentionedCount: q.mentionedCount,
+      successCount: q.successCount,
+      platforms: q.platforms,
+      usedAt: q.usedAt,
+    }));
+
+    // 전체 통계
+    const totalMentionRate = queries.length > 0
+      ? Math.round(queries.reduce((sum, q) => sum + q.mentionRate, 0) / queries.length)
+      : 0;
+
+    return {
+      hospitalName: hospital.name,
+      period: `최근 ${daysNum}일`,
+      totalQueries: queries.length,
+      totalMentionRate,
+      categories,
+      topTags,     // 우리 병원이 강한 분야
+      weakTags,    // 개선이 필요한 분야
+      recentQueries,
     };
   }
 
