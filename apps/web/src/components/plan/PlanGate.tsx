@@ -21,7 +21,7 @@ export const PLAN_LIMITS = {
   STARTER: {
     maxPrompts: 5,
     maxCompetitors: 1,
-    platforms: ['PERPLEXITY', 'GEMINI'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
     crawlsPerMonth: 4,
     exportEnabled: false,
     aiRecommendations: false,
