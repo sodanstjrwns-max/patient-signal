@@ -115,6 +115,110 @@ export class AdminService {
   }
 
   /**
+   * 회원 활동 현황 (로그인 추적 + 사용량)
+   */
+  async getUserActivity(sort: string = 'lastLogin') {
+    const users = await this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        lastLoginAt: true,
+        loginCount: true,
+        createdAt: true,
+        hospital: {
+          select: {
+            id: true,
+            name: true,
+            planType: true,
+            _count: {
+              select: {
+                aiResponses: true,
+                prompts: true,
+                crawlJobs: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // 각 유저의 실시간 질문 사용 횟수 조회
+    const enriched = await Promise.all(
+      users.map(async (u) => {
+        let liveQueryCount = 0;
+        if (u.hospital?.id) {
+          liveQueryCount = await this.prisma.liveQueryUsage.count({
+            where: { hospitalId: u.hospital.id },
+          }).catch(() => 0);
+        }
+
+        const now = new Date();
+        const lastLogin = u.lastLoginAt ? new Date(u.lastLoginAt) : null;
+        const daysSinceLogin = lastLogin
+          ? Math.floor((now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        const daysSinceSignup = Math.floor((now.getTime() - new Date(u.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+
+        let activityLevel: string;
+        if (!lastLogin) activityLevel = '미접속';
+        else if (daysSinceLogin <= 1) activityLevel = '🔥 활발';
+        else if (daysSinceLogin <= 3) activityLevel = '👍 보통';
+        else if (daysSinceLogin <= 7) activityLevel = '😐 저조';
+        else activityLevel = '😴 이탈위험';
+
+        return {
+          name: u.name,
+          email: u.email,
+          hospital: u.hospital?.name || '미등록',
+          plan: u.hospital?.planType || 'FREE',
+          lastLoginAt: u.lastLoginAt,
+          loginCount: u.loginCount,
+          daysSinceLogin,
+          daysSinceSignup,
+          activityLevel,
+          responses: u.hospital?._count?.aiResponses || 0,
+          prompts: u.hospital?._count?.prompts || 0,
+          crawls: u.hospital?._count?.crawlJobs || 0,
+          liveQueries: liveQueryCount,
+          signupDate: u.createdAt,
+        };
+      }),
+    );
+
+    // 정렬
+    if (sort === 'loginCount') {
+      enriched.sort((a, b) => b.loginCount - a.loginCount);
+    } else if (sort === 'responses') {
+      enriched.sort((a, b) => b.responses - a.responses);
+    } else {
+      // lastLogin 기준 (최근 접속순, null은 맨 뒤)
+      enriched.sort((a, b) => {
+        if (!a.lastLoginAt && !b.lastLoginAt) return 0;
+        if (!a.lastLoginAt) return 1;
+        if (!b.lastLoginAt) return -1;
+        return new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime();
+      });
+    }
+
+    // 요약 통계
+    const summary = {
+      total: enriched.length,
+      active: enriched.filter(e => e.activityLevel === '🔥 활발').length,
+      normal: enriched.filter(e => e.activityLevel === '👍 보통').length,
+      low: enriched.filter(e => e.activityLevel === '😐 저조').length,
+      churnRisk: enriched.filter(e => e.activityLevel === '😴 이탈위험').length,
+      neverLoggedIn: enriched.filter(e => e.activityLevel === '미접속').length,
+      avgLoginCount: enriched.length > 0
+        ? Math.round(enriched.reduce((sum, e) => sum + e.loginCount, 0) / enriched.length * 10) / 10
+        : 0,
+    };
+
+    return { summary, users: enriched };
+  }
+
+  /**
    * 쿠폰 사용 현황
    */
   async getCoupons() {

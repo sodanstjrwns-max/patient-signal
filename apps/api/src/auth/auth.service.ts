@@ -91,6 +91,12 @@ export class AuthService {
       throw new UnauthorizedException('이메일 또는 비밀번호가 올바르지 않습니다');
     }
 
+    // 로그인 활동 기록
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+    });
+
     // 토큰 생성
     const tokens = await this.generateTokens(user.id, user.email, user.role, user.hospitalId);
 
@@ -313,6 +319,12 @@ export class AuthService {
         });
       }
 
+      // Step 3.5: 로그인 활동 기록
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+      });
+
       // Step 4: JWT 토큰 생성
       const jwtTokens = await this.generateTokens(
         user.id,
@@ -378,6 +390,12 @@ export class AuthService {
           include: { hospital: true },
         });
       }
+
+      // 로그인 활동 기록
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date(), loginCount: { increment: 1 } },
+      });
 
       // 토큰 생성
       const tokens = await this.generateTokens(

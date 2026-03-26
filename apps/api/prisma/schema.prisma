@@ -134,6 +134,8 @@ model User {
   hospitalId    String?   @map("hospital_id")
   isPfMember    Boolean   @default(false) @map("is_pf_member") // 페이션트퍼널 수강생 여부
   emailVerified Boolean   @default(false) @map("email_verified")
+  lastLoginAt   DateTime? @map("last_login_at")
+  loginCount    Int       @default(0) @map("login_count")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

@@ -54,6 +54,20 @@ export class AdminController {
     return this.adminService.getCoupons();
   }
 
+  /**
+   * 회원 활동 현황 (로그인 추적)
+   * GET /api/admin/activity?secret=xxx&sort=lastLogin|loginCount|responses
+   */
+  @Public()
+  @Get('activity')
+  async getActivity(
+    @Query('secret') secret: string,
+    @Query('sort') sort: string = 'lastLogin',
+  ) {
+    this.validateSecret(secret);
+    return this.adminService.getUserActivity(sort);
+  }
+
   private validateSecret(secret: string) {
     const validSecret = process.env.ADMIN_SECRET || 'pf-admin-2026';
     if (secret !== validSecret) {
