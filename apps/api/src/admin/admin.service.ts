@@ -162,7 +162,7 @@ export class AdminService {
         const daysSinceSignup = Math.floor((now.getTime() - new Date(u.createdAt).getTime()) / (1000 * 60 * 60 * 24));
 
         let activityLevel: string;
-        if (!lastLogin) activityLevel = '미접속';
+        if (!lastLogin || daysSinceLogin === null) activityLevel = '미접속';
         else if (daysSinceLogin <= 1) activityLevel = '🔥 활발';
         else if (daysSinceLogin <= 3) activityLevel = '👍 보통';
         else if (daysSinceLogin <= 7) activityLevel = '😐 저조';
