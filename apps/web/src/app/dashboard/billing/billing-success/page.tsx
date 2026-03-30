@@ -26,11 +26,12 @@ function BillingSuccessContent() {
       }
 
       try {
-        // 빌링키 발급
+        // 빌링키 발급 (planType 포함)
         await paymentsApi.issueBillingKey({
           authKey,
           customerKey,
           hospitalId,
+          planType: plan,
         });
 
         setStatus('success');

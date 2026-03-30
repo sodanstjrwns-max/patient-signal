@@ -340,7 +340,7 @@ export const paymentsApi = {
     api.get(`/payments/subscription/${hospitalId}`),
   getMyPayments: () =>
     api.get('/payments/user/history'),
-  issueBillingKey: (data: { authKey: string; customerKey: string; hospitalId: string }) =>
+  issueBillingKey: (data: { authKey: string; customerKey: string; hospitalId: string; planType?: string }) =>
     api.post('/payments/billing/issue', data),
   deleteBillingKey: (hospitalId: string) =>
     api.post('/payments/billing/delete', { hospitalId }),

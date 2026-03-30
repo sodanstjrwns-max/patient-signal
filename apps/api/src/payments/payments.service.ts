@@ -189,15 +189,16 @@ export class PaymentsService {
     const now = new Date();
     const periodEnd = new Date();
     
-    // 7일 무료 체험 + 구독 기간
+    // 구독 기간 계산
     if (payment.billingType === 'yearly') {
       periodEnd.setFullYear(periodEnd.getFullYear() + 1);
     } else {
       periodEnd.setMonth(periodEnd.getMonth() + 1);
     }
-    
-    // 7일 무료 체험 추가
-    periodEnd.setDate(periodEnd.getDate() + 7);
+
+    // 단건결제는 ACTIVE, 빌링키 결제는 기존 구독 상태에서 판단
+    // 실제 돈을 낸 결제이므로 ACTIVE로 설정
+    const subscriptionStatus = 'ACTIVE';
 
     await this.prisma.subscription.upsert({
       where: {
@@ -206,14 +207,14 @@ export class PaymentsService {
       create: {
         hospitalId: payment.hospitalId,
         planType: payment.planType,
-        status: 'TRIAL', // 7일 체험 시작
+        status: subscriptionStatus,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
         paymentMethodId: payment.id,
       },
       update: {
         planType: payment.planType,
-        status: 'TRIAL',
+        status: subscriptionStatus,
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
         paymentMethodId: payment.id,
@@ -225,11 +226,11 @@ export class PaymentsService {
       where: { id: payment.hospitalId },
       data: {
         planType: payment.planType,
-        subscriptionStatus: 'TRIAL',
+        subscriptionStatus: subscriptionStatus,
       },
     });
 
-    this.logger.log(`구독 활성화 완료: hospitalId=${payment.hospitalId}, plan=${payment.planType}`);
+    this.logger.log(`구독 활성화 완료: hospitalId=${payment.hospitalId}, plan=${payment.planType}, status=${subscriptionStatus}`);
   }
 
   /**
@@ -507,6 +508,7 @@ export class PaymentsService {
     authKey: string;
     customerKey: string;
     hospitalId: string;
+    planType?: string;
   }): Promise<any> {
     this.logger.log(`빌링키 발급 요청: customerKey=${data.customerKey}`);
 
@@ -536,11 +538,12 @@ export class PaymentsService {
       this.logger.log(`빌링키 발급 성공: billingKey=${result.billingKey}`);
 
       // 구독 정보 업데이트 (빌링키 저장)
+      const selectedPlan = (data.planType as PlanType) || 'STARTER';
       await this.prisma.subscription.upsert({
         where: { hospitalId: data.hospitalId },
         create: {
           hospitalId: data.hospitalId,
-          planType: 'STARTER',
+          planType: selectedPlan,
           status: 'TRIAL',
           currentPeriodStart: new Date(),
           currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 트라이얼
@@ -618,14 +621,15 @@ export class PaymentsService {
           },
         });
 
-        // 결제 실패 기록
+        // 결제 실패 기록 (구독의 실제 플랜 사용)
+        const failedSub = await this.prisma.subscription.findUnique({ where: { hospitalId: data.hospitalId } });
         await this.prisma.payment.create({
           data: {
             orderId: data.orderId,
             hospitalId: data.hospitalId,
             amount: data.amount,
             status: 'FAILED',
-            planType: 'STARTER',
+            planType: failedSub?.planType || 'STARTER',
             billingType: 'monthly',
             failReason: result.message || '자동결제 실패',
           },
@@ -636,7 +640,8 @@ export class PaymentsService {
 
       this.logger.log(`빌링키 결제 성공: paymentKey=${result.paymentKey}`);
 
-      // 결제 정보 저장
+      // 결제 정보 저장 (구독의 실제 플랜 사용)
+      const currentSub = await this.prisma.subscription.findUnique({ where: { hospitalId: data.hospitalId } });
       const payment = await this.prisma.payment.create({
         data: {
           orderId: data.orderId,
@@ -645,7 +650,7 @@ export class PaymentsService {
           amount: result.totalAmount,
           status: 'DONE',
           method: 'CARD',
-          planType: 'STARTER',
+          planType: currentSub?.planType || 'STARTER',
           billingType: 'monthly',
           approvedAt: new Date(result.approvedAt),
           receiptUrl: result.receipt?.url,

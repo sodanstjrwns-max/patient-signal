@@ -93,8 +93,8 @@ const PLAN_INFO: Record<string, {
   },
 };
 
-// Toss Payments 클라이언트 키 (라이브 - API 개별 연동)
-const TOSS_CLIENT_KEY = 'live_ck_LkKEypNArWgym1QbWvEQrlmeaxYG';
+// Toss Payments 클라이언트 키 (환경변수 우선, 폴백으로 라이브 키)
+const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'live_ck_LkKEypNArWgym1QbWvEQrlmeaxYG';
 
 function BillingContent() {
   const searchParams = useSearchParams();

@@ -240,10 +240,10 @@ export class PaymentsController {
   @ApiOperation({ summary: '빌링키 발급', description: '자동결제를 위한 빌링키를 발급합니다' })
   @ApiResponse({ status: 200, description: '빌링키 발급 성공' })
   async issueBillingKey(
-    @Body() body: { authKey: string; customerKey: string; hospitalId: string },
+    @Body() body: { authKey: string; customerKey: string; hospitalId: string; planType?: string },
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`빌링키 발급 요청: hospitalId=${body.hospitalId}`);
+    this.logger.log(`빌링키 발급 요청: hospitalId=${body.hospitalId}, plan=${body.planType}`);
 
     if (!body.authKey || !body.customerKey || !body.hospitalId) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
