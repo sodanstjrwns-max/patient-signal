@@ -10,6 +10,7 @@ import { Loader2, CheckCircle2, PartyPopper, Sparkles } from 'lucide-react';
 function SuccessContent() {
   const searchParams = useSearchParams();
   const { user } = useAuthStore();
+  const hospitalId = user?.hospitalId;
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [paymentInfo, setPaymentInfo] = useState<any>(null);
 
@@ -26,11 +27,13 @@ function SuccessContent() {
       }
 
       try {
-        // 백엔드에서 결제 승인 처리
+        // 백엔드에서 결제 승인 처리 (hospitalId, userId 포함)
         const { data } = await paymentsApi.confirm({
           paymentKey,
           orderId,
           amount: Number(amount),
+          hospitalId: hospitalId || undefined,
+          userId: user?.id || undefined,
         });
 
         setPaymentInfo(data);
@@ -43,7 +46,7 @@ function SuccessContent() {
     };
 
     confirmPayment();
-  }, [searchParams]);
+  }, [searchParams, hospitalId, user]);
 
   if (status === 'loading') {
     return (

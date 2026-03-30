@@ -330,7 +330,7 @@ export const couponsApi = {
 
 // Payments API
 export const paymentsApi = {
-  confirm: (data: { paymentKey: string; orderId: string; amount: number }) =>
+  confirm: (data: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string }) =>
     api.post('/payments/confirm', data),
   save: (data: any) =>
     api.post('/payments/save', data),

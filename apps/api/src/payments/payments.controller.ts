@@ -81,9 +81,9 @@ export class PaymentsController {
   @ApiResponse({ status: 200, description: '결제 승인 성공' })
   @ApiResponse({ status: 400, description: '결제 승인 실패' })
   async confirmPayment(
-    @Body() body: { paymentKey: string; orderId: string; amount: number },
+    @Body() body: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string },
   ) {
-    this.logger.log(`결제 승인 요청: orderId=${body.orderId}`);
+    this.logger.log(`결제 승인 요청: orderId=${body.orderId}, hospitalId=${body.hospitalId}`);
 
     if (!body.paymentKey || !body.orderId || !body.amount) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
@@ -93,6 +93,8 @@ export class PaymentsController {
       paymentKey: body.paymentKey,
       orderId: body.orderId,
       amount: body.amount,
+      hospitalId: body.hospitalId,
+      userId: body.userId,
     });
   }
 

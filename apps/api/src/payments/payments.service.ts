@@ -7,6 +7,8 @@ interface TossPaymentConfirmRequest {
   paymentKey: string;
   orderId: string;
   amount: number;
+  hospitalId?: string;
+  userId?: string;
 }
 
 interface TossPaymentResponse {
@@ -68,7 +70,7 @@ export class PaymentsService {
    * 결제 승인 요청
    */
   async confirmPayment(data: TossPaymentConfirmRequest): Promise<any> {
-    this.logger.log(`결제 승인 요청: orderId=${data.orderId}, amount=${data.amount}`);
+    this.logger.log(`결제 승인 요청: orderId=${data.orderId}, amount=${data.amount}, hospitalId=${data.hospitalId}`);
 
     // 1. 기존 결제 정보 확인
     const existingPayment = await this.prisma.payment.findUnique({
@@ -105,15 +107,15 @@ export class PaymentsService {
         await this.savePaymentResult(data.orderId, data.paymentKey, {
           status: 'FAILED',
           failReason: result.message || '결제 승인 실패',
-        });
+        }, data.hospitalId, data.userId);
 
         throw new BadRequestException(result.message || '결제 승인에 실패했습니다.');
       }
 
       this.logger.log(`토스 결제 승인 성공: paymentKey=${result.paymentKey}`);
 
-      // 3. 결제 정보 DB 저장
-      const payment = await this.savePaymentResult(data.orderId, data.paymentKey, result);
+      // 3. 결제 정보 DB 저장 (hospitalId, userId 포함)
+      const payment = await this.savePaymentResult(data.orderId, data.paymentKey, result, data.hospitalId, data.userId);
 
       // 4. 구독 정보 업데이트 (결제 완료 시)
       if (result.status === 'DONE') {
@@ -138,12 +140,14 @@ export class PaymentsService {
     orderId: string,
     paymentKey: string,
     result: any,
+    hospitalId?: string,
+    userId?: string,
   ) {
-    // orderId에서 플랜 정보 추출 (metadata로 처리 권장)
+    // orderId에서 플랜 정보 추출 (PS_STARTER_xxx, PS_STANDARD_xxx 등)
     const planType = this.extractPlanFromOrderId(orderId);
     const billingType = 'monthly'; // 기본값
 
-    const paymentData = {
+    const paymentData: any = {
       paymentKey,
       amount: result.totalAmount || 0,
       status: this.mapTossStatus(result.status),
@@ -158,6 +162,10 @@ export class PaymentsService {
       easyPayInfo: result.easyPay || null,
       failReason: result.failReason || null,
     };
+
+    // hospitalId, userId가 제공된 경우 추가
+    if (hospitalId) paymentData.hospitalId = hospitalId;
+    if (userId) paymentData.userId = userId;
 
     return this.prisma.payment.upsert({
       where: { orderId },
@@ -470,8 +478,22 @@ export class PaymentsService {
   }
 
   private extractPlanFromOrderId(orderId: string): PlanType {
-    // orderId 형식: PS_{timestamp}_{random}
-    // 기본값 STARTER 반환, 실제로는 메타데이터나 세션에서 가져오는 것이 좋음
+    // orderId 형식: PS_{PLAN}_{timestamp}_{random}
+    // 예: PS_STARTER_1711234567890_abc123, PS_STANDARD_..., PS_PRO_...
+    const parts = orderId.split('_');
+    if (parts.length >= 2) {
+      const planCandidate = parts[1].toUpperCase();
+      const validPlans: PlanType[] = ['FREE', 'STARTER', 'STANDARD', 'PRO', 'ENTERPRISE'];
+      if (validPlans.includes(planCandidate as PlanType)) {
+        return planCandidate as PlanType;
+      }
+    }
+    // AUTO 결제인 경우: PS_AUTO_{timestamp}_{random}
+    if (parts[1] === 'AUTO') {
+      // 자동결제는 구독에서 플랜을 가져오므로 기본값
+      return 'STARTER';
+    }
+    this.logger.warn(`orderId에서 플랜 추출 실패 (${orderId}), STARTER 기본값 사용`);
     return 'STARTER';
   }
 
