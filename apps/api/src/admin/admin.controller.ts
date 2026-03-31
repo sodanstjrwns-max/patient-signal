@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Query, Logger } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { Public } from '../auth/decorators/public.decorator';
@@ -66,6 +66,17 @@ export class AdminController {
   ) {
     this.validateSecret(secret);
     return this.adminService.getUserActivity(sort);
+  }
+
+  /**
+   * 기존 FREE 유저들에게 STARTER 7일 트라이얼 소급 적용
+   * POST /api/admin/grant-trials?secret=xxx
+   */
+  @Public()
+  @Post('grant-trials')
+  async grantTrialsToFreeUsers(@Query('secret') secret: string) {
+    this.validateSecret(secret);
+    return this.adminService.grantStarterTrialToFreeUsers();
   }
 
   private validateSecret(secret: string) {

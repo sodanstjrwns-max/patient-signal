@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { TrialBanner } from '@/components/dashboard/TrialBanner';
 import { useAuthStore } from '@/stores/auth';
 import { useRouter } from 'next/navigation';
 import { hospitalApi } from '@/lib/api';
@@ -63,7 +64,10 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
       {/* pt-14: 모바일 top bar 높이만큼 패딩, lg:pt-0: 데스크톱은 패딩 없음 */}
-      <main className="flex-1 overflow-auto pt-14 lg:pt-0">{children}</main>
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0">
+        <TrialBanner />
+        {children}
+      </main>
     </div>
   );
 }

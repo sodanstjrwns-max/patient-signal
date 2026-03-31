@@ -14,7 +14,7 @@ export class HospitalsService {
     // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)
     const sanitize = (val?: string) => val?.trim() || null;
 
-    // 병원 생성 (무료 플랜)
+    // 병원 생성 (STARTER 7일 트라이얼로 시작)
     // 새 필드(coreTreatments 등)가 DB에 아직 없을 수 있으므로 fallback 처리
     let hospital;
     try {
@@ -34,8 +34,8 @@ export class HospitalsService {
           address: dto.address,
           websiteUrl: dto.websiteUrl,
           naverPlaceId: dto.naverPlaceId,
-          planType: 'FREE',
-          subscriptionStatus: 'ACTIVE',
+          planType: 'STARTER',              // 7일 트라이얼은 STARTER 권한
+          subscriptionStatus: 'TRIAL',       // 트라이얼 상태
         },
       });
     } catch (err) {
@@ -53,8 +53,8 @@ export class HospitalsService {
           address: dto.address,
           websiteUrl: dto.websiteUrl,
           naverPlaceId: dto.naverPlaceId,
-          planType: 'FREE',
-          subscriptionStatus: 'ACTIVE',
+          planType: 'STARTER',
+          subscriptionStatus: 'TRIAL',
         },
       });
     }
@@ -68,39 +68,41 @@ export class HospitalsService {
       },
     });
 
-    // 무료 플랜 구독 생성 (무기한)
+    // STARTER 7일 트라이얼 구독 생성
+    // 7일 후 자동으로 FREE로 다운그레이드 (Cron에서 처리)
     const now = new Date();
-    const farFuture = new Date('2099-12-31T23:59:59.000Z');
+    const trialEnd = new Date(now);
+    trialEnd.setDate(trialEnd.getDate() + 7); // 7일 후 만료
 
     try {
       await this.prisma.subscription.create({
         data: {
           hospitalId: hospital.id,
-          planType: 'FREE',
-          status: 'ACTIVE',
+          planType: 'STARTER',
+          status: 'TRIAL',
           currentPeriodStart: now,
-          currentPeriodEnd: farFuture,
+          currentPeriodEnd: trialEnd,
         },
       });
+      this.logger.log(`[트라이얼] STARTER 7일 체험 시작: hospitalId=${hospital.id}, 만료=${trialEnd.toISOString()}`);
     } catch (err) {
       this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }
 
-    // ── 경쟁 병원 등록 (FREE 플랜은 경쟁사 0개이므로 스킵, 유료 전환 시 활성화) ──
+    // ── 경쟁 병원 등록 (STARTER 트라이얼 → 경쟁사 1개 활성화) ──
     if (dto.competitorNames && dto.competitorNames.length > 0) {
-      const planLimits = PlanGuard.PLAN_LIMITS['FREE'];
+      const planLimits = PlanGuard.PLAN_LIMITS['STARTER']; // 트라이얼은 STARTER 권한
       const maxCompetitors = planLimits.maxCompetitors;
       const competitorRegion = `${dto.regionSido} ${dto.regionSigungu}`;
       
-      // FREE 플랜이라도 데이터는 저장 (비활성), 업그레이드 시 활성화
-      for (const name of dto.competitorNames.slice(0, 5)) {
+      for (const [idx, name] of dto.competitorNames.slice(0, 5).entries()) {
         try {
           await this.prisma.competitor.create({
             data: {
               hospitalId: hospital.id,
               competitorName: name.trim(),
               competitorRegion: competitorRegion,
-              isActive: maxCompetitors > 0, // FREE=false, 유료=true
+              isActive: idx < maxCompetitors, // STARTER=1개 활성, 나머지 비활성
             },
           });
         } catch (err) {
@@ -109,10 +111,10 @@ export class HospitalsService {
       }
     }
 
-    // 자동 프롬프트 생성 (주력 진료 + 내원 지역 + 기본 지역 기반)
-    // 플랜별 질문 수 제한 적용 (실패해도 온보딩은 진행)
+    // 자동 프롬프트 생성 (STARTER 기준: 5개)
+    // 트라이얼 동안 STARTER 수준의 질문 제공 (실패해도 온보딩은 진행)
     try {
-      await this.createAutoPrompts(hospital.id, dto, 'FREE');
+      await this.createAutoPrompts(hospital.id, dto, 'STARTER');
     } catch (err) {
       this.logger.warn(`자동 프롬프트 생성 실패 (무시됨): ${err?.message}`);
     }

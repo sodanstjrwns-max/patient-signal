@@ -231,21 +231,25 @@ export class SubscriptionsService {
 
   /**
    * 체험 기간 종료 체크 (매일 실행)
+   * 
+   * STARTER 트라이얼 만료 시:
+   *   - 빌링키(자동결제)가 있으면 → ACTIVE 유지
+   *   - 빌링키가 없으면 → FREE로 자동 다운그레이드
+   * 
+   * 쿠폰/결제 기반 트라이얼: → ACTIVE로 전환 (기존 동작)
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkTrialExpirations() {
     this.logger.log('체험 기간 종료 체크 시작...');
 
     const now = new Date();
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    // 체험 기간이 지난 구독 찾기
+    // 트라이얼 기간이 만료된 구독 찾기 (currentPeriodEnd 기준)
     const expiredTrials = await this.prisma.subscription.findMany({
       where: {
         status: 'TRIAL',
-        currentPeriodStart: {
-          lte: sevenDaysAgo,
+        currentPeriodEnd: {
+          lte: now,
         },
       },
       include: {
@@ -253,30 +257,58 @@ export class SubscriptionsService {
       },
     });
 
+    let downgraded = 0;
+    let activated = 0;
+
     for (const subscription of expiredTrials) {
-      // 체험 -> 활성 상태로 변경
+      // 자동결제(빌링키)가 있으면 → ACTIVE 유지 (유료 전환 성공)
+      if (subscription.billingKey) {
+        await this.prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { status: 'ACTIVE' },
+        });
+        await this.prisma.hospital.update({
+          where: { id: subscription.hospitalId },
+          data: { subscriptionStatus: 'ACTIVE' },
+        });
+        activated++;
+        this.logger.log(`트라이얼 → ACTIVE (빌링키 존재): hospitalId=${subscription.hospitalId}`);
+        continue;
+      }
+
+      // 빌링키 없음 → FREE로 다운그레이드
       await this.prisma.subscription.update({
         where: { id: subscription.id },
         data: {
-          status: 'ACTIVE',
+          status: 'EXPIRED',
+          planType: 'FREE',
         },
       });
 
       await this.prisma.hospital.update({
         where: { id: subscription.hospitalId },
         data: {
-          subscriptionStatus: 'ACTIVE',
+          subscriptionStatus: 'EXPIRED',
+          planType: 'FREE',
         },
       });
 
-      this.logger.log(`체험 종료 -> 활성: hospitalId=${subscription.hospitalId}`);
+      // 경쟁사 비활성화 (FREE는 경쟁사 0개)
+      await this.prisma.competitor.updateMany({
+        where: { hospitalId: subscription.hospitalId },
+        data: { isActive: false },
+      });
+
+      downgraded++;
+      this.logger.log(`트라이얼 만료 → FREE 다운그레이드: hospitalId=${subscription.hospitalId}, 병원=${subscription.hospital?.name}`);
     }
 
-    this.logger.log(`체험 기간 체크 완료: ${expiredTrials.length}건 처리`);
+    this.logger.log(`체험 기간 체크 완료: 총 ${expiredTrials.length}건 (활성화 ${activated}, 다운그레이드 ${downgraded})`);
   }
 
   /**
    * 구독 만료 체크 (매일 실행)
+   * 쿠폰/결제 기반 구독이 만료되면 FREE로 다운그레이드
    */
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async checkSubscriptionExpirations() {
@@ -284,12 +316,10 @@ export class SubscriptionsService {
 
     const now = new Date();
 
-    // 만료된 구독 찾기
+    // 만료된 구독 찾기 (TRIAL은 checkTrialExpirations에서 처리)
     const expiredSubscriptions = await this.prisma.subscription.findMany({
       where: {
-        status: {
-          in: ['TRIAL', 'ACTIVE'],
-        },
+        status: 'ACTIVE',
         currentPeriodEnd: {
           lte: now,
         },
@@ -297,26 +327,36 @@ export class SubscriptionsService {
     });
 
     for (const subscription of expiredSubscriptions) {
-      // 취소 예약된 경우 -> 만료 처리
-      if (subscription.cancelAtPeriodEnd) {
-        await this.prisma.subscription.update({
-          where: { id: subscription.id },
-          data: {
-            status: 'EXPIRED',
-          },
-        });
-
-        await this.prisma.hospital.update({
-          where: { id: subscription.hospitalId },
-          data: {
-            subscriptionStatus: 'EXPIRED',
-            planType: 'FREE', // 무료 플랜으로 다운그레이드
-          },
-        });
-
-        this.logger.log(`구독 만료: hospitalId=${subscription.hospitalId}`);
+      // 자동갱신(빌링키) 있는 경우 → payments.service에서 자동결제 처리
+      if (subscription.billingKey && subscription.autoRenewal) {
+        this.logger.log(`자동갱신 대상 (빌링키 존재): hospitalId=${subscription.hospitalId}`);
+        continue;
       }
-      // 자동 갱신인 경우 -> 결제 시도 필요 (현재는 수동 갱신)
+
+      // 취소 예약 또는 빌링키 없는 경우 → 만료 처리
+      await this.prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          status: 'EXPIRED',
+          planType: 'FREE',
+        },
+      });
+
+      await this.prisma.hospital.update({
+        where: { id: subscription.hospitalId },
+        data: {
+          subscriptionStatus: 'EXPIRED',
+          planType: 'FREE',
+        },
+      });
+
+      // 경쟁사 비활성화 (FREE는 경쟁사 0개)
+      await this.prisma.competitor.updateMany({
+        where: { hospitalId: subscription.hospitalId },
+        data: { isActive: false },
+      });
+
+      this.logger.log(`구독 만료 → FREE 다운그레이드: hospitalId=${subscription.hospitalId}`);
     }
 
     this.logger.log(`구독 만료 체크 완료: ${expiredSubscriptions.length}건 처리`);

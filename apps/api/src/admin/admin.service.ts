@@ -266,4 +266,102 @@ export class AdminService {
       coupons: enrichedCoupons,
     };
   }
+
+  /**
+   * 기존 FREE 유저들에게 STARTER 7일 트라이얼 소급 적용
+   * 
+   * 대상: planType='FREE'이고, 구독이 없거나 FREE 구독만 있는 병원
+   * 동작: subscription을 STARTER/TRIAL/7일로 변경, hospital.planType도 STARTER로
+   */
+  async grantStarterTrialToFreeUsers() {
+    this.logger.log('=== FREE 유저 STARTER 트라이얼 소급 적용 시작 ===');
+
+    // FREE 플랜인 병원 중 쿠폰으로 이미 유료 구독 중인 병원 제외
+    const freeHospitals = await this.prisma.hospital.findMany({
+      where: { planType: 'FREE' },
+      include: {
+        subscriptions: true,
+      },
+    });
+
+    const now = new Date();
+    const trialEnd = new Date(now);
+    trialEnd.setDate(trialEnd.getDate() + 7);
+
+    const results: any[] = [];
+
+    for (const hospital of freeHospitals) {
+      // 이미 ACTIVE/TRIAL 상태의 유료 구독이 있으면 스킵
+      const hasActivePaidSub = hospital.subscriptions?.some(
+        (s: any) => ['ACTIVE', 'TRIAL'].includes(s.status) && s.planType !== 'FREE'
+      );
+      if (hasActivePaidSub) {
+        results.push({ hospital: hospital.name, status: 'skipped', reason: '이미 유료 구독 중' });
+        continue;
+      }
+
+      try {
+        // 구독 upsert (기존 FREE 구독이 있으면 업데이트, 없으면 생성)
+        await this.prisma.subscription.upsert({
+          where: { hospitalId: hospital.id },
+          create: {
+            hospitalId: hospital.id,
+            planType: 'STARTER',
+            status: 'TRIAL',
+            currentPeriodStart: now,
+            currentPeriodEnd: trialEnd,
+          },
+          update: {
+            planType: 'STARTER',
+            status: 'TRIAL',
+            currentPeriodStart: now,
+            currentPeriodEnd: trialEnd,
+          },
+        });
+
+        // 병원 planType 업데이트
+        await this.prisma.hospital.update({
+          where: { id: hospital.id },
+          data: {
+            planType: 'STARTER',
+            subscriptionStatus: 'TRIAL',
+          },
+        });
+
+        // 경쟁사 1개 활성화 (STARTER 기준)
+        const competitors = await this.prisma.competitor.findMany({
+          where: { hospitalId: hospital.id },
+          orderBy: { createdAt: 'asc' },
+        });
+        if (competitors.length > 0) {
+          await this.prisma.competitor.update({
+            where: { id: competitors[0].id },
+            data: { isActive: true },
+          });
+        }
+
+        results.push({
+          hospital: hospital.name,
+          hospitalId: hospital.id,
+          status: 'granted',
+          trialEnd: trialEnd.toISOString(),
+        });
+
+        this.logger.log(`[소급적용] ${hospital.name} → STARTER 7일 트라이얼 부여`);
+      } catch (err) {
+        results.push({ hospital: hospital.name, status: 'error', error: err?.message });
+        this.logger.error(`[소급적용 실패] ${hospital.name}: ${err?.message}`);
+      }
+    }
+
+    this.logger.log(`=== 소급 적용 완료: ${results.filter(r => r.status === 'granted').length}건 성공 ===`);
+
+    return {
+      total: freeHospitals.length,
+      granted: results.filter(r => r.status === 'granted').length,
+      skipped: results.filter(r => r.status === 'skipped').length,
+      errors: results.filter(r => r.status === 'error').length,
+      details: results,
+    };
+  }
 }
