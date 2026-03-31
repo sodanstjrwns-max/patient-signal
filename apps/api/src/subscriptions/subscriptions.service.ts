@@ -1,5 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { PlanType, SubscriptionStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HospitalsService } from '../hospitals/hospitals.service';
@@ -11,6 +12,7 @@ export class SubscriptionsService {
   constructor(
     private prisma: PrismaService,
     private hospitalsService: HospitalsService,
+    private emailService: EmailService,
   ) {}
 
   /**
@@ -495,5 +497,338 @@ export class SubscriptionsService {
         competitorAEO: limits.competitorAEO,
       },
     };
+  }
+
+  // ==================== A1: 트라이얼 만료 전 전환 유도 (D-3, D-1, D-day) ====================
+
+  /**
+   * 매일 오전 9시(KST=00:00 UTC) 실행
+   * 트라이얼 만료 3일 전, 1일 전, 당일에 전환 유도 이메일 발송
+   */
+  @Cron('0 0 * * *') // 매일 00:00 UTC = 09:00 KST
+  async sendTrialConversionReminders() {
+    this.logger.log('[A1] 트라이얼 전환 유도 알림 크론 시작...');
+    const now = new Date();
+
+    // TRIAL 상태 + ENTERPRISE 제외 + 빌링키 없는 구독 조회
+    const trialSubs = await this.prisma.subscription.findMany({
+      where: {
+        status: 'TRIAL',
+        planType: { not: 'ENTERPRISE' },
+        billingKey: null,
+      },
+      include: {
+        hospital: {
+          include: {
+            users: { where: { role: 'OWNER' }, select: { email: true, name: true } },
+          },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const sub of trialSubs) {
+      const daysRemaining = Math.ceil(
+        (sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      // D-3, D-1, D-0만 발송
+      if (![3, 1, 0].includes(daysRemaining)) continue;
+
+      const owner = sub.hospital?.users?.[0];
+      if (!owner?.email) continue;
+
+      // 이 병원의 성과 데이터 수집 (있으면)
+      let mentionRate: number | undefined;
+      let abhsScore: number | undefined;
+      try {
+        const recentScore = await this.prisma.dailyScore.findFirst({
+          where: { hospitalId: sub.hospitalId },
+          orderBy: { scoreDate: 'desc' },
+        });
+        if (recentScore) {
+          abhsScore = recentScore.abhsScore ?? undefined;
+          mentionRate = recentScore.overallScore ?? undefined;
+        }
+      } catch {}
+
+      await this.emailService.sendTrialConversionEmail(
+        owner.email,
+        owner.name || '원장님',
+        {
+          hospitalName: sub.hospital?.name || '',
+          daysRemaining,
+          mentionRate,
+          abhsScore,
+        },
+      );
+      sent++;
+    }
+    this.logger.log(`[A1] 트라이얼 전환 유도 알림 완료: ${sent}건 발송`);
+  }
+
+  // ==================== A3: 이탈 위험 자동 감지 & 리마인드 ====================
+
+  /**
+   * 매일 오전 10시(KST=01:00 UTC) 실행
+   * 3일, 7일 미접속 유저에게 리마인드 이메일 발송
+   */
+  @Cron('0 1 * * *') // 매일 01:00 UTC = 10:00 KST
+  async sendInactivityReminders() {
+    this.logger.log('[A3] 이탈 위험 리마인드 크론 시작...');
+
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // 3일 또는 7일 미접속 + 유료 구독 활성 상태인 유저
+    const inactiveUsers = await this.prisma.user.findMany({
+      where: {
+        role: 'OWNER',
+        hospital: {
+          subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
+          planType: { not: 'FREE' },
+        },
+        OR: [
+          { lastLoginAt: { lte: threeDaysAgo, gte: sevenDaysAgo } }, // 3~7일 미접속
+          { lastLoginAt: { lte: sevenDaysAgo } },                     // 7일+ 미접속
+          { lastLoginAt: null },                                       // 한번도 접속 안함
+        ],
+      },
+      select: {
+        email: true,
+        name: true,
+        lastLoginAt: true,
+        hospital: {
+          select: { id: true, name: true },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const user of inactiveUsers) {
+      if (!user.email || !user.hospital) continue;
+
+      const daysSinceLogin = user.lastLoginAt
+        ? Math.floor((now.getTime() - user.lastLoginAt.getTime()) / (1000 * 60 * 60 * 24))
+        : 999;
+
+      // 정확히 3일 또는 7일인 경우만 발송 (매일 보내지 않도록)
+      if (daysSinceLogin !== 3 && daysSinceLogin !== 7) continue;
+
+      // 최근 점수 데이터
+      let recentMentionRate: number | undefined;
+      try {
+        const score = await this.prisma.dailyScore.findFirst({
+          where: { hospitalId: user.hospital.id },
+          orderBy: { scoreDate: 'desc' },
+        });
+        recentMentionRate = score?.overallScore ?? undefined;
+      } catch {}
+
+      await this.emailService.sendInactivityReminderEmail(
+        user.email,
+        user.name || '원장님',
+        {
+          hospitalName: user.hospital.name,
+          daysSinceLogin,
+          recentMentionRate,
+        },
+      );
+      sent++;
+    }
+    this.logger.log(`[A3] 이탈 리마인드 완료: ${sent}건 발송`);
+  }
+
+  // ==================== B1: 주간 AI 리포트 자동 발송 ====================
+
+  /**
+   * 매주 월요일 오전 9시(KST=00:00 UTC) 실행
+   * 활성 구독 병원 원장님에게 주간 리포트 이메일 발송
+   */
+  @Cron('0 0 * * 1') // 매주 월요일 00:00 UTC = 09:00 KST
+  async sendWeeklyReportEmails() {
+    this.logger.log('[B1] 주간 리포트 이메일 발송 크론 시작...');
+
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    // 활성 구독 병원 (FREE 제외)
+    const hospitals = await this.prisma.hospital.findMany({
+      where: {
+        subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
+        planType: { not: 'FREE' },
+      },
+      include: {
+        users: { where: { role: 'OWNER' }, select: { email: true, name: true } },
+      },
+    });
+
+    let sent = 0;
+    for (const hospital of hospitals) {
+      const owner = hospital.users?.[0];
+      if (!owner?.email) continue;
+
+      try {
+        // 이번 주 점수
+        const thisWeekScores = await this.prisma.dailyScore.findMany({
+          where: { hospitalId: hospital.id, scoreDate: { gte: weekAgo } },
+          orderBy: { scoreDate: 'desc' },
+        });
+
+        // 지난 주 점수 (비교용)
+        const lastWeekScores = await this.prisma.dailyScore.findMany({
+          where: { hospitalId: hospital.id, scoreDate: { gte: twoWeeksAgo, lt: weekAgo } },
+        });
+
+        if (thisWeekScores.length === 0) continue;
+
+        const avgAbhs = Math.round(thisWeekScores.reduce((s, d) => s + (d.abhsScore || 0), 0) / thisWeekScores.length);
+        const avgMention = Math.round(thisWeekScores.reduce((s, d) => s + (d.overallScore || 0), 0) / thisWeekScores.length);
+
+        const lastAvgAbhs = lastWeekScores.length > 0
+          ? Math.round(lastWeekScores.reduce((s, d) => s + (d.abhsScore || 0), 0) / lastWeekScores.length)
+          : avgAbhs;
+        const lastAvgMention = lastWeekScores.length > 0
+          ? Math.round(lastWeekScores.reduce((s, d) => s + (d.overallScore || 0), 0) / lastWeekScores.length)
+          : avgMention;
+
+        // 플랫폼별 성과 (최신 점수 기준)
+        const latest = thisWeekScores[0];
+        const platformData: Record<string, number> = {};
+        try {
+          const latestResponses = await this.prisma.aIResponse.findMany({
+            where: { hospitalId: hospital.id, createdAt: { gte: weekAgo } },
+            select: { aiPlatform: true, isMentioned: true },
+          });
+          const platformGroups = new Map<string, { total: number; mentioned: number }>();
+          for (const r of latestResponses) {
+            if (!platformGroups.has(r.aiPlatform)) platformGroups.set(r.aiPlatform, { total: 0, mentioned: 0 });
+            const g = platformGroups.get(r.aiPlatform)!;
+            g.total++;
+            if (r.isMentioned) g.mentioned++;
+          }
+          for (const [p, g] of platformGroups) {
+            platformData[p] = g.total > 0 ? Math.round((g.mentioned / g.total) * 100) : 0;
+          }
+        } catch {}
+
+        const platformEntries = Object.entries(platformData).sort((a, b) => b[1] - a[1]);
+        const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
+
+        // 크롤링 횟수
+        const totalCrawls = await this.prisma.crawlJob.count({
+          where: { hospitalId: hospital.id, startedAt: { gte: weekAgo }, status: 'COMPLETED' },
+        });
+
+        await this.emailService.sendWeeklyReportEmail(
+          owner.email,
+          owner.name || '원장님',
+          {
+            hospitalName: hospital.name,
+            abhsScore: avgAbhs,
+            abhsChange: avgAbhs - lastAvgAbhs,
+            mentionRate: avgMention,
+            mentionRateChange: avgMention - lastAvgMention,
+            topPlatform: platformNames[platformEntries[0]?.[0]] || 'N/A',
+            topPlatformRate: platformEntries[0]?.[1] || 0,
+            weakPlatform: platformNames[platformEntries[platformEntries.length - 1]?.[0]] || 'N/A',
+            weakPlatformRate: platformEntries[platformEntries.length - 1]?.[1] || 0,
+            totalCrawls,
+            periodStart: weekAgo.toLocaleDateString('ko-KR'),
+            periodEnd: now.toLocaleDateString('ko-KR'),
+          },
+        );
+        sent++;
+      } catch (err) {
+        this.logger.error(`[B1] ${hospital.name} 주간 리포트 실패: ${err.message}`);
+      }
+    }
+    this.logger.log(`[B1] 주간 리포트 발송 완료: ${sent}건`);
+  }
+
+  // ==================== B2: 경쟁사 변동 알림 ====================
+
+  /**
+   * 매일 오후 6시(KST=09:00 UTC) 실행
+   * 일일 크롤링 후 경쟁사 점수 5점 이상 변동 감지 → 이메일 알림
+   */
+  @Cron('0 9 * * *') // 매일 09:00 UTC = 18:00 KST
+  async checkCompetitorChanges() {
+    this.logger.log('[B2] 경쟁사 변동 감지 크론 시작...');
+
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+
+    // 경쟁사가 있는 활성 병원 조회
+    const hospitals = await this.prisma.hospital.findMany({
+      where: {
+        subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
+        planType: { notIn: ['FREE', 'STARTER'] }, // STANDARD 이상만
+        competitors: { some: { isActive: true } },
+      },
+      include: {
+        users: { where: { role: 'OWNER' }, select: { email: true, name: true } },
+        competitors: { where: { isActive: true }, select: { id: true, competitorName: true } },
+      },
+    });
+
+    let alertsSent = 0;
+    for (const hospital of hospitals) {
+      const owner = hospital.users?.[0];
+      if (!owner?.email || hospital.competitors.length === 0) continue;
+
+      const significantChanges: Array<{
+        competitorName: string;
+        oldScore: number;
+        newScore: number;
+        change: number;
+      }> = [];
+
+      for (const comp of hospital.competitors) {
+        try {
+          // 최근 점수 (오늘/어제)
+          const recentScore = await this.prisma.competitorScore.findFirst({
+            where: { competitorId: comp.id, createdAt: { gte: yesterday } },
+            orderBy: { createdAt: 'desc' },
+          });
+          // 이전 점수 (어제/그저께)
+          const prevScore = await this.prisma.competitorScore.findFirst({
+            where: { competitorId: comp.id, createdAt: { gte: twoDaysAgo, lt: yesterday } },
+            orderBy: { createdAt: 'desc' },
+          });
+
+          if (recentScore && prevScore) {
+            const recentVal = recentScore.overallScore ?? 0;
+            const prevVal = prevScore.overallScore ?? 0;
+            const change = recentVal - prevVal;
+
+            if (Math.abs(change) >= 5) {
+              significantChanges.push({
+                competitorName: comp.competitorName,
+                oldScore: prevVal,
+                newScore: recentVal,
+                change,
+              });
+            }
+          }
+        } catch {}
+      }
+
+      if (significantChanges.length > 0) {
+        await this.emailService.sendCompetitorChangeEmail(
+          owner.email,
+          owner.name || '원장님',
+          {
+            hospitalName: hospital.name,
+            changes: significantChanges,
+          },
+        );
+        alertsSent++;
+      }
+    }
+    this.logger.log(`[B2] 경쟁사 변동 알림 완료: ${alertsSent}건 발송`);
   }
 }

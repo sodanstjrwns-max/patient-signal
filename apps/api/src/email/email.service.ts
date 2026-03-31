@@ -419,4 +419,331 @@ export class EmailService {
       return false;
     }
   }
+
+  // ==================== A1: 트라이얼 만료 전 전환 유도 이메일 ====================
+
+  /**
+   * 트라이얼 만료 전 전환 유도 이메일 (D-3, D-1, D-day)
+   */
+  async sendTrialConversionEmail(
+    to: string,
+    name: string,
+    data: {
+      hospitalName: string;
+      daysRemaining: number;
+      mentionRate?: number;
+      totalQueries?: number;
+      abhsScore?: number;
+      topPlatform?: string;
+    },
+  ): Promise<boolean> {
+    if (!this.resend) {
+      this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
+      return false;
+    }
+
+    const urgencyColor = data.daysRemaining <= 0 ? '#EF4444' : data.daysRemaining <= 1 ? '#F59E0B' : '#3B82F6';
+    const urgencyText = data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
+    const subject = data.daysRemaining <= 0
+      ? `[Patient Signal] 체험 기간이 오늘 종료됩니다 ⏰`
+      : `[Patient Signal] 체험 기간 만료 ${data.daysRemaining}일 전 안내`;
+
+    const statsSection = (data.mentionRate || data.totalQueries || data.abhsScore) ? `
+    <div style="background:#F0F9FF;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #3B82F6;">
+      <p style="font-weight:bold;color:#1E40AF;margin-bottom:12px;">📊 체험 기간 동안의 ${data.hospitalName} 성과</p>
+      ${data.mentionRate !== undefined ? `<p>🎯 AI 언급률: <strong>${data.mentionRate}%</strong></p>` : ''}
+      ${data.abhsScore !== undefined ? `<p>📈 ABHS 점수: <strong>${data.abhsScore}점</strong></p>` : ''}
+      ${data.totalQueries !== undefined ? `<p>🔍 총 AI 분석: <strong>${data.totalQueries}회</strong></p>` : ''}
+      ${data.topPlatform ? `<p>🏆 최고 성과 플랫폼: <strong>${data.topPlatform}</strong></p>` : ''}
+      <p style="color:#6B7280;font-size:13px;margin-top:12px;">유료 전환하면 매일 자동 추적하여 경쟁사 대비 변화를 실시간으로 확인할 수 있습니다.</p>
+    </div>` : '';
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;color:#333;}
+  .container{max-width:600px;margin:0 auto;padding:40px 20px;}
+  .header{text-align:center;margin-bottom:30px;}
+  .logo{font-size:24px;font-weight:bold;color:#4F46E5;}
+  .urgency-box{background:linear-gradient(135deg,${urgencyColor}11,${urgencyColor}22);border-radius:12px;padding:24px;text-align:center;margin:24px 0;border:2px solid ${urgencyColor}44;}
+  .urgency-text{font-size:14px;color:${urgencyColor};}
+  .urgency-days{font-size:42px;font-weight:bold;color:${urgencyColor};}
+  .button{display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;text-decoration:none;padding:16px 48px;border-radius:8px;font-weight:bold;font-size:16px;}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;}
+</style></head>
+<body><div class="container">
+  <div class="header"><div class="logo">🏥 Patient Signal</div></div>
+  <h2>안녕하세요, ${name} 원장님!</h2>
+  <p><strong>${data.hospitalName}</strong>의 무료 체험 기간이 곧 종료됩니다.</p>
+  <div class="urgency-box">
+    <div class="urgency-text">무료 체험 종료까지</div>
+    <div class="urgency-days">${urgencyText}</div>
+    <div class="urgency-text">체험 종료 후 FREE 플랜으로 전환됩니다</div>
+  </div>
+  ${statsSection}
+  <p>지금 유료 전환하면:</p>
+  <ul>
+    <li>✅ 매일 자동 AI 크롤링 (4개 플랫폼)</li>
+    <li>✅ 경쟁사 AEO 비교 분석</li>
+    <li>✅ 실시간 질문 5회/일 이상</li>
+    <li>✅ 주간 AI 리포트 자동 발송</li>
+  </ul>
+  <div style="text-align:center;margin:30px 0;">
+    <a href="${this.appUrl}/dashboard/billing" class="button">유료 전환하기 →</a>
+  </div>
+  <div class="footer"><p>© 2026 Patient Signal. All rights reserved.</p></div>
+</div></body></html>`;
+
+    try {
+      await this.resend.emails.send({
+        from: `Patient Signal <${this.fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+      });
+      this.logger.log(`[A1] 트라이얼 전환 이메일 발송 완료: ${to} (D-${data.daysRemaining})`);
+      return true;
+    } catch (error) {
+      this.logger.error(`이메일 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
+
+  // ==================== A3: 이탈 리마인드 이메일 ====================
+
+  /**
+   * 미접속 리마인드 이메일 (3일, 7일 미접속)
+   */
+  async sendInactivityReminderEmail(
+    to: string,
+    name: string,
+    data: {
+      hospitalName: string;
+      daysSinceLogin: number;
+      recentMentionRate?: number;
+      scoreChange?: number;
+    },
+  ): Promise<boolean> {
+    if (!this.resend) return false;
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;color:#333;}
+  .container{max-width:600px;margin:0 auto;padding:40px 20px;}
+  .header{text-align:center;margin-bottom:30px;}
+  .logo{font-size:24px;font-weight:bold;color:#4F46E5;}
+  .highlight{background:linear-gradient(135deg,#EFF6FF,#DBEAFE);border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #3B82F6;}
+  .button{display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;}
+</style></head>
+<body><div class="container">
+  <div class="header"><div class="logo">🏥 Patient Signal</div></div>
+  <h2>${name} 원장님, ${data.daysSinceLogin}일째 안 오셨어요! 😢</h2>
+  <p><strong>${data.hospitalName}</strong>의 AI 가시성은 계속 추적되고 있습니다.</p>
+  ${data.recentMentionRate !== undefined ? `
+  <div class="highlight">
+    <p>📊 지금 확인 안 하고 계신 데이터:</p>
+    <p>🎯 최근 AI 언급률: <strong>${data.recentMentionRate}%</strong></p>
+    ${data.scoreChange !== undefined ? `<p>${data.scoreChange >= 0 ? '📈' : '📉'} 점수 변화: <strong>${data.scoreChange >= 0 ? '+' : ''}${data.scoreChange}점</strong></p>` : ''}
+    <p style="color:#6B7280;font-size:13px;">경쟁사들은 매일 확인하고 있을지도 몰라요...</p>
+  </div>` : ''}
+  <div style="text-align:center;margin:30px 0;">
+    <a href="${this.appUrl}/dashboard" class="button">대시보드 확인하기 →</a>
+  </div>
+  <div class="footer"><p>© 2026 Patient Signal. All rights reserved.</p></div>
+</div></body></html>`;
+
+    try {
+      await this.resend.emails.send({
+        from: `Patient Signal <${this.fromEmail}>`,
+        to: [to],
+        subject: `[Patient Signal] ${name} 원장님, ${data.hospitalName}의 AI 성과가 변했어요`,
+        html,
+      });
+      this.logger.log(`[A3] 이탈 리마인드 이메일 발송: ${to} (${data.daysSinceLogin}일 미접속)`);
+      return true;
+    } catch (error) {
+      this.logger.error(`이메일 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
+
+  // ==================== B1: 주간 AI 리포트 이메일 ====================
+
+  /**
+   * 주간 AI 리포트 이메일
+   */
+  async sendWeeklyReportEmail(
+    to: string,
+    name: string,
+    data: {
+      hospitalName: string;
+      abhsScore: number;
+      abhsChange: number;
+      mentionRate: number;
+      mentionRateChange: number;
+      topPlatform: string;
+      topPlatformRate: number;
+      weakPlatform: string;
+      weakPlatformRate: number;
+      competitorAlert?: string;
+      totalCrawls: number;
+      periodStart: string;
+      periodEnd: string;
+    },
+  ): Promise<boolean> {
+    if (!this.resend) return false;
+
+    const trendIcon = (change: number) => change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
+    const trendColor = (change: number) => change > 0 ? '#059669' : change < 0 ? '#DC2626' : '#6B7280';
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;color:#333;}
+  .container{max-width:600px;margin:0 auto;padding:40px 20px;}
+  .header{text-align:center;margin-bottom:30px;}
+  .logo{font-size:24px;font-weight:bold;color:#4F46E5;}
+  .score-grid{display:flex;gap:12px;margin:20px 0;}
+  .score-card{flex:1;background:#F8FAFC;border-radius:12px;padding:16px;text-align:center;}
+  .score-value{font-size:28px;font-weight:bold;color:#1E293B;}
+  .score-change{font-size:13px;margin-top:4px;}
+  .platform-bar{display:flex;align-items:center;gap:8px;padding:8px 0;}
+  .bar{height:8px;border-radius:4px;background:#E2E8F0;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .alert-box{background:#FEF3C7;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #F59E0B;}
+  .button{display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;}
+</style></head>
+<body><div class="container">
+  <div class="header"><div class="logo">🏥 Patient Signal</div></div>
+  <h2>${name} 원장님의 주간 AI 리포트 📊</h2>
+  <p style="color:#6B7280;">${data.periodStart} ~ ${data.periodEnd} | ${data.hospitalName}</p>
+  
+  <table width="100%" cellpadding="0" cellspacing="8" style="margin:20px 0;">
+    <tr>
+      <td style="background:#F8FAFC;border-radius:12px;padding:16px;text-align:center;width:50%;">
+        <div style="font-size:13px;color:#6B7280;">ABHS 종합점수</div>
+        <div style="font-size:28px;font-weight:bold;">${data.abhsScore}</div>
+        <div style="font-size:13px;color:${trendColor(data.abhsChange)};">${trendIcon(data.abhsChange)} ${data.abhsChange >= 0 ? '+' : ''}${data.abhsChange}점</div>
+      </td>
+      <td style="background:#F8FAFC;border-radius:12px;padding:16px;text-align:center;width:50%;">
+        <div style="font-size:13px;color:#6B7280;">AI 언급률</div>
+        <div style="font-size:28px;font-weight:bold;">${data.mentionRate}%</div>
+        <div style="font-size:13px;color:${trendColor(data.mentionRateChange)};">${trendIcon(data.mentionRateChange)} ${data.mentionRateChange >= 0 ? '+' : ''}${data.mentionRateChange}%p</div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="background:#F0FDF4;border-radius:8px;padding:12px 16px;margin:12px 0;">
+    🏆 <strong>최고 성과:</strong> ${data.topPlatform} (${data.topPlatformRate}%)
+  </div>
+  <div style="background:#FEF2F2;border-radius:8px;padding:12px 16px;margin:12px 0;">
+    ⚠️ <strong>개선 필요:</strong> ${data.weakPlatform} (${data.weakPlatformRate}%)
+  </div>
+  ${data.competitorAlert ? `
+  <div class="alert-box">
+    🔔 <strong>경쟁사 알림:</strong> ${data.competitorAlert}
+  </div>` : ''}
+  
+  <p style="color:#6B7280;font-size:13px;">이번 주 총 ${data.totalCrawls}회 AI 분석 완료</p>
+  
+  <div style="text-align:center;margin:30px 0;">
+    <a href="${this.appUrl}/dashboard/report" class="button">상세 리포트 보기 →</a>
+  </div>
+  <div class="footer"><p>© 2026 Patient Signal. All rights reserved.</p><p>이 메일은 매주 월요일 자동 발송됩니다.</p></div>
+</div></body></html>`;
+
+    try {
+      await this.resend.emails.send({
+        from: `Patient Signal <${this.fromEmail}>`,
+        to: [to],
+        subject: `[Patient Signal] ${data.hospitalName} 주간 AI 리포트 | ABHS ${data.abhsScore}점 ${trendIcon(data.abhsChange)}`,
+        html,
+      });
+      this.logger.log(`[B1] 주간 리포트 이메일 발송: ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`이메일 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
+
+  // ==================== B2: 경쟁사 변동 알림 이메일 ====================
+
+  /**
+   * 경쟁사 점수 변동 알림
+   */
+  async sendCompetitorChangeEmail(
+    to: string,
+    name: string,
+    data: {
+      hospitalName: string;
+      changes: Array<{
+        competitorName: string;
+        oldScore: number;
+        newScore: number;
+        change: number;
+      }>;
+    },
+  ): Promise<boolean> {
+    if (!this.resend) return false;
+
+    const changesHtml = data.changes.map(c => {
+      const icon = c.change > 0 ? '📈' : '📉';
+      const color = c.change > 0 ? '#DC2626' : '#059669'; // 경쟁사 올라가면 빨간색(위험), 내려가면 초록(기회)
+      return `<tr>
+        <td style="padding:8px 12px;">${c.competitorName}</td>
+        <td style="padding:8px 12px;text-align:center;">${c.oldScore}</td>
+        <td style="padding:8px 12px;text-align:center;">${c.newScore}</td>
+        <td style="padding:8px 12px;text-align:center;color:${color};font-weight:bold;">${icon} ${c.change >= 0 ? '+' : ''}${c.change}</td>
+      </tr>`;
+    }).join('');
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;color:#333;}
+  .container{max-width:600px;margin:0 auto;padding:40px 20px;}
+  .header{text-align:center;margin-bottom:30px;}
+  .logo{font-size:24px;font-weight:bold;color:#4F46E5;}
+  table.changes{width:100%;border-collapse:collapse;margin:20px 0;}
+  table.changes th{background:#F1F5F9;padding:10px 12px;text-align:left;font-size:13px;color:#475569;}
+  table.changes td{border-bottom:1px solid #F1F5F9;}
+  .button{display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;text-decoration:none;padding:14px 40px;border-radius:8px;font-weight:bold;}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;}
+</style></head>
+<body><div class="container">
+  <div class="header"><div class="logo">🏥 Patient Signal</div></div>
+  <h2>🔔 경쟁사 변동 알림</h2>
+  <p><strong>${data.hospitalName}</strong>의 경쟁사 AI 점수가 크게 변동되었습니다.</p>
+  <table class="changes">
+    <tr><th>경쟁사</th><th>이전</th><th>현재</th><th>변동</th></tr>
+    ${changesHtml}
+  </table>
+  <div style="text-align:center;margin:30px 0;">
+    <a href="${this.appUrl}/dashboard/competitors" class="button">경쟁사 분석 보기 →</a>
+  </div>
+  <div class="footer"><p>© 2026 Patient Signal. All rights reserved.</p></div>
+</div></body></html>`;
+
+    try {
+      await this.resend.emails.send({
+        from: `Patient Signal <${this.fromEmail}>`,
+        to: [to],
+        subject: `[Patient Signal] 🔔 ${data.hospitalName} 경쟁사 점수 변동 알림`,
+        html,
+      });
+      this.logger.log(`[B2] 경쟁사 변동 이메일 발송: ${to}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`이메일 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
 }

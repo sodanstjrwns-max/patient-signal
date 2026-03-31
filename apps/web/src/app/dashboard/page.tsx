@@ -12,6 +12,7 @@ import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { crawlerApi } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/auth';
 import { queryKeys } from '@/lib/queryKeys';
 import {
@@ -78,6 +79,19 @@ export default function DashboardPage() {
 
   // 【캐싱 통합 완료】공유 커스텀 훅 사용 → 인사이트/분석 페이지와 100% 캐시 공유
   const { data: dashboard, isLoading: dashboardLoading, refetch } = useDashboard();
+
+  // B4: 마지막 분석 시간 인디케이터
+  const { data: lastAnalysis } = useQuery({
+    queryKey: ['lastAnalysis', hospitalId],
+    queryFn: async () => {
+      if (!hospitalId) return null;
+      const res = await crawlerApi.getLastAnalysis(hospitalId);
+      return res.data;
+    },
+    enabled: !!hospitalId,
+    staleTime: 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
   const { data: weekly } = useWeeklyScore();
   const { data: comparison } = useCompetitorComparison(canUseFeature(planType, 'competitorComparison'));
   const { data: platformDetails } = usePlatformScores();
@@ -119,6 +133,42 @@ export default function DashboardPage() {
         description={`${dashboard?.hospital?.name || '병원'}의 AI 가시성 현황`}
         onRefresh={handleRefresh}
       />
+
+      {/* B4: 마지막 분석 시간 인디케이터 */}
+      {lastAnalysis?.lastCrawl && (
+        <div className="mx-4 sm:mx-6 mt-2">
+          <div className="flex items-center gap-3 text-xs text-gray-500 bg-white rounded-lg px-4 py-2 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-1.5">
+              <span className={`inline-block w-2 h-2 rounded-full ${
+                lastAnalysis.lastCrawl.freshness === 'fresh' ? 'bg-green-500 animate-pulse' :
+                lastAnalysis.lastCrawl.freshness === 'stale' ? 'bg-yellow-500' : 'bg-gray-400'
+              }`} />
+              <span>마지막 분석:</span>
+              <span className="font-medium text-gray-700">
+                {lastAnalysis.lastCrawl.hoursAgo !== null
+                  ? lastAnalysis.lastCrawl.hoursAgo < 1
+                    ? '방금 전'
+                    : lastAnalysis.lastCrawl.hoursAgo < 24
+                      ? `${Math.round(lastAnalysis.lastCrawl.hoursAgo)}시간 전`
+                      : `${Math.round(lastAnalysis.lastCrawl.hoursAgo / 24)}일 전`
+                  : '분석 대기 중'}
+              </span>
+            </div>
+            {lastAnalysis.lastCrawl.totalPrompts && (
+              <span className="text-gray-400">|</span>
+            )}
+            {lastAnalysis.lastCrawl.totalPrompts && (
+              <span>{lastAnalysis.lastCrawl.totalPrompts}개 질문 분석</span>
+            )}
+            {lastAnalysis.lastLiveQuery && (
+              <>
+                <span className="text-gray-400">|</span>
+                <span>실시간 질문: "{lastAnalysis.lastLiveQuery.queryText?.slice(0, 20)}..."</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* 상단 안내 카드 - 최초 데이터 없을 때 */}

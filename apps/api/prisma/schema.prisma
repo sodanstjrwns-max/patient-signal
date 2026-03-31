@@ -142,6 +142,8 @@ model User {
   hospital      Hospital?       @relation(fields: [hospitalId], references: [id])
   notifications Notification[]
 
+  @@index([lastLoginAt])
+  @@index([hospitalId, role])
   @@map("users")
 }
 
@@ -179,6 +181,8 @@ model Hospital {
   crawlJobs          CrawlJob[]
   reports            Report[]
 
+  @@index([subscriptionStatus, planType])
+  @@index([planType])
   @@map("hospitals")
 }
 
@@ -197,6 +201,7 @@ model Prompt {
   hospital    Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   aiResponses AIResponse[]
 
+  @@index([hospitalId, isActive])
   @@map("prompts")
 }
 
@@ -241,6 +246,8 @@ model AIResponse {
 
   @@index([hospitalId, responseDate])
   @@index([promptId, aiPlatform])
+  @@index([hospitalId, isMentioned, responseDate])
+  @@index([hospitalId, createdAt])
   @@map("ai_responses")
 }
 
@@ -367,6 +374,8 @@ model Subscription {
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
+  @@index([status, planType])
+  @@index([currentPeriodEnd, status])
   @@map("subscriptions")
 }
 
@@ -580,6 +589,8 @@ model CrawlJob {
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
+  @@index([hospitalId, status])
+  @@index([hospitalId, completedAt])
   @@map("crawl_jobs")
 }
 

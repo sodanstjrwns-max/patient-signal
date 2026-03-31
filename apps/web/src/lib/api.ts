@@ -239,6 +239,9 @@ export const crawlerApi = {
     api.get(`/ai-crawler/live-query/category-stats/${hospitalId}`, { params: { days } }),
   getCategoryAnalysis: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/category-analysis/${hospitalId}`, { params: { days } }),
+  // B4: 마지막 분석 시간 조회
+  getLastAnalysis: (hospitalId: string) =>
+    api.get(`/ai-crawler/last-analysis/${hospitalId}`),
 };
 
 // Scores API

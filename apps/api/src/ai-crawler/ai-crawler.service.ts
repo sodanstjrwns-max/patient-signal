@@ -4,56 +4,14 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AIPlatform, SentimentLabel } from '@prisma/client';
-
-// 출처 소스 아이템
-interface SourceItem {
-  url: string;
-  title?: string;
-  type: 'citation' | 'grounding' | 'inline_url' | 'hint';  // citation=Perplexity, grounding=Gemini, inline_url=텍스트내URL, hint=추정소스
-  platform: string;  // 어느 AI가 제공한 소스인지
-  domain?: string;   // 도메인 (naver.com, google.com 등)
-}
-
-// 소스 힌트 (ChatGPT/Claude 텍스트에서 추출한 단서)
-export interface SourceHints {
-  sources: SourceItem[];
-  hintKeywords: string[];   // "네이버 평점", "블로그 후기" 등 추정 소스 키워드
-  estimatedSources: string[]; // 추정 원본 소스 (네이버 플레이스, 블로그 등)
-}
-
-interface AIQueryResult {
-  platform: AIPlatform;
-  model: string;
-  response: string;
-  isMentioned: boolean;
-  mentionPosition: number | null;
-  totalRecommendations: number | null;
-  competitorsMentioned: string[];
-  citedSources: string[];
-  sentimentScore: number;
-  sentimentLabel: SentimentLabel;
-  matchedVariant?: string;
-  allMentionCount?: number;
-  repeatIndex?: number;        // 측정 인덱스 (현재 1회)
-  isWebSearch?: boolean;       // 개선8: 웹 검색 모드 사용 여부
-  isVerified?: boolean;        // 개선10: 환각 필터링 통과 여부
-  verificationSource?: string; // 개선10: 검증 소스
-  confidenceScore?: number;    // 할루시네이션 감소: 응답 신뢰도 (0.0~1.0)
-  confidenceFactors?: Record<string, number>; // 신뢰도 세부 팩터
-  isLowConfidence?: boolean;   // 신뢰도 < 0.4 플래그
-  sourceHints?: SourceHints;   // 출처 분석 데이터
-}
-
-// 측정 결과 집계 (REPEAT_COUNT 변경 시 확장 가능)
-interface AggregatedResult {
-  platform: AIPlatform;
-  model: string;
-  mentionRate: number;          // 측정 중 언급 비율
-  avgPosition: number | null;   // 평균 순위
-  avgSentiment: number;         // 평균 감성 점수
-  consistencyScore: number;     // 일관성 점수
-  responses: AIQueryResult[];   // 원본 응답들
-}
+import {
+  AIQueryResult,
+  AggregatedResult,
+  SourceItem,
+  SourceHints,
+  CircuitBreakerState,
+  PLATFORM_WEIGHTS,
+} from './types';
 
 @Injectable()
 export class AICrawlerService {
@@ -63,6 +21,11 @@ export class AICrawlerService {
 
   // 플랫폼당 측정 횟수 (비용 최적화: 1회, 필요 시 3으로 올려 일관성 검증 가능)
   private readonly REPEAT_COUNT = 1;
+
+  // C2: 서킷브레이커 상태 관리
+  private circuitBreakers = new Map<string, CircuitBreakerState>();
+  private readonly CB_FAILURE_THRESHOLD = 5;  // 5번 연속 실패 시 회로 개방
+  private readonly CB_RECOVERY_TIME = 60000;  // 60초 후 반개방으로 전환
 
   constructor(
     private prisma: PrismaService,
@@ -446,6 +409,18 @@ export class AICrawlerService {
     maxRetries: number = 2,
     baseDelay: number = 3000,
   ): Promise<T> {
+    // C2: 서킷브레이커 체크
+    const cb = this.circuitBreakers.get(label) || { failures: 0, lastFailure: 0, state: 'closed' as const };
+    
+    if (cb.state === 'open') {
+      if (Date.now() - cb.lastFailure > this.CB_RECOVERY_TIME) {
+        cb.state = 'half-open';
+        this.logger.warn(`[CircuitBreaker] ${label}: open → half-open (복구 시도)`);
+      } else {
+        throw new Error(`[CircuitBreaker] ${label}: 서비스 일시 중단 (${Math.ceil((this.CB_RECOVERY_TIME - (Date.now() - cb.lastFailure)) / 1000)}초 후 재시도)`);
+      }
+    }
+
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -457,6 +432,14 @@ export class AICrawlerService {
             setTimeout(() => reject(new Error(`${label} 타임아웃 (30초)`)), 30000)
           ),
         ]);
+        
+        // 성공 시 서킷브레이커 리셋
+        if (cb.failures > 0) {
+          cb.failures = 0;
+          cb.state = 'closed';
+          this.circuitBreakers.set(label, cb);
+          this.logger.log(`[CircuitBreaker] ${label}: 복구 완료 → closed`);
+        }
         return result;
       } catch (error: any) {
         lastError = error;
@@ -473,8 +456,12 @@ export class AICrawlerService {
           error.status === 502;
 
         if (attempt < maxRetries && isRetryable) {
-          const delay = baseDelay * Math.pow(2, attempt); // 3s → 6s → 12s
-          this.logger.warn(`[${label}] 시도 ${attempt + 1}/${maxRetries + 1} 실패 (${error.message}), ${delay}ms 후 재시도`);
+          // C2: Rate Limit 429는 더 긴 대기
+          const isRateLimit = error.message?.includes('429') || error.status === 429;
+          const delay = isRateLimit 
+            ? baseDelay * Math.pow(3, attempt) // 429: 3s → 9s → 27s
+            : baseDelay * Math.pow(2, attempt); // 기타: 3s → 6s → 12s
+          this.logger.warn(`[${label}] 시도 ${attempt + 1}/${maxRetries + 1} 실패 (${error.message}), ${delay}ms 후 재시도${isRateLimit ? ' [Rate Limit]' : ''}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         } else if (attempt < maxRetries) {
           this.logger.warn(`[${label}] 시도 ${attempt + 1} 비재시도 에러: ${error.message}`);
@@ -483,6 +470,15 @@ export class AICrawlerService {
       }
     }
     
+    // 실패 시 서킷브레이커 업데이트
+    cb.failures++;
+    cb.lastFailure = Date.now();
+    if (cb.failures >= this.CB_FAILURE_THRESHOLD) {
+      cb.state = 'open';
+      this.logger.error(`[CircuitBreaker] ${label}: → OPEN (연속 ${cb.failures}회 실패, ${this.CB_RECOVERY_TIME / 1000}초간 차단)`);
+    }
+    this.circuitBreakers.set(label, cb);
+
     throw lastError || new Error(`${label} 최대 재시도 초과`);
   }
 

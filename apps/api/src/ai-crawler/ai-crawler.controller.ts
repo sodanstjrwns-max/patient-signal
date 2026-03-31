@@ -1,5 +1,6 @@
 import { Controller, Post, Get, Param, Body, UseGuards, Query, Req, Logger, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AICrawlerService } from './ai-crawler.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -31,6 +32,56 @@ export class AICrawlerController {
   @ApiOperation({ summary: 'API 상태 확인 (개선 사항 포함)', description: 'AI API 키 설정 및 개선 사항 상태를 확인합니다' })
   async getApiStatus() {
     return this.aiCrawlerService.getApiStatus();
+  }
+
+  /**
+   * B4: 마지막 크롤링/분석 시간 조회 (대시보드 인디케이터용)
+   */
+  @Get('last-analysis/:hospitalId')
+  @ApiOperation({ summary: '마지막 분석 시간 조회', description: '대시보드 새로고침 인디케이터용' })
+  async getLastAnalysisTime(@Param('hospitalId') hospitalId: string) {
+    const [lastCrawl, lastScore, lastLiveQuery] = await Promise.all([
+      this.prisma.crawlJob.findFirst({
+        where: { hospitalId, status: 'COMPLETED' },
+        orderBy: { completedAt: 'desc' },
+        select: { completedAt: true, totalPrompts: true },
+      }),
+      this.prisma.dailyScore.findFirst({
+        where: { hospitalId },
+        orderBy: { scoreDate: 'desc' },
+        select: { scoreDate: true, abhsScore: true, overallScore: true },
+      }),
+      this.prisma.liveQueryUsage.findFirst({
+        where: { hospitalId },
+        orderBy: { usedAt: 'desc' },
+        select: { usedAt: true, queryText: true },
+      }),
+    ]);
+
+    const now = new Date();
+    const lastCrawlTime = lastCrawl?.completedAt;
+    const hoursAgo = lastCrawlTime
+      ? Math.round((now.getTime() - lastCrawlTime.getTime()) / (1000 * 60 * 60) * 10) / 10
+      : null;
+
+    return {
+      lastCrawl: {
+        completedAt: lastCrawlTime,
+        hoursAgo,
+        totalPrompts: lastCrawl?.totalPrompts,
+        freshness: hoursAgo === null ? 'none' : hoursAgo < 6 ? 'fresh' : hoursAgo < 24 ? 'stale' : 'old',
+      },
+      lastScore: lastScore ? {
+        date: lastScore.scoreDate,
+        abhsScore: lastScore.abhsScore,
+        mentionRate: lastScore.overallScore,
+      } : null,
+      lastLiveQuery: lastLiveQuery ? {
+        usedAt: lastLiveQuery.usedAt,
+        queryText: lastLiveQuery.queryText,
+      } : null,
+      serverTime: now.toISOString(),
+    };
   }
 
   @Get('test-openai')
@@ -80,6 +131,7 @@ export class AICrawlerController {
   // ==================== 개선된 크롤링 엔드포인트 ====================
 
   @Post('crawl/:hospitalId')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 1분에 3회 (AI API 비용 보호)
   @PlanLimit({ feature: 'crawlsPerMonth' })
   @ApiOperation({ 
     summary: '수동 크롤링 실행 (temp=0, 웹검색, ABHS 분석)',
@@ -1408,6 +1460,7 @@ export class AICrawlerController {
   }
 
   @Post('live-query/:hospitalId')
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 1분에 10회 (DDoS 방어)
   @ApiOperation({ 
     summary: '실시간 AI 질문 (사용량 제한 적용)',
     description: '사용자가 원하는 질문을 선택한 AI 플랫폼에 실시간으로 물어보고 결과를 즉시 반환합니다. 플랜별 일일 사용량 제한과 5분 쿨다운이 적용됩니다.' 

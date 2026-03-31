@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EmailService } from '../email/email.service';
 import { PaymentStatus, PlanType } from '@prisma/client';
 
 interface TossPaymentConfirmRequest {
@@ -62,6 +63,7 @@ export class PaymentsService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private emailService: EmailService,
   ) {
     this.secretKey = process.env.TOSS_SECRET_KEY || '';
   }
@@ -396,10 +398,13 @@ export class PaymentsService {
 
     this.logger.log(`결제 저장 완료: id=${payment.id}, status=${payment.status}`);
 
-    // 결제 완료 시 알림 (가상계좌 입금 대기는 제외)
+    // 결제 완료 시 이메일 알림 발송
     if (data.status === 'DONE') {
       this.logger.log(`결제 완료! orderId=${data.orderId}`);
-      // TODO: 결제 완료 이메일/카카오 알림 발송
+      // A2: 결제 완료 이메일 발송
+      this.sendPaymentNotification(payment).catch(err => 
+        this.logger.error(`결제 알림 이메일 발송 실패: ${err.message}`)
+      );
     }
 
     return { success: true, payment };
@@ -826,5 +831,40 @@ export class PaymentsService {
     });
 
     return subscriptions;
+  }
+
+  /**
+   * A2: 결제 완료 이메일 알림 발송 (비동기)
+   */
+  private async sendPaymentNotification(payment: any) {
+    try {
+      const user = payment.userId
+        ? await this.prisma.user.findUnique({
+            where: { id: payment.userId },
+            select: { email: true, name: true },
+          })
+        : null;
+
+      const hospital = payment.hospitalId
+        ? await this.prisma.hospital.findUnique({
+            where: { id: payment.hospitalId },
+            select: { name: true },
+          })
+        : null;
+
+      if (user?.email) {
+        await this.emailService.sendPaymentConfirmationEmail(
+          user.email,
+          user.name || '원장님',
+          {
+            amount: payment.amount,
+            planType: payment.planType || 'STARTER',
+            receiptUrl: payment.receiptUrl || undefined,
+          },
+        );
+      }
+    } catch (err) {
+      this.logger.error(`결제 알림 이메일 처리 오류: ${err.message}`);
+    }
   }
 }

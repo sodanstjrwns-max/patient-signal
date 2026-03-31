@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Query, Logger } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('관리자')
 @Controller('admin')
+@Throttle({ default: { limit: 30, ttl: 60000 } }) // 관리자 API: 1분에 30회
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 

@@ -2,12 +2,16 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     // 웹훅 서명 검증을 위해 rawBody 활성화
     rawBody: true,
   });
+
+  // C2: 글로벌 에러 필터 등록
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // CORS 설정 - 여러 도메인 허용
   app.enableCors({
