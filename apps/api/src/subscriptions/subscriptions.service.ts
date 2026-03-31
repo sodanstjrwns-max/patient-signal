@@ -245,9 +245,11 @@ export class SubscriptionsService {
     const now = new Date();
 
     // 트라이얼 기간이 만료된 구독 찾기 (currentPeriodEnd 기준)
+    // ⚠️ ENTERPRISE 플랜은 절대 만료/다운그레이드하지 않음
     const expiredTrials = await this.prisma.subscription.findMany({
       where: {
         status: 'TRIAL',
+        planType: { not: 'ENTERPRISE' },
         currentPeriodEnd: {
           lte: now,
         },
@@ -317,9 +319,11 @@ export class SubscriptionsService {
     const now = new Date();
 
     // 만료된 구독 찾기 (TRIAL은 checkTrialExpirations에서 처리)
+    // ⚠️ ENTERPRISE 플랜은 절대 만료/다운그레이드하지 않음
     const expiredSubscriptions = await this.prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
+        planType: { not: 'ENTERPRISE' },
         currentPeriodEnd: {
           lte: now,
         },
