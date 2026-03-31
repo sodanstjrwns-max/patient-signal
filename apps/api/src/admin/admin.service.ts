@@ -7,6 +7,342 @@ export class AdminService {
 
   constructor(private prisma: PrismaService) {}
 
+  // ==================== 실시간 질문 인사이트 분석 ====================
+
+  /**
+   * 전체 실시간 질문 로그 조회 (페이지네이션 + 필터링)
+   */
+  async getLiveQueryLogs(options: {
+    page?: number;
+    limit?: number;
+    hospitalId?: string;
+    category?: string;
+    days?: number;
+    search?: string;
+  }) {
+    const { page = 1, limit = 50, hospitalId, category, days = 30, search } = options;
+    const skip = (page - 1) * limit;
+
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const where: any = { usedAt: { gte: since } };
+    if (hospitalId) where.hospitalId = hospitalId;
+    if (category) where.category = category;
+    if (search) where.queryText = { contains: search, mode: 'insensitive' };
+
+    const [total, queries] = await Promise.all([
+      this.prisma.liveQueryUsage.count({ where }),
+      this.prisma.liveQueryUsage.findMany({
+        where,
+        orderBy: { usedAt: 'desc' },
+        skip,
+        take: limit,
+        include: {
+          responses: {
+            select: {
+              platform: true,
+              success: true,
+              isMentioned: true,
+              mentionPosition: true,
+              sentimentLabel: true,
+              responseTimeMs: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    // 병원명 매핑
+    const hospitalIds = [...new Set(queries.map(q => q.hospitalId))];
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { id: { in: hospitalIds } },
+      select: { id: true, name: true, planType: true },
+    });
+    const hospitalMap = new Map(hospitals.map(h => [h.id, h]));
+
+    // 유저명 매핑
+    const userIds = [...new Set(queries.filter(q => q.userId).map(q => q.userId!))];
+    const users = userIds.length > 0 ? await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, name: true, email: true },
+    }) : [];
+    const userMap = new Map(users.map(u => [u.id, u]));
+
+    const enrichedQueries = queries.map(q => ({
+      id: q.id,
+      hospitalName: hospitalMap.get(q.hospitalId)?.name || '알 수 없음',
+      hospitalPlan: hospitalMap.get(q.hospitalId)?.planType || 'FREE',
+      userName: q.userId ? (userMap.get(q.userId)?.name || '알 수 없음') : '미확인',
+      userEmail: q.userId ? (userMap.get(q.userId)?.email || '-') : '-',
+      queryText: q.queryText,
+      category: q.category,
+      categoryTag: q.categoryTag,
+      platforms: q.platforms,
+      successCount: q.successCount,
+      mentionedCount: q.mentionedCount,
+      mentionRate: q.mentionRate,
+      avgPosition: q.avgPosition,
+      sentimentSummary: q.sentimentSummary,
+      competitorsMentioned: q.competitorsMentioned,
+      responses: q.responses,
+      usedAt: q.usedAt,
+    }));
+
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+      queries: enrichedQueries,
+    };
+  }
+
+  /**
+   * 전체 실시간 질문 인사이트 대시보드
+   * - 전체 통계, 카테고리 분포, 인기 질문, 트렌드, 병원별 랭킹
+   */
+  async getLiveQueryInsights(days: number = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const queries = await this.prisma.liveQueryUsage.findMany({
+      where: { usedAt: { gte: since } },
+      orderBy: { usedAt: 'desc' },
+    });
+
+    if (queries.length === 0) {
+      return {
+        period: `최근 ${days}일`,
+        totalQueries: 0,
+        message: '아직 실시간 질문 데이터가 없습니다.',
+      };
+    }
+
+    // ── 1. 전체 통계 ──
+    const totalQueries = queries.length;
+    const avgMentionRate = Math.round(queries.reduce((sum, q) => sum + q.mentionRate, 0) / totalQueries);
+    const totalMentioned = queries.filter(q => q.mentionRate > 0).length;
+    const avgSuccessCount = Math.round((queries.reduce((sum, q) => sum + q.successCount, 0) / totalQueries) * 10) / 10;
+
+    // ── 2. 카테고리별 분포 ──
+    const categoryDisplayNames: Record<string, string> = {
+      PROCEDURE: '🔧 시술/진료',
+      EMOTION: '💛 감성/경험',
+      COST: '💰 비용/가격',
+      REGION: '📍 지역 기반',
+      REVIEW: '⭐ 후기/평판',
+      COMPARISON: '⚖️ 비교',
+      GENERAL: '📋 기타',
+    };
+
+    const categoryStats = new Map<string, { count: number; totalMentionRate: number; mentionedCount: number }>();
+    for (const q of queries) {
+      const cat = q.category || 'GENERAL';
+      if (!categoryStats.has(cat)) {
+        categoryStats.set(cat, { count: 0, totalMentionRate: 0, mentionedCount: 0 });
+      }
+      const data = categoryStats.get(cat)!;
+      data.count++;
+      data.totalMentionRate += q.mentionRate;
+      if (q.mentionRate > 0) data.mentionedCount++;
+    }
+
+    const categories = Array.from(categoryStats.entries())
+      .map(([cat, data]) => ({
+        category: cat,
+        categoryName: categoryDisplayNames[cat] || cat,
+        queryCount: data.count,
+        percentage: Math.round((data.count / totalQueries) * 100),
+        avgMentionRate: Math.round(data.totalMentionRate / data.count),
+        mentionedCount: data.mentionedCount,
+      }))
+      .sort((a, b) => b.queryCount - a.queryCount);
+
+    // ── 3. 인기 태그/키워드 TOP 20 ──
+    const tagCounts = new Map<string, { count: number; category: string; totalMentionRate: number }>();
+    for (const q of queries) {
+      const tag = q.categoryTag || '기타';
+      if (!tagCounts.has(tag)) {
+        tagCounts.set(tag, { count: 0, category: q.category || 'GENERAL', totalMentionRate: 0 });
+      }
+      const data = tagCounts.get(tag)!;
+      data.count++;
+      data.totalMentionRate += q.mentionRate;
+    }
+
+    const popularTags = Array.from(tagCounts.entries())
+      .map(([tag, data]) => ({
+        tag,
+        category: data.category,
+        categoryName: categoryDisplayNames[data.category] || data.category,
+        queryCount: data.count,
+        avgMentionRate: Math.round(data.totalMentionRate / data.count),
+      }))
+      .sort((a, b) => b.queryCount - a.queryCount)
+      .slice(0, 20);
+
+    // ── 4. 인기 질문 문구 TOP 20 (동일 질문 그룹화) ──
+    const questionCounts = new Map<string, { count: number; category: string; avgMentionRate: number; hospitals: Set<string> }>();
+    for (const q of queries) {
+      const text = q.queryText.trim().toLowerCase();
+      if (!questionCounts.has(text)) {
+        questionCounts.set(text, { count: 0, category: q.category || 'GENERAL', avgMentionRate: 0, hospitals: new Set() });
+      }
+      const data = questionCounts.get(text)!;
+      data.count++;
+      data.avgMentionRate += q.mentionRate;
+      data.hospitals.add(q.hospitalId);
+    }
+
+    const popularQuestions = Array.from(questionCounts.entries())
+      .map(([text, data]) => ({
+        queryText: text,
+        count: data.count,
+        category: data.category,
+        categoryName: categoryDisplayNames[data.category] || data.category,
+        avgMentionRate: Math.round(data.avgMentionRate / data.count),
+        uniqueHospitals: data.hospitals.size,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 20);
+
+    // ── 5. 일별 트렌드 ──
+    const dailyMap = new Map<string, { count: number; mentionSum: number }>();
+    for (const q of queries) {
+      const dateKey = q.usedAt.toISOString().split('T')[0]; // YYYY-MM-DD
+      if (!dailyMap.has(dateKey)) {
+        dailyMap.set(dateKey, { count: 0, mentionSum: 0 });
+      }
+      const data = dailyMap.get(dateKey)!;
+      data.count++;
+      data.mentionSum += q.mentionRate;
+    }
+
+    const dailyTrend = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({
+        date,
+        queryCount: data.count,
+        avgMentionRate: Math.round(data.mentionSum / data.count),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    // ── 6. 병원별 사용 랭킹 TOP 20 ──
+    const hospitalUsage = new Map<string, { count: number; totalMentionRate: number }>();
+    for (const q of queries) {
+      if (!hospitalUsage.has(q.hospitalId)) {
+        hospitalUsage.set(q.hospitalId, { count: 0, totalMentionRate: 0 });
+      }
+      const data = hospitalUsage.get(q.hospitalId)!;
+      data.count++;
+      data.totalMentionRate += q.mentionRate;
+    }
+
+    const hospitalIds = [...hospitalUsage.keys()];
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { id: { in: hospitalIds } },
+      select: { id: true, name: true, planType: true },
+    });
+    const hospitalMap = new Map(hospitals.map(h => [h.id, h]));
+
+    const hospitalRanking = Array.from(hospitalUsage.entries())
+      .map(([hid, data]) => ({
+        hospitalId: hid,
+        hospitalName: hospitalMap.get(hid)?.name || '알 수 없음',
+        planType: hospitalMap.get(hid)?.planType || 'FREE',
+        queryCount: data.count,
+        avgMentionRate: Math.round(data.totalMentionRate / data.count),
+      }))
+      .sort((a, b) => b.queryCount - a.queryCount)
+      .slice(0, 20);
+
+    // ── 7. 플랫폼별 성과 ──
+    const platformStats = new Map<string, { total: number; mentioned: number }>();
+    // responses를 별도 쿼리로 집계
+    const platformAgg = await this.prisma.liveQueryResponse.groupBy({
+      by: ['platform'],
+      where: {
+        createdAt: { gte: since },
+        success: true,
+      },
+      _count: true,
+    });
+    const platformMentioned = await this.prisma.liveQueryResponse.groupBy({
+      by: ['platform'],
+      where: {
+        createdAt: { gte: since },
+        success: true,
+        isMentioned: true,
+      },
+      _count: true,
+    });
+    const mentionedMap = new Map(platformMentioned.map(p => [p.platform, p._count]));
+
+    const platformNames: Record<string, string> = {
+      CHATGPT: 'ChatGPT',
+      CLAUDE: 'Claude',
+      PERPLEXITY: 'Perplexity',
+      GEMINI: 'Gemini',
+    };
+
+    const platformPerformance = platformAgg.map(p => ({
+      platform: p.platform,
+      platformName: platformNames[p.platform] || p.platform,
+      totalResponses: p._count,
+      mentionedCount: mentionedMap.get(p.platform) || 0,
+      mentionRate: p._count > 0
+        ? Math.round(((mentionedMap.get(p.platform) || 0) / p._count) * 100)
+        : 0,
+    })).sort((a, b) => b.mentionRate - a.mentionRate);
+
+    // ── 8. 경쟁사 빈출 랭킹 TOP 15 ──
+    const competitorCounts = new Map<string, number>();
+    for (const q of queries) {
+      if (q.competitorsMentioned && q.competitorsMentioned.length > 0) {
+        for (const comp of q.competitorsMentioned) {
+          competitorCounts.set(comp, (competitorCounts.get(comp) || 0) + 1);
+        }
+      }
+    }
+    const competitorRanking = Array.from(competitorCounts.entries())
+      .map(([name, count]) => ({ competitorName: name, mentionCount: count }))
+      .sort((a, b) => b.mentionCount - a.mentionCount)
+      .slice(0, 15);
+
+    // ── 9. 시간대별 질문 패턴 (0~23시) ──
+    const hourlyPattern = new Array(24).fill(0);
+    for (const q of queries) {
+      const hour = q.usedAt.getHours();
+      hourlyPattern[hour]++;
+    }
+    const hourlyStats = hourlyPattern.map((count, hour) => ({
+      hour: `${String(hour).padStart(2, '0')}:00`,
+      queryCount: count,
+    }));
+
+    return {
+      period: `최근 ${days}일`,
+      totalQueries,
+      avgMentionRate,
+      totalMentioned,
+      avgSuccessCount,
+      summary: {
+        uniqueHospitals: hospitalUsage.size,
+        uniqueQuestions: questionCounts.size,
+        avgQueriesPerDay: Math.round((totalQueries / days) * 10) / 10,
+        peakHour: hourlyStats.reduce((max, h) => h.queryCount > max.queryCount ? h : max, hourlyStats[0]),
+      },
+      categories,
+      popularTags,
+      popularQuestions,
+      dailyTrend,
+      hospitalRanking,
+      platformPerformance,
+      competitorRanking,
+      hourlyStats,
+    };
+  }
+
   /**
    * 대시보드 통계
    */

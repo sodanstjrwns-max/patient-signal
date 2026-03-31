@@ -79,6 +79,54 @@ export class AdminController {
     return this.adminService.grantStarterTrialToFreeUsers();
   }
 
+  // ==================== 실시간 질문 인사이트 ====================
+
+  /**
+   * 전체 실시간 질문 인사이트 대시보드
+   * GET /api/admin/live-query/insights?secret=xxx&days=30
+   *
+   * 전체 통계, 카테고리 분포, 인기 질문, 트렌드, 병원별 랭킹,
+   * 플랫폼별 성과, 경쟁사 빈출 랭킹, 시간대별 패턴 등
+   */
+  @Public()
+  @Get('live-query/insights')
+  async getLiveQueryInsights(
+    @Query('secret') secret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(secret);
+    const daysNum = parseInt(days || '30', 10);
+    this.logger.log(`[Admin] 실시간 질문 인사이트 조회 (최근 ${daysNum}일)`);
+    return this.adminService.getLiveQueryInsights(daysNum);
+  }
+
+  /**
+   * 전체 실시간 질문 로그 조회 (페이지네이션 + 필터)
+   * GET /api/admin/live-query/logs?secret=xxx&page=1&limit=50&category=PROCEDURE&hospitalId=xxx&search=임플란트&days=30
+   */
+  @Public()
+  @Get('live-query/logs')
+  async getLiveQueryLogs(
+    @Query('secret') secret: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('category') category?: string,
+    @Query('days') days?: string,
+    @Query('search') search?: string,
+  ) {
+    this.validateSecret(secret);
+    this.logger.log(`[Admin] 실시간 질문 로그 조회`);
+    return this.adminService.getLiveQueryLogs({
+      page: parseInt(page || '1', 10),
+      limit: parseInt(limit || '50', 10),
+      hospitalId: hospitalId || undefined,
+      category: category || undefined,
+      days: parseInt(days || '30', 10),
+      search: search || undefined,
+    });
+  }
+
   private validateSecret(secret: string) {
     const validSecret = process.env.ADMIN_SECRET || 'pf-admin-2026';
     if (secret !== validSecret) {

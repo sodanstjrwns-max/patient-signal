@@ -513,6 +513,7 @@ enum LiveQueryCategory {
 model LiveQueryUsage {
   id              String            @id @default(uuid())
   hospitalId      String            @map("hospital_id")
+  userId          String?           @map("user_id")         // 질문한 사용자
   queryText       String            @map("query_text")
   platforms       String[]          // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
   platformCount   Int               @default(4) @map("platform_count")
@@ -523,11 +524,45 @@ model LiveQueryUsage {
   successCount    Int               @default(0) @map("success_count")
   mentionedCount  Int               @default(0) @map("mentioned_count")
   mentionRate     Int               @default(0) @map("mention_rate")    // 0~100
+  // 경쟁사 & 인사이트
+  competitorsMentioned String[]     @map("competitors_mentioned")  // 응답에 등장한 경쟁 병원들
+  avgPosition     Float?            @map("avg_position")           // 평균 추천 순위 (1위=1.0)
+  sentimentSummary String?          @map("sentiment_summary")      // POSITIVE/NEUTRAL/NEGATIVE
   usedAt          DateTime          @default(now()) @map("used_at")
+
+  // 각 플랫폼별 상세 응답
+  responses       LiveQueryResponse[]
 
   @@index([hospitalId, usedAt])
   @@index([hospitalId, category])
+  @@index([userId, usedAt])
+  @@index([category, usedAt])
   @@map("live_query_usages")
+}
+
+// 실시간 질문 플랫폼별 상세 응답 로그
+model LiveQueryResponse {
+  id                   String   @id @default(uuid())
+  liveQueryId          String   @map("live_query_id")
+  platform             String                          // CHATGPT, CLAUDE, PERPLEXITY, GEMINI
+  success              Boolean  @default(false)
+  responseText         String?  @map("response_text")  // AI 원문 응답 (전체 저장)
+  isMentioned          Boolean  @default(false) @map("is_mentioned")
+  mentionPosition      Int?     @map("mention_position")       // 몇 번째로 추천됐는지
+  totalRecommendations Int?     @map("total_recommendations")  // 전체 추천 수
+  competitorsMentioned String[] @map("competitors_mentioned")  // 이 응답에서 언급된 경쟁사
+  citedSources         String[] @map("cited_sources")          // 인용된 출처
+  sentimentLabel       String?  @map("sentiment_label")        // POSITIVE/NEUTRAL/NEGATIVE
+  errorMessage         String?  @map("error_message")          // 실패 시 에러 메시지
+  responseTimeMs       Int?     @map("response_time_ms")       // 응답 소요 시간 (ms)
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  liveQuery LiveQueryUsage @relation(fields: [liveQueryId], references: [id], onDelete: Cascade)
+
+  @@index([liveQueryId])
+  @@index([platform, createdAt])
+  @@index([isMentioned, platform])
+  @@map("live_query_responses")
 }
 
 // 크롤링 작업 테이블

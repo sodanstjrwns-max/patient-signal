@@ -1510,9 +1510,10 @@ export class AICrawlerController {
     const { category, categoryTag } = this.classifyQueryCategory(question.trim());
     this.logger.log(`[LiveQuery] 카테고리: ${category} / 태그: ${categoryTag}`);
 
-    // ── 4. 각 플랫폼에 병렬로 질의 ──
+    // ── 4. 각 플랫폼에 병렬로 질의 (응답 시간 측정 포함) ──
     const results = await Promise.allSettled(
       selectedPlatforms.map(async (platform: string) => {
+        const startTime = Date.now();
         try {
           const result = await this.aiCrawlerService.queryPlatformPublic(
             platform as any,
@@ -1531,6 +1532,7 @@ export class AICrawlerController {
             citedSources: result.citedSources,
             sentimentLabel: result.sentimentLabel || 'NEUTRAL',
             sourceHints: result.sourceHints || null,
+            responseTimeMs: Date.now() - startTime,
           };
         } catch (error) {
           return {
@@ -1538,6 +1540,7 @@ export class AICrawlerController {
             platformName: platformNames[platform] || platform,
             success: false,
             error: error.message,
+            responseTimeMs: Date.now() - startTime,
           };
         }
       }),
@@ -1553,15 +1556,39 @@ export class AICrawlerController {
     );
 
     // 요약 통계
-    const successCount = responses.filter(r => r.success).length;
-    const mentionedCount = responses.filter(r => r.success && r.isMentioned).length;
+    const successCount = responses.filter((r: any) => r.success).length;
+    const mentionedCount = responses.filter((r: any) => r.success && r.isMentioned).length;
     const mentionRate = successCount > 0 ? Math.round((mentionedCount / successCount) * 100) : 0;
     const newUsed = todayCount + 1;
 
     // ── 5. 사용량 + 결과 기록 (질의 후 결과까지 포함) ──
-    await this.prisma.liveQueryUsage.create({
+    // 경쟁사 목록 통합 수집
+    const allCompetitors = [...new Set(
+      responses
+        .filter((r: any) => r.success && r.competitorsMentioned)
+        .flatMap((r: any) => r.competitorsMentioned)
+    )];
+    
+    // 평균 추천 순위 계산
+    const positions = responses
+      .filter((r: any) => r.success && r.isMentioned && r.mentionPosition)
+      .map((r: any) => r.mentionPosition);
+    const avgPosition = positions.length > 0
+      ? Math.round((positions.reduce((a: number, b: number) => a + b, 0) / positions.length) * 10) / 10
+      : null;
+
+    // 감성 요약 (다수결)
+    const sentiments = responses.filter((r: any) => r.success).map((r: any) => r.sentimentLabel || 'NEUTRAL');
+    const sentimentCounts: Record<string, number> = sentiments.reduce((acc: Record<string, number>, s: string) => { acc[s] = (acc[s] || 0) + 1; return acc; }, {} as Record<string, number>);
+    const sentimentSummary = Object.entries(sentimentCounts).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0] || 'NEUTRAL';
+
+    // userId 추출 (JWT에서)
+    const userId = req?.user?.sub || req?.user?.id || null;
+
+    const savedQuery = await this.prisma.liveQueryUsage.create({
       data: {
         hospitalId,
+        userId,
         queryText: question.trim(),
         platforms: selectedPlatforms,
         platformCount: selectedPlatforms.length,
@@ -1570,6 +1597,25 @@ export class AICrawlerController {
         successCount,
         mentionedCount,
         mentionRate,
+        competitorsMentioned: allCompetitors,
+        avgPosition,
+        sentimentSummary,
+        // 각 플랫폼별 상세 응답도 함께 저장
+        responses: {
+          create: responses.map((r: any) => ({
+            platform: r.platform,
+            success: r.success,
+            responseText: r.success ? (r.response || '').substring(0, 10000) : null,
+            isMentioned: r.success ? (r.isMentioned || false) : false,
+            mentionPosition: r.success ? (r.mentionPosition || null) : null,
+            totalRecommendations: r.success ? (r.totalRecommendations || null) : null,
+            competitorsMentioned: r.success ? (r.competitorsMentioned || []) : [],
+            citedSources: r.success ? (r.citedSources || []) : [],
+            sentimentLabel: r.success ? (r.sentimentLabel || 'NEUTRAL') : null,
+            errorMessage: !r.success ? (r.error || 'Unknown error') : null,
+            responseTimeMs: r.responseTimeMs || null,
+          })),
+        },
       },
     });
 
