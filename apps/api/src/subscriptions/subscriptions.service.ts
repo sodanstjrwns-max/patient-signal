@@ -101,6 +101,23 @@ export class SubscriptionsService {
     const isUnpaidActive = subscription.status === 'ACTIVE' && !subscription.billingKey;
     const needsPayment = isInTrial || isUnpaidActive;
 
+    // 쿠폰 사용자 여부 확인
+    let isCouponUser = false;
+    let couponName: string | null = null;
+    let couponFreeMonths = 0;
+    try {
+      const redemption = await this.prisma.couponRedemption.findFirst({
+        where: { hospitalId },
+        include: { coupon: { select: { name: true, code: true, couponType: true, freeMonths: true } } },
+        orderBy: { redeemedAt: 'desc' },
+      });
+      if (redemption) {
+        isCouponUser = true;
+        couponName = redemption.coupon?.name || null;
+        couponFreeMonths = redemption.freeMonths || redemption.coupon?.freeMonths || 0;
+      }
+    } catch {}
+
     return {
       hasSubscription: true,
       subscription,
@@ -116,6 +133,10 @@ export class SubscriptionsService {
       willCancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       currentPeriodEnd: subscription.currentPeriodEnd,
       hasBillingKey: !!subscription.billingKey,
+      // 쿠폰 관련 정보
+      isCouponUser,
+      couponName,
+      couponFreeMonths,
     };
   }
 
@@ -569,11 +590,98 @@ export class SubscriptionsService {
 
   // ==================== A3: 이탈 위험 자동 감지 & 리마인드 ====================
 
+  // ==================== 쿠폰 만료 안내 (D-30, D-7, D-3, D-1, D-day) ====================
+
+  /**
+   * 매일 오전 10시(KST=01:00 UTC) 실행
+   * 쿠폰으로 활성화된 구독(ACTIVE + 빌링키 없음)의 만료 안내 발송
+   * D-30, D-7, D-3, D-1, D-0에만 발송
+   */
+  @Cron('0 1 * * *') // 매일 01:00 UTC = 10:00 KST (이탈 리마인드 전에 실행)
+  async sendCouponExpirationReminders() {
+    this.logger.log('[쿠폰 만료] 쿠폰 만료 안내 크론 시작...');
+    const now = new Date();
+
+    // ACTIVE + 빌링키 없음 + FREE/ENTERPRISE 제외 → 쿠폰 사용자 대상
+    const couponSubs = await this.prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        billingKey: null,
+        planType: { notIn: ['FREE', 'ENTERPRISE'] },
+      },
+      include: {
+        hospital: {
+          include: {
+            users: { where: { role: 'OWNER' }, select: { email: true, name: true } },
+          },
+        },
+      },
+    });
+
+    let sent = 0;
+    for (const sub of couponSubs) {
+      const daysRemaining = Math.ceil(
+        (sub.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+      );
+
+      // D-30, D-7, D-3, D-1, D-0만 발송
+      if (![30, 7, 3, 1, 0].includes(daysRemaining)) continue;
+
+      const owner = sub.hospital?.users?.[0];
+      if (!owner?.email) continue;
+
+      // 쿠폰 정보 조회
+      let couponName = '무료 이용 쿠폰';
+      try {
+        const redemption = await this.prisma.couponRedemption.findFirst({
+          where: { hospitalId: sub.hospitalId },
+          include: { coupon: { select: { name: true, code: true } } },
+          orderBy: { redeemedAt: 'desc' },
+        });
+        if (redemption?.coupon?.name) {
+          couponName = redemption.coupon.name;
+        }
+      } catch {}
+
+      // 성과 데이터
+      let mentionRate: number | undefined;
+      let abhsScore: number | undefined;
+      try {
+        const recentScore = await this.prisma.dailyScore.findFirst({
+          where: { hospitalId: sub.hospitalId },
+          orderBy: { scoreDate: 'desc' },
+        });
+        if (recentScore) {
+          abhsScore = recentScore.abhsScore ?? undefined;
+          mentionRate = recentScore.overallScore ?? undefined;
+        }
+      } catch {}
+
+      await this.emailService.sendCouponExpirationEmail(
+        owner.email,
+        owner.name || '원장님',
+        {
+          hospitalName: sub.hospital?.name || '',
+          daysRemaining,
+          couponName,
+          planType: sub.planType,
+          expirationDate: sub.currentPeriodEnd.toLocaleDateString('ko-KR'),
+          mentionRate,
+          abhsScore,
+        },
+      );
+      sent++;
+    }
+    this.logger.log(`[쿠폰 만료] 쿠폰 만료 안내 완료: ${sent}건 발송`);
+  }
+
+  // ==================== A3-원본: 이탈 위험 자동 감지 & 리마인드 ====================
+
   /**
    * 매일 오전 10시(KST=01:00 UTC) 실행
    * 3일, 7일 미접속 유저에게 리마인드 이메일 발송
    */
-  @Cron('0 1 * * *') // 매일 01:00 UTC = 10:00 KST
+  @Cron('0 2 * * *') // 매일 02:00 UTC = 11:00 KST (쿠폰 만료 안내 이후 실행)
   async sendInactivityReminders() {
     this.logger.log('[A3] 이탈 위험 리마인드 크론 시작...');
 

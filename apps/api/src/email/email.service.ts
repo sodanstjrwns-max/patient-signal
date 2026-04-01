@@ -673,6 +673,122 @@ export class EmailService {
     }
   }
 
+  // ==================== 쿠폰 만료 안내 이메일 ====================
+
+  /**
+   * 쿠폰 만료 안내 이메일 (D-30, D-7, D-3, D-1, D-day)
+   */
+  async sendCouponExpirationEmail(
+    to: string,
+    name: string,
+    data: {
+      hospitalName: string;
+      daysRemaining: number;
+      couponName: string;
+      planType: string;
+      expirationDate: string;
+      mentionRate?: number;
+      abhsScore?: number;
+    },
+  ): Promise<boolean> {
+    if (!this.resend) {
+      this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
+      return false;
+    }
+
+    const planNames: Record<string, string> = {
+      STARTER: '스타터',
+      STANDARD: '스탠다드',
+      PRO: '프로',
+      ENTERPRISE: '엔터프라이즈',
+    };
+
+    const urgencyColor = data.daysRemaining <= 1 ? '#EF4444' : data.daysRemaining <= 3 ? '#F59E0B' : data.daysRemaining <= 7 ? '#F97316' : '#3B82F6';
+    const urgencyBg = data.daysRemaining <= 1 ? '#FEF2F2' : data.daysRemaining <= 3 ? '#FFFBEB' : data.daysRemaining <= 7 ? '#FFF7ED' : '#EFF6FF';
+    const urgencyText = data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
+
+    const subject = data.daysRemaining <= 0
+      ? `[Patient Signal] ${data.couponName} 혜택이 오늘 만료됩니다 ⏰`
+      : data.daysRemaining <= 3
+        ? `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 ⚠️`
+        : `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 안내`;
+
+    const statsSection = (data.mentionRate !== undefined || data.abhsScore !== undefined) ? `
+    <div style="background:#F0F9FF;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #3B82F6;">
+      <p style="font-weight:bold;color:#1E40AF;margin-bottom:12px;">📊 ${data.hospitalName}의 현재 AI 성과</p>
+      ${data.abhsScore !== undefined ? `<p>📈 ABHS 종합점수: <strong>${data.abhsScore}점</strong></p>` : ''}
+      ${data.mentionRate !== undefined ? `<p>🎯 AI 언급률: <strong>${data.mentionRate}%</strong></p>` : ''}
+      <p style="color:#6B7280;font-size:13px;margin-top:12px;">쿠폰 만료 후에도 유료 결제하시면 이 성과를 계속 추적할 수 있습니다.</p>
+    </div>` : '';
+
+    const html = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;line-height:1.6;color:#333;}
+  .container{max-width:600px;margin:0 auto;padding:40px 20px;}
+  .header{text-align:center;margin-bottom:30px;}
+  .logo{font-size:24px;font-weight:bold;color:#4F46E5;}
+  .urgency-box{background:${urgencyBg};border-radius:12px;padding:24px;text-align:center;margin:24px 0;border:2px solid ${urgencyColor}44;}
+  .urgency-label{font-size:14px;color:${urgencyColor};}
+  .urgency-days{font-size:42px;font-weight:bold;color:${urgencyColor};}
+  .coupon-info{background:#F8FAFC;border-radius:12px;padding:16px 20px;margin:20px 0;}
+  .button{display:inline-block;background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;text-decoration:none;padding:16px 48px;border-radius:8px;font-weight:bold;font-size:16px;}
+  .footer{margin-top:40px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#999;font-size:12px;}
+</style></head>
+<body><div class="container">
+  <div class="header"><div class="logo">🏥 Patient Signal</div></div>
+  <h2>안녕하세요, ${name} 원장님!</h2>
+  <p><strong>${data.hospitalName}</strong>에 적용된 <strong>${data.couponName}</strong> 혜택이 곧 만료됩니다.</p>
+  
+  <div class="urgency-box">
+    <div class="urgency-label">🎟️ 쿠폰 혜택 종료까지</div>
+    <div class="urgency-days">${urgencyText}</div>
+    <div class="urgency-label">만료일: ${data.expirationDate}</div>
+  </div>
+
+  <div class="coupon-info">
+    <p style="margin:4px 0;"><strong>쿠폰:</strong> ${data.couponName}</p>
+    <p style="margin:4px 0;"><strong>현재 플랜:</strong> ${planNames[data.planType] || data.planType}</p>
+    <p style="margin:4px 0;"><strong>만료 후:</strong> FREE 플랜으로 자동 전환</p>
+  </div>
+
+  ${statsSection}
+
+  <p>쿠폰 만료 후 변경사항:</p>
+  <ul>
+    <li>❌ AI 플랫폼: 4개 → <strong>Perplexity 1개만</strong></li>
+    <li>❌ 모니터링 질문: 5개 → <strong>1개</strong></li>
+    <li>❌ 크롤링: 매일 → <strong>주 1회</strong></li>
+    <li>❌ 경쟁사 분석: <strong>사용 불가</strong></li>
+  </ul>
+
+  <p>지금 유료 결제를 등록하시면 만료 후에도 중단 없이 이용하실 수 있습니다!</p>
+
+  <div style="text-align:center;margin:30px 0;">
+    <a href="${this.appUrl}/dashboard/billing" class="button">결제 수단 등록하기 →</a>
+  </div>
+  <div class="footer">
+    <p>© 2026 Patient Signal. All rights reserved.</p>
+    <p>이 메일은 쿠폰 만료 안내를 위해 자동 발송됩니다.</p>
+  </div>
+</div></body></html>`;
+
+    try {
+      await this.resend.emails.send({
+        from: `Patient Signal <${this.fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+      });
+      this.logger.log(`[쿠폰 만료] 이메일 발송 완료: ${to} (D-${data.daysRemaining}, ${data.couponName})`);
+      return true;
+    } catch (error) {
+      this.logger.error(`이메일 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
+
   // ==================== B2: 경쟁사 변동 알림 이메일 ====================
 
   /**
