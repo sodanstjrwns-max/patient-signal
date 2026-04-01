@@ -704,17 +704,15 @@ export class AdminService {
   /**
    * 무결제 구독을 TRIAL 7일로 리셋 (체험 → 과금 전환 마이그레이션)
    * 
-   * 대상: ACTIVE 상태이지만 billingKey가 없는 구독 (= 결제 없이 수동 할당된 구독)
-   * 제외: ENTERPRISE, PRO(원장님), 이미 TRIAL인 구독
+   * 대상: ACTIVE 상태 + billingKey 없음 + 쿠폰 미사용 (= 순수 무료 체험 사용자)
+   * 제외: ENTERPRISE, PRO, FREE, 쿠폰 사용자 (12개월 무료 등)
    * 
    * 동작:
    *   1. status → TRIAL
    *   2. currentPeriodEnd → 오늘 + trialDays일 (기본 7일)
    *   3. hospital.subscriptionStatus → TRIAL
    * 
-   * 이후 Cron이 매일 체크하여:
-   *   - 만료 D-3, D-1, D-day에 결제 유도 이메일 자동 발송
-   *   - 만료 시 billingKey 없으면 FREE로 자동 다운그레이드
+   * 쿠폰 사용자는 별도로 쿠폰 만료일 기준으로 유지됨
    */
   async migrateUnpaidSubscriptionsToTrial(trialDays: number = 7): Promise<any> {
     this.logger.log(`=== 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작 ===`);
@@ -723,7 +721,14 @@ export class AdminService {
     const trialEnd = new Date(now);
     trialEnd.setDate(trialEnd.getDate() + trialDays);
 
-    // 대상: ACTIVE + billingKey 없음 + ENTERPRISE/PRO 제외
+    // 쿠폰 사용한 hospitalId 목록 조회 (이 병원들은 건드리지 않음)
+    const couponRedemptions = await this.prisma.couponRedemption.findMany({
+      select: { hospitalId: true, freeMonths: true, coupon: { select: { code: true } } },
+    });
+    const couponHospitalIds = new Set(couponRedemptions.map(r => r.hospitalId));
+    this.logger.log(`쿠폰 사용 병원: ${couponHospitalIds.size}개 (마이그레이션 제외)`);
+
+    // 대상: ACTIVE + billingKey 없음 + ENTERPRISE/PRO/FREE 제외
     const unpaidSubs = await this.prisma.subscription.findMany({
       where: {
         status: 'ACTIVE',
@@ -741,6 +746,20 @@ export class AdminService {
 
     for (const sub of unpaidSubs) {
       try {
+        // 쿠폰 사용 병원은 건드리지 않음 (12개월 무료 쿠폰 등)
+        if (couponHospitalIds.has(sub.hospitalId)) {
+          results.push({
+            hospital: sub.hospital?.name,
+            hospitalId: sub.hospitalId,
+            plan: sub.planType,
+            status: 'skipped',
+            reason: '쿠폰 사용자 (만료일 유지)',
+            currentEnd: sub.currentPeriodEnd.toISOString(),
+          });
+          this.logger.log(`⏭️ ${sub.hospital?.name}: 쿠폰 사용자 → 스킵`);
+          continue;
+        }
+
         // 구독을 TRIAL로 리셋
         await this.prisma.subscription.update({
           where: { id: sub.id },
@@ -820,15 +839,17 @@ export class AdminService {
     }
 
     const migrated = results.filter(r => r.status === 'migrated').length;
+    const skippedCoupon = results.filter(r => r.status === 'skipped').length;
     const cleaned = results.filter(r => r.status === 'cleaned').length;
     const errors = results.filter(r => r.status === 'error').length;
 
-    this.logger.log(`=== 마이그레이션 완료: ${migrated}건 전환, ${cleaned}건 정리, ${errors}건 오류 ===`);
+    this.logger.log(`=== 마이그레이션 완료: ${migrated}건 전환, ${skippedCoupon}건 쿠폰스킵, ${cleaned}건 정리, ${errors}건 오류 ===`);
 
     return {
       summary: {
         totalTargets: unpaidSubs.length,
         migrated,
+        skippedCoupon,
         cleaned,
         errors,
         trialDays,
