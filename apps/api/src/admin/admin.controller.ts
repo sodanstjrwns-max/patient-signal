@@ -129,6 +129,25 @@ export class AdminController {
     });
   }
 
+  /**
+   * 무결제 구독을 TRIAL로 마이그레이션 (체험→과금 전환)
+   * POST /api/admin/migrate-to-trial?secret=xxx&days=7
+   * 
+   * 대상: ACTIVE + 빌링키 없음 + STARTER/STANDARD (ENTERPRISE/PRO 제외)
+   * 결과: TRIAL 7일(기본)로 전환 → Cron이 D-3,D-1,D-day 이메일 + 만료 시 FREE 다운그레이드
+   */
+  @Public()
+  @Post('migrate-to-trial')
+  async migrateUnpaidToTrial(
+    @Query('secret') secret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(secret);
+    const trialDays = parseInt(days || '7', 10);
+    this.logger.log(`[Admin] 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작`);
+    return this.adminService.migrateUnpaidSubscriptionsToTrial(trialDays);
+  }
+
   private validateSecret(secret: string) {
     const validSecret = process.env.ADMIN_SECRET || 'pf-admin-2026';
     if (secret !== validSecret) {

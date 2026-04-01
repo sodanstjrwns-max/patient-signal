@@ -27,16 +27,8 @@ export class SubscriptionsService {
     this.logger.log(`구독 생성: hospitalId=${data.hospitalId}, plan=${data.planType}`);
 
     const now = new Date();
-    const periodEnd = new Date(now);
 
-    // 구독 기간 설정
-    if (data.billingType === 'yearly') {
-      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-    } else {
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-    }
-
-    // 7일 무료 체험 추가
+    // 7일 무료 체험 기간으로 설정 (결제 전까지는 체험)
     const trialEnd = new Date(now);
     trialEnd.setDate(trialEnd.getDate() + 7);
 
@@ -47,14 +39,14 @@ export class SubscriptionsService {
         planType: data.planType,
         status: 'TRIAL',
         currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: trialEnd, // 7일 체험 기간
         paymentMethodId: data.paymentId,
       },
       update: {
         planType: data.planType,
         status: 'TRIAL',
         currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
+        currentPeriodEnd: trialEnd, // 7일 체험 기간
         paymentMethodId: data.paymentId,
         cancelAtPeriodEnd: false,
       },
@@ -104,18 +96,26 @@ export class SubscriptionsService {
     );
     const isInTrial = subscription.status === 'TRIAL' && trialDaysUsed <= 7;
 
+    // 빌링키(결제수단) 없이 ACTIVE인 경우 = 아직 결제하지 않은 사용자
+    // 이 경우도 체험과 동일하게 취급
+    const isUnpaidActive = subscription.status === 'ACTIVE' && !subscription.billingKey;
+    const needsPayment = isInTrial || isUnpaidActive;
+
     return {
       hasSubscription: true,
       subscription,
       isActive,
       isExpired,
       isInTrial,
+      isUnpaidActive,
+      needsPayment,
       trialDaysRemaining: isInTrial ? Math.max(0, 7 - trialDaysUsed) : 0,
       daysRemaining,
       planType: subscription.planType,
       status: subscription.status,
       willCancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
       currentPeriodEnd: subscription.currentPeriodEnd,
+      hasBillingKey: !!subscription.billingKey,
     };
   }
 

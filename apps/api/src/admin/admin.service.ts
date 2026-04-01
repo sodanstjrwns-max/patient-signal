@@ -700,4 +700,141 @@ export class AdminService {
       details: results,
     };
   }
+
+  /**
+   * 무결제 구독을 TRIAL 7일로 리셋 (체험 → 과금 전환 마이그레이션)
+   * 
+   * 대상: ACTIVE 상태이지만 billingKey가 없는 구독 (= 결제 없이 수동 할당된 구독)
+   * 제외: ENTERPRISE, PRO(원장님), 이미 TRIAL인 구독
+   * 
+   * 동작:
+   *   1. status → TRIAL
+   *   2. currentPeriodEnd → 오늘 + trialDays일 (기본 7일)
+   *   3. hospital.subscriptionStatus → TRIAL
+   * 
+   * 이후 Cron이 매일 체크하여:
+   *   - 만료 D-3, D-1, D-day에 결제 유도 이메일 자동 발송
+   *   - 만료 시 billingKey 없으면 FREE로 자동 다운그레이드
+   */
+  async migrateUnpaidSubscriptionsToTrial(trialDays: number = 7): Promise<any> {
+    this.logger.log(`=== 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작 ===`);
+
+    const now = new Date();
+    const trialEnd = new Date(now);
+    trialEnd.setDate(trialEnd.getDate() + trialDays);
+
+    // 대상: ACTIVE + billingKey 없음 + ENTERPRISE/PRO 제외
+    const unpaidSubs = await this.prisma.subscription.findMany({
+      where: {
+        status: 'ACTIVE',
+        billingKey: null,
+        planType: { notIn: ['ENTERPRISE', 'PRO', 'FREE'] },
+      },
+      include: {
+        hospital: { select: { id: true, name: true, planType: true } },
+      },
+    });
+
+    this.logger.log(`마이그레이션 대상: ${unpaidSubs.length}개 구독`);
+
+    const results: any[] = [];
+
+    for (const sub of unpaidSubs) {
+      try {
+        // 구독을 TRIAL로 리셋
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: {
+            status: 'TRIAL',
+            currentPeriodStart: now,
+            currentPeriodEnd: trialEnd,
+          },
+        });
+
+        // 병원 상태도 TRIAL로 업데이트
+        await this.prisma.hospital.update({
+          where: { id: sub.hospitalId },
+          data: {
+            subscriptionStatus: 'TRIAL',
+          },
+        });
+
+        results.push({
+          hospital: sub.hospital?.name,
+          hospitalId: sub.hospitalId,
+          plan: sub.planType,
+          previousEnd: sub.currentPeriodEnd.toISOString(),
+          newEnd: trialEnd.toISOString(),
+          status: 'migrated',
+        });
+
+        this.logger.log(`✅ ${sub.hospital?.name}: ACTIVE → TRIAL (D-${trialDays})`);
+      } catch (error) {
+        results.push({
+          hospital: sub.hospital?.name,
+          hospitalId: sub.hospitalId,
+          status: 'error',
+          error: error.message,
+        });
+        this.logger.error(`❌ ${sub.hospital?.name}: 마이그레이션 실패 - ${error.message}`);
+      }
+    }
+
+    // FREE 구독 중 D=26938 같은 비정상 데이터도 정리
+    const freeSubs = await this.prisma.subscription.findMany({
+      where: {
+        planType: 'FREE',
+        status: 'ACTIVE',
+        billingKey: null,
+        currentPeriodEnd: {
+          gt: new Date(Date.now() + 400 * 24 * 60 * 60 * 1000), // 400일 이상 남은 비정상 데이터
+        },
+      },
+      include: {
+        hospital: { select: { name: true } },
+      },
+    });
+
+    for (const sub of freeSubs) {
+      try {
+        // FREE는 만료 기간을 현실적으로 조정 (무료이므로 만료 개념 없지만 정리)
+        const freeEnd = new Date(now);
+        freeEnd.setFullYear(freeEnd.getFullYear() + 1); // 1년
+        
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: {
+            currentPeriodEnd: freeEnd,
+          },
+        });
+        
+        results.push({
+          hospital: sub.hospital?.name,
+          plan: 'FREE',
+          status: 'cleaned',
+          note: '비정상 만료일 → 1년으로 정리',
+        });
+      } catch (error) {
+        // 무시
+      }
+    }
+
+    const migrated = results.filter(r => r.status === 'migrated').length;
+    const cleaned = results.filter(r => r.status === 'cleaned').length;
+    const errors = results.filter(r => r.status === 'error').length;
+
+    this.logger.log(`=== 마이그레이션 완료: ${migrated}건 전환, ${cleaned}건 정리, ${errors}건 오류 ===`);
+
+    return {
+      summary: {
+        totalTargets: unpaidSubs.length,
+        migrated,
+        cleaned,
+        errors,
+        trialDays,
+        trialEnd: trialEnd.toISOString(),
+      },
+      details: results,
+    };
+  }
 }
