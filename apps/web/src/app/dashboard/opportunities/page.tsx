@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
-import { api } from '@/lib/api';
+import { api, geoContentApi, crawlerApi } from '@/lib/api';
+import { toast } from '@/hooks/useToast';
 import { 
   Zap, Target, TrendingUp, AlertTriangle, CheckCircle, 
   ArrowRight, Eye, Users, MessageSquare, Lightbulb,
   ChevronDown, ChevronUp, Star, BarChart3, Shield,
-  ThumbsUp, ThumbsDown, Minus, Clock,
+  ThumbsUp, ThumbsDown, Minus, Clock, Sparkles, Loader2, PenTool,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -69,8 +70,56 @@ const platformNames: Record<string, string> = {
 export default function OpportunitiesPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps'>('opportunities');
+  const [generatingGapIds, setGeneratingGapIds] = useState<Set<string>>(new Set());
+  const [generatingBlogGapIds, setGeneratingBlogGapIds] = useState<Set<string>>(new Set());
+
+  // GEO 콘텐츠 생성 (퍼널 기반)
+  const generateFromGap = async (gap: ContentGapItem) => {
+    setGeneratingGapIds(prev => new Set(prev).add(gap.id));
+    try {
+      await geoContentApi.generate({
+        topic: gap.topic,
+        funnelStage: 'AWARENESS',
+        contentTone: 'PROFESSIONAL',
+        targetKeywords: gap.competitorNames || [],
+        procedure: gap.topic,
+        includeCardNews: true,
+        additionalInstructions: gap.suggestedAction || undefined,
+      });
+      toast.success('AI가 콘텐츠를 생성하고 있습니다! AI 콘텐츠 페이지에서 확인하세요.');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || '콘텐츠 생성에 실패했습니다');
+    } finally {
+      setGeneratingGapIds(prev => {
+        const next = new Set(prev);
+        next.delete(gap.id);
+        return next;
+      });
+    }
+  };
+
+  // 블로그 초안 생성 (크롤러 기반)
+  const generateBlogFromGap = async (gap: ContentGapItem) => {
+    if (!hospitalId) return;
+    setGeneratingBlogGapIds(prev => new Set(prev).add(gap.id));
+    try {
+      const res = await crawlerApi.generateBlogDraft(hospitalId, gap.id);
+      toast.success('블로그 초안이 생성되었습니다!');
+      setExpandedId(gap.id); // 펼쳐서 결과 보기
+      queryClient.invalidateQueries({ queryKey: ['opportunities'] });
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || '블로그 생성에 실패했습니다');
+    } finally {
+      setGeneratingBlogGapIds(prev => {
+        const next = new Set(prev);
+        next.delete(gap.id);
+        return next;
+      });
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ['opportunities', hospitalId || ''],
@@ -289,6 +338,15 @@ export default function OpportunitiesPage() {
                             </p>
                           </div>
                         </div>
+                        {/* 1-Click 개선 버튼 */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <Link
+                            href={`/dashboard/geo-content`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 text-white hover:from-brand-700 hover:to-purple-700 transition-all shadow-sm hover:shadow-md"
+                          >
+                            <Sparkles className="h-3 w-3" /> AI로 콘텐츠 만들기
+                          </Link>
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -374,6 +432,41 @@ export default function OpportunitiesPage() {
                             <p className="text-xs text-brand-600 leading-relaxed whitespace-pre-wrap">{gap.aiGeneratedGuide}</p>
                           </div>
                         )}
+
+                        {/* 콘텐츠 생성 버튼 */}
+                        <div className="flex items-center gap-2 flex-wrap pt-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              generateFromGap(gap);
+                            }}
+                            disabled={generatingGapIds.has(gap.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 text-white hover:from-brand-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-sm hover:shadow-md"
+                          >
+                            {generatingGapIds.has(gap.id) ? (
+                              <><Loader2 className="h-3 w-3 animate-spin" /> 생성 중...</>
+                            ) : (
+                              <><Sparkles className="h-3 w-3" /> GEO 콘텐츠 생성</>
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              generateBlogFromGap(gap);
+                            }}
+                            disabled={generatingBlogGapIds.has(gap.id)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 transition-all disabled:opacity-50"
+                          >
+                            {generatingBlogGapIds.has(gap.id) ? (
+                              <><Loader2 className="h-3 w-3 animate-spin" /> 생성 중...</>
+                            ) : (
+                              <><PenTool className="h-3 w-3" /> 블로그 초안</>
+                            )}
+                          </button>
+                          <Link href="/dashboard/geo-content" className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-slate-500 hover:text-brand-600 transition-colors">
+                            AI 콘텐츠 보기 <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </div>
                       </div>
                     )}
                   </CardContent>

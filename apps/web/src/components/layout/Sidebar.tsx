@@ -24,6 +24,7 @@ import {
   Target,
   ChevronDown,
   Crown,
+  PenTool,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -67,6 +68,13 @@ const navGroups: NavGroup[] = [
       { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
       { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
       { name: '인용 출처', href: '/dashboard/insights?tab=sources', icon: Globe },
+    ],
+  },
+  {
+    label: 'GEO 콘텐츠',
+    defaultOpen: true,
+    items: [
+      { name: 'AI 콘텐츠', href: '/dashboard/geo-content', icon: PenTool, badge: 'NEW' },
     ],
   },
   {

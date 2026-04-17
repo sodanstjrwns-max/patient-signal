@@ -31,6 +31,13 @@ export const queryKeys = {
     contentGap: (hospitalId: string) => ['content-gap', hospitalId] as const,
   },
 
+  // === GEO Content ===
+  geoContent: {
+    list: (status?: string, funnelStage?: string) => ['geo-content', status, funnelStage] as const,
+    stats: () => ['geo-content-stats'] as const,
+    detail: (id: string) => ['geo-content-detail', id] as const,
+  },
+
   // === Competitors ===
   competitors: {
     list: (hospitalId: string) => ['competitors', hospitalId] as const,
