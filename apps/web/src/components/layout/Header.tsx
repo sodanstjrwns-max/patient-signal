@@ -6,17 +6,19 @@ import { Button } from '@/components/ui/button';
 interface HeaderProps {
   title: string;
   description?: string;
+  subtitle?: string;
   onRefresh?: () => void;
   refreshing?: boolean;
 }
 
-export function Header({ title, description, onRefresh, refreshing }: HeaderProps) {
+export function Header({ title, description, subtitle, onRefresh, refreshing }: HeaderProps) {
+  const desc = description || subtitle;
   return (
     <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
       <div className="min-w-0">
         <h1 className="text-lg sm:text-xl font-semibold text-gray-900 truncate">{title}</h1>
-        {description && (
-          <p className="text-xs sm:text-sm text-gray-500 truncate">{description}</p>
+        {desc && (
+          <p className="text-xs sm:text-sm text-gray-500 truncate">{desc}</p>
         )}
       </div>
       <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">

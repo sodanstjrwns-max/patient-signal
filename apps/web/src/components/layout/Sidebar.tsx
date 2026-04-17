@@ -22,23 +22,72 @@ import {
   PieChart,
   Globe,
   Target,
+  ChevronDown,
+  Eye,
+  Search,
+  TrendingUp,
+  Shield,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
-const navigation = [
-  { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
-  { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
-  { name: '질문 관리', href: '/dashboard/prompts', icon: MessageSquare },
-  { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
-  { name: '실시간 질문', href: '/dashboard/live-query', icon: Zap },
-  { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
-  { name: '인용 출처', href: '/dashboard/citations', icon: Globe },
-  { name: '기회 분석', href: '/dashboard/opportunities', icon: Target },
-  { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
-  { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
-  { name: '결제/구독', href: '/dashboard/billing', icon: CreditCard },
-  { name: '설정', href: '/dashboard/settings', icon: Settings },
+// ─── 그룹핑 네비게이션 ───
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  badge?: string;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+  defaultOpen?: boolean;
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: '개요',
+    defaultOpen: true,
+    items: [
+      { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
+      { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
+    ],
+  },
+  {
+    label: '모니터링',
+    defaultOpen: true,
+    items: [
+      { name: '질문 관리', href: '/dashboard/prompts', icon: MessageSquare },
+      { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
+      { name: '실시간 질문', href: '/dashboard/live-query', icon: Zap },
+    ],
+  },
+  {
+    label: '분석',
+    defaultOpen: true,
+    items: [
+      { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
+      { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
+      { name: '인용 출처', href: '/dashboard/citations', icon: Globe, badge: 'NEW' },
+      { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
+      { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
+    ],
+  },
+  {
+    label: '경쟁',
+    defaultOpen: true,
+    items: [
+      { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
+    ],
+  },
+  {
+    label: '관리',
+    defaultOpen: false,
+    items: [
+      { name: '결제/구독', href: '/dashboard/billing', icon: CreditCard },
+      { name: '설정', href: '/dashboard/settings', icon: Settings },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -46,9 +95,28 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // 페이지 이동 시 모바일 메뉴 자동 닫기
+  // 그룹 열림/닫힘 상태 (현재 경로가 속한 그룹은 자동 오픈)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navGroups.forEach((group) => {
+      const hasActive = group.items.some((item) => pathname === item.href);
+      initial[group.label] = hasActive || !!group.defaultOpen;
+    });
+    return initial;
+  });
+
+  // 페이지 이동 시 모바일 메뉴 자동 닫기 + 해당 그룹 열기
   useEffect(() => {
     setMobileOpen(false);
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      navGroups.forEach((group) => {
+        if (group.items.some((item) => pathname === item.href)) {
+          next[group.label] = true;
+        }
+      });
+      return next;
+    });
   }, [pathname]);
 
   // 모바일 메뉴 열렸을 때 body 스크롤 방지
@@ -61,19 +129,23 @@ export function Sidebar() {
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
+  };
+
   const sidebarContent = (
     <>
       {/* 로고 */}
       <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <Link href="/dashboard" className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
             <h1 className="font-bold text-gray-900">Patient Signal</h1>
-            <p className="text-xs text-gray-500">AI 검색 가시성 추적</p>
+            <p className="text-[10px] text-gray-400">AI 검색 가시성 추적</p>
           </div>
-        </div>
+        </Link>
         {/* 모바일 닫기 버튼 */}
         <button
           onClick={() => setMobileOpen(false)}
@@ -85,10 +157,10 @@ export function Sidebar() {
 
       {/* 병원 정보 */}
       {user?.hospital && (
-        <div className="px-4 py-4 border-b border-gray-100">
-          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Building2 className="h-5 w-5 text-blue-600" />
+        <div className="px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
+            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+              <Building2 className="h-4 w-4 text-blue-600" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-medium text-sm text-gray-900 truncate">
@@ -100,11 +172,11 @@ export function Sidebar() {
                 user.hospital.planType === 'STARTER' ? 'text-green-600' :
                 'text-gray-500'
               }`}>
-                {user.hospital.planType === 'PRO' ? 'Pro 플랜' :
-                 user.hospital.planType === 'STANDARD' ? 'Standard 플랜' :
-                 user.hospital.planType === 'ENTERPRISE' ? 'Enterprise 플랜' :
-                 user.hospital.planType === 'STARTER' ? 'Starter 플랜' :
-                 'Free 플랜'}
+                {user.hospital.planType === 'PRO' ? 'Pro' :
+                 user.hospital.planType === 'STANDARD' ? 'Standard' :
+                 user.hospital.planType === 'ENTERPRISE' ? 'Enterprise' :
+                 user.hospital.planType === 'STARTER' ? 'Starter' :
+                 'Free'}
               </p>
             </div>
           </div>
@@ -120,32 +192,78 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* 네비게이션 */}
-      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href;
+      {/* 그룹핑 네비게이션 */}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-1">
+        {navGroups.map((group) => {
+          const isGroupOpen = openGroups[group.label] ?? true;
+          const hasActiveItem = group.items.some((item) => pathname === item.href);
+
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-              )}
-            >
-              <item.icon className={cn('h-5 w-5', isActive ? 'text-blue-600' : 'text-gray-400')} />
-              {item.name}
-            </Link>
+            <div key={group.label}>
+              {/* 그룹 헤더 (토글) */}
+              <button
+                onClick={() => toggleGroup(group.label)}
+                className="flex items-center justify-between w-full px-3 py-1.5 mb-0.5 group"
+              >
+                <span className={cn(
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  hasActiveItem ? 'text-blue-600' : 'text-gray-400'
+                )}>
+                  {group.label}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-3 w-3 text-gray-400 transition-transform duration-200',
+                    isGroupOpen ? 'rotate-0' : '-rotate-90'
+                  )}
+                />
+              </button>
+
+              {/* 그룹 아이템들 */}
+              <div
+                className={cn(
+                  'overflow-hidden transition-all duration-200',
+                  isGroupOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+                )}
+              >
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ml-1',
+                        isActive
+                          ? 'bg-blue-50 text-blue-700 shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          'h-[18px] w-[18px] flex-shrink-0',
+                          isActive ? 'text-blue-600' : 'text-gray-400'
+                        )}
+                      />
+                      <span className="flex-1">{item.name}</span>
+                      {item.badge && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-blue-500 text-white leading-none">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </nav>
 
       {/* 사용자 정보 */}
-      <div className="px-4 py-4 border-t border-gray-200">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+      <div className="px-4 py-3 border-t border-gray-200">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
             <span className="text-sm font-medium text-gray-600">
               {user?.name?.charAt(0) || 'U'}
             </span>
@@ -157,7 +275,7 @@ export function Sidebar() {
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors"
         >
           <LogOut className="h-4 w-4" />
           로그아웃
