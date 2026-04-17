@@ -14,7 +14,7 @@ import {
   Loader2, CheckCircle, Clock, AlertCircle, Sparkles,
   ChevronDown, ChevronUp, BarChart3, Target, Zap,
   Copy, Download, Filter, RefreshCw, ArrowRight,
-  BookOpen, Instagram, Globe, Send, X,
+  Code, FileDown, X,
 } from 'lucide-react';
 
 // ─── Types ───
@@ -66,12 +66,6 @@ const toneLabels: Record<string, string> = {
   PROFESSIONAL: '전문적',
 };
 
-const publishPlatforms = [
-  { key: 'NAVER_BLOG', label: '네이버 블로그', icon: BookOpen },
-  { key: 'TISTORY', label: '티스토리', icon: FileText },
-  { key: 'INSTAGRAM', label: '인스타그램', icon: Instagram },
-  { key: 'HOSPITAL_SITE', label: '병원 웹사이트', icon: Globe },
-];
 
 export default function GeoContentPage() {
   const { user } = useAuthStore();
@@ -391,37 +385,54 @@ export default function GeoContentPage() {
                       {/* 액션 버튼 */}
                       <div className="flex items-center gap-2 flex-wrap pt-2">
                         {item.bodyHtml && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const text = item.bodyMarkdown || item.bodyHtml?.replace(/<[^>]+>/g, '') || '';
-                              navigator.clipboard.writeText(text);
-                              toast.success('본문이 클립보드에 복사되었습니다');
-                            }}
-                          >
-                            <Copy className="h-3 w-3 mr-1" />
-                            본문 복사
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const text = item.bodyHtml?.replace(/<[^>]+>/g, '') || '';
+                                navigator.clipboard.writeText(text);
+                                toast.success('텍스트 본문이 복사되었습니다');
+                              }}
+                            >
+                              <Copy className="h-3 w-3 mr-1" />
+                              텍스트 복사
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(item.bodyHtml || '');
+                                toast.success('HTML 본문이 복사되었습니다 (블로그 편집기에 붙여넣기)');
+                              }}
+                            >
+                              <Code className="h-3 w-3 mr-1" />
+                              HTML 복사
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const meta = [
+                                  `제목: ${item.title}`,
+                                  item.subtitle ? `부제: ${item.subtitle}` : '',
+                                  item.metaDescription ? `META: ${item.metaDescription}` : '',
+                                  item.targetKeywords?.length ? `키워드: ${item.targetKeywords.join(', ')}` : '',
+                                  '',
+                                  item.bodyHtml?.replace(/<[^>]+>/g, '') || '',
+                                ].filter(Boolean).join('\n');
+                                navigator.clipboard.writeText(meta);
+                                toast.success('제목 + META + 본문 전체가 복사되었습니다');
+                              }}
+                            >
+                              <FileDown className="h-3 w-3 mr-1" />
+                              전체 복사
+                            </Button>
+                          </>
                         )}
-                        {item.status === 'REVIEW' && publishPlatforms.map(plat => (
-                          <Button
-                            key={plat.key}
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              geoContentApi.publish(item.id, { platform: plat.key }).then(() => {
-                                toast.success(`${plat.label} 발행이 등록되었습니다`);
-                                queryClient.invalidateQueries({ queryKey: ['geo-content'] });
-                              }).catch(() => toast.error('발행 등록에 실패했습니다'));
-                            }}
-                          >
-                            <Send className="h-3 w-3 mr-1" />
-                            {plat.label}
-                          </Button>
-                        ))}
                         <Button
                           variant="ghost"
                           size="sm"
