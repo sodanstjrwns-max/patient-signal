@@ -253,7 +253,7 @@ export default function CompetitorsPage() {
 
     if (diff > 5) return { icon: <TrendingUp className="h-4 w-4 text-green-500" />, text: '우위', color: 'text-green-600' };
     if (diff < -5) return { icon: <TrendingDown className="h-4 w-4 text-red-500" />, text: '열세', color: 'text-red-600' };
-    return { icon: <Minus className="h-4 w-4 text-gray-400" />, text: '비슷', color: 'text-gray-500' };
+    return { icon: <Minus className="h-4 w-4 text-slate-400" />, text: '비슷', color: 'text-slate-500' };
   };
 
   // 제안 결과에서 이미 등록/거절된 것 필터링
@@ -269,9 +269,9 @@ export default function CompetitorsPage() {
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">병원 등록이 필요합니다</h3>
-              <p className="text-gray-500 mb-4">경쟁사를 관리하려면 먼저 병원 정보를 등록해주세요.</p>
+              <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">병원 등록이 필요합니다</h3>
+              <p className="text-slate-500 mb-4">경쟁사를 관리하려면 먼저 병원 정보를 등록해주세요.</p>
               <Button onClick={() => window.location.href = '/onboarding'}>병원 등록하기</Button>
             </CardContent>
           </Card>
@@ -287,7 +287,7 @@ export default function CompetitorsPage() {
       <div className="p-6 space-y-6">
         {/* 플랜 사용량 표시 */}
         {planLimits.maxCompetitors !== -1 && (
-          <Card className="bg-gradient-to-r from-gray-50 to-white">
+          <Card className="bg-gradient-to-r from-slate-50 to-white">
             <CardContent className="p-4">
               <UsageBar
                 used={competitors?.length || 0}
@@ -355,10 +355,10 @@ export default function CompetitorsPage() {
                   )}
                   AI 경쟁사 제안
                   {!canUseFeature(planType, 'autoDetect') && (
-                    <Lock className="h-3 w-3 ml-1 text-gray-400" />
+                    <Lock className="h-3 w-3 ml-1 text-slate-400" />
                   )}
                 </Button>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-500">
                   크롤링 데이터를 분석하여 주요 경쟁사를 제안합니다
                 </p>
               </div>
@@ -383,7 +383,7 @@ export default function CompetitorsPage() {
                 </Button>
               </div>
               {analysisInfo && (
-                <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+                <div className="flex items-center gap-4 text-sm text-slate-500 mt-1">
                   <span className="flex items-center gap-1">
                     <BarChart3 className="h-3.5 w-3.5" />
                     {analysisInfo.totalResponsesAnalyzed}개 AI 응답 분석
@@ -399,8 +399,8 @@ export default function CompetitorsPage() {
               {suggestions.length === 0 ? (
                 <div className="text-center py-8">
                   <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">추가 제안할 경쟁사가 없습니다</p>
-                  <p className="text-sm text-gray-400 mt-1">크롤링 데이터가 더 쌓이면 새로운 제안이 나올 수 있습니다</p>
+                  <p className="text-slate-600 font-medium">추가 제안할 경쟁사가 없습니다</p>
+                  <p className="text-sm text-slate-400 mt-1">크롤링 데이터가 더 쌓이면 새로운 제안이 나올 수 있습니다</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -415,21 +415,21 @@ export default function CompetitorsPage() {
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <div className={`p-2 rounded-lg bg-white shadow-sm flex-shrink-0`}>
+                            <div className={`p-2 rounded-2xl bg-white/80 backdrop-blur-sm shadow-sm flex-shrink-0`}>
                               <ThreatIcon className={`h-5 w-5 ${config.color}`} />
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h4 className="font-semibold text-gray-900">{suggestion.name}</h4>
+                                <h4 className="font-semibold text-slate-900">{suggestion.name}</h4>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${config.badge}`}>
                                   {config.label} · {suggestion.threatScore}점
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 mt-1 leading-relaxed">
+                              <p className="text-sm text-slate-600 mt-1 leading-relaxed">
                                 {suggestion.reason}
                               </p>
                               {/* 상세 지표 */}
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+                              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
                                 <span>총 {suggestion.mentionCount}회 언급</span>
                                 {suggestion.soloMentionCount > 0 && (
                                   <span className="text-red-500 font-medium">
@@ -454,7 +454,7 @@ export default function CompetitorsPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-gray-400 hover:text-gray-600"
+                              className="text-slate-400 hover:text-slate-600"
                               onClick={() => {
                                 setDismissedSuggestions((prev) => new Set(Array.from(prev).concat(suggestion.name)));
                               }}
@@ -489,7 +489,7 @@ export default function CompetitorsPage() {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="경쟁사 검색..."
                 value={searchTerm}
@@ -507,7 +507,7 @@ export default function CompetitorsPage() {
               삭제된 경쟁사
             </Button>
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             총 {filteredCompetitors?.length || 0}개 경쟁사
           </p>
         </div>
@@ -544,7 +544,7 @@ export default function CompetitorsPage() {
                   </Button>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-slate-500 mt-1">
                 이전에 삭제한 경쟁사를 다시 활성화할 수 있습니다
               </p>
             </CardHeader>
@@ -556,8 +556,8 @@ export default function CompetitorsPage() {
               ) : inactiveError ? (
                 <div className="text-center py-6">
                   <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">목록을 불러오지 못했습니다</p>
-                  <p className="text-sm text-gray-400 mt-1 mb-4">
+                  <p className="text-slate-600 font-medium">목록을 불러오지 못했습니다</p>
+                  <p className="text-sm text-slate-400 mt-1 mb-4">
                     목록 조회가 안 되더라도 &quot;전체 복구&quot; 버튼으로 바로 복구할 수 있습니다
                   </p>
                   <Button
@@ -576,8 +576,8 @@ export default function CompetitorsPage() {
               ) : !inactiveCompetitors || inactiveCompetitors.length === 0 ? (
                 <div className="text-center py-6">
                   <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">삭제된 경쟁사가 없습니다</p>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-slate-600 font-medium">삭제된 경쟁사가 없습니다</p>
+                  <p className="text-sm text-slate-400 mt-1">
                     모든 경쟁사가 활성 상태이거나, DB에서 완전 삭제되었을 수 있습니다
                   </p>
                 </div>
@@ -589,16 +589,16 @@ export default function CompetitorsPage() {
                   {inactiveCompetitors.map((comp: any) => (
                     <div
                       key={comp.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100"
+                      className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-amber-100"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="p-1.5 rounded-lg bg-gray-100">
-                          <Building className="h-4 w-4 text-gray-400" />
+                        <div className="p-1.5 rounded-2xl bg-slate-100">
+                          <Building className="h-4 w-4 text-slate-400" />
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">{comp.competitorName}</span>
+                          <span className="font-medium text-slate-700">{comp.competitorName}</span>
                           {comp.competitorRegion && (
-                            <span className="text-sm text-gray-400 ml-2">
+                            <span className="text-sm text-slate-400 ml-2">
                               <MapPin className="h-3 w-3 inline" /> {comp.competitorRegion}
                             </span>
                           )}
@@ -630,17 +630,17 @@ export default function CompetitorsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {isLoading ? (
             <div className="col-span-full flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
             </div>
           ) : filteredCompetitors?.length === 0 ? (
             <div className="col-span-full">
               <Card>
                 <CardContent className="p-12 text-center">
-                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">
+                  <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                  <p className="text-slate-500">
                     {searchTerm ? '검색 결과가 없습니다' : '등록된 경쟁사가 없습니다'}
                   </p>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-sm text-slate-400 mt-1">
                     {planType === 'FREE' || planType === 'STARTER'
                       ? 'Standard 플랜으로 업그레이드하여 경쟁사 분석을 시작하세요'
                       : '경쟁사를 추가하거나 AI 제안을 사용해보세요'}
@@ -656,19 +656,19 @@ export default function CompetitorsPage() {
               )?.score;
 
               return (
-                <Card key={competitor.id} className="hover:shadow-md transition-shadow">
+                <Card key={competitor.id} className="hover:shadow-card-hover transition-shadow">
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-orange-100">
+                        <div className="p-2 rounded-2xl bg-orange-100">
                           <Building className="h-5 w-5 text-orange-600" />
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900">
+                          <h3 className="font-medium text-slate-900">
                             {competitor.competitorName}
                           </h3>
                           {competitor.competitorRegion && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                            <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
                               <MapPin className="h-3 w-3" />
                               {competitor.competitorRegion}
                             </p>
@@ -692,15 +692,15 @@ export default function CompetitorsPage() {
                     {compScore !== undefined && (
                       <div className="mt-4 pt-3 border-t">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-500">AI 가시성 점수</span>
+                          <span className="text-sm text-slate-500">AI 가시성 점수</span>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900">
+                            <span className="font-semibold text-slate-900">
                               {compScore}점
                             </span>
                             {trend && (
                               <span className="flex items-center gap-1 text-sm">
                                 {trend.icon}
-                                <span className="text-gray-500">{trend.text}</span>
+                                <span className="text-slate-500">{trend.text}</span>
                               </span>
                             )}
                           </div>
@@ -719,7 +719,7 @@ export default function CompetitorsPage() {
                       <span className={`text-xs px-2 py-0.5 rounded ${
                         competitor.isActive
                           ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
+                          : 'bg-slate-100 text-slate-500'
                       }`}>
                         {competitor.isActive ? '활성' : '비활성'}
                       </span>
@@ -739,7 +739,7 @@ export default function CompetitorsPage() {
                   <TrendingUp className="h-5 w-5" />
                   경쟁사 점수 비교
                 </CardTitle>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   ≈ 표시는 AI 응답 데이터 기반 추정 점수입니다
                 </p>
               </CardHeader>
@@ -747,12 +747,12 @@ export default function CompetitorsPage() {
                 <div className="space-y-3">
                   {/* 내 병원 */}
                   <div className="flex items-center gap-3">
-                    <div className="w-36 font-medium text-blue-600 truncate" title={comparison.myHospital?.name}>
+                    <div className="w-36 font-medium text-brand-600 truncate" title={comparison.myHospital?.name}>
                       {comparison.myHospital?.name || '우리 병원'}
                     </div>
-                    <div className="flex-1 bg-gray-100 rounded-full h-5">
+                    <div className="flex-1 bg-slate-100 rounded-full h-5">
                       <div
-                        className="bg-blue-500 rounded-full h-5 transition-all flex items-center justify-end pr-2"
+                        className="bg-brand-500 rounded-full h-5 transition-all flex items-center justify-end pr-2"
                         style={{ width: `${Math.max(comparison.myHospital?.score || 0, 8)}%` }}
                       >
                         <span className="text-[10px] text-white font-bold">
@@ -770,18 +770,18 @@ export default function CompetitorsPage() {
                     .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
                     .map((comp: any, index: number) => (
                     <div key={index} className="flex items-center gap-3">
-                      <div className="w-36 text-sm text-gray-600 truncate" title={comp.name}>
+                      <div className="w-36 text-sm text-slate-600 truncate" title={comp.name}>
                         {comp.name}
                         {comp.isEstimated && (
                           <span className="text-xs text-amber-500 ml-1" title="AI 응답 기반 추정치">≈</span>
                         )}
                       </div>
-                      <div className="flex-1 bg-gray-100 rounded-full h-5">
+                      <div className="flex-1 bg-slate-100 rounded-full h-5">
                         <div
                           className={`rounded-full h-5 transition-all flex items-center justify-end pr-2 ${
                             comp.score > 0
                               ? comp.isEstimated ? 'bg-orange-300' : 'bg-orange-400'
-                              : 'bg-gray-200'
+                              : 'bg-slate-200'
                           }`}
                           style={{ width: `${Math.max(comp.score || 0, comp.score > 0 ? 8 : 3)}%` }}
                         >
@@ -794,7 +794,7 @@ export default function CompetitorsPage() {
                       </div>
                       <div className="w-14 text-right text-sm flex items-center justify-end gap-1">
                         {comp.score === 0 ? (
-                          <span className="text-gray-400 text-xs">데이터 없음</span>
+                          <span className="text-slate-400 text-xs">데이터 없음</span>
                         ) : (
                           <>
                             <span>{comp.score}점</span>

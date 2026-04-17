@@ -57,14 +57,14 @@ const platformNames: Record<string, string> = {
 const platformColors: Record<string, string> = {
   CHATGPT: 'bg-green-500',
   CLAUDE: 'bg-orange-500',
-  PERPLEXITY: 'bg-blue-500',
+  PERPLEXITY: 'bg-brand-500',
   GEMINI: 'bg-purple-500',
 };
 
 const platformBgColors: Record<string, string> = {
   CHATGPT: 'bg-green-50 text-green-700',
   CLAUDE: 'bg-orange-50 text-orange-700',
-  PERPLEXITY: 'bg-blue-50 text-blue-700',
+  PERPLEXITY: 'bg-brand-50 text-brand-700',
   GEMINI: 'bg-purple-50 text-purple-700',
 };
 
@@ -121,7 +121,7 @@ export default function InsightsPage() {
     return (
       <div className="min-h-screen">
         <Header title="AI 인사이트" description="AI가 우리 병원을 어떻게 보는지 분석합니다" />
-        <div className="p-6 text-center text-gray-500">병원 등록이 필요합니다</div>
+        <div className="p-6 text-center text-slate-500">병원 등록이 필요합니다</div>
       </div>
     );
   }
@@ -156,7 +156,7 @@ export default function InsightsPage() {
 
         {isLoading ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
           </div>
         ) : currentError ? (
           <Card className="border-red-200 bg-red-50/50">
@@ -227,10 +227,10 @@ function MentionAnalysis({ data }: { data: any }) {
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-blue-600 font-medium">전체 응답</p>
-            <p className="text-2xl font-bold text-blue-800">{data.totalResponses}</p>
+            <p className="text-xs text-brand-600 font-medium">전체 응답</p>
+            <p className="text-2xl font-bold text-brand-800">{data.totalResponses}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
@@ -265,11 +265,11 @@ function MentionAnalysis({ data }: { data: any }) {
       {/* 추천 키워드 분석 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <Target className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Target className="h-5 w-5 text-brand-600" />
             AI가 우리 병원을 추천할 때 강조하는 포인트
           </h3>
-          <p className="text-xs text-gray-500 mb-4">AI 응답에서 우리 병원 언급 주변의 키워드를 분석합니다</p>
+          <p className="text-xs text-slate-500 mb-4">AI 응답에서 우리 병원 언급 주변의 키워드를 분석합니다</p>
           {data.recommendationKeywords?.length > 0 ? (
             <div className="space-y-3">
               {data.recommendationKeywords.map((kw: any, i: number) => {
@@ -277,11 +277,11 @@ function MentionAnalysis({ data }: { data: any }) {
                 const percentage = maxCount > 0 ? Math.round((kw.count / maxCount) * 100) : 0;
                 return (
                   <div key={kw.keyword} className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700 w-24 flex-shrink-0">{kw.keyword}</span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                    <span className="text-sm font-medium text-slate-700 w-24 flex-shrink-0">{kw.keyword}</span>
+                    <div className="flex-1 bg-slate-100 rounded-full h-6 relative overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-blue-400' : 'bg-blue-300'
+                          i === 0 ? 'bg-brand-500' : i === 1 ? 'bg-brand-400' : 'bg-blue-300'
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -294,7 +294,7 @@ function MentionAnalysis({ data }: { data: any }) {
               })}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm">아직 충분한 데이터가 없습니다</p>
+            <p className="text-slate-400 text-sm">아직 충분한 데이터가 없습니다</p>
           )}
         </CardContent>
       </Card>
@@ -302,20 +302,20 @@ function MentionAnalysis({ data }: { data: any }) {
       {/* 플랫폼별 추천 방식 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-purple-600" />
             플랫폼별 추천 패턴
           </h3>
-          <p className="text-xs text-gray-500 mb-4">각 AI 플랫폼이 우리 병원을 어떤 방식으로 추천하는지</p>
+          <p className="text-xs text-slate-500 mb-4">각 AI 플랫폼이 우리 병원을 어떤 방식으로 추천하는지</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Object.entries(data.platformContext || {}).map(([platform, stats]: [string, any]) => {
               const mentioned = stats.primary + stats.list + stats.conditional;
               return (
-                <div key={platform} className="border rounded-lg p-4">
+                <div key={platform} className="border rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
-                    <span className="font-medium text-gray-900">{platformNames[platform]}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{stats.total}건</span>
+                    <span className="font-medium text-slate-900">{platformNames[platform]}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{stats.total}건</span>
                   </div>
                   {mentioned > 0 ? (
                     <div className="space-y-2">
@@ -326,7 +326,7 @@ function MentionAnalysis({ data }: { data: any }) {
                         <span className="font-bold">{stats.primary}건</span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-blue-600">목록 나열</span>
+                        <span className="text-brand-600">목록 나열</span>
                         <span className="font-bold">{stats.list}건</span>
                       </div>
                       <div className="flex justify-between text-xs">
@@ -334,12 +334,12 @@ function MentionAnalysis({ data }: { data: any }) {
                         <span className="font-bold">{stats.conditional}건</span>
                       </div>
                       <div className="flex justify-between text-xs border-t pt-2">
-                        <span className="text-gray-500">언급 안됨</span>
-                        <span className="text-gray-400">{stats.notMentioned}건</span>
+                        <span className="text-slate-500">언급 안됨</span>
+                        <span className="text-slate-400">{stats.notMentioned}건</span>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-400">아직 언급된 적 없음</p>
+                    <p className="text-xs text-slate-400">아직 언급된 적 없음</p>
                   )}
                 </div>
               );
@@ -352,15 +352,15 @@ function MentionAnalysis({ data }: { data: any }) {
       {data.competitorComparison?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-600" />
               경쟁사 대비 차별화 포인트
             </h3>
-            <p className="text-xs text-gray-500 mb-4">AI가 경쟁사를 추천할 때 강조하는 포인트 vs 우리</p>
+            <p className="text-xs text-slate-500 mb-4">AI가 경쟁사를 추천할 때 강조하는 포인트 vs 우리</p>
             <div className="space-y-3">
               {/* 우리 병원 */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-800 mb-2">
+              <div className="bg-brand-50 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-brand-800 mb-2">
                   🏥 {data.hospitalName} (우리)
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -368,22 +368,22 @@ function MentionAnalysis({ data }: { data: any }) {
                     .sort(([, a]: any, [, b]: any) => b - a)
                     .slice(0, 5)
                     .map(([attr, count]: any) => (
-                      <span key={attr} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                      <span key={attr} className="text-xs bg-brand-100 text-brand-700 px-2 py-1 rounded-full">
                         {attr} ({count})
                       </span>
                     ))}
                   {Object.keys(data.ourStrengthProfile || {}).length === 0 && (
-                    <span className="text-xs text-blue-400">데이터 수집 중...</span>
+                    <span className="text-xs text-brand-400">데이터 수집 중...</span>
                   )}
                 </div>
               </div>
               {/* 경쟁사 */}
               {data.competitorComparison.map((comp: any) => (
-                <div key={comp.name} className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-gray-700 mb-2">{comp.name}</p>
+                <div key={comp.name} className="bg-slate-50 rounded-2xl p-4">
+                  <p className="text-sm font-medium text-slate-700 mb-2">{comp.name}</p>
                   <div className="flex flex-wrap gap-2">
                     {comp.topAttributes?.map((attr: any) => (
-                      <span key={attr.keyword} className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">
+                      <span key={attr.keyword} className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full">
                         {attr.keyword} ({attr.count})
                       </span>
                     ))}
@@ -399,11 +399,11 @@ function MentionAnalysis({ data }: { data: any }) {
       {data.sampleMentions?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <Quote className="h-5 w-5 text-green-600" />
               AI의 실제 추천 문구
             </h3>
-            <p className="text-xs text-gray-500 mb-4">AI가 실제로 우리 병원을 언급한 원문 발췌</p>
+            <p className="text-xs text-slate-500 mb-4">AI가 실제로 우리 병원을 언급한 원문 발췌</p>
             <div className="space-y-4">
               {data.sampleMentions.map((mention: any, i: number) => (
                 <div key={i} className="border-l-4 border-l-green-400 pl-4 py-2">
@@ -417,14 +417,14 @@ function MentionAnalysis({ data }: { data: any }) {
                     {mention.sentiment && (
                       <span className={`text-xs ${
                         mention.sentiment === 'POSITIVE' ? 'text-green-600' :
-                        mention.sentiment === 'NEGATIVE' ? 'text-red-600' : 'text-gray-400'
+                        mention.sentiment === 'NEGATIVE' ? 'text-red-600' : 'text-slate-400'
                       }`}>
                         {mention.sentiment === 'POSITIVE' ? '😊 긍정' : mention.sentiment === 'NEGATIVE' ? '😟 부정' : '😐 중립'}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mb-1">Q: {mention.question}</p>
-                  <p className="text-sm text-gray-700 italic leading-relaxed">
+                  <p className="text-xs text-slate-500 mb-1">Q: {mention.question}</p>
+                  <p className="text-sm text-slate-700 italic leading-relaxed">
                     "{mention.excerpt}"
                   </p>
                   {mention.confidenceScore != null && (
@@ -460,10 +460,10 @@ function TrendAnalysis({ data }: { data: any }) {
     <div className="space-y-6">
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-blue-600 font-medium">전체 응답 (60일)</p>
-            <p className="text-2xl font-bold text-blue-800">{data.summary?.totalResponses || 0}</p>
+            <p className="text-xs text-brand-600 font-medium">전체 응답 (60일)</p>
+            <p className="text-2xl font-bold text-brand-800">{data.summary?.totalResponses || 0}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
@@ -480,8 +480,8 @@ function TrendAnalysis({ data }: { data: any }) {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-gray-500 font-medium">분석 기간</p>
-            <p className="text-lg font-bold text-gray-800">{data.period}</p>
+            <p className="text-xs text-slate-500 font-medium">분석 기간</p>
+            <p className="text-lg font-bold text-slate-800">{data.period}</p>
           </CardContent>
         </Card>
       </div>
@@ -489,25 +489,25 @@ function TrendAnalysis({ data }: { data: any }) {
       {/* 플랫폼별 트렌드 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-brand-600" />
             플랫폼별 가시성 트렌드
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Object.entries(data.platformTrend || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+              <div key={platform} className="border rounded-2xl p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
-                    <span className="font-medium text-gray-900">{platformNames[platform]}</span>
+                    <span className="font-medium text-slate-900">{platformNames[platform]}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     {stats.trend === 'UP' && <ArrowUpRight className="h-4 w-4 text-green-600" />}
                     {stats.trend === 'DOWN' && <ArrowDownRight className="h-4 w-4 text-red-600" />}
-                    {stats.trend === 'STABLE' && <Minus className="h-4 w-4 text-gray-400" />}
+                    {stats.trend === 'STABLE' && <Minus className="h-4 w-4 text-slate-400" />}
                     <span className={`text-xs font-medium ${
                       stats.trend === 'UP' ? 'text-green-600' :
-                      stats.trend === 'DOWN' ? 'text-red-600' : 'text-gray-400'
+                      stats.trend === 'DOWN' ? 'text-red-600' : 'text-slate-400'
                     }`}>
                       {stats.trend === 'UP' ? '상승' : stats.trend === 'DOWN' ? '하락' : '유지'}
                     </span>
@@ -515,16 +515,16 @@ function TrendAnalysis({ data }: { data: any }) {
                 </div>
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-3xl font-bold text-gray-900">{stats.mentionRate}%</p>
-                    <p className="text-xs text-gray-500">언급률</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.mentionRate}%</p>
+                    <p className="text-xs text-slate-500">언급률</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-gray-600">{stats.mentioned}/{stats.total}</p>
-                    <p className="text-xs text-gray-400">언급/전체</p>
+                    <p className="text-sm text-slate-600">{stats.mentioned}/{stats.total}</p>
+                    <p className="text-xs text-slate-400">언급/전체</p>
                   </div>
                 </div>
                 {/* 간단한 바 */}
-                <div className="mt-3 bg-gray-100 rounded-full h-2 overflow-hidden">
+                <div className="mt-3 bg-slate-100 rounded-full h-2 overflow-hidden">
                   <div
                     className={`h-full rounded-full ${platformColors[platform]}`}
                     style={{ width: `${stats.mentionRate}%` }}
@@ -540,7 +540,7 @@ function TrendAnalysis({ data }: { data: any }) {
       {data.dailyData?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-purple-600" />
               일별 크롤링 기록
             </h3>
@@ -548,18 +548,18 @@ function TrendAnalysis({ data }: { data: any }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium text-gray-500">날짜</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">전체</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">언급</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">언급률</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">감성</th>
+                    <th className="pb-2 font-medium text-slate-500">날짜</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">전체</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">언급</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">언급률</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">감성</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.dailyData.slice(-14).reverse().map((day: any) => (
-                    <tr key={day.date} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 text-gray-700">{new Date(day.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}</td>
-                      <td className="py-2 text-center text-gray-600">{day.total}</td>
+                    <tr key={day.date} className="border-b last:border-0 hover:bg-white/60">
+                      <td className="py-2 text-slate-700">{new Date(day.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}</td>
+                      <td className="py-2 text-center text-slate-600">{day.total}</td>
                       <td className="py-2 text-center text-green-600 font-medium">{day.mentioned}</td>
                       <td className="py-2 text-center">
                         <span className={`font-medium ${day.mentionRate >= 50 ? 'text-green-600' : day.mentionRate >= 30 ? 'text-amber-600' : 'text-red-500'}`}>
@@ -569,7 +569,7 @@ function TrendAnalysis({ data }: { data: any }) {
                       <td className="py-2 text-center">
                         <span className="text-green-500 text-xs">+{day.sentiment.positive}</span>
                         {' '}
-                        <span className="text-gray-400 text-xs">{day.sentiment.neutral}</span>
+                        <span className="text-slate-400 text-xs">{day.sentiment.neutral}</span>
                         {' '}
                         {day.sentiment.negative > 0 && (
                           <span className="text-red-500 text-xs">-{day.sentiment.negative}</span>
@@ -593,10 +593,10 @@ function SourceAnalysis({ data }: { data: any }) {
     <div className="space-y-6">
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-blue-600 font-medium">인용된 출처</p>
-            <p className="text-2xl font-bold text-blue-800">{data.totalUrls || 0}개</p>
+            <p className="text-xs text-brand-600 font-medium">인용된 출처</p>
+            <p className="text-2xl font-bold text-brand-800">{data.totalUrls || 0}개</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
@@ -616,27 +616,27 @@ function SourceAnalysis({ data }: { data: any }) {
       {/* 출처 카테고리별 분포 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <Globe className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Globe className="h-5 w-5 text-brand-600" />
             AI가 참조하는 출처 채널
           </h3>
-          <p className="text-xs text-gray-500 mb-4">AI가 우리 병원 정보를 가져오는 소스 분석</p>
+          <p className="text-xs text-slate-500 mb-4">AI가 우리 병원 정보를 가져오는 소스 분석</p>
           {data.categories?.length > 0 ? (
             <div className="space-y-3">
               {data.categories.map((cat: any, i: number) => {
                 const colors = [
-                  'bg-blue-500', 'bg-green-500', 'bg-amber-500', 'bg-purple-500',
+                  'bg-brand-500', 'bg-green-500', 'bg-amber-500', 'bg-purple-500',
                   'bg-pink-500', 'bg-red-500', 'bg-teal-500', 'bg-indigo-500',
                 ];
                 return (
                   <div key={cat.category} className="flex items-center gap-3">
-                    <span className="text-sm text-gray-700 w-28 flex-shrink-0 truncate">{cat.category}</span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-6 relative overflow-hidden">
+                    <span className="text-sm text-slate-700 w-28 flex-shrink-0 truncate">{cat.category}</span>
+                    <div className="flex-1 bg-slate-100 rounded-full h-6 relative overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${colors[i % colors.length]}`}
                         style={{ width: `${cat.percentage}%` }}
                       />
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-slate-700">
                         {cat.count}건 ({cat.percentage}%)
                       </span>
                     </div>
@@ -645,7 +645,7 @@ function SourceAnalysis({ data }: { data: any }) {
               })}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm">출처 데이터가 없습니다. Perplexity 응답에서 주로 수집됩니다.</p>
+            <p className="text-slate-400 text-sm">출처 데이터가 없습니다. Perplexity 응답에서 주로 수집됩니다.</p>
           )}
         </CardContent>
       </Card>
@@ -653,17 +653,17 @@ function SourceAnalysis({ data }: { data: any }) {
       {/* 플랫폼별 출처 현황 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <ExternalLink className="h-5 w-5 text-green-600" />
             플랫폼별 출처 인용 현황
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {Object.entries(data.platformSources || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="text-center border rounded-lg p-4">
+              <div key={platform} className="text-center border rounded-2xl p-4">
                 <div className={`w-3 h-3 rounded-full ${platformColors[platform]} mx-auto mb-2`} />
-                <p className="text-sm font-medium text-gray-900">{platformNames[platform]}</p>
-                <p className="text-2xl font-bold text-gray-800 my-1">{stats.totalSources}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-slate-900">{platformNames[platform]}</p>
+                <p className="text-2xl font-bold text-slate-800 my-1">{stats.totalSources}</p>
+                <p className="text-xs text-slate-500">
                   {stats.responsesWithSources}/{stats.total} 응답
                 </p>
               </div>
@@ -676,20 +676,20 @@ function SourceAnalysis({ data }: { data: any }) {
       {data.missingChannels?.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600" />
               미활용 채널 — AI 참조를 늘릴 수 있는 기회!
             </h3>
-            <p className="text-xs text-gray-500 mb-4">이 채널에 콘텐츠를 올리면 AI 가시성이 올라갈 수 있어요</p>
+            <p className="text-xs text-slate-500 mb-4">이 채널에 콘텐츠를 올리면 AI 가시성이 올라갈 수 있어요</p>
             <div className="space-y-3">
               {data.missingChannels.map((ch: any) => (
-                <div key={ch.channel} className="flex items-start gap-3 bg-white rounded-lg p-4 border border-amber-100">
+                <div key={ch.channel} className="flex items-start gap-3 bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-amber-100">
                   <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                     <Lightbulb className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">{ch.channel}</p>
-                    <p className="text-xs text-gray-600 mt-0.5">{ch.recommendation}</p>
+                    <p className="text-sm font-semibold text-slate-900">{ch.channel}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{ch.recommendation}</p>
                   </div>
                 </div>
               ))}
@@ -702,7 +702,7 @@ function SourceAnalysis({ data }: { data: any }) {
       {data.topDomains?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-indigo-600" />
               인용 빈도 상위 도메인
             </h3>
@@ -710,17 +710,17 @@ function SourceAnalysis({ data }: { data: any }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium text-gray-500">도메인</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">카테고리</th>
-                    <th className="pb-2 font-medium text-gray-500 text-center">인용 수</th>
+                    <th className="pb-2 font-medium text-slate-500">도메인</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">카테고리</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">인용 수</th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topDomains.slice(0, 10).map((d: any) => (
-                    <tr key={d.domain} className="border-b last:border-0 hover:bg-gray-50">
-                      <td className="py-2 text-gray-700 font-mono text-xs">{d.domain}</td>
-                      <td className="py-2 text-center text-gray-500 text-xs">{d.category}</td>
-                      <td className="py-2 text-center font-medium text-gray-800">{d.count}</td>
+                    <tr key={d.domain} className="border-b last:border-0 hover:bg-white/60">
+                      <td className="py-2 text-slate-700 font-mono text-xs">{d.domain}</td>
+                      <td className="py-2 text-center text-slate-500 text-xs">{d.category}</td>
+                      <td className="py-2 text-center font-medium text-slate-800">{d.count}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -780,10 +780,10 @@ function PositioningMap({ data }: { data: any }) {
     <div className="space-y-6">
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-blue-600 font-medium">우리 병원 언급</p>
-            <p className="text-2xl font-bold text-blue-800">{data.ourPosition?.totalMentions || 0}회</p>
+            <p className="text-xs text-brand-600 font-medium">우리 병원 언급</p>
+            <p className="text-2xl font-bold text-brand-800">{data.ourPosition?.totalMentions || 0}회</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
@@ -821,11 +821,11 @@ function PositioningMap({ data }: { data: any }) {
       {/* 레이더 차트 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <Radar className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Radar className="h-5 w-5 text-brand-600" />
             AI가 보는 시장 내 포지션 맵
           </h3>
-          <p className="text-xs text-gray-500 mb-4">AI 응답에서 추출한 5개 축 기준 포지셔닝 비교</p>
+          <p className="text-xs text-slate-500 mb-4">AI 응답에서 추출한 5개 축 기준 포지셔닝 비교</p>
 
           <div className="flex flex-col lg:flex-row items-center gap-6">
             {/* SVG 레이더 */}
@@ -916,16 +916,16 @@ function PositioningMap({ data }: { data: any }) {
             {/* 범례 + 수치 */}
             <div className="flex-1 space-y-3 w-full">
               {/* 우리 병원 */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <div className="bg-brand-50 rounded-2xl p-4 border border-brand-200">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-4 h-1 bg-blue-600 rounded" />
-                  <span className="text-sm font-semibold text-blue-800">🏥 {data.hospitalName} (우리)</span>
+                  <div className="w-4 h-1 bg-brand-600 rounded" />
+                  <span className="text-sm font-semibold text-brand-800">🏥 {data.hospitalName} (우리)</span>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
                   {axisKeys.map(key => (
                     <div key={key} className="text-center">
-                      <p className="text-xs text-gray-500">{axisLabels[key]}</p>
-                      <p className="text-lg font-bold text-blue-700">{ourScores[key] || 0}</p>
+                      <p className="text-xs text-slate-500">{axisLabels[key]}</p>
+                      <p className="text-lg font-bold text-brand-700">{ourScores[key] || 0}</p>
                     </div>
                   ))}
                 </div>
@@ -933,11 +933,11 @@ function PositioningMap({ data }: { data: any }) {
 
               {/* 경쟁사 */}
               {competitors.map((comp: any, ci: number) => (
-                <div key={comp.name} className="bg-gray-50 rounded-lg p-4 border">
+                <div key={comp.name} className="bg-slate-50 rounded-2xl p-4 border">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-4 h-1 rounded" style={{ backgroundColor: compColors[ci % compColors.length] }} />
-                    <span className="text-sm font-medium text-gray-700">{comp.name}</span>
-                    <span className="text-xs text-gray-400 ml-auto">{comp.mentionCount}회 언급</span>
+                    <span className="text-sm font-medium text-slate-700">{comp.name}</span>
+                    <span className="text-xs text-slate-400 ml-auto">{comp.mentionCount}회 언급</span>
                   </div>
                   <div className="grid grid-cols-5 gap-2">
                     {axisKeys.map(key => {
@@ -946,7 +946,7 @@ function PositioningMap({ data }: { data: any }) {
                       const diff = compVal - ourVal;
                       return (
                         <div key={key} className="text-center">
-                          <p className="text-xs text-gray-500">{axisLabels[key]}</p>
+                          <p className="text-xs text-slate-500">{axisLabels[key]}</p>
                           <p className="text-lg font-bold" style={{ color: compColors[ci % compColors.length] }}>{compVal}</p>
                           {diff !== 0 && (
                             <p className={`text-xs ${diff > 0 ? 'text-red-500' : 'text-green-500'}`}>
@@ -961,7 +961,7 @@ function PositioningMap({ data }: { data: any }) {
               ))}
 
               {competitors.length === 0 && (
-                <p className="text-sm text-gray-400 text-center py-4">경쟁사 데이터가 없습니다. AI 응답에서 경쟁사가 언급되면 자동으로 추출됩니다.</p>
+                <p className="text-sm text-slate-400 text-center py-4">경쟁사 데이터가 없습니다. AI 응답에서 경쟁사가 언급되면 자동으로 추출됩니다.</p>
               )}
             </div>
           </div>
@@ -970,19 +970,19 @@ function PositioningMap({ data }: { data: any }) {
 
       {/* 인사이트 */}
       {data.insights?.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50/30">
+        <Card className="border-brand-200 bg-brand-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-500" />
               포지셔닝 인사이트
             </h3>
             <div className="space-y-3">
               {data.insights.map((insight: string, i: number) => (
-                <div key={i} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-blue-100">
-                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-blue-600">{i + 1}</span>
+                <div key={i} className="flex items-start gap-3 bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-brand-100">
+                  <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-brand-600">{i + 1}</span>
                   </div>
-                  <p className="text-sm text-gray-700">{insight}</p>
+                  <p className="text-sm text-slate-700">{insight}</p>
                 </div>
               ))}
             </div>
@@ -993,7 +993,7 @@ function PositioningMap({ data }: { data: any }) {
       {/* 5축별 상세 비교 바 차트 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <BarChart3 className="h-5 w-5 text-purple-600" />
             축별 상세 비교
           </h3>
@@ -1003,14 +1003,14 @@ function PositioningMap({ data }: { data: any }) {
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">{axisEmojis[key]} {axisLabels[key]}</span>
+                    <span className="text-sm font-medium text-slate-700">{axisEmojis[key]} {axisLabels[key]}</span>
                   </div>
                   {/* 우리 바 */}
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-gray-500 w-20 flex-shrink-0 truncate">{data.hospitalName}</span>
-                    <div className="flex-1 bg-gray-100 rounded-full h-5 relative overflow-hidden">
-                      <div className="h-full bg-blue-500 rounded-full transition-all duration-700" style={{ width: `${ourVal}%` }} />
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-gray-700">{ourVal}</span>
+                    <span className="text-xs text-slate-500 w-20 flex-shrink-0 truncate">{data.hospitalName}</span>
+                    <div className="flex-1 bg-slate-100 rounded-full h-5 relative overflow-hidden">
+                      <div className="h-full bg-brand-500 rounded-full transition-all duration-700" style={{ width: `${ourVal}%` }} />
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700">{ourVal}</span>
                     </div>
                   </div>
                   {/* 경쟁사 바 */}
@@ -1018,13 +1018,13 @@ function PositioningMap({ data }: { data: any }) {
                     const compVal = comp.scores?.[key] || 0;
                     return (
                       <div key={comp.name} className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-gray-400 w-20 flex-shrink-0 truncate">{comp.name}</span>
-                        <div className="flex-1 bg-gray-100 rounded-full h-4 relative overflow-hidden">
+                        <span className="text-xs text-slate-400 w-20 flex-shrink-0 truncate">{comp.name}</span>
+                        <div className="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-700"
                             style={{ width: `${compVal}%`, backgroundColor: compColors[ci % compColors.length] }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-xs text-gray-600">{compVal}</span>
+                          <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-600">{compVal}</span>
                         </div>
                       </div>
                     );
@@ -1045,35 +1045,35 @@ function SourceQuality({ data }: { data: any }) {
 
   const healthColors: Record<string, string> = {
     '우수': 'text-green-600 bg-green-50 border-green-200',
-    '양호': 'text-blue-600 bg-blue-50 border-blue-200',
+    '양호': 'text-brand-600 bg-brand-50 border-brand-200',
     '보통': 'text-amber-600 bg-amber-50 border-amber-200',
     '개선 필요': 'text-red-600 bg-red-50 border-red-200',
   };
 
   const weightColors: Record<string, string> = {
     '최상': 'bg-green-100 text-green-800',
-    '상': 'bg-blue-100 text-blue-800',
+    '상': 'bg-brand-100 text-brand-800',
     '중상': 'bg-cyan-100 text-cyan-800',
     '중': 'bg-amber-100 text-amber-800',
-    '하': 'bg-gray-100 text-gray-600',
+    '하': 'bg-slate-100 text-slate-600',
   };
 
   return (
     <div className="space-y-6">
       {/* 건강도 점수 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className={`${healthColors[data.healthLabel] || 'bg-gray-50'} border-2`}>
+        <Card className={`${healthColors[data.healthLabel] || 'bg-slate-50'} border-2`}>
           <CardContent className="p-4 text-center">
             <p className="text-xs font-medium opacity-80">출처 건강도</p>
             <p className="text-3xl font-bold">{data.healthScore || 0}</p>
             <p className="text-sm font-semibold">{data.healthLabel}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-blue-600 font-medium">평균 품질</p>
-            <p className="text-3xl font-bold text-blue-800">{data.avgQuality || 0}</p>
-            <p className="text-xs text-blue-600">100점 만점</p>
+            <p className="text-xs text-brand-600 font-medium">평균 품질</p>
+            <p className="text-3xl font-bold text-brand-800">{data.avgQuality || 0}</p>
+            <p className="text-xs text-brand-600">100점 만점</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
@@ -1085,8 +1085,8 @@ function SourceQuality({ data }: { data: any }) {
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-gray-500 font-medium">분석 기간</p>
-            <p className="text-lg font-bold text-gray-800">{data.period}</p>
+            <p className="text-xs text-slate-500 font-medium">분석 기간</p>
+            <p className="text-lg font-bold text-slate-800">{data.period}</p>
           </CardContent>
         </Card>
       </div>
@@ -1094,60 +1094,60 @@ function SourceQuality({ data }: { data: any }) {
       {/* 채널별 영향력 분석 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-blue-600" />
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Shield className="h-5 w-5 text-brand-600" />
             채널별 영향력 분석
           </h3>
-          <p className="text-xs text-gray-500 mb-4">각 출처 채널의 품질 점수와 AI 가시성 영향 분석</p>
+          <p className="text-xs text-slate-500 mb-4">각 출처 채널의 품질 점수와 AI 가시성 영향 분석</p>
 
           {channels.length > 0 ? (
             <div className="space-y-4">
               {channels.map((ch: any, i: number) => (
-                <div key={ch.channel} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div key={ch.channel} className="border rounded-2xl p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-900">{ch.channel}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${weightColors[ch.qualityWeight] || 'bg-gray-100 text-gray-600'}`}>
+                      <span className="text-sm font-semibold text-slate-900">{ch.channel}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${weightColors[ch.qualityWeight] || 'bg-slate-100 text-slate-600'}`}>
                         {ch.qualityWeight}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold text-blue-600">{ch.influenceScore}</span>
-                      <span className="text-xs text-gray-400 ml-1">영향력</span>
+                      <span className="text-lg font-bold text-brand-600">{ch.influenceScore}</span>
+                      <span className="text-xs text-slate-400 ml-1">영향력</span>
                     </div>
                   </div>
 
                   {/* 지표 바 */}
                   <div className="grid grid-cols-3 gap-4 mb-3">
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">품질 점수</p>
-                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <p className="text-xs text-slate-500 mb-1">품질 점수</p>
+                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
                         <div className="h-full bg-green-500 rounded-full" style={{ width: `${ch.qualityScore}%` }} />
                       </div>
-                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.qualityScore}/100</p>
+                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.qualityScore}/100</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">언급 상관도</p>
-                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${ch.mentionCorrelation}%` }} />
+                      <p className="text-xs text-slate-500 mb-1">언급 상관도</p>
+                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div className="h-full bg-brand-500 rounded-full" style={{ width: `${ch.mentionCorrelation}%` }} />
                       </div>
-                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.mentionCorrelation}%</p>
+                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.mentionCorrelation}%</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">긍정 비율</p>
-                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
+                      <p className="text-xs text-slate-500 mb-1">긍정 비율</p>
+                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
                         <div className="h-full bg-amber-500 rounded-full" style={{ width: `${ch.positiveCorrelation}%` }} />
                       </div>
-                      <p className="text-xs font-medium text-gray-700 mt-0.5">{ch.positiveCorrelation}%</p>
+                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.positiveCorrelation}%</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-slate-500">
                     <span>인용 {ch.citedCount}건</span>
                     <span>{ch.qualityDescription}</span>
                     <div className="flex gap-1">
                       {ch.platforms?.map((p: string) => (
-                        <span key={p} className={`px-1.5 py-0.5 rounded text-xs ${platformBgColors[p] || 'bg-gray-100 text-gray-600'}`}>
+                        <span key={p} className={`px-1.5 py-0.5 rounded text-xs ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}>
                           {platformNames[p] || p}
                         </span>
                       ))}
@@ -1157,7 +1157,7 @@ function SourceQuality({ data }: { data: any }) {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm text-center py-4">출처 데이터가 아직 없습니다</p>
+            <p className="text-slate-400 text-sm text-center py-4">출처 데이터가 아직 없습니다</p>
           )}
         </CardContent>
       </Card>
@@ -1166,20 +1166,20 @@ function SourceQuality({ data }: { data: any }) {
       {data.recommendations?.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <Target className="h-5 w-5 text-amber-600" />
               출처 강화 추천 (우선순위 순)
             </h3>
-            <p className="text-xs text-gray-500 mb-4">AI 가시성을 높이기 위해 집중해야 할 채널</p>
+            <p className="text-xs text-slate-500 mb-4">AI 가시성을 높이기 위해 집중해야 할 채널</p>
             <div className="space-y-3">
               {data.recommendations.map((rec: any, i: number) => (
-                <div key={i} className="bg-white rounded-lg p-4 border border-amber-100">
+                <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-amber-100">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm">{rec.priority}</span>
-                    <span className="text-sm font-semibold text-gray-900">{rec.channel}</span>
+                    <span className="text-sm font-semibold text-slate-900">{rec.channel}</span>
                   </div>
-                  <p className="text-sm text-gray-700 mb-2">{rec.action}</p>
-                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                  <p className="text-sm text-slate-700 mb-2">{rec.action}</p>
+                  <p className="text-xs text-brand-600 font-medium flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     {rec.expectedImpact}
                   </p>
@@ -1203,8 +1203,8 @@ function ActionReport({ data }: { data: any }) {
     1: 'border-l-red-500 bg-red-50/50',
     2: 'border-l-orange-500 bg-orange-50/50',
     3: 'border-l-amber-500 bg-amber-50/50',
-    4: 'border-l-blue-500 bg-blue-50/50',
-    5: 'border-l-gray-400 bg-gray-50/50',
+    4: 'border-l-blue-500 bg-brand-50/50',
+    5: 'border-l-gray-400 bg-slate-50/50',
   };
 
   const categoryIcons: Record<string, string> = {
@@ -1240,21 +1240,21 @@ function ActionReport({ data }: { data: any }) {
 
           {/* 핵심 수치 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
               <p className="text-xs text-slate-300">전체 언급률</p>
               <p className="text-2xl font-bold">{summary.overallMentionRate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
               <p className="text-xs text-slate-300">최강 플랫폼</p>
               <p className="text-lg font-bold">{summary.strongestPlatform?.name || '-'}</p>
               <p className="text-xs text-green-400">{summary.strongestPlatform?.rate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
               <p className="text-xs text-slate-300">최약 플랫폼</p>
               <p className="text-lg font-bold">{summary.weakestPlatform?.name || '-'}</p>
               <p className="text-xs text-red-400">{summary.weakestPlatform?.rate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="bg-white/10 rounded-2xl p-3 text-center">
               <p className="text-xs text-slate-300">콘텐츠 갭</p>
               <p className="text-2xl font-bold">{summary.contentGapCount || 0}건</p>
             </div>
@@ -1264,19 +1264,19 @@ function ActionReport({ data }: { data: any }) {
 
       {/* 이번 주 목표 */}
       {weeklyGoals.length > 0 && (
-        <Card className="border-blue-200 bg-blue-50/30">
+        <Card className="border-brand-200 bg-brand-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-500" />
               이번 주 목표
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {weeklyGoals.map((goal: string, i: number) => (
-                <div key={i} className="bg-white rounded-lg p-4 border border-blue-100 flex items-start gap-3">
-                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-brand-100 flex items-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-brand-600" />
                   </div>
-                  <p className="text-sm text-gray-700 font-medium">{goal}</p>
+                  <p className="text-sm text-slate-700 font-medium">{goal}</p>
                 </div>
               ))}
             </div>
@@ -1287,32 +1287,32 @@ function ActionReport({ data }: { data: any }) {
       {/* 액션 아이템 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-600" />
             실행 과제 ({actions.length}개)
           </h3>
-          <p className="text-xs text-gray-500 mb-4">우선순위 순으로 정렬된 이번 주 실행 과제</p>
+          <p className="text-xs text-slate-500 mb-4">우선순위 순으로 정렬된 이번 주 실행 과제</p>
 
           {actions.length > 0 ? (
             <div className="space-y-4">
               {actions.map((action: any, i: number) => (
                 <div
                   key={i}
-                  className={`border-l-4 rounded-lg p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-gray-50/50'}`}
+                  className={`border-l-4 rounded-2xl p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-slate-50/50'}`}
                 >
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-lg">{categoryIcons[action.category] || '📋'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border text-gray-600 font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm border text-slate-600 font-medium">
                       {action.category}
                     </span>
-                    <span className="text-xs text-gray-400 flex items-center gap-1 ml-auto">
+                    <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
                       <Clock className="h-3 w-3" />
                       {action.deadline}
                     </span>
                   </div>
-                  <h4 className="text-sm font-semibold text-gray-900 mb-1">{action.title}</h4>
-                  <p className="text-sm text-gray-600 mb-2">{action.description}</p>
-                  <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-1">{action.title}</h4>
+                  <p className="text-sm text-slate-600 mb-2">{action.description}</p>
+                  <p className="text-xs text-brand-600 font-medium flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     예상 효과: {action.expectedImpact}
                   </p>
@@ -1322,8 +1322,8 @@ function ActionReport({ data }: { data: any }) {
           ) : (
             <div className="text-center py-8">
               <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-3" />
-              <p className="text-gray-600 font-medium">현재 긴급 액션 아이템이 없습니다!</p>
-              <p className="text-sm text-gray-400 mt-1">AI 가시성이 잘 관리되고 있어요 👏</p>
+              <p className="text-slate-600 font-medium">현재 긴급 액션 아이템이 없습니다!</p>
+              <p className="text-sm text-slate-400 mt-1">AI 가시성이 잘 관리되고 있어요 👏</p>
             </div>
           )}
         </CardContent>
@@ -1337,7 +1337,7 @@ function ActionReport({ data }: { data: any }) {
               <AlertCircle className="h-4 w-4" />
               경쟁사 알림
             </h3>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-slate-700">
               <span className="font-bold text-red-700">{summary.topCompetitor.name}</span>이(가)
               최근 30일간 <span className="font-bold">{summary.topCompetitor.count}회</span> AI에서 언급되었습니다.
               {summary.topCompetitor.count > (summary.mentionedCount || 0) && (

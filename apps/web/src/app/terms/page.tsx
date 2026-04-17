@@ -2,22 +2,22 @@
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-mesh">
       <div className="max-w-4xl mx-auto px-4 py-16">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">이용약관</h1>
+        <h1 className="text-3xl font-bold text-slate-900 mb-8">이용약관</h1>
         
-        <div className="bg-white rounded-2xl shadow-sm p-8 space-y-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-8 space-y-8">
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제1조 (목적)</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제1조 (목적)</h2>
+            <p className="text-slate-600 leading-relaxed">
               본 약관은 페이션트 시그널(Patient Signal, 이하 "회사")이 제공하는 AI 검색 가시성 분석 서비스(이하 "서비스")의 
               이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제2조 (정의)</h2>
-            <ul className="list-disc list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제2조 (정의)</h2>
+            <ul className="list-disc list-inside text-slate-600 space-y-2">
               <li><strong>"서비스"</strong>란 회사가 제공하는 AI 플랫폼(ChatGPT, Claude, Perplexity, Gemini 등)에서의 
                 병원/의료기관 검색 가시성 분석, 경쟁사 비교, 개선 인사이트 제공 등의 서비스를 말합니다.</li>
               <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 병원, 의료기관 또는 개인을 말합니다.</li>
@@ -26,8 +26,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제3조 (약관의 효력 및 변경)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제3조 (약관의 효력 및 변경)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 이용자에게 공지함으로써 효력이 발생합니다.</li>
               <li>회사는 필요하다고 인정되는 경우 본 약관을 변경할 수 있으며, 변경된 약관은 공지 후 효력이 발생합니다.</li>
               <li>이용자는 변경된 약관에 동의하지 않을 경우 서비스 이용을 중단하고 탈퇴할 수 있습니다.</li>
@@ -35,8 +35,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제4조 (서비스의 제공)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제4조 (서비스의 제공)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>회사는 다음과 같은 서비스를 제공합니다:
                 <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
                   <li>AI 플랫폼 검색 결과 모니터링 및 분석</li>
@@ -52,8 +52,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제5조 (이용요금)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (이용요금)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>서비스는 현재 무료로 제공됩니다.</li>
               <li>향후 유료 전환 시 사전에 이용자에게 충분히 고지하며, 별도 동의 없이 요금이 부과되지 않습니다.</li>
               <li>유료 전환 시점 및 가격 정책은 서비스 내 공지사항을 통해 안내됩니다.</li>
@@ -61,8 +61,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제6조 (서비스 해지)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (서비스 해지)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>이용자는 언제든지 서비스 이용을 중단하고 계정을 삭제할 수 있습니다.</li>
               <li>현재 서비스는 무료로 제공되므로 별도의 환불 절차가 없습니다.</li>
               <li>서비스 관련 문의는 고객센터(support@patientsignal.kr)를 통해 접수할 수 있습니다.</li>
@@ -70,8 +70,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제7조 (이용자의 의무)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제7조 (이용자의 의무)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>이용자는 정확한 정보를 제공해야 하며, 허위 정보 제공 시 서비스 이용이 제한될 수 있습니다.</li>
               <li>이용자는 계정 정보를 안전하게 관리해야 하며, 제3자에게 계정을 양도하거나 공유할 수 없습니다.</li>
               <li>이용자는 서비스를 부정한 목적으로 사용해서는 안 됩니다.</li>
@@ -79,8 +79,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제8조 (면책조항)</h2>
-            <ol className="list-decimal list-inside text-gray-600 space-y-2">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제8조 (면책조항)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
               <li>회사는 AI 플랫폼의 정책 변경이나 기술적 문제로 인한 서비스 제공 중단에 대해 책임지지 않습니다.</li>
               <li>회사는 이용자가 서비스를 통해 얻은 정보에 기반한 의사결정의 결과에 대해 책임지지 않습니다.</li>
               <li>서비스에서 제공하는 분석 결과는 참고 자료이며, 최종 의사결정은 이용자의 책임입니다.</li>
@@ -88,16 +88,16 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">제9조 (분쟁해결)</h2>
-            <p className="text-gray-600 leading-relaxed">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제9조 (분쟁해결)</h2>
+            <p className="text-slate-600 leading-relaxed">
               서비스 이용과 관련하여 분쟁이 발생한 경우, 회사와 이용자는 원만한 해결을 위해 성실히 협의합니다. 
               협의가 이루어지지 않는 경우, 관할 법원에 의해 해결합니다.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">부칙</h2>
-            <p className="text-gray-600">
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
+            <p className="text-slate-600">
               본 약관은 2024년 1월 1일부터 시행됩니다.
             </p>
           </section>

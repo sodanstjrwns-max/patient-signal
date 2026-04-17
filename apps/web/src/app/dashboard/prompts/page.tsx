@@ -36,7 +36,7 @@ import { Lock } from 'lucide-react';
 
 // 카테고리별 아이콘 & 색상 매핑
 const categoryConfig: Record<string, { icon: any; color: string; bgColor: string }> = {
-  '추천': { icon: Star, color: 'text-blue-700', bgColor: 'bg-blue-50 border-blue-200' },
+  '추천': { icon: Star, color: 'text-brand-700', bgColor: 'bg-brand-50 border-brand-200' },
   '비교': { icon: BarChart3, color: 'text-purple-700', bgColor: 'bg-purple-50 border-purple-200' },
   '가격': { icon: TrendingUp, color: 'text-green-700', bgColor: 'bg-green-50 border-green-200' },
   '증상': { icon: AlertCircle, color: 'text-orange-700', bgColor: 'bg-orange-50 border-orange-200' },
@@ -44,7 +44,7 @@ const categoryConfig: Record<string, { icon: any; color: string; bgColor: string
   '불안해소': { icon: Heart, color: 'text-red-700', bgColor: 'bg-red-50 border-red-200' },
   '강점': { icon: Sparkles, color: 'text-amber-700', bgColor: 'bg-amber-50 border-amber-200' },
   '지역': { icon: MapPin, color: 'text-indigo-700', bgColor: 'bg-indigo-50 border-indigo-200' },
-  '플랫폼': { icon: Stethoscope, color: 'text-gray-700', bgColor: 'bg-gray-50 border-gray-200' },
+  '플랫폼': { icon: Stethoscope, color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
 };
 
 export default function PromptsPage() {
@@ -242,11 +242,11 @@ export default function PromptsPage() {
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <MessageSquare className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 병원 등록이 필요합니다
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-slate-500 mb-4">
                 질문을 관리하려면 먼저 병원 정보를 등록해주세요.
               </p>
               <Button onClick={() => window.location.href = '/onboarding'}>
@@ -268,7 +268,7 @@ export default function PromptsPage() {
 
       <div className="p-6 space-y-6">
         {/* 플랜 사용량 표시 */}
-        <Card className="bg-gradient-to-r from-gray-50 to-white">
+        <Card className="bg-gradient-to-r from-slate-50 to-white">
           <CardContent className="p-4">
             <UsageBar
               used={activePrompts}
@@ -300,7 +300,7 @@ export default function PromptsPage() {
           </CardHeader>
           <CardContent>
             {isAtLimit ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
                 <p className="text-red-700 font-medium">
                   질문은 최대 {MAX_PROMPTS}개까지 등록할 수 있습니다
                 </p>
@@ -331,7 +331,7 @@ export default function PromptsPage() {
                   </Button>
                 </div>
                 <div className="flex items-center justify-between mt-3">
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-slate-500">
                     💡 팁: 환자들이 실제로 검색할 만한 질문을 추가해보세요 (남은 슬롯: {remainingSlots}개)
                   </p>
                   <Button
@@ -358,7 +358,7 @@ export default function PromptsPage() {
                   <Lightbulb className="h-5 w-5 text-amber-600" />
                   AI 질문 제안
                   {suggestData?.hospital && (
-                    <span className="text-xs font-normal text-gray-500 ml-2">
+                    <span className="text-xs font-normal text-slate-500 ml-2">
                       {suggestData.hospital.name} · {suggestData.hospital.specialty} · {suggestData.hospital.region}
                     </span>
                   )}
@@ -390,9 +390,9 @@ export default function PromptsPage() {
               </CardTitle>
               {suggestData?.hospital?.procedures && (
                 <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                  <span className="text-xs text-gray-500">핵심 진료:</span>
+                  <span className="text-xs text-slate-500">핵심 진료:</span>
                   {suggestData.hospital.procedures.map((p: string) => (
-                    <span key={p} className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">{p}</span>
+                    <span key={p} className="text-xs px-2 py-0.5 bg-brand-100 text-brand-700 rounded-full">{p}</span>
                   ))}
                 </div>
               )}
@@ -401,13 +401,13 @@ export default function PromptsPage() {
               {isSuggestLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-amber-600 mb-3" />
-                  <p className="text-sm text-gray-500">병원 정보를 분석하여 질문을 생성하고 있습니다...</p>
+                  <p className="text-sm text-slate-500">병원 정보를 분석하여 질문을 생성하고 있습니다...</p>
                 </div>
               ) : Object.keys(groupedSuggestions).length === 0 ? (
                 <div className="text-center py-8">
                   <Check className="h-12 w-12 text-green-500 mx-auto mb-3" />
-                  <p className="text-gray-700 font-medium">모든 제안 질문이 이미 등록되어 있습니다!</p>
-                  <p className="text-gray-500 text-sm mt-1">직접 질문을 입력하거나 핵심 시술을 변경해보세요.</p>
+                  <p className="text-slate-700 font-medium">모든 제안 질문이 이미 등록되어 있습니다!</p>
+                  <p className="text-slate-500 text-sm mt-1">직접 질문을 입력하거나 핵심 시술을 변경해보세요.</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
@@ -418,7 +418,7 @@ export default function PromptsPage() {
                     const selectedInCategory = items.filter(s => selectedSuggestions.has(s.query)).length;
 
                     return (
-                      <div key={category} className={`border rounded-lg overflow-hidden ${config.bgColor}`}>
+                      <div key={category} className={`border rounded-2xl overflow-hidden ${config.bgColor}`}>
                         {/* 카테고리 헤더 */}
                         <button
                           onClick={() => toggleCategory(category)}
@@ -427,12 +427,12 @@ export default function PromptsPage() {
                           <div className="flex items-center gap-2">
                             <IconComp className={`h-4 w-4 ${config.color}`} />
                             <span className={`text-sm font-semibold ${config.color}`}>{category}</span>
-                            <span className="text-xs text-gray-500">{items.length}개</span>
+                            <span className="text-xs text-slate-500">{items.length}개</span>
                             {selectedInCategory > 0 && (
                               <span className="text-xs bg-amber-600 text-white px-1.5 py-0.5 rounded-full">{selectedInCategory}개 선택</span>
                             )}
                           </div>
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                          {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
                         </button>
 
                         {/* 질문 목록 */}
@@ -444,21 +444,21 @@ export default function PromptsPage() {
                                 <button
                                   key={s.query}
                                   onClick={() => toggleSuggestionSelect(s.query)}
-                                  className={`w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                                  className={`w-full text-left px-3 py-2.5 rounded-2xl border text-sm transition-all ${
                                     isSelected
                                       ? 'border-amber-400 bg-amber-100 ring-1 ring-amber-300'
-                                      : 'border-transparent bg-white/80 hover:bg-white hover:border-gray-200'
+                                      : 'border-transparent bg-white/80 hover:bg-white/80 backdrop-blur-sm hover:border-slate-200'
                                   }`}
                                 >
                                   <div className="flex items-start gap-2">
                                     <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
                                       isSelected
                                         ? 'bg-amber-500 border-amber-500'
-                                        : 'border-gray-300 bg-white'
+                                        : 'border-slate-300 bg-white/80 backdrop-blur-sm'
                                     }`}>
                                       {isSelected && <Check className="h-3 w-3 text-white" />}
                                     </div>
-                                    <span className={`${isSelected ? 'text-amber-900 font-medium' : 'text-gray-700'}`}>
+                                    <span className={`${isSelected ? 'text-amber-900 font-medium' : 'text-slate-700'}`}>
                                       {s.query}
                                     </span>
                                   </div>
@@ -476,11 +476,11 @@ export default function PromptsPage() {
               {/* 하단 액션 바 */}
               {suggestData && Object.keys(groupedSuggestions).length > 0 && (
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-amber-200">
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-slate-600">
                     <span className="font-medium text-amber-700">{suggestData.total}</span>개 제안 중{' '}
                     <span className="font-medium text-amber-700">{selectedSuggestions.size}</span>개 선택
                     {remainingSlots < suggestData.total && (
-                      <span className="text-gray-400 ml-2">(슬롯 {remainingSlots}개 남음)</span>
+                      <span className="text-slate-400 ml-2">(슬롯 {remainingSlots}개 남음)</span>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -522,7 +522,7 @@ export default function PromptsPage() {
         {/* 검색 */}
         <div className="flex justify-between items-center">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               placeholder="질문 검색..."
               value={searchTerm}
@@ -530,7 +530,7 @@ export default function PromptsPage() {
               className="pl-10 w-64"
             />
           </div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-slate-500">
             크롤링은 매일 자동으로 실행됩니다
           </p>
         </div>
@@ -548,15 +548,15 @@ export default function PromptsPage() {
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
               </div>
             ) : filteredPrompts?.length === 0 ? (
               <div className="text-center py-12">
-                <MessageSquare className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">
+                <MessageSquare className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-500">
                   {searchTerm ? '검색 결과가 없습니다' : '등록된 질문이 없습니다'}
                 </p>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm text-slate-400 mt-1">
                   위에서 새 질문을 추가하거나 <button onClick={handleOpenSuggestions} className="text-amber-600 underline font-medium">질문 제안</button>을 이용해보세요
                 </p>
               </div>
@@ -565,25 +565,25 @@ export default function PromptsPage() {
                 {filteredPrompts?.map((prompt: any) => (
                   <div
                     key={prompt.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      prompt.isActive ? 'bg-white' : 'bg-gray-50 opacity-60'
+                    className={`flex items-center justify-between p-4 rounded-2xl border ${
+                      prompt.isActive ? 'bg-white/80 backdrop-blur-sm' : 'bg-slate-50 opacity-60'
                     }`}
                   >
                     <div className="flex-1">
-                      <p className="text-gray-900">{prompt.promptText}</p>
+                      <p className="text-slate-900">{prompt.promptText}</p>
                       <div className="flex items-center gap-3 mt-1">
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           prompt.promptType === 'PRESET'
-                            ? 'bg-blue-100 text-blue-700'
+                            ? 'bg-brand-100 text-brand-700'
                             : prompt.promptType === 'AUTO_GENERATED'
                             ? 'bg-purple-100 text-purple-700'
-                            : 'bg-gray-100 text-gray-700'
+                            : 'bg-slate-100 text-slate-700'
                         }`}>
                           {prompt.promptType === 'PRESET' ? '추천' :
                            prompt.promptType === 'AUTO_GENERATED' ? 'AI생성' : '직접입력'}
                         </span>
                         {prompt.specialtyCategory && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-slate-500">
                             {prompt.specialtyCategory}
                           </span>
                         )}
@@ -607,7 +607,7 @@ export default function PromptsPage() {
                         >
                           <Sparkles className="h-4 w-4 text-purple-600" />
                           {!canUseFeature(planType, 'queryFanouts') && (
-                            <Lock className="h-3 w-3 ml-0.5 text-gray-400" />
+                            <Lock className="h-3 w-3 ml-0.5 text-slate-400" />
                           )}
                         </Button>
                       )}
@@ -620,7 +620,7 @@ export default function PromptsPage() {
                         {prompt.isActive ? (
                           <ToggleRight className="h-5 w-5 text-green-600" />
                         ) : (
-                          <ToggleLeft className="h-5 w-5 text-gray-400" />
+                          <ToggleLeft className="h-5 w-5 text-slate-400" />
                         )}
                       </Button>
                       <Button

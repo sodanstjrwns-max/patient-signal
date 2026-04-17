@@ -91,7 +91,7 @@ const getPathname = (href: string) => href.split('?')[0];
 const PLAN_STYLES: Record<string, { label: string; color: string; bg: string }> = {
   ENTERPRISE: { label: 'Enterprise', color: 'text-amber-300', bg: 'bg-amber-500/10' },
   PRO: { label: 'Pro', color: 'text-purple-300', bg: 'bg-purple-500/10' },
-  STANDARD: { label: 'Standard', color: 'text-blue-300', bg: 'bg-blue-500/10' },
+  STANDARD: { label: 'Standard', color: 'text-brand-300', bg: 'bg-brand-500/10' },
   STARTER: { label: 'Starter', color: 'text-emerald-300', bg: 'bg-emerald-500/10' },
   FREE: { label: 'Free', color: 'text-slate-400', bg: 'bg-slate-500/10' },
 };

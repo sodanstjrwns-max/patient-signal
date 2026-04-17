@@ -21,7 +21,7 @@ interface OnboardingTutorialProps {
 const slides = [
   {
     icon: Sparkles,
-    iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+    iconBg: 'bg-gradient-to-br from-brand-500 to-brand-600',
     title: 'Patient Signal에 오신 것을 환영합니다!',
     subtitle: 'AI 시대, 병원 마케팅의 새로운 기준',
     description: 'ChatGPT, Perplexity 등 AI 검색에서 우리 병원이 얼마나 추천되는지 실시간으로 추적하세요.',
@@ -95,13 +95,13 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
         {/* Header with skip button */}
         <div className="flex justify-end p-4 pb-0">
           {onSkip && (
             <button
               onClick={onSkip}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -118,24 +118,24 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-center text-slate-900 mb-2">
             {slide.title}
           </h2>
-          <p className="text-blue-600 font-medium text-center mb-4">
+          <p className="text-brand-600 font-medium text-center mb-4">
             {slide.subtitle}
           </p>
 
           {/* Description */}
           {slide.description && (
-            <p className="text-gray-600 text-center mb-4 leading-relaxed">
+            <p className="text-slate-600 text-center mb-4 leading-relaxed">
               {slide.description}
             </p>
           )}
 
           {/* Highlight */}
           {slide.highlight && (
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
-              <p className="text-blue-800 text-sm text-center font-medium">
+            <div className="bg-brand-50 border border-brand-100 rounded-2xl p-4 mb-4">
+              <p className="text-brand-800 text-sm text-center font-medium">
                 💡 {slide.highlight}
               </p>
             </div>
@@ -143,10 +143,10 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
 
           {/* Bullets */}
           {slide.bullets && (
-            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-4 space-y-2">
               {slide.bullets.map((bullet, i) => (
-                <p key={i} className="text-gray-700 text-sm flex items-center gap-2">
-                  <span className="text-blue-500">•</span>
+                <p key={i} className="text-slate-700 text-sm flex items-center gap-2">
+                  <span className="text-brand-500">•</span>
                   {bullet}
                 </p>
               ))}
@@ -158,12 +158,12 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
             <div className="space-y-3 mb-4">
               {slide.steps.map((step) => (
                 <div key={step.num} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-brand-100 text-brand-600 font-bold flex items-center justify-center flex-shrink-0">
                     {step.num}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">{step.title}</p>
-                    <p className="text-sm text-gray-500">{step.desc}</p>
+                    <p className="font-medium text-slate-900">{step.title}</p>
+                    <p className="text-sm text-slate-500">{step.desc}</p>
                   </div>
                 </div>
               ))}
@@ -174,7 +174,7 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
           {slide.features && (
             <div className="grid grid-cols-2 gap-2 mb-4">
               {slide.features.map((feature, i) => (
-                <div key={i} className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700">
+                <div key={i} className="bg-white/60 backdrop-blur-sm rounded-2xl p-3 text-sm text-slate-700">
                   {feature}
                 </div>
               ))}
@@ -189,8 +189,8 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
                 onClick={() => setCurrentSlide(i)}
                 className={`w-2 h-2 rounded-full transition-all ${
                   i === currentSlide 
-                    ? 'bg-blue-600 w-6' 
-                    : 'bg-gray-300 hover:bg-gray-400'
+                    ? 'bg-brand-600 w-6' 
+                    : 'bg-slate-300 hover:bg-slate-400'
                 }`}
               />
             ))}

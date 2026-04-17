@@ -43,7 +43,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex">
       {/* 좌측: 서비스 소개 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-blue-700 to-indigo-800 text-white p-12 flex-col justify-between relative overflow-hidden">
         {/* 배경 장식 */}
         <div className="absolute top-20 right-10 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl" />
@@ -60,7 +60,7 @@ export default function RegisterPage() {
             3분 만에 시작하는<br />
             AI 가시성 분석
           </h2>
-          <p className="text-blue-200 text-base leading-relaxed mb-10">
+          <p className="text-brand-200 text-base leading-relaxed mb-10">
             가입 → 병원 등록 → 질문 설정<br />
             이후엔 매일 자동으로 분석해드립니다.
           </p>
@@ -79,28 +79,28 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-xs text-blue-200">{item.desc}</p>
+                  <p className="text-xs text-brand-200">{item.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="relative z-10 text-sm text-blue-300/60">
+        <div className="relative z-10 text-sm text-brand-300/60">
           Patient Signal by 페이션트퍼널
         </div>
       </div>
 
       {/* 우측: 회원가입 폼 */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-gray-50">
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-mesh">
         <div className="w-full max-w-md">
           {/* 모바일에서만 보이는 로고 */}
           <div className="lg:hidden text-center mb-8">
             <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-xl text-gray-900">Patient Signal</span>
+              <span className="font-bold text-xl text-slate-900">Patient Signal</span>
             </Link>
           </div>
 
@@ -120,7 +120,7 @@ export default function RegisterPage() {
                 )}
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">이름</label>
+                  <label className="text-sm font-medium text-slate-700">이름</label>
                   <Input
                     type="text"
                     placeholder="홍길동"
@@ -132,7 +132,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">이메일</label>
+                  <label className="text-sm font-medium text-slate-700">이메일</label>
                   <Input
                     type="email"
                     placeholder="doctor@clinic.com"
@@ -144,7 +144,7 @@ export default function RegisterPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">비밀번호</label>
+                  <label className="text-sm font-medium text-slate-700">비밀번호</label>
                   <div className="relative">
                     <Input
                       type={showPassword ? 'text' : 'password'}
@@ -157,7 +157,7 @@ export default function RegisterPage() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -166,7 +166,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">전화번호 <span className="text-gray-400 font-normal">(선택)</span></label>
+                  <label className="text-sm font-medium text-slate-700">전화번호 <span className="text-slate-400 font-normal">(선택)</span></label>
                   <Input
                     type="tel"
                     placeholder="010-1234-5678"
@@ -176,34 +176,34 @@ export default function RegisterPage() {
                   />
                 </div>
 
-                <label className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-100 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors">
+                <label className="flex items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-lg cursor-pointer hover:bg-brand-100 transition-colors">
                   <input
                     type="checkbox"
                     checked={formData.isPfMember}
                     onChange={(e) => setFormData({ ...formData, isPfMember: e.target.checked })}
-                    className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-blue-500"
                   />
                   <div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-sm font-medium text-slate-900">
                       페이션트퍼널 수강생입니다
                     </span>
-                    <p className="text-xs text-gray-500 mt-0.5">수강생은 Starter 기능을 무료로 이용할 수 있습니다</p>
+                    <p className="text-xs text-slate-500 mt-0.5">수강생은 Starter 기능을 무료로 이용할 수 있습니다</p>
                   </div>
                 </label>
 
-                <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600" loading={loading}>
+                <Button type="submit" className="w-full bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600" loading={loading}>
                   무료로 시작하기
                 </Button>
 
-                <p className="text-xs text-center text-gray-400">
-                  가입 시 <Link href="/terms" className="underline hover:text-gray-600">이용약관</Link> 및{' '}
-                  <Link href="/privacy" className="underline hover:text-gray-600">개인정보처리방침</Link>에 동의합니다
+                <p className="text-xs text-center text-slate-400">
+                  가입 시 <Link href="/terms" className="underline hover:text-slate-600">이용약관</Link> 및{' '}
+                  <Link href="/privacy" className="underline hover:text-slate-600">개인정보처리방침</Link>에 동의합니다
                 </p>
               </form>
 
-              <div className="mt-6 text-center text-sm text-gray-500">
+              <div className="mt-6 text-center text-sm text-slate-500">
                 이미 계정이 있으신가요?{' '}
-                <Link href="/login" className="text-blue-600 hover:underline font-medium">
+                <Link href="/login" className="text-brand-600 hover:underline font-medium">
                   로그인
                 </Link>
               </div>
@@ -212,7 +212,7 @@ export default function RegisterPage() {
 
           {/* 모바일에서만 보이는 하단 기능 요약 */}
           <div className="lg:hidden mt-8 space-y-3">
-            <div className="flex items-center justify-center gap-6 text-xs text-gray-400">
+            <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500" />
                 <span>무료</span>

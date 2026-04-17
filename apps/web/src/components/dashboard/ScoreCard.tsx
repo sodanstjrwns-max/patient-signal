@@ -14,40 +14,40 @@ interface ScoreCardProps {
 
 export function ScoreCard({ title, score, change, description, icon }: ScoreCardProps) {
   const getTrendIcon = () => {
-    if (!change || change === 0) return <Minus className="h-4 w-4 text-gray-400" />;
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
+    if (!change || change === 0) return <Minus className="h-4 w-4 text-slate-400" />;
+    if (change > 0) return <TrendingUp className="h-4 w-4 text-emerald-500" />;
     return <TrendingDown className="h-4 w-4 text-red-500" />;
   };
 
   const getTrendColor = () => {
-    if (!change || change === 0) return 'text-gray-500';
-    if (change > 0) return 'text-green-600';
+    if (!change || change === 0) return 'text-slate-500';
+    if (change > 0) return 'text-emerald-600';
     return 'text-red-600';
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="group hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-300">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">{title}</p>
+            <p className="text-sm font-medium text-slate-500">{title}</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className={cn('text-3xl font-bold', getScoreColor(score))}>
+              <span className={cn('text-3xl font-bold tracking-tight', getScoreColor(score))}>
                 {score}
               </span>
-              <span className="text-sm text-gray-500">/ 100</span>
+              <span className="text-sm text-slate-400">/ 100</span>
             </div>
             {change !== undefined && (
-              <div className={cn('flex items-center gap-1 mt-1', getTrendColor())}>
+              <div className={cn('flex items-center gap-1 mt-1.5', getTrendColor())}>
                 {getTrendIcon()}
-                <span className="text-sm font-medium">
+                <span className="text-sm font-semibold">
                   {change > 0 ? '+' : ''}{change}점
                 </span>
-                <span className="text-xs text-gray-400">vs 지난주</span>
+                <span className="text-xs text-slate-400">vs 지난주</span>
               </div>
             )}
           </div>
-          <div className={cn('p-3 rounded-full', getScoreBgColor(score))}>
+          <div className={cn('p-3.5 rounded-2xl', getScoreBgColor(score))}>
             {icon || (
               <span className={cn('text-lg font-bold', getScoreColor(score))}>
                 {getScoreLabel(score)}
@@ -56,7 +56,7 @@ export function ScoreCard({ title, score, change, description, icon }: ScoreCard
           </div>
         </div>
         {description && (
-          <p className="mt-3 text-sm text-gray-500">{description}</p>
+          <p className="mt-3 text-sm text-slate-500 leading-relaxed">{description}</p>
         )}
       </CardContent>
     </Card>

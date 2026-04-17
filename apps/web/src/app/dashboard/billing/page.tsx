@@ -282,8 +282,8 @@ function BillingContent() {
               onClick={() => setSelectedPlan(planId)}
               className={`relative p-5 rounded-xl border-2 text-left transition-all ${
                 isSelected
-                  ? 'border-blue-500 ring-2 ring-blue-100 bg-blue-50/30'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? 'border-brand-500 ring-2 ring-blue-100 bg-brand-50/30'
+                  : 'border-slate-200 hover:border-slate-300'
               }`}
             >
               {isCurrent && isActive && (
@@ -292,18 +292,18 @@ function BillingContent() {
                 </span>
               )}
               {planId === 'STANDARD' && (
-                <span className="absolute -top-2.5 right-3 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                <span className="absolute -top-2.5 right-3 bg-brand-600 text-white text-xs px-2 py-0.5 rounded-full">
                   인기
                 </span>
               )}
 
-              <h3 className="text-lg font-bold text-gray-900 mb-1">{info.name}</h3>
-              <p className="text-2xl font-bold text-gray-900">{info.priceText}</p>
-              <p className="text-xs text-gray-500 mt-1 mb-3">{info.description}</p>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">{info.name}</h3>
+              <p className="text-2xl font-bold text-slate-900">{info.priceText}</p>
+              <p className="text-xs text-slate-500 mt-1 mb-3">{info.description}</p>
 
               <ul className="space-y-1.5">
                 {info.features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
                     <Check className="h-3.5 w-3.5 text-green-500 mt-0.5 flex-shrink-0" />
                     {f}
                   </li>
@@ -312,7 +312,7 @@ function BillingContent() {
 
               {isSelected && (
                 <div className="absolute top-3 right-3">
-                  <BadgeCheck className="h-6 w-6 text-blue-600" />
+                  <BadgeCheck className="h-6 w-6 text-brand-600" />
                 </div>
               )}
             </button>
@@ -324,7 +324,7 @@ function BillingContent() {
       <div className="flex gap-3">
         <button
           onClick={() => setCurrentStep('coupon')}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-600 hover:border-brand-400 hover:text-brand-600 transition-colors"
         >
           <Tag className="h-5 w-5" />
           <span className="font-medium">쿠폰 코드 입력</span>
@@ -332,7 +332,7 @@ function BillingContent() {
         <button
           onClick={() => setCurrentStep('payment')}
           disabled={selectedPlan === 'FREE'}
-          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-brand-600 text-white rounded-xl hover:bg-brand-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <CreditCard className="h-5 w-5" />
           <span>{selectedPlan === 'FREE' ? '무료 플랜은 결제 불필요' : '결제하기'}</span>
@@ -349,21 +349,21 @@ function BillingContent() {
         <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Gift className="h-8 w-8 text-purple-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">쿠폰 적용</h2>
-        <p className="text-gray-500 mt-1">
+        <h2 className="text-2xl font-bold text-slate-900">쿠폰 적용</h2>
+        <p className="text-slate-500 mt-1">
           페이션트 퍼널 수강생 쿠폰 코드를 입력해주세요
         </p>
       </div>
 
       {/* 선택된 플랜 표시 */}
-      <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between">
+      <div className="bg-mesh rounded-xl p-4 flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">적용 플랜</p>
-          <p className="font-bold text-gray-900">{planInfo.name} 플랜</p>
+          <p className="text-sm text-slate-500">적용 플랜</p>
+          <p className="font-bold text-slate-900">{planInfo.name} 플랜</p>
         </div>
         <div className="text-right">
-          <p className="text-sm text-gray-500">정가</p>
-          <p className="font-bold text-gray-900">{planInfo.priceText}</p>
+          <p className="text-sm text-slate-500">정가</p>
+          <p className="font-bold text-slate-900">{planInfo.priceText}</p>
         </div>
       </div>
 
@@ -371,7 +371,7 @@ function BillingContent() {
       <div className="space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <input
               type="text"
               value={couponCode}
@@ -381,14 +381,14 @@ function BillingContent() {
                 setCouponResult(null);
               }}
               placeholder="PF2026-XXXX"
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg font-mono tracking-wider"
+              className="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:border-brand-500 focus:ring-2 focus:ring-blue-100 outline-none text-lg font-mono tracking-wider"
               onKeyDown={(e) => e.key === 'Enter' && handleValidateCoupon()}
             />
           </div>
           <button
             onClick={handleValidateCoupon}
             disabled={isApplyingCoupon || !couponCode.trim()}
-            className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-3 bg-slate-900 text-white rounded-xl font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isApplyingCoupon ? (
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -400,7 +400,7 @@ function BillingContent() {
 
         {/* 에러 메시지 */}
         {couponError && (
-          <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-2.5 rounded-lg">
+          <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 px-4 py-2.5 rounded-2xl">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             {couponError}
           </div>
@@ -420,10 +420,10 @@ function BillingContent() {
             </div>
 
             {/* 가격 요약 */}
-            <div className="bg-white rounded-lg p-4 space-y-2">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-500">{planInfo.name} 플랜 정가</span>
-                <span className="text-gray-900">{planInfo.price.toLocaleString()}원/월</span>
+                <span className="text-slate-500">{planInfo.name} 플랜 정가</span>
+                <span className="text-slate-900">{planInfo.price.toLocaleString()}원/월</span>
               </div>
               {freeMonths > 0 && (
                 <div className="flex justify-between text-sm">
@@ -440,10 +440,10 @@ function BillingContent() {
                 </div>
               )}
               <div className="border-t pt-2 flex justify-between">
-                <span className="font-bold text-gray-900">결제 금액</span>
-                <span className="font-bold text-2xl text-blue-600">
+                <span className="font-bold text-slate-900">결제 금액</span>
+                <span className="font-bold text-2xl text-brand-600">
                   {freeMonths > 0 ? (
-                    <span>0원 <span className="text-sm font-normal text-gray-500">({freeMonths}개월)</span></span>
+                    <span>0원 <span className="text-sm font-normal text-slate-500">({freeMonths}개월)</span></span>
                   ) : (
                     `${finalPrice.toLocaleString()}원`
                   )}
@@ -470,7 +470,7 @@ function BillingContent() {
             ) : (
               <button
                 onClick={() => setCurrentStep('payment')}
-                className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold text-lg hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
               >
                 <CreditCard className="h-5 w-5" />
                 {finalPrice.toLocaleString()}원 결제하기
@@ -483,7 +483,7 @@ function BillingContent() {
       {/* 돌아가기 */}
       <button
         onClick={() => { setCurrentStep('plan'); setCouponResult(null); setCouponError(''); setCouponCode(''); }}
-        className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+        className="w-full text-center text-sm text-slate-500 hover:text-slate-700 transition-colors"
       >
         <ArrowLeft className="h-4 w-4 inline mr-1" />
         플랜 선택으로 돌아가기
@@ -496,27 +496,27 @@ function BillingContent() {
     <div className="max-w-lg mx-auto space-y-6">
       <div className="text-center">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <CreditCard className="h-8 w-8 text-blue-600" />
+          <CreditCard className="h-8 w-8 text-brand-600" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">결제하기</h2>
-        <p className="text-gray-500 mt-1">안전한 결제로 바로 시작하세요</p>
+        <h2 className="text-2xl font-bold text-slate-900">결제하기</h2>
+        <p className="text-slate-500 mt-1">안전한 결제로 바로 시작하세요</p>
       </div>
 
       {/* 주문 요약 */}
-      <div className="bg-gray-50 rounded-xl p-5 space-y-3">
-        <h3 className="font-bold text-gray-900 mb-3">주문 요약</h3>
+      <div className="bg-mesh rounded-xl p-5 space-y-3">
+        <h3 className="font-bold text-slate-900 mb-3">주문 요약</h3>
 
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">플랜</span>
-          <span className="font-medium text-gray-900">{planInfo.name}</span>
+          <span className="text-slate-500">플랜</span>
+          <span className="font-medium text-slate-900">{planInfo.name}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">결제 주기</span>
-          <span className="font-medium text-gray-900">월간 (매월 자동결제)</span>
+          <span className="text-slate-500">결제 주기</span>
+          <span className="font-medium text-slate-900">월간 (매월 자동결제)</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">정가</span>
-          <span className="text-gray-900">{planInfo.price.toLocaleString()}원</span>
+          <span className="text-slate-500">정가</span>
+          <span className="text-slate-900">{planInfo.price.toLocaleString()}원</span>
         </div>
 
         {couponResult?.valid && (
@@ -529,8 +529,8 @@ function BillingContent() {
         )}
 
         <div className="border-t pt-3 flex justify-between">
-          <span className="font-bold text-gray-900">결제 금액</span>
-          <span className="font-bold text-xl text-blue-600">
+          <span className="font-bold text-slate-900">결제 금액</span>
+          <span className="font-bold text-xl text-brand-600">
             {finalPrice.toLocaleString()}원/월
           </span>
         </div>
@@ -542,7 +542,7 @@ function BillingContent() {
         <button
           onClick={handleTossPayment}
           disabled={isLoadingPayment}
-          className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-4 bg-brand-600 text-white rounded-xl font-bold text-lg hover:bg-brand-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
           {isLoadingPayment ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -558,7 +558,7 @@ function BillingContent() {
         <button
           onClick={handleBillingSetup}
           disabled={isLoadingPayment}
-          className="w-full py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-medium hover:border-gray-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm"
+          className="w-full py-3 border-2 border-slate-200 text-slate-700 rounded-xl font-medium hover:border-slate-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm"
         >
           <Shield className="h-4 w-4" />
           카드 등록 후 자동결제 시작 (첫 7일 무료)
@@ -566,17 +566,17 @@ function BillingContent() {
       </div>
 
       {/* 안내 */}
-      <div className="bg-blue-50 rounded-xl p-4 space-y-2">
+      <div className="bg-brand-50 rounded-xl p-4 space-y-2">
         <div className="flex items-start gap-2">
-          <Shield className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-blue-700">
+          <Shield className="h-4 w-4 text-brand-600 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-brand-700">
             <strong>안전한 결제:</strong> 토스페이먼츠를 통해 안전하게 결제됩니다. 
             카드정보는 Patient Signal에 저장되지 않습니다.
           </p>
         </div>
         <div className="flex items-start gap-2">
-          <Clock className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          <p className="text-xs text-blue-700">
+          <Clock className="h-4 w-4 text-brand-600 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-brand-700">
             <strong>해지 자유:</strong> 언제든지 설정에서 구독을 해지할 수 있으며, 
             남은 기간까지 이용 가능합니다.
           </p>
@@ -587,14 +587,14 @@ function BillingContent() {
       <div className="flex gap-3">
         <button
           onClick={() => setCurrentStep('plan')}
-          className="flex-1 text-center py-2 text-sm text-gray-500 hover:text-gray-700"
+          className="flex-1 text-center py-2 text-sm text-slate-500 hover:text-slate-700"
         >
           <ArrowLeft className="h-4 w-4 inline mr-1" />
           플랜 선택
         </button>
         <button
           onClick={() => setCurrentStep('coupon')}
-          className="flex-1 text-center py-2 text-sm text-blue-500 hover:text-blue-700"
+          className="flex-1 text-center py-2 text-sm text-brand-500 hover:text-brand-700"
         >
           <Tag className="h-4 w-4 inline mr-1" />
           쿠폰 입력
@@ -611,10 +611,10 @@ function BillingContent() {
       </div>
 
       <div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">
           구독이 활성화되었습니다!
         </h2>
-        <p className="text-gray-500">
+        <p className="text-slate-500">
           {successData?.type === 'coupon' ? (
             <>
               <strong>{successData.couponName}</strong> 쿠폰이 적용되어{' '}
@@ -629,7 +629,7 @@ function BillingContent() {
       {/* 구독 정보 */}
       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 text-left space-y-3">
         <div className="flex items-center gap-2 mb-2">
-          <Crown className="h-5 w-5 text-blue-600" />
+          <Crown className="h-5 w-5 text-brand-600" />
           <span className="font-bold text-blue-900">
             {PLAN_INFO[successData?.planType]?.name || 'Starter'} 플랜
           </span>
@@ -637,8 +637,8 @@ function BillingContent() {
 
         {successData?.periodEnd && (
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">이용 기간</span>
-            <span className="font-medium text-gray-900">
+            <span className="text-slate-600">이용 기간</span>
+            <span className="font-medium text-slate-900">
               ~ {new Date(successData.periodEnd).toLocaleDateString('ko-KR')}
             </span>
           </div>
@@ -646,7 +646,7 @@ function BillingContent() {
 
         {successData?.freeMonths > 0 && (
           <div className="flex justify-between text-sm">
-            <span className="text-gray-600">무료 기간</span>
+            <span className="text-slate-600">무료 기간</span>
             <span className="font-medium text-green-600">{successData.freeMonths}개월</span>
           </div>
         )}
@@ -656,14 +656,14 @@ function BillingContent() {
       <div className="space-y-3">
         <button
           onClick={() => window.location.href = '/dashboard'}
-          className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-brand-600 text-white rounded-xl font-bold text-lg hover:bg-brand-700 transition-colors flex items-center justify-center gap-2"
         >
           <Sparkles className="h-5 w-5" />
           대시보드로 이동
         </button>
         <button
           onClick={() => window.location.href = '/dashboard/settings'}
-          className="w-full py-2.5 text-gray-500 hover:text-gray-700 text-sm"
+          className="w-full py-2.5 text-slate-500 hover:text-slate-700 text-sm"
         >
           설정 페이지로 이동
         </button>
@@ -677,13 +677,13 @@ function BillingContent() {
       <div className="min-h-screen">
         <Header title="결제" description="구독 플랜을 선택하고 결제합니다" />
         <div className="p-6 max-w-3xl mx-auto">
-          <div className="bg-white rounded-2xl border p-12 text-center">
-            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">병원 등록이 필요합니다</h3>
-            <p className="text-gray-500 mb-4">결제를 진행하려면 먼저 병원 정보를 등록해주세요.</p>
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl border p-12 text-center">
+            <AlertCircle className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">병원 등록이 필요합니다</h3>
+            <p className="text-slate-500 mb-4">결제를 진행하려면 먼저 병원 정보를 등록해주세요.</p>
             <button
               onClick={() => window.location.href = '/onboarding'}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-6 py-2.5 bg-brand-600 text-white rounded-2xl hover:bg-brand-700"
             >
               병원 등록하기
             </button>
@@ -708,15 +708,15 @@ function BillingContent() {
 
               return (
                 <div key={step} className="flex items-center gap-2">
-                  {idx > 0 && <div className={`w-8 h-0.5 ${isPast ? 'bg-blue-500' : 'bg-gray-200'}`} />}
+                  {idx > 0 && <div className={`w-8 h-0.5 ${isPast ? 'bg-brand-500' : 'bg-slate-200'}`} />}
                   <button
                     onClick={() => setCurrentStep(step as any)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-colors ${
                       isActive
-                        ? 'bg-blue-600 text-white font-medium'
+                        ? 'bg-brand-600 text-white font-medium'
                         : isPast
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-brand-100 text-brand-700'
+                        : 'bg-slate-100 text-slate-500'
                     }`}
                   >
                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
@@ -744,7 +744,7 @@ export default function BillingPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
       </div>
     }>
       <BillingContent />

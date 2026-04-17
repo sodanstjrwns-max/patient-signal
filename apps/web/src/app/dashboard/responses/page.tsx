@@ -31,7 +31,7 @@ import Link from 'next/link';
 const platformColors: Record<string, string> = {
   CHATGPT: 'bg-green-100 text-green-800',
   CLAUDE: 'bg-orange-100 text-orange-800',
-  PERPLEXITY: 'bg-blue-100 text-blue-800',
+  PERPLEXITY: 'bg-brand-100 text-brand-800',
   GEMINI: 'bg-purple-100 text-purple-800',
 };
 
@@ -116,7 +116,7 @@ export default function ResponsesPage() {
       case 'NEGATIVE':
         return <ThumbsDown className="h-4 w-4 text-red-600" />;
       default:
-        return <Minus className="h-4 w-4 text-gray-400" />;
+        return <Minus className="h-4 w-4 text-slate-400" />;
     }
   };
 
@@ -135,11 +135,11 @@ export default function ResponsesPage() {
         <div className="p-4 sm:p-6">
           <Card>
             <CardContent className="p-8 sm:p-12 text-center">
-              <Bot className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Bot className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
                 병원 등록이 필요합니다
               </h3>
-              <p className="text-gray-500 mb-4">
+              <p className="text-slate-500 mb-4">
                 AI 응답을 확인하려면 먼저 병원 정보를 등록해주세요.
               </p>
               <Button onClick={() => window.location.href = '/onboarding'}>
@@ -163,22 +163,22 @@ export default function ResponsesPage() {
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
-                <p className="text-2xl font-bold text-gray-900">{totalCount}</p>
-                <p className="text-xs text-gray-500">전체 응답</p>
+                <p className="text-2xl font-bold text-slate-900">{totalCount}</p>
+                <p className="text-xs text-slate-500">전체 응답</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
                 <p className="text-2xl font-bold text-green-600">{mentionedCount}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-slate-500">
                   언급됨 ({totalCount > 0 ? Math.round((mentionedCount / totalCount) * 100) : 0}%)
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-3 sm:p-4 text-center">
-                <p className="text-2xl font-bold text-blue-600">{webSearchCount}</p>
-                <p className="text-xs text-gray-500">웹검색 기반</p>
+                <p className="text-2xl font-bold text-brand-600">{webSearchCount}</p>
+                <p className="text-xs text-slate-500">웹검색 기반</p>
               </CardContent>
             </Card>
           </div>
@@ -209,7 +209,7 @@ export default function ResponsesPage() {
               ))}
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 placeholder="응답 내용 검색..."
                 value={searchTerm}
@@ -254,7 +254,7 @@ export default function ResponsesPage() {
         {/* 응답 목록 */}
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
           </div>
         ) : queryError ? (
           /* Error State */
@@ -264,10 +264,10 @@ export default function ResponsesPage() {
                 <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
                   <XCircle className="h-8 w-8 text-red-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">
                   응답 데이터를 불러올 수 없습니다
                 </h3>
-                <p className="text-gray-500 mb-4">
+                <p className="text-slate-500 mb-4">
                   서버 연결이 불안정합니다. 잠시 후 다시 시도해주세요.
                 </p>
                 <Button onClick={() => window.location.reload()}>
@@ -283,22 +283,22 @@ export default function ResponsesPage() {
             <CardContent className="p-8 sm:p-16 text-center">
               <div className="max-w-md mx-auto">
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="h-8 w-8 text-blue-600" />
+                  <Sparkles className="h-8 w-8 text-brand-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                <h3 className="text-xl font-semibold text-slate-900 mb-3">
                   {searchTerm ? '검색 결과가 없습니다' : '아직 AI 응답이 없습니다'}
                 </h3>
                 {searchTerm ? (
-                  <p className="text-gray-500 mb-6">
+                  <p className="text-slate-500 mb-6">
                     다른 검색어를 시도해보세요
                   </p>
                 ) : (
                   <>
-                    <p className="text-gray-500 mb-2">
+                    <p className="text-slate-500 mb-2">
                       AI 크롤링이 실행되면 ChatGPT, Perplexity, Claude, Gemini의
                       응답 내역이 이곳에 표시됩니다.
                     </p>
-                    <div className="flex items-center justify-center gap-2 text-sm text-blue-600 mb-6">
+                    <div className="flex items-center justify-center gap-2 text-sm text-brand-600 mb-6">
                       <Calendar className="h-4 w-4" />
                       <span>매일 자동 크롤링 예정</span>
                     </div>
@@ -322,7 +322,7 @@ export default function ResponsesPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-500">
               {filteredResponses.length}개 응답
               {searchTerm && ` (검색: "${searchTerm}")`}
               {mentionFilter !== 'all' && ` · ${mentionFilter === 'mentioned' ? '언급됨' : '언급 안됨'} 필터`}
@@ -343,17 +343,17 @@ export default function ResponsesPage() {
                           {platformNames[response.aiPlatform]}
                         </span>
                         {response.aiModelVersion && (
-                          <span className="text-[10px] text-gray-400 font-mono">
+                          <span className="text-[10px] text-slate-400 font-mono">
                             {response.aiModelVersion}
                           </span>
                         )}
-                        <span className="text-sm text-gray-500 flex items-center gap-1" title={timeInfo.full}>
+                        <span className="text-sm text-slate-500 flex items-center gap-1" title={timeInfo.full}>
                           <Clock className="h-3 w-3" />
                           {timeInfo.full}
-                          <span className="text-gray-400 text-xs">({timeInfo.relative})</span>
+                          <span className="text-slate-400 text-xs">({timeInfo.relative})</span>
                         </span>
                         {response.isWebSearch && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded">
+                          <span className="flex items-center gap-0.5 text-[10px] text-brand-500 bg-brand-50 px-1.5 py-0.5 rounded">
                             <Globe className="h-2.5 w-2.5" />
                             웹검색
                           </span>
@@ -369,11 +369,11 @@ export default function ResponsesPage() {
                           </span>
                         )}
                         {!response.isMentioned && (
-                          <span className="text-sm text-gray-400">
+                          <span className="text-sm text-slate-400">
                             언급 안됨
                           </span>
                         )}
-                        <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <span className="flex items-center gap-1 text-xs text-slate-500">
                           {getSentimentIcon(response.sentimentLabel)}
                           <span className="hidden sm:inline">{getSentimentText(response.sentimentLabel)}</span>
                         </span>
@@ -381,8 +381,8 @@ export default function ResponsesPage() {
                     </div>
 
                     {/* 질문 */}
-                    <div className="bg-gray-50 rounded-lg p-3 mb-3">
-                      <p className="text-sm font-medium text-gray-700">
+                    <div className="bg-slate-50 rounded-2xl p-3 mb-3">
+                      <p className="text-sm font-medium text-slate-700">
                         Q: {response.prompt?.promptText || '질문 정보 없음'}
                       </p>
                     </div>
@@ -390,7 +390,7 @@ export default function ResponsesPage() {
                     {/* 응답 내용 */}
                     <div className="relative">
                       <div
-                        className={`text-sm text-gray-600 whitespace-pre-wrap ${
+                        className={`text-sm text-slate-600 whitespace-pre-wrap ${
                           expandedId === response.id ? '' : 'line-clamp-6'
                         }`}
                       >
@@ -411,7 +411,7 @@ export default function ResponsesPage() {
                     </div>
 
                     {/* 추가 정보 */}
-                    <div className="flex flex-wrap gap-3 sm:gap-4 mt-4 pt-3 border-t text-xs text-gray-500">
+                    <div className="flex flex-wrap gap-3 sm:gap-4 mt-4 pt-3 border-t text-xs text-slate-500">
                       {response.totalRecommendations && (
                         <span className="flex items-center gap-1">
                           총 추천: <strong>{response.totalRecommendations}개</strong>
@@ -444,18 +444,18 @@ export default function ResponsesPage() {
 
         {/* 실시간 질문 안내 배너 */}
         <Link href="/dashboard/live-query">
-          <Card className="mt-6 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-md transition-all cursor-pointer group">
+          <Card className="mt-6 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-card-hover transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-brand-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-gray-900">AI에게 직접 질문해보기</p>
-                  <p className="text-xs text-gray-500">원하는 질문을 실시간으로 4개 AI에 동시에 물어보세요</p>
+                  <p className="text-sm font-bold text-slate-900">AI에게 직접 질문해보기</p>
+                  <p className="text-xs text-slate-500">원하는 질문을 실시간으로 4개 AI에 동시에 물어보세요</p>
                 </div>
               </div>
-              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
+              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-brand-600 hover:from-purple-700 hover:to-brand-700 text-white">
                 질문하기
               </Button>
             </CardContent>

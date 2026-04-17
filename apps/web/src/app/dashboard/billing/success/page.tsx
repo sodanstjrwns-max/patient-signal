@@ -51,9 +51,9 @@ function SuccessContent() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
-        <p className="text-gray-600 text-lg">결제를 확인하고 있습니다...</p>
-        <p className="text-gray-400 text-sm">잠시만 기다려주세요</p>
+        <Loader2 className="h-12 w-12 animate-spin text-brand-600" />
+        <p className="text-slate-600 text-lg">결제를 확인하고 있습니다...</p>
+        <p className="text-slate-400 text-sm">잠시만 기다려주세요</p>
       </div>
     );
   }
@@ -64,21 +64,21 @@ function SuccessContent() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
           <span className="text-3xl">!</span>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900">결제 확인에 문제가 있습니다</h2>
-        <p className="text-gray-500 text-center max-w-md">
+        <h2 className="text-2xl font-bold text-slate-900">결제 확인에 문제가 있습니다</h2>
+        <p className="text-slate-500 text-center max-w-md">
           걱정하지 마세요. 결제가 실제로 이루어졌다면 자동으로 처리됩니다.
           문제가 지속되면 고객센터로 문의해주세요.
         </p>
         <div className="flex gap-3 mt-4">
           <a
             href="/dashboard/settings"
-            className="px-6 py-2.5 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+            className="px-6 py-2.5 border border-slate-200 rounded-2xl text-slate-700 hover:bg-white/60"
           >
             설정으로 이동
           </a>
           <a
             href="/dashboard"
-            className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2.5 bg-brand-600 text-white rounded-2xl hover:bg-brand-700"
           >
             대시보드로 이동
           </a>
@@ -94,8 +94,8 @@ function SuccessContent() {
       </div>
 
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">결제 완료!</h2>
-        <p className="text-gray-500">구독이 활성화되었습니다. 지금 바로 시작하세요.</p>
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">결제 완료!</h2>
+        <p className="text-slate-500">구독이 활성화되었습니다. 지금 바로 시작하세요.</p>
       </div>
 
       {paymentInfo?.receiptUrl && (
@@ -103,7 +103,7 @@ function SuccessContent() {
           href={paymentInfo.receiptUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-blue-600 underline"
+          className="text-sm text-brand-600 underline"
         >
           영수증 확인
         </a>
@@ -112,7 +112,7 @@ function SuccessContent() {
       <div className="flex gap-3 mt-4">
         <a
           href="/dashboard"
-          className="px-8 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 flex items-center gap-2"
+          className="px-8 py-3 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 flex items-center gap-2"
         >
           <Sparkles className="h-5 w-5" />
           대시보드로 이동
@@ -126,7 +126,7 @@ export default function PaymentSuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
       </div>
     }>
       <SuccessContent />

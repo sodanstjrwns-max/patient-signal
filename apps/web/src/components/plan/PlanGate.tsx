@@ -148,9 +148,9 @@ export function UpgradeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-brand-600 to-indigo-600 p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/70 hover:text-white"
@@ -172,13 +172,13 @@ export function UpgradeModal({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-lg">{requiredPlan} 플랜</span>
-              <span className="text-blue-600 font-bold text-lg">
+              <span className="text-brand-600 font-bold text-lg">
                 {planPrices[requiredPlan] || '문의'}
               </span>
             </div>
             <ul className="space-y-2">
               {(planFeatures[requiredPlan] || []).map((feat, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
                   <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                   {feat}
                 </li>
@@ -186,7 +186,7 @@ export function UpgradeModal({
             </ul>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 mb-4">
             <p className="text-sm text-yellow-800">
               <strong>7일 무료 체험</strong> 가능! 마음에 안 들면 언제든 취소하세요.
             </p>
@@ -195,7 +195,7 @@ export function UpgradeModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 text-sm"
+              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-2xl text-slate-600 hover:bg-white/60 text-sm"
             >
               나중에
             </button>
@@ -204,7 +204,7 @@ export function UpgradeModal({
                 onClose();
                 window.location.href = `/dashboard/billing?plan=${requiredPlan}`;
               }}
-              className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 text-sm font-medium flex items-center justify-center gap-2"
             >
               업그레이드 <ArrowRight className="w-4 h-4" />
             </button>
@@ -239,8 +239,8 @@ export function LockedFeature({
         onClick={() => setShowModal(true)}
       >
         <div className="opacity-50 pointer-events-none">{children}</div>
-        <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-lg backdrop-blur-[1px]">
-          <div className="flex items-center gap-2 bg-gray-800 text-white px-4 py-2 rounded-full text-sm shadow-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl backdrop-blur-[1px]">
+          <div className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-full text-sm shadow-lg">
             <Lock className="w-4 h-4" />
             <span>{getRequiredPlan(feature)} 플랜 필요</span>
           </div>
@@ -277,15 +277,15 @@ export function UsageBar({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-gray-600">{label}</span>
-        <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-gray-900'}`}>
+        <span className="text-slate-600">{label}</span>
+        <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-slate-900'}`}>
           {used}/{limit === -1 ? '∞' : limit}
         </span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
+      <div className="w-full bg-slate-200 rounded-full h-2">
         <div
           className={`h-2 rounded-full transition-all ${
-            isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-blue-500'
+            isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-brand-500'
           }`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />

@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: 'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-600 shadow-sm hover:shadow-md',
         destructive: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600 shadow-sm',
-        outline: 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 focus-visible:ring-slate-400 shadow-xs',
+        outline: 'border border-slate-200 bg-white/80 backdrop-blur-sm hover:bg-white/60 text-slate-700 focus-visible:ring-slate-400 shadow-xs',
         secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 focus-visible:ring-slate-400',
         ghost: 'hover:bg-slate-100 text-slate-600 focus-visible:ring-slate-400',
         link: 'text-brand-600 underline-offset-4 hover:underline',

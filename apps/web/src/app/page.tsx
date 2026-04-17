@@ -161,7 +161,7 @@ export default function HomePage() {
       </section>
 
       {/* Patient Signal 프레임워크 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 glass rounded-full px-5 py-2 mb-5 shadow-sm">
@@ -222,7 +222,7 @@ export default function HomePage() {
       </section>
 
       {/* 주요 기능 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
@@ -274,7 +274,7 @@ export default function HomePage() {
       </section>
 
       {/* Patient Funnel 연계 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto">
           <div className="relative rounded-3xl p-8 sm:p-12 overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-brand-50 to-violet-50" />
@@ -282,7 +282,7 @@ export default function HomePage() {
             
             <div className="relative z-10">
               <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 bg-white rounded-full px-5 py-2 mb-5 shadow-sm border border-brand-100">
+                <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-5 py-2 mb-5 shadow-sm border border-brand-100">
                   <Sparkles className="h-4 w-4 text-brand-600" />
                   <span className="text-sm font-bold text-brand-700">페이션트 퍼널 × Patient Signal</span>
                 </div>
@@ -300,7 +300,7 @@ export default function HomePage() {
                   { num: '2.1배', desc: '평균 매출 성장률' },
                   { num: '40%', desc: '광고비 절감' },
                 ].map((item, i) => (
-                  <div key={i} className="bg-white rounded-2xl p-6 shadow-card hover-lift">
+                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-card hover-lift">
                     <div className="text-3xl font-black text-brand-600 mb-1.5 tabular-nums">{item.num}</div>
                     <p className="text-xs text-slate-500 font-semibold">{item.desc}</p>
                   </div>

@@ -43,8 +43,8 @@ const intentNames: Record<string, string> = {
 };
 
 const intentColors: Record<string, string> = {
-  RESERVATION: 'bg-blue-100 text-blue-800', COMPARISON: 'bg-purple-100 text-purple-800',
-  INFORMATION: 'bg-gray-100 text-gray-800', REVIEW: 'bg-green-100 text-green-800',
+  RESERVATION: 'bg-brand-100 text-brand-800', COMPARISON: 'bg-purple-100 text-purple-800',
+  INFORMATION: 'bg-slate-100 text-slate-800', REVIEW: 'bg-green-100 text-green-800',
   FEAR: 'bg-red-100 text-red-800',
 };
 
@@ -251,9 +251,9 @@ export default function SettingsPage() {
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <Settings className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">병원 등록이 필요합니다</h3>
-              <p className="text-gray-500 mb-4">설정을 관리하려면 먼저 병원 정보를 등록해주세요.</p>
+              <Settings className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">병원 등록이 필요합니다</h3>
+              <p className="text-slate-500 mb-4">설정을 관리하려면 먼저 병원 정보를 등록해주세요.</p>
               <Button onClick={() => window.location.href = '/onboarding'}>병원 등록하기</Button>
             </CardContent>
           </Card>
@@ -263,7 +263,7 @@ export default function SettingsPage() {
   }
 
   if (isLoading) {
-    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>;
+    return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-brand-600" /></div>;
   }
 
   return (
@@ -285,11 +285,11 @@ export default function SettingsPage() {
               </div>
               <div>
                 <Label>진료과목</Label>
-                <Input value={specialtyNames[hospital?.specialtyType] || hospital?.specialtyType || ''} disabled className="bg-gray-50" />
+                <Input value={specialtyNames[hospital?.specialtyType] || hospital?.specialtyType || ''} disabled className="bg-slate-50" />
               </div>
               <div>
                 <Label>지역</Label>
-                <Input value={`${hospital?.regionSido || ''} ${hospital?.regionSigungu || ''}`} disabled className="bg-gray-50" />
+                <Input value={`${hospital?.regionSido || ''} ${hospital?.regionSigungu || ''}`} disabled className="bg-slate-50" />
               </div>
               <div>
                 <Label>상세 주소</Label>
@@ -323,12 +323,12 @@ export default function SettingsPage() {
         </Card>
 
         {/* ==================== 핵심 시술 설정 + 쿼리 자동 생성 ==================== */}
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-white">
+        <Card className="border-brand-200 bg-gradient-to-br from-blue-50/50 to-white">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Stethoscope className="h-5 w-5 text-blue-600" />
+              <Stethoscope className="h-5 w-5 text-brand-600" />
               핵심 시술 설정
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">중요</span>
+              <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">중요</span>
             </CardTitle>
             <CardDescription>
               핵심 시술 최대 3개를 선택하면 {hospital?.planType === 'PRO' ? '34' : '14'}개의 AI 모니터링 쿼리가 자동 생성됩니다
@@ -338,13 +338,13 @@ export default function SettingsPage() {
             {/* 현재 선택된 시술 */}
             {selectedProcedures.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500">선택된 시술:</span>
+                <span className="text-sm text-slate-500">선택된 시술:</span>
                 {selectedProcedures.map((proc) => (
-                  <span key={proc} className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium flex items-center gap-1">
+                  <span key={proc} className="px-3 py-1 bg-brand-100 text-brand-800 text-sm rounded-full font-medium flex items-center gap-1">
                     <Check className="h-3 w-3" /> {proc}
                   </span>
                 ))}
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-slate-400">
                   → {selectedProcedures.length * (hospital?.planType === 'PRO' ? 34 : 14)}개 쿼리 생성
                 </span>
               </div>
@@ -358,23 +358,23 @@ export default function SettingsPage() {
                   <button
                     key={proc.name}
                     onClick={() => toggleProcedure(proc.name)}
-                    className={`p-3 rounded-lg border text-left transition-all ${
+                    className={`p-3 rounded-2xl border text-left transition-all ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        ? 'border-brand-500 bg-brand-50 ring-2 ring-blue-200'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-white/60'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm font-medium ${isSelected ? 'text-blue-800' : 'text-gray-700'}`}>
+                      <span className={`text-sm font-medium ${isSelected ? 'text-brand-800' : 'text-slate-700'}`}>
                         {proc.name}
                       </span>
-                      {isSelected && <Check className="h-4 w-4 text-blue-600" />}
+                      {isSelected && <Check className="h-4 w-4 text-brand-600" />}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       {proc.isPopular && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">인기</span>
                       )}
-                      <span className="text-xs text-gray-400">{proc.category === 'core' ? '핵심' : proc.category === 'cosmetic' ? '미용' : '일반'}</span>
+                      <span className="text-xs text-slate-400">{proc.category === 'core' ? '핵심' : proc.category === 'cosmetic' ? '미용' : '일반'}</span>
                     </div>
                   </button>
                 );
@@ -395,7 +395,7 @@ export default function SettingsPage() {
               <Button
                 onClick={handleSaveProcedures}
                 disabled={selectedProcedures.length === 0 || generateMutation.isPending}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-brand-600 hover:bg-brand-700"
               >
                 {generateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -408,27 +408,27 @@ export default function SettingsPage() {
 
             {/* 쿼리 미리보기 */}
             {showQueryPreview && queryPreview && (
-              <div className="mt-4 p-4 bg-white rounded-lg border border-blue-100 max-h-96 overflow-y-auto">
+              <div className="mt-4 p-4 bg-white/80 backdrop-blur-sm rounded-2xl border border-brand-100 max-h-96 overflow-y-auto">
                 <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm text-gray-800">
+                  <h4 className="font-semibold text-sm text-slate-800">
                     생성될 쿼리 ({queryPreview.total}개)
                   </h4>
                 </div>
                 <div className="space-y-2">
                   {queryPreview.queries?.slice(0, 30).map((q: any, idx: number) => (
                     <div key={idx} className="flex items-start gap-2 text-sm">
-                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${intentColors[q.intent] || 'bg-gray-100'}`}>
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${intentColors[q.intent] || 'bg-slate-100'}`}>
                         {intentNames[q.intent] || q.intent}
                         {intentWeights[q.intent] > 1 && ` ×${intentWeights[q.intent]}`}
                       </span>
-                      <span className="text-gray-600">{q.query}</span>
+                      <span className="text-slate-600">{q.query}</span>
                       {q.platform && (
-                        <span className="text-xs text-gray-400 flex-shrink-0">[{q.platform}]</span>
+                        <span className="text-xs text-slate-400 flex-shrink-0">[{q.platform}]</span>
                       )}
                     </div>
                   ))}
                   {queryPreview.total > 30 && (
-                    <p className="text-xs text-gray-400 text-center pt-2">... 외 {queryPreview.total - 30}개</p>
+                    <p className="text-xs text-slate-400 text-center pt-2">... 외 {queryPreview.total - 30}개</p>
                   )}
                 </div>
               </div>
@@ -459,14 +459,14 @@ export default function SettingsPage() {
                     key={plan.id}
                     className={`relative p-5 rounded-xl border-2 transition-all ${
                       plan.isPopular
-                        ? 'border-blue-500 ring-2 ring-blue-100'
+                        ? 'border-brand-500 ring-2 ring-blue-100'
                         : isCurrent && isActiveSub
                         ? 'border-green-500 bg-green-50/30'
-                        : 'border-gray-200'
+                        : 'border-slate-200'
                     }`}
                   >
                     {plan.isPopular && !isCurrent && (
-                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
+                      <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand-600 text-white text-xs font-bold px-3 py-1 rounded-full">
                         {plan.badge}
                       </span>
                     )}
@@ -477,24 +477,24 @@ export default function SettingsPage() {
                     )}
 
                     <div className="text-center mb-4">
-                      <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                      <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
                       <p className="text-3xl font-bold mt-2">
                         {plan.priceText}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">{plan.description}</p>
+                      <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
                     </div>
 
                     <ul className="space-y-2 mb-6">
                       {plan.features.map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm">
                           <Check className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span className="text-gray-600">{feature}</span>
+                          <span className="text-slate-600">{feature}</span>
                         </li>
                       ))}
                       {plan.notIncluded.map((feature, idx) => (
                         <li key={`no-${idx}`} className="flex items-start gap-2 text-sm opacity-40">
                           <span className="h-4 w-4 flex-shrink-0 mt-0.5 text-center">-</span>
-                          <span className="text-gray-400 line-through">{feature}</span>
+                          <span className="text-slate-400 line-through">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -512,9 +512,9 @@ export default function SettingsPage() {
                       {isCurrent && isActiveSub ? '현재 이용 중' : '시작하기'}
                     </Button>
 
-                    <p className="text-xs text-center text-gray-400 mt-2">
+                    <p className="text-xs text-center text-slate-400 mt-2">
                       쿠폰 코드가 있으신가요?{' '}
-                      <a href={`/dashboard/billing?plan=${plan.id}&coupon=true`} className="text-blue-500 underline">
+                      <a href={`/dashboard/billing?plan=${plan.id}&coupon=true`} className="text-brand-500 underline">
                         쿠폰 적용
                       </a>
                     </p>
@@ -533,17 +533,17 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center justify-between p-3 border rounded-2xl">
                 <div>
                   <p className="font-medium">이메일</p>
-                  <p className="text-sm text-gray-500">{user?.email}</p>
+                  <p className="text-sm text-slate-500">{user?.email}</p>
                 </div>
                 <Button variant="outline" size="sm" disabled>변경</Button>
               </div>
-              <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center justify-between p-3 border rounded-2xl">
                 <div>
                   <p className="font-medium">비밀번호</p>
-                  <p className="text-sm text-gray-500">********</p>
+                  <p className="text-sm text-slate-500">********</p>
                 </div>
                 <Button variant="outline" size="sm">변경</Button>
               </div>

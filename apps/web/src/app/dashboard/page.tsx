@@ -60,14 +60,14 @@ import { toast } from '@/hooks/useToast';
 // ─── 플랫폼 색상/이름 ───
 const PLATFORM_META: Record<string, { name: string; color: string; bg: string; text: string; ringClass: string }> = {
   CHATGPT: { name: 'ChatGPT', color: '#10a37f', bg: 'bg-emerald-50', text: 'text-emerald-700', ringClass: 'ring-emerald-200' },
-  PERPLEXITY: { name: 'Perplexity', color: '#1E88E5', bg: 'bg-blue-50', text: 'text-blue-700', ringClass: 'ring-blue-200' },
+  PERPLEXITY: { name: 'Perplexity', color: '#1E88E5', bg: 'bg-brand-50', text: 'text-brand-700', ringClass: 'ring-blue-200' },
   CLAUDE: { name: 'Claude', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-700', ringClass: 'ring-amber-200' },
   GEMINI: { name: 'Gemini', color: '#8B5CF6', bg: 'bg-purple-50', text: 'text-purple-700', ringClass: 'ring-violet-200' },
 };
 
 // Journey step config
 const JOURNEY_STEPS = [
-  { href: '/dashboard/prompts', step: '1', label: '질문 설정', icon: MessageSquare, iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
+  { href: '/dashboard/prompts', step: '1', label: '질문 설정', icon: MessageSquare, iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
   { href: '/dashboard/insights', step: '2', label: 'AI 인사이트', icon: Lightbulb, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
   { href: '/dashboard/analytics', step: '3', label: 'ABHS 분석', icon: BarChart3, iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
   { href: '/dashboard/competitors', step: '4', label: '경쟁사 비교', icon: Users, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
@@ -283,7 +283,7 @@ export default function DashboardPage() {
                       <>
                         <span className="font-black text-emerald-400">R3 {abhs.depthDistribution.R3 ?? 0}</span>
                         <span className="text-white/10">·</span>
-                        <span className="font-bold text-blue-400">R2 {abhs.depthDistribution.R2 ?? 0}</span>
+                        <span className="font-bold text-brand-400">R2 {abhs.depthDistribution.R2 ?? 0}</span>
                         <span className="text-white/10">·</span>
                         <span className="font-semibold text-amber-400">R1 {abhs.depthDistribution.R1 ?? 0}</span>
                       </>
@@ -415,8 +415,8 @@ export default function DashboardPage() {
             <div className="glass-bento p-6 h-full group cursor-pointer">
               <div className="flex items-center justify-between mb-5">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Globe className="h-5 w-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-2xl bg-brand-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Globe className="h-5 w-5 text-brand-600" />
                   </div>
                   <div>
                     <span className="text-sm font-black text-slate-900">인용 출처</span>
@@ -515,7 +515,7 @@ export default function DashboardPage() {
                       <div className={`relative p-2 rounded-xl ${item.iconBg}`}>
                         <item.icon className={`h-4 w-4 ${item.iconColor}`} />
                         {done && (
-                          <CheckCircle2 className="absolute -top-1 -right-1 h-3.5 w-3.5 text-emerald-500 bg-white rounded-full shadow-sm" />
+                          <CheckCircle2 className="absolute -top-1 -right-1 h-3.5 w-3.5 text-emerald-500 bg-white/80 backdrop-blur-sm rounded-full shadow-sm" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">

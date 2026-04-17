@@ -66,7 +66,7 @@ export function TrialBanner() {
     const isCouponExpired = subInfo.isCouponUser;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
             isCouponExpired ? 'bg-amber-100' : 'bg-red-100'
           }`}>
@@ -75,7 +75,7 @@ export function TrialBanner() {
               : <AlertTriangle className="h-8 w-8 text-red-600" />
             }
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
             {isCouponExpired 
               ? '쿠폰 혜택이 종료되었습니다'
               : '체험 기간이 종료되었습니다'
@@ -86,12 +86,12 @@ export function TrialBanner() {
               🎟️ {subInfo.couponName}
             </p>
           )}
-          <p className="text-gray-600 mb-2">
+          <p className="text-slate-600 mb-2">
             현재 <strong>FREE 플랜</strong>으로 전환되었습니다.
           </p>
-          <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left text-sm">
-            <p className="font-semibold text-gray-700 mb-2">FREE 플랜 제한:</p>
-            <ul className="space-y-1 text-gray-500">
+          <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left text-sm">
+            <p className="font-semibold text-slate-700 mb-2">FREE 플랜 제한:</p>
+            <ul className="space-y-1 text-slate-500">
               <li>• AI 플랫폼: Perplexity 1개만</li>
               <li>• 모니터링 질문: 1개</li>
               <li>• 크롤링: 주 1회</li>
@@ -100,14 +100,14 @@ export function TrialBanner() {
           </div>
           <Link
             href="/dashboard/billing"
-            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all mb-3"
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-bold rounded-xl hover:from-brand-700 hover:to-indigo-700 transition-all mb-3"
           >
             <CreditCard className="h-5 w-5" />
             {isCouponExpired ? '유료 결제로 계속 이용하기' : '플랜 업그레이드하기'}
           </Link>
           <button
             onClick={() => setShowExpiredModal(false)}
-            className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
           >
             나중에 할게요
           </button>
@@ -161,10 +161,10 @@ export function TrialBanner() {
             className={`
               flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
               ${isUrgent
-                ? 'bg-white text-red-600 hover:bg-red-50'
+                ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
                 : isWarning
                   ? 'bg-amber-900 text-white hover:bg-amber-800'
-                  : 'bg-white text-purple-600 hover:bg-purple-50'
+                  : 'bg-white/80 backdrop-blur-sm text-purple-600 hover:bg-purple-50'
               }
             `}
           >
@@ -198,7 +198,7 @@ export function TrialBanner() {
         ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white' 
         : isExpiring 
           ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900'
-          : 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
+          : 'bg-gradient-to-r from-brand-500 to-indigo-500 text-white'
       }
     `}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -220,10 +220,10 @@ export function TrialBanner() {
           className={`
             flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
             ${isUrgent 
-              ? 'bg-white text-red-600 hover:bg-red-50' 
+              ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50' 
               : isExpiring 
                 ? 'bg-amber-900 text-white hover:bg-amber-800'
-                : 'bg-white text-blue-600 hover:bg-blue-50'
+                : 'bg-white/80 backdrop-blur-sm text-brand-600 hover:bg-brand-50'
             }
           `}
         >

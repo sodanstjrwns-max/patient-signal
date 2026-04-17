@@ -31,18 +31,18 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 pb-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">이메일을 확인해주세요</h2>
-            <p className="text-gray-600 mb-6">
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">이메일을 확인해주세요</h2>
+            <p className="text-slate-600 mb-6">
               <strong>{email}</strong>로<br />
               비밀번호 재설정 링크를 발송했습니다.
             </p>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-slate-500 mb-6">
               이메일이 도착하지 않았다면 스팸 폴더를 확인해주세요.
             </p>
             <Link href="/login">
@@ -57,11 +57,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
           </Link>
@@ -79,9 +79,9 @@ export default function ForgotPasswordPage() {
             )}
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">이메일</label>
+              <label className="text-sm font-medium text-slate-700">이메일</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
                   type="email"
                   placeholder="doctor@clinic.com"
@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
           <div className="mt-6 text-center">
             <Link 
               href="/login" 
-              className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+              className="inline-flex items-center text-sm text-slate-600 hover:text-slate-900"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               로그인으로 돌아가기
