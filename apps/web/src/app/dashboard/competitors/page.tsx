@@ -111,10 +111,11 @@ export default function CompetitorsPage() {
   });
 
   // 비활성(삭제된) 경쟁사 조회
-  const { data: inactiveCompetitors } = useQuery({
+  const { data: inactiveCompetitors, isLoading: inactiveLoading, isError: inactiveError } = useQuery({
     queryKey: ['competitors-inactive', hospitalId],
     queryFn: () => competitorsApi.getInactive(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId && showInactive,
+    retry: 1,
   });
 
   // 경쟁사 비교 데이터 - 공유 훅 사용
@@ -548,11 +549,19 @@ export default function CompetitorsPage() {
               </p>
             </CardHeader>
             <CardContent>
-              {!inactiveCompetitors ? (
+              {inactiveLoading ? (
                 <div className="flex justify-center py-6">
                   <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
                 </div>
-              ) : inactiveCompetitors.length === 0 ? (
+              ) : inactiveError ? (
+                <div className="text-center py-6">
+                  <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">데이터를 불러올 수 없습니다</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    서버 연결을 확인하거나 잠시 후 다시 시도해주세요
+                  </p>
+                </div>
+              ) : !inactiveCompetitors || inactiveCompetitors.length === 0 ? (
                 <div className="text-center py-6">
                   <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
                   <p className="text-gray-600 font-medium">삭제된 경쟁사가 없습니다</p>
