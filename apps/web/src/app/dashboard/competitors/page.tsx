@@ -556,10 +556,22 @@ export default function CompetitorsPage() {
               ) : inactiveError ? (
                 <div className="text-center py-6">
                   <AlertTriangle className="h-10 w-10 text-amber-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">데이터를 불러올 수 없습니다</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    서버 연결을 확인하거나 잠시 후 다시 시도해주세요
+                  <p className="text-gray-600 font-medium">목록을 불러오지 못했습니다</p>
+                  <p className="text-sm text-gray-400 mt-1 mb-4">
+                    목록 조회가 안 되더라도 &quot;전체 복구&quot; 버튼으로 바로 복구할 수 있습니다
                   </p>
+                  <Button
+                    onClick={() => restoreAllMutation.mutate()}
+                    disabled={restoreAllMutation.isPending}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {restoreAllMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    삭제된 경쟁사 전체 복구 시도
+                  </Button>
                 </div>
               ) : !inactiveCompetitors || inactiveCompetitors.length === 0 ? (
                 <div className="text-center py-6">
