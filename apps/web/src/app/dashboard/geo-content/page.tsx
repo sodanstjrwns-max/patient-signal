@@ -31,7 +31,6 @@ interface GeoContentItem {
   procedure?: string;
   status: string;
   aiModel?: string;
-  cardNewsSlides?: any;
   metaTitle?: string;
   metaDescription?: string;
   slug?: string;
@@ -244,7 +243,7 @@ export default function GeoContentPage() {
               아직 생성된 콘텐츠가 없습니다
             </h3>
             <p className="text-sm text-slate-400 mb-6 max-w-md mx-auto">
-              기회 분석에서 발견된 콘텐츠 갭을 기반으로 AI가 자동으로 블로그, 카드뉴스 등을 만들어줍니다.
+              기회 분석에서 발견된 콘텐츠 갭을 기반으로 AI가 자동으로 블로그 풀 아티클을 만들어줍니다.
               직접 주제를 입력해서 생성할 수도 있어요!
             </p>
             <div className="flex items-center justify-center gap-3">
@@ -375,27 +374,17 @@ export default function GeoContentPage() {
 
                       {/* 본문 미리보기 */}
                       {item.bodyHtml && (
-                        <div className="bg-white border rounded-xl p-4 max-h-64 overflow-y-auto">
-                          <p className="text-[10px] font-semibold text-slate-500 mb-2">본문 미리보기</p>
+                        <div className="bg-white border rounded-xl p-4 max-h-[500px] overflow-y-auto">
+                          <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-semibold text-slate-700">블로그 본문</p>
+                            <span className="text-[10px] text-slate-400">
+                              {item.bodyHtml.replace(/<[^>]+>/g, '').length.toLocaleString()}자
+                            </span>
+                          </div>
                           <div
-                            className="prose prose-sm max-w-none text-slate-700"
+                            className="prose prose-sm max-w-none text-slate-700 prose-h2:text-base prose-h2:font-bold prose-h2:text-slate-900 prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-sm prose-h3:font-semibold prose-h3:text-slate-800 prose-h3:mt-4 prose-h3:mb-2 prose-table:text-xs prose-table:border prose-th:bg-slate-50 prose-th:p-2 prose-td:p-2 prose-td:border"
                             dangerouslySetInnerHTML={{ __html: item.bodyHtml }}
                           />
-                        </div>
-                      )}
-
-                      {/* 카드뉴스 */}
-                      {item.cardNewsSlides && item.cardNewsSlides.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold text-slate-500 mb-2">카드뉴스 ({item.cardNewsSlides.length}장)</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {item.cardNewsSlides.map((slide: any, i: number) => (
-                              <div key={i} className="bg-gradient-to-br from-brand-50 to-purple-50 rounded-lg p-3 border text-center">
-                                <p className="text-[10px] text-slate-400 mb-1">Slide {i + 1}</p>
-                                <p className="text-xs font-medium text-slate-700 line-clamp-2">{slide.title || slide.headline}</p>
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       )}
 
@@ -501,7 +490,6 @@ function CreateContentModal({ onClose, onCreated }: { onClose: () => void; onCre
   const [contentTone, setContentTone] = useState('PROFESSIONAL');
   const [procedure, setProcedure] = useState('');
   const [keywords, setKeywords] = useState('');
-  const [includeCardNews, setIncludeCardNews] = useState(true);
   const [additionalInstructions, setAdditionalInstructions] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -519,7 +507,6 @@ function CreateContentModal({ onClose, onCreated }: { onClose: () => void; onCre
         contentTone,
         procedure: procedure.trim() || undefined,
         targetKeywords: keywords.split(',').map(k => k.trim()).filter(Boolean),
-        includeCardNews,
         additionalInstructions: additionalInstructions.trim() || undefined,
       });
       toast.success('AI가 콘텐츠를 생성하고 있습니다! 잠시 후 목록에서 확인하세요.');
@@ -626,13 +613,13 @@ function CreateContentModal({ onClose, onCreated }: { onClose: () => void; onCre
             />
           </div>
 
-          {/* 카드뉴스 포함 */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <div className={`w-10 h-6 rounded-full transition-colors relative ${includeCardNews ? 'bg-brand-600' : 'bg-slate-200'}`}>
-              <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${includeCardNews ? 'translate-x-4.5 left-[18px]' : 'translate-x-0 left-0.5'}`} />
-            </div>
-            <span className="text-sm text-slate-700">카드뉴스 슬라이드도 함께 생성</span>
-          </label>
+          {/* 생성 정보 */}
+          <div className="bg-brand-50 rounded-xl p-3 border border-brand-100">
+            <p className="text-xs font-semibold text-brand-700 mb-1">✨ GPT-4o 고급 모델로 생성</p>
+            <p className="text-[11px] text-brand-600">
+              2,500자+ 블로그 풀 아티클 · SEO/GEO 최적화 · 비교표 · FAQ · 체크리스트 자동 포함
+            </p>
+          </div>
 
           {/* 버튼 */}
           <div className="flex items-center gap-3 pt-2">

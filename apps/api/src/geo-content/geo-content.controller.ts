@@ -85,7 +85,6 @@ export class GeoContentController {
       targetKeywords?: string[];
       procedure?: string;
       relatedPromptIds?: string[];
-      includeCardNews?: boolean;
       additionalInstructions?: string;
     },
   ) {

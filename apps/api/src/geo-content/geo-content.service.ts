@@ -3,6 +3,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { SPECIALTY_NAMES, SPECIALTY_PROCEDURES } from '../query-templates/query-templates.service';
 import OpenAI from 'openai';
+import { Prisma } from '@prisma/client';
 
 /**
  * ═══════════════════════════════════════════════════════════
@@ -10,11 +11,11 @@ import OpenAI from 'openai';
  *  GEO (Generative Engine Optimization) 콘텐츠 생성 에이전트
  * 
  *  기능:
- *  1. AI 기반 GEO 최적화 콘텐츠 생성 (체크리스트, FAQ, 표, 면책조항)
+ *  1. AI 기반 GEO 최적화 블로그 초안 생성 (체크리스트, FAQ, 표, 면책조항)
  *  2. 퍼널 단계별 톤/구조 자동 설정
- *  3. 카드뉴스 슬라이드 자동 생성
- *  4. 멀티 플랫폼 발행 관리 (네이버 블로그, 티스토리 등)
- *  5. 반말해라체 등 다양한 톤 지원
+ *  3. 멀티 플랫폼 발행 관리 (네이버 블로그, 티스토리 등)
+ *  4. 반말해라체 등 다양한 톤 지원
+ *  5. GPT-4o 고급 모델 사용 (2,500자+ 풀 아티클)
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -164,9 +165,8 @@ export class GeoContentService {
    * GEO 최적화 콘텐츠 생성
    * 
    * Step 1: 병원 정보 + 퍼널 단계 + 톤 + 키워드 수집
-   * Step 2: AI가 GEO 블록 포함 콘텐츠 생성
-   * Step 3: 카드뉴스 슬라이드 자동 생성
-   * Step 4: DB 저장
+   * Step 2: AI가 GEO 블록 포함 블로그 풀 아티클 생성 (2,500자+)
+   * Step 3: DB 저장
    */
   async generate(hospitalId: string, params: {
     topic: string;                   // 주제 (예: "임플란트 비용 가이드")
@@ -175,7 +175,6 @@ export class GeoContentService {
     targetKeywords?: string[];       // 타겟 키워드
     procedure?: string;              // 관련 시술
     relatedPromptIds?: string[];     // 연관 프롬프트
-    includeCardNews?: boolean;       // 카드뉴스 포함
     additionalInstructions?: string; // 추가 지시사항
   }) {
     if (!this.openai) {
@@ -212,12 +211,11 @@ export class GeoContentService {
         relatedPromptIds: params.relatedPromptIds || [],
         procedure: params.procedure,
         status: 'GENERATING',
-        aiModel: 'gpt-4o-mini',
+        aiModel: 'gpt-4o',
         generationPrompt: params.topic,
         generationParams: {
           funnelStage: params.funnelStage,
           tone,
-          includeCardNews: params.includeCardNews,
         },
       },
     });
@@ -255,79 +253,112 @@ export class GeoContentService {
     hospital: any,
     params: any,
   ) {
-    const { topic, funnelStage, tone, toneInstruction, funnelConfig, specialty, region, procedures, strengths, includeCardNews, additionalInstructions } = params;
+    const { topic, funnelStage, tone, toneInstruction, funnelConfig, specialty, region, procedures, strengths, additionalInstructions } = params;
 
-    const systemPrompt = `당신은 의료 마케팅 전문가이자 GEO (Generative Engine Optimization) 콘텐츠 작가입니다.
-AI 검색 엔진(ChatGPT, Perplexity, Gemini 등)이 답변할 때 인용하고 참조할 수 있도록 최적화된 콘텐츠를 작성합니다.
+    const systemPrompt = `당신은 대한민국 최고의 의료 블로그 전문 작가이자 GEO (Generative Engine Optimization) 콘텐츠 전략가입니다.
+AI 검색 엔진(ChatGPT, Perplexity, Gemini, Claude 등)이 답변할 때 인용하고 참조할 수 있도록 최적화된 **블로그 풀 아티클**을 작성합니다.
 
-병원 정보:
+## 병원 정보 (반드시 콘텐츠에 자연스럽게 녹여주세요)
 - 병원명: ${hospital.name}
 - 진료과: ${specialty}
 - 지역: ${region}
 - 핵심 시술: ${procedures.join(', ') || '미지정'}
-- 강점: ${strengths.join(', ') || '미지정'}
+- 강점/차별점: ${strengths.join(', ') || '미지정'}
+${hospital.name.includes('비디') ? '- 특이사항: 400평 규모, 서울대학교 치과병원과 동일한 진료 시스템, 진료과목별 층 분류, 6개 독립 수술실, 에어샤워 시스템 등 최첨단 감염관리 체계' : ''}
 
-퍼널 단계: ${funnelStage}
+## 퍼널 단계: ${funnelStage}
 - 포커스: ${funnelConfig.focus}
 - CTA: ${funnelConfig.cta}
 
-톤 지시: ${toneInstruction}
+## 톤 지시: ${toneInstruction}
 
-${additionalInstructions ? `추가 지시사항: ${additionalInstructions}` : ''}
+${additionalInstructions ? `## 사용자 추가 지시사항 (반드시 반영):\n${additionalInstructions}` : ''}
 
-GEO 최적화 규칙:
-1. 구조화된 콘텐츠: 명확한 H2/H3 소제목, 번호 리스트, 표 활용
-2. FAQ 섹션 필수 포함 (3~5개)
-3. 체크리스트 포함 (3~7개 항목)
-4. 비교 표 1개 포함 (해당 시)
-5. 의학적 면책조항 포함
-6. 핵심 포인트(Key Takeaway) 1줄 요약
-7. 자연스러운 키워드 배치 (키워드 스터핑 금지)
-8. 모바일 가독성 고려 (짧은 문단, 2~3줄)`;
+## 블로그 풀 아티클 작성 규칙 (필수 준수)
 
-    const userPrompt = `다음 주제로 GEO 최적화 블로그 콘텐츠를 작성해주세요.
+### 분량
+- **최소 2,500자 이상** (HTML 태그 제외 순수 텍스트 기준). 3,000~4,000자가 이상적입니다.
+- 짧은 글은 절대 금지. 독자가 "이 글 하나로 충분하다"고 느낄 정도로 상세하게 작성하세요.
+
+### 구조 (H2/H3 필수)
+1. **도입부** (H2): 독자의 고민/증상을 공감하며 시작. 이 글을 읽으면 무엇을 알 수 있는지 명시.
+2. **본론 섹션들** (H2 3~5개, 각 H2 아래 H3 2~3개씩): 
+   - 정의/개념 설명
+   - 필요성/중요성 (왜 이 시술이 필요한가)
+   - 장점/특징 상세 설명
+   - 시술 과정 (단계별 설명: 상담→진단→시술→회복)
+   - 비교 분석 (대안 시술과의 비교표)
+   - 병원 선택 시 체크포인트
+3. **비교표** (HTML table): 관련 시술/방법 간 장단점 비교
+4. **체크리스트**: 환자가 확인해야 할 사항 3~7개
+5. **FAQ 섹션** (H2): 실제 환자가 자주 묻는 질문 3~5개 (Q&A 형식)
+6. **핵심 요약** (Key Takeaway): 전체 내용 1~2줄 요약
+7. **면책조항**: "본 콘텐츠는 의학적 조언을 대체하지 않습니다" 등
+8. **CTA**: 자연스러운 행동 유도 (상담 예약, 문의 등)
+
+### SEO/GEO 최적화
+- 타겟 키워드를 제목, 첫 문단, H2 소제목에 자연스럽게 배치
+- 키워드 스터핑 금지 — 자연스러운 문맥에서만 사용
+- 내부 링크 앵커 텍스트 제안 포함
+- 모바일 가독성: 문단은 2~3줄, 리스트/표 적극 활용
+- 의학적 근거/데이터/통계 인용 시 출처 명시
+
+### 품질 기준
+- 의사가 직접 감수했다고 느낄 정도의 전문성
+- 환자 입장에서 이해하기 쉬운 설명
+- 병원 강점을 자연스럽게 녹여서 신뢰감 형성
+- AI가 이 콘텐츠를 참조할 때 정확한 정보만 인용할 수 있도록 팩트 중심 작성`;
+
+    const userPrompt = `다음 주제로 GEO 최적화 **블로그 풀 아티클**을 작성해주세요.
 
 주제: ${topic}
 타겟 키워드: ${(params.targetKeywords || []).join(', ') || topic}
 관련 시술: ${params.procedure || procedures[0] || '일반'}
 
+⚠️ 중요:
+- bodyHtml은 반드시 **2,500자 이상** (HTML 태그 제외 순수 텍스트). 3,000~4,000자 권장.
+- H2 소제목 최소 4개, 각 H2 아래 H3 2~3개씩 필수.
+- 비교표(HTML table), 체크리스트, FAQ(3~5개), 면책조항, 핵심요약 모두 포함.
+- 병원명과 강점을 본문에 자연스럽게 2~3회 언급.
+
 반드시 아래 JSON 형식으로 응답해주세요:
 {
-  "title": "SEO 최적화된 제목",
-  "subtitle": "부제목",
-  "excerpt": "메타 디스크립션 (120자 이내)",
-  "bodyHtml": "HTML 본문 (H2, H3, ul, ol, table, p 태그 사용)",
+  "title": "SEO 최적화된 블로그 제목 (40~60자)",
+  "subtitle": "독자의 관심을 끄는 부제목",
+  "excerpt": "메타 디스크립션 (120~155자, 키워드 포함)",
+  "bodyHtml": "<h2>...</h2><p>...</p>... (최소 2500자 이상의 완전한 HTML 블로그 기사. H2/H3/p/ul/ol/table/strong/em 태그 사용. 비교표, 체크리스트, FAQ를 bodyHtml 안에 모두 포함시켜 하나의 완성된 기사로 작성)",
   "geoElements": {
     "checklist": {
       "title": "체크리스트 제목",
-      "items": ["항목1", "항목2", "항목3"]
+      "items": ["항목1", "항목2", "항목3", "항목4", "항목5"]
     },
     "faq": [
-      { "question": "질문1", "answer": "답변1" },
+      { "question": "실제 환자가 궁금해하는 질문1", "answer": "전문적이면서 이해하기 쉬운 답변1 (3~5문장)" },
       { "question": "질문2", "answer": "답변2" },
-      { "question": "질문3", "answer": "답변3" }
+      { "question": "질문3", "answer": "답변3" },
+      { "question": "질문4", "answer": "답변4" }
     ],
     "table": {
-      "headers": ["항목", "설명", "비고"],
-      "rows": [["데이터1", "설명1", "비고1"]]
+      "headers": ["구분", "특징", "장점", "단점", "추천 대상"],
+      "rows": [["항목1", "설명", "장점", "단점", "대상"], ["항목2", "설명", "장점", "단점", "대상"], ["항목3", "설명", "장점", "단점", "대상"]]
     },
-    "disclaimer": "의학적 면책조항",
-    "keyTakeaway": "핵심 포인트 1줄 요약"
+    "disclaimer": "구체적인 의학적 면책조항 (개인 차이, 전문의 상담 권고 등)",
+    "keyTakeaway": "이 글의 핵심 메시지 1~2줄"
   },
-  "metaTitle": "SEO 메타 타이틀 (60자 이내)",
-  "metaDescription": "SEO 메타 디스크립션 (155자 이내)",
-  "slug": "url-friendly-slug"
+  "metaTitle": "SEO 메타 타이틀 (50~60자, 키워드 포함)",
+  "metaDescription": "SEO 메타 디스크립션 (120~155자, 키워드 + CTA 포함)",
+  "slug": "url-friendly-slug-in-english"
 }`;
 
     try {
       const response = await this.openai!.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: 8000,
         response_format: { type: 'json_object' },
       });
 
@@ -339,13 +370,7 @@ GEO 최적화 규칙:
         result = { title: topic, bodyHtml: `<p>${resultText}</p>`, geoElements: {} };
       }
 
-      // 카드뉴스 생성
-      let cardNewsSlides = null;
-      if (includeCardNews && result.bodyHtml) {
-        cardNewsSlides = await this.generateCardNews(result, hospital, specialty);
-      }
-
-      // DB 업데이트
+      // DB 업데이트 (카드뉴스 없이 블로그 풀 아티클만)
       await this.prisma.geoContent.update({
         where: { id: contentId },
         data: {
@@ -357,7 +382,7 @@ GEO 최적화 규칙:
           metaTitle: result.metaTitle,
           metaDescription: result.metaDescription,
           slug: result.slug,
-          cardNewsSlides: cardNewsSlides,
+          cardNewsSlides: Prisma.DbNull,
           status: 'REVIEW',
         },
       });
@@ -370,50 +395,6 @@ GEO 최적화 규칙:
         data: { status: 'FAILED' },
       });
       throw error;
-    }
-  }
-
-  /**
-   * 카드뉴스 슬라이드 자동 생성
-   */
-  private async generateCardNews(content: any, hospital: any, specialty: string) {
-    if (!this.openai) return null;
-
-    try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `당신은 인스타그램 카드뉴스 전문가입니다. 의료 콘텐츠를 5~7장 슬라이드 카드뉴스로 변환합니다.
-각 슬라이드는 짧고 임팩트 있는 텍스트만 포함합니다 (배경 색상 제안 포함).`,
-          },
-          {
-            role: 'user',
-            content: `아래 콘텐츠를 카드뉴스로 변환해주세요.
-제목: ${content.title}
-본문 요약: ${content.excerpt || content.title}
-병원: ${hospital.name} (${specialty})
-
-JSON 형식으로 응답:
-{
-  "slides": [
-    { "slideNumber": 1, "title": "슬라이드 제목", "body": "본문 (2~3줄)", "bgColor": "#색상코드", "textColor": "#색상코드" }
-  ]
-}`,
-          },
-        ],
-        temperature: 0.8,
-        max_tokens: 2000,
-        response_format: { type: 'json_object' },
-      });
-
-      const text = response.choices[0]?.message?.content || '{}';
-      const result = JSON.parse(text);
-      return result.slides || null;
-    } catch {
-      this.logger.warn('카드뉴스 생성 실패 - 스킵');
-      return null;
     }
   }
 

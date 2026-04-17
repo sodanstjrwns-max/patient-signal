@@ -259,7 +259,6 @@ export const geoContentApi = {
     targetKeywords?: string[];
     procedure?: string;
     relatedPromptIds?: string[];
-    includeCardNews?: boolean;
     additionalInstructions?: string;
   }) =>
     api.post('/geo-content/generate', data, { timeout: 120000 }),

@@ -86,7 +86,6 @@ export default function OpportunitiesPage() {
         contentTone: 'PROFESSIONAL',
         targetKeywords: gap.competitorNames || [],
         procedure: gap.topic,
-        includeCardNews: true,
         additionalInstructions: gap.suggestedAction || undefined,
       });
       toast.success('AI가 콘텐츠를 생성하고 있습니다! AI 콘텐츠 페이지에서 확인하세요.');
