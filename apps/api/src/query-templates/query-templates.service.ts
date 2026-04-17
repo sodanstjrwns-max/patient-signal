@@ -81,6 +81,43 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '안면윤곽', alias: ['윤곽', '양악', '사각턱'], category: 'core', isPopular: true },
     { name: '리프팅성형', alias: ['안면거상', '페이스리프트'], category: 'cosmetic', isPopular: false },
   ],
+  ENT: [
+    { name: '코골이수술', alias: ['코골이', '수면무호흡', 'UPPP'], category: 'core', isPopular: true },
+    { name: '비중격수술', alias: ['비중격', '비중격만곡'], category: 'core', isPopular: true },
+    { name: '축농증치료', alias: ['축농증', '부비동염', '내시경수술'], category: 'core', isPopular: true },
+    { name: '알레르기비염', alias: ['비염', '알레르기', '코막힘'], category: 'core', isPopular: true },
+    { name: '편도선수술', alias: ['편도', '편도절제'], category: 'general', isPopular: false },
+    { name: '중이염치료', alias: ['중이염', '귀치료', '이관'], category: 'general', isPopular: false },
+    { name: '어지럼증', alias: ['어지러움', '이석증', '메니에르'], category: 'core', isPopular: false },
+    { name: '청력검사', alias: ['청력', '보청기', '난청'], category: 'general', isPopular: false },
+  ],
+  PSYCHIATRY: [
+    { name: '우울증치료', alias: ['우울증', '우울', '기분장애'], category: 'core', isPopular: true },
+    { name: '불안장애', alias: ['불안', '범불안', '사회불안'], category: 'core', isPopular: true },
+    { name: '공황장애', alias: ['공황', '패닉'], category: 'core', isPopular: true },
+    { name: '불면증치료', alias: ['불면증', '수면장애', '불면'], category: 'core', isPopular: true },
+    { name: 'ADHD', alias: ['주의력결핍', '집중력', '과잉행동'], category: 'core', isPopular: true },
+    { name: '상담치료', alias: ['심리상담', '심리치료', '인지행동'], category: 'general', isPopular: false },
+    { name: '스트레스관리', alias: ['스트레스', '번아웃', '직장스트레스'], category: 'general', isPopular: false },
+  ],
+  OBSTETRICS: [
+    { name: '산전검사', alias: ['산전', '임신검사', '기형아검사'], category: 'core', isPopular: true },
+    { name: '부인과검진', alias: ['부인과', '자궁경부암', '난소검사'], category: 'core', isPopular: true },
+    { name: '불임치료', alias: ['불임', '인공수정', '시험관'], category: 'core', isPopular: true },
+    { name: '갱년기치료', alias: ['갱년기', '폐경', '호르몬'], category: 'core', isPopular: true },
+    { name: '자궁질환', alias: ['자궁근종', '자궁내막', '자궁경부'], category: 'core', isPopular: false },
+    { name: '피임상담', alias: ['피임', '루프', '임플라논'], category: 'general', isPopular: false },
+    { name: '요실금치료', alias: ['요실금', '방광', '골반근육'], category: 'general', isPopular: false },
+  ],
+  PEDIATRICS: [
+    { name: '예방접종', alias: ['접종', '백신', 'BCG'], category: 'core', isPopular: true },
+    { name: '영유아검진', alias: ['영유아', '건강검진', '발달검사'], category: 'core', isPopular: true },
+    { name: '소아감기', alias: ['감기', '소아감염', '독감'], category: 'general', isPopular: false },
+    { name: '아토피', alias: ['소아아토피', '피부염', '알레르기'], category: 'core', isPopular: true },
+    { name: '성장클리닉', alias: ['성장', '키성장', '성장호르몬'], category: 'core', isPopular: true },
+    { name: '소아천식', alias: ['천식', '소아호흡기', '기관지'], category: 'core', isPopular: false },
+    { name: '소아비만', alias: ['비만', '소아체중', '식이관리'], category: 'general', isPopular: false },
+  ],
 };
 
 // ==================== 14개 핵심 쿼리 템플릿 ====================
@@ -500,6 +537,44 @@ export class QueryTemplatesService {
         q.push(
           { query: `시력이 많이 떨어졌는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
           { query: `눈이 자주 충혈되는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+        );
+        break;
+      case 'INTERNAL_MEDICINE':
+        q.push(
+          { query: `건강검진 받고 싶은데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `속이 자주 더부룩한데 ${region} ${specialty} 위내시경 잘하는 곳 알려줘`, category: cat, intent },
+          { query: `혈압이 높다는데 ${region}에서 잘 관리해주는 ${specialty} 있어?`, category: cat, intent },
+        );
+        break;
+      case 'ENT':
+        q.push(
+          { query: `코가 항상 막혀서 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `코골이가 심한데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+          { query: `귀가 잘 안 들리는데 ${region} ${specialty} 알려줘`, category: cat, intent },
+        );
+        break;
+      case 'PSYCHIATRY':
+        q.push(
+          { query: `우울감이 심한데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `잠을 잘 못 자는데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+        );
+        break;
+      case 'OBSTETRICS':
+        q.push(
+          { query: `임신 초기인데 ${region} ${specialty} 산전검사 잘하는 곳 추천해줘`, category: cat, intent },
+          { query: `부인과 검진 받고 싶은데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
+        );
+        break;
+      case 'PEDIATRICS':
+        q.push(
+          { query: `아이 감기가 안 낫는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `영유아 예방접종 잘하는 ${region} ${specialty} 어디야?`, category: cat, intent },
+        );
+        break;
+      case 'UROLOGY':
+        q.push(
+          { query: `소변을 자주 보는데 ${region} ${specialty} 추천해줘`, category: cat, intent },
+          { query: `전립선 검사 받고 싶은데 ${region} ${specialty} 어디가 좋아?`, category: cat, intent },
         );
         break;
       default:

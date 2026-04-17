@@ -53,6 +53,24 @@ export class ScoresController {
     return this.scoresService.getCitationAnalysis(hospitalId);
   }
 
+  @Get(':hospitalId/source-hints')
+  @ApiOperation({ summary: '소스 힌트 데이터 (인용 출처 상세)' })
+  async getSourceHints(@Param('hospitalId') hospitalId: string) {
+    return this.scoresService.getSourceHints(hospitalId);
+  }
+
+  @Get(':hospitalId/content-gaps')
+  @ApiOperation({ summary: 'Content Gap 분석 목록' })
+  async getContentGaps(@Param('hospitalId') hospitalId: string) {
+    return this.scoresService.getContentGaps(hospitalId);
+  }
+
+  @Get(':hospitalId/opportunity-analysis')
+  @ApiOperation({ summary: '기회 분석 - 경쟁사 추천 vs 우리 미언급 패턴' })
+  async getOpportunityAnalysis(@Param('hospitalId') hospitalId: string) {
+    return this.scoresService.getOpportunityAnalysis(hospitalId);
+  }
+
   @Get(':hospitalId/prompt-heatmap')
   @ApiOperation({ 
     summary: '【개선4】프롬프트별 성과 히트맵',

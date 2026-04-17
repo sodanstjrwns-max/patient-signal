@@ -476,4 +476,169 @@ export class ScoresService {
     if (counts.NEGATIVE === max) return 'NEGATIVE';
     return 'NEUTRAL';
   }
+
+  // ==================== V2: 소스 힌트 / Content Gap / Opportunity ====================
+
+  /**
+   * sourceHints 데이터에서 인용 출처 상세 목록 추출
+   */
+  async getSourceHints(hospitalId: string) {
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        createdAt: { gte: last30Days },
+        sourceHints: { not: null },
+      },
+      select: {
+        sourceHints: true,
+        aiPlatform: true,
+        isMentioned: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const sources: Array<{ url: string; title?: string; type?: string; platform?: string }> = [];
+    for (const r of responses) {
+      const hints = r.sourceHints as any;
+      if (hints?.sources && Array.isArray(hints.sources)) {
+        for (const s of hints.sources) {
+          if (s.url) {
+            sources.push({
+              url: s.url,
+              title: s.title,
+              type: s.type,
+              platform: r.aiPlatform,
+            });
+          }
+        }
+      }
+    }
+
+    return { sources, total: sources.length };
+  }
+
+  /**
+   * Content Gap 목록 조회
+   */
+  async getContentGaps(hospitalId: string) {
+    return this.prisma.contentGap.findMany({
+      where: { hospitalId },
+      orderBy: [{ priorityScore: 'desc' }, { createdAt: 'desc' }],
+      take: 50,
+    });
+  }
+
+  /**
+   * Opportunity 분석 - 경쟁사는 추천되지만 우리 병원은 미언급인 패턴 감지
+   */
+  async getOpportunityAnalysis(hospitalId: string) {
+    const last30Days = new Date();
+    last30Days.setDate(last30Days.getDate() - 30);
+
+    // 1. 우리 병원이 미언급된 응답 중 경쟁사가 언급된 것들
+    const missedResponses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        isMentioned: false,
+        createdAt: { gte: last30Days },
+        competitorsMentioned: { isEmpty: false },
+      },
+      include: {
+        prompt: {
+          select: { promptText: true, specialtyCategory: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 2. 프롬프트별 기회 집계
+    const opportunityMap = new Map<string, {
+      promptText: string;
+      category: string;
+      competitors: Map<string, number>;
+      platforms: Set<string>;
+      latestDate: Date;
+      count: number;
+      intent: string;
+    }>();
+
+    for (const r of missedResponses) {
+      const key = r.prompt?.promptText || r.promptId;
+      const existing = opportunityMap.get(key);
+      
+      if (existing) {
+        existing.count++;
+        existing.platforms.add(r.aiPlatform);
+        for (const comp of r.competitorsMentioned) {
+          existing.competitors.set(comp, (existing.competitors.get(comp) || 0) + 1);
+        }
+        if (r.createdAt > existing.latestDate) existing.latestDate = r.createdAt;
+      } else {
+        const competitors = new Map<string, number>();
+        for (const comp of r.competitorsMentioned) {
+          competitors.set(comp, 1);
+        }
+        opportunityMap.set(key, {
+          promptText: r.prompt?.promptText || '알 수 없는 질문',
+          category: r.prompt?.specialtyCategory || '',
+          competitors,
+          platforms: new Set([r.aiPlatform]),
+          latestDate: r.createdAt,
+          count: 1,
+          intent: r.queryIntent || 'INFORMATION',
+        });
+      }
+    }
+
+    // 3. 긴급도 판단 및 정렬
+    const opportunities = Array.from(opportunityMap.values()).map(opp => {
+      const competitorsList = Array.from(opp.competitors.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([name]) => name);
+
+      // 긴급도: 경쟁사 3개 이상 + 다수 플랫폼 = high
+      let urgency: 'high' | 'medium' | 'low' = 'low';
+      if (opp.competitors.size >= 3 && opp.platforms.size >= 3) urgency = 'high';
+      else if (opp.competitors.size >= 2 || opp.platforms.size >= 2) urgency = 'medium';
+
+      // 개선 제안 자동 생성
+      const topCompetitor = competitorsList[0] || '경쟁사';
+      const suggestedAction = urgency === 'high'
+        ? `"${opp.promptText}" 관련 블로그 포스트 또는 웹사이트 콘텐츠를 작성하세요. ${topCompetitor} 등 ${competitorsList.length}개 경쟁사가 이미 AI에서 추천되고 있습니다.`
+        : urgency === 'medium'
+        ? `해당 주제의 네이버 플레이스 정보와 블로그 콘텐츠를 보강하면 AI 노출 개선이 가능합니다.`
+        : `관련 키워드의 온라인 콘텐츠를 점진적으로 확대해보세요.`;
+
+      return {
+        promptText: opp.promptText,
+        category: opp.category,
+        competitorsMentioned: competitorsList,
+        competitorCount: opp.competitors.size,
+        platforms: Array.from(opp.platforms),
+        urgency,
+        suggestedAction,
+        intent: opp.intent,
+        lastDetectedAt: opp.latestDate.toISOString(),
+        missCount: opp.count,
+      };
+    }).sort((a, b) => {
+      const urgencyOrder = { high: 0, medium: 1, low: 2 };
+      return urgencyOrder[a.urgency] - urgencyOrder[b.urgency] || b.missCount - a.missCount;
+    });
+
+    return {
+      opportunities,
+      summary: {
+        totalOpportunities: opportunities.length,
+        highUrgency: opportunities.filter(o => o.urgency === 'high').length,
+        mediumUrgency: opportunities.filter(o => o.urgency === 'medium').length,
+        lowUrgency: opportunities.filter(o => o.urgency === 'low').length,
+        topCompetitor: opportunities.length > 0 ? opportunities[0].competitorsMentioned[0] : null,
+      },
+    };
+  }
 }

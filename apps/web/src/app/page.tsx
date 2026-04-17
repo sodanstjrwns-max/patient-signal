@@ -13,7 +13,14 @@ import {
   Eye,
   Zap,
   CheckCircle,
-  Bot
+  Bot,
+  Activity,
+  Target,
+  Globe,
+  Users,
+  FileText,
+  Layers,
+  ChevronRight,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -47,7 +54,7 @@ export default function HomePage() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-8">
             <Bot className="h-4 w-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-700">AI 시대, 병원 마케팅의 새로운 기준</span>
+            <span className="text-sm font-medium text-blue-700">병원 AI 가시성 관리 플랫폼</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
@@ -59,11 +66,11 @@ export default function HomePage() {
           
           <p className="text-lg sm:text-xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed">
             ChatGPT, Perplexity, Claude, Gemini에게 물어보세요.<br />
-            <strong>"우리 동네 치과 추천해줘"</strong> — 거기에 우리 병원이 나오나요?
+            <strong>"우리 동네 병원 추천해줘"</strong> — 거기에 우리 병원이 나오나요?
           </p>
           <p className="text-base text-gray-500 mb-10 max-w-2xl mx-auto">
-            Patient Signal은 AI 검색엔진에서 우리 병원이 얼마나 노출되는지<br className="hidden sm:block" />
-            자동으로 추적하고 분석해주는 도구입니다.
+            Patient Signal은 <strong>13개 전체 진료과</strong>의 AI 검색 가시성을<br className="hidden sm:block" />
+            자동으로 추적하고 분석하는 <strong>병원 전문</strong> AEO 플랫폼입니다.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -78,6 +85,22 @@ export default function HomePage() {
                 서비스 가이드 보기
               </Button>
             </Link>
+          </div>
+
+          {/* 지원 진료과 태그 */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-8">
+            {['🦷 치과', '💆 피부과', '✨ 성형외과', '🦴 정형외과', '🌿 한의원', '👁️ 안과', '🩺 내과', '👂 이비인후과', '🧠 정신건강의학과', '+4개'].map((tag, i) => (
+              <span 
+                key={i}
+                className={`text-xs px-2.5 py-1 rounded-full ${
+                  i === 9 
+                    ? 'bg-gray-100 text-gray-500 font-medium' 
+                    : 'bg-blue-50 text-blue-600'
+                }`}
+              >
+                {tag}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -104,18 +127,54 @@ export default function HomePage() {
               </div>
             </div>
             <p className="text-center text-gray-400 mt-8 text-sm">
-              네이버, 구글 SEO는 이미 하고 계시죠? <strong className="text-white">AI SEO(AEO)</strong>는 시작하셨나요?
+              네이버, 구글 SEO는 이미 하고 계시죠? <strong className="text-white">AI 검색 최적화(AEO)</strong>는 시작하셨나요?
             </p>
           </div>
         </div>
       </section>
 
-      {/* 작동 원리 Section */}
+      {/* Patient Signal 프레임워크 Section */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-full px-4 py-1.5 mb-4">
+              <Target className="h-4 w-4 text-indigo-600" />
+              <span className="text-sm font-medium text-indigo-700">Patient Signal 독자 프레임워크</span>
+            </div>
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              이렇게 작동합니다
+              ABHS 5축 분석으로 정밀하게 측정합니다
+            </h2>
+            <p className="text-gray-500 max-w-2xl mx-auto">
+              단순 키워드 추적이 아닙니다. 5가지 측정축으로 AI가 우리 병원을 <strong>얼마나 적극적으로</strong> 추천하는지 분석합니다.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { axis: 'Voice Share', desc: 'AI 응답에서 우리 병원이 언급되는 비율', icon: Activity, color: 'blue' },
+              { axis: 'Sentiment', desc: '언급 시 긍정·중립·부정 톤 분석', icon: Shield, color: 'green' },
+              { axis: 'Rec Depth', desc: '단독추천(R3)부터 단순언급(R1)까지', icon: Layers, color: 'purple' },
+              { axis: 'Platform', desc: '4개 플랫폼별 가중치 적용 점수', icon: Globe, color: 'cyan' },
+              { axis: 'Intent', desc: '예약·비교·공포 등 질문 의도별 분석', icon: Target, color: 'orange' },
+            ].map((item, i) => (
+              <div key={i} className="bg-gray-50 rounded-xl p-5 text-center hover:shadow-md transition-shadow">
+                <div className={`w-12 h-12 rounded-xl bg-${item.color}-100 flex items-center justify-center mx-auto mb-3`}>
+                  <item.icon className={`h-6 w-6 text-${item.color}-600`} />
+                </div>
+                <h3 className="font-bold text-gray-900 text-sm mb-1">{item.axis}</h3>
+                <p className="text-xs text-gray-500 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 작동 원리 Section - 3단계 */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              3분이면 시작할 수 있습니다
             </h2>
             <p className="text-gray-500">복잡한 설정 없이, 3단계면 충분합니다</p>
           </div>
@@ -126,11 +185,11 @@ export default function HomePage() {
                 <MessageSquare className="h-7 w-7 text-blue-600" />
               </div>
               <div className="text-sm font-bold text-blue-600 mb-2">STEP 1</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">질문 등록</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">병원 정보 입력</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                "천안 임플란트 잘하는 치과" 같은<br />
-                환자가 실제로 할 만한 질문을<br />
-                최대 10개까지 등록하세요
+                병원명, 진료과, 위치, 주력 진료만<br />
+                입력하면 AI 모니터링 질문이<br />
+                <strong>자동으로 생성</strong>됩니다
               </p>
             </div>
             <div className="text-center">
@@ -138,11 +197,11 @@ export default function HomePage() {
                 <Search className="h-7 w-7 text-green-600" />
               </div>
               <div className="text-sm font-bold text-green-600 mb-2">STEP 2</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">자동 크롤링</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">AI 자동 분석</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                매일, 4개 AI 플랫폼에<br />
-                자동으로 질문하고 응답을<br />
-                수집·분석합니다
+                매일, ChatGPT·Perplexity·Claude·Gemini<br />
+                4개 플랫폼에 자동으로 질문하고<br />
+                <strong>ABHS 5축 분석</strong>을 수행합니다
               </p>
             </div>
             <div className="text-center">
@@ -150,11 +209,11 @@ export default function HomePage() {
                 <BarChart3 className="h-7 w-7 text-purple-600" />
               </div>
               <div className="text-sm font-bold text-purple-600 mb-2">STEP 3</div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">리포트 확인</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">인사이트 확인</h3>
               <p className="text-sm text-gray-500 leading-relaxed">
-                대시보드에서 AI 가시성 점수,<br />
-                경쟁사 비교, 개선 인사이트를<br />
-                한눈에 확인하세요
+                SoV(Voice Share) 중심 대시보드에서<br />
+                가시성 점수, 경쟁사 비교,<br />
+                <strong>개선 기회</strong>를 확인하세요
               </p>
             </div>
           </div>
@@ -162,7 +221,7 @@ export default function HomePage() {
       </section>
 
       {/* 주요 기능 Section */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8">
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -171,47 +230,53 @@ export default function HomePage() {
             <p className="text-gray-500">AI가 우리 병원을 어떻게 소개하는지, 정확히 파악하세요</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center mb-4">
-                <Eye className="h-6 w-6 text-blue-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Eye,
+                color: 'blue',
+                title: 'SoV 기반 가시성 점수',
+                desc: '4개 AI 플랫폼에서 우리 병원이 차지하는 Voice Share를 매일 추적합니다. 점수 변동과 트렌드를 한눈에 확인하세요.',
+              },
+              {
+                icon: TrendingUp,
+                color: 'green',
+                title: '경쟁사 AEO 비교',
+                desc: '같은 지역 경쟁 병원의 AI 노출 현황을 자동으로 비교합니다. 누가 AI의 1순위 추천을 받고 있는지 파악하세요.',
+              },
+              {
+                icon: Shield,
+                color: 'purple',
+                title: '감성 & 추천 깊이 분석',
+                desc: 'AI가 우리 병원을 긍정적으로 추천하는지(R3), 단순 언급(R1)인지, 부정적(R0)인지 자동으로 분류합니다.',
+              },
+              {
+                icon: FileText,
+                color: 'orange',
+                title: '인용 출처 추적',
+                desc: 'AI가 우리 병원을 추천할 때 어떤 출처(블로그, 리뷰 등)를 참고하는지 추적합니다. 소스 관리 전략에 활용하세요.',
+              },
+              {
+                icon: Zap,
+                color: 'amber',
+                title: '개선 기회 자동 발견',
+                desc: '경쟁사는 AI에서 추천되지만 우리 병원은 빠져있는 질문 패턴을 자동으로 감지하고 개선 방향을 제시합니다.',
+              },
+              {
+                icon: Users,
+                color: 'cyan',
+                title: '13개 진료과 전문 분석',
+                desc: '치과, 피부과, 성형외과, 정형외과, 한의원, 안과, 내과 등 13개 진료과별 맞춤 질문과 분석을 제공합니다.',
+              },
+            ].map((feature, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                <div className={`w-12 h-12 rounded-xl bg-${feature.color}-100 flex items-center justify-center mb-4`}>
+                  <feature.icon className={`h-6 w-6 text-${feature.color}-600`} />
+                </div>
+                <h3 className="font-bold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{feature.desc}</p>
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">AI 가시성 점수</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                ChatGPT, Perplexity, Claude, Gemini에서 우리 병원이 언급되는 빈도, 
-                순위, 감성을 종합한 점수를 매일 추적합니다.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center mb-4">
-                <TrendingUp className="h-6 w-6 text-green-600" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">경쟁사 비교 분석</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                같은 지역 경쟁 병원 대비 AI 노출 현황을 비교합니다. 
-                어떤 병원이 더 자주 추천되는지 한눈에 파악하세요.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-4">
-                <Shield className="h-6 w-6 text-purple-600" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">감성 분석</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                AI가 우리 병원을 긍정적으로 추천하는지, 
-                부정적으로 언급하는지 자동으로 분석합니다.
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center mb-4">
-                <Zap className="h-6 w-6 text-orange-600" />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">주간 인사이트 리포트</h3>
-              <p className="text-sm text-gray-500 leading-relaxed">
-                매일 자동으로 분석 리포트를 생성합니다. 
-                점수 변동, 새로운 언급, 개선 포인트를 쉽게 확인하세요.
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -227,7 +292,9 @@ export default function HomePage() {
               '"ChatGPT한테 우리 병원 물어보면 뭐라 하는지 궁금한" 원장님',
               '"광고비 대비 신환이 줄어드는 느낌이 드는" 원장님',
               '"AEO, AI SEO가 뭔지 알고 싶은" 원장님',
-              '"경쟁 치과는 AI에서 어떻게 나오나 궁금한" 원장님',
+              '"경쟁 병원은 AI에서 어떻게 나오나 궁금한" 원장님',
+              '"네이버·구글은 하고 있는데 AI는 뭘 해야 할지 모르겠는" 원장님',
+              '"AI 시대에 뒤처지고 싶지 않은" 원장님',
             ].map((text, i) => (
               <div key={i} className="flex items-start gap-3 bg-white/10 backdrop-blur rounded-xl p-4">
                 <CheckCircle className="h-5 w-5 text-cyan-300 mt-0.5 flex-shrink-0" />
@@ -238,8 +305,43 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Patient Funnel 연계 Section */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-3xl p-8 sm:p-12 border border-blue-100">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-1.5 mb-4 border border-blue-200">
+                <Sparkles className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">페이션트 퍼널 × Patient Signal</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4">
+                환자 여정의 시작점이 바뀌고 있습니다
+              </h2>
+              <p className="text-gray-600 max-w-2xl mx-auto">
+                환자가 병원을 선택하는 10단계 여정, 그 첫 번째 단계인 <strong>"인지"</strong>가 
+                이제 AI 추천으로 시작됩니다. Patient Signal은 이 변화를 추적하는 유일한 도구입니다.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="text-3xl font-bold text-blue-600 mb-1">6,000+</div>
+                <p className="text-xs text-gray-500">페이션트 퍼널 수강 원장님</p>
+              </div>
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="text-3xl font-bold text-blue-600 mb-1">2.1배</div>
+                <p className="text-xs text-gray-500">평균 매출 성장률</p>
+              </div>
+              <div className="bg-white rounded-xl p-5 shadow-sm">
+                <div className="text-3xl font-bold text-blue-600 mb-1">40%</div>
+                <p className="text-xs text-gray-500">광고비 절감</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-500/25">
             <Sparkles className="h-8 w-8 text-white" />
@@ -249,7 +351,7 @@ export default function HomePage() {
           </h2>
           <p className="text-gray-500 mb-8">
             가입부터 첫 분석까지 3분이면 충분합니다.<br />
-            무료로 시작하세요.
+            무료 7일 체험으로 시작하세요.
           </p>
           <Link href="/register">
             <Button size="lg" className="px-10 py-6 text-base bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 shadow-lg shadow-blue-500/25">

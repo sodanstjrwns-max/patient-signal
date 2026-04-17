@@ -506,6 +506,54 @@ export class HospitalsService {
           `체중이 잘 안 빠지는데 ${region} 한방다이어트 잘하는 ${name} 있어?`,
         );
         break;
+      case 'INTERNAL_MEDICINE':
+        q.push(
+          `건강검진 받고 싶은데 ${region} ${name} 어디가 좋아?`,
+          `속이 자주 더부룩한데 ${region} ${name} 위내시경 잘하는 곳 알려줘`,
+          `혈압이 높다는데 ${region}에서 잘 관리해주는 ${name} 있어?`,
+        );
+        break;
+      case 'ORTHOPEDICS':
+        q.push(
+          `허리가 너무 아픈데 ${region} ${name} 추천해줘`,
+          `무릎이 시큰거리는데 ${region} ${name} 어디가 좋아?`,
+          `어깨가 안 올라가는데 ${region} ${name} 잘하는 곳 알려줘`,
+        );
+        break;
+      case 'UROLOGY':
+        q.push(
+          `소변을 자주 보는데 ${region} ${name} 추천해줘`,
+          `전립선 검사 받고 싶은데 ${region} ${name} 어디가 좋아?`,
+        );
+        break;
+      case 'ENT':
+        q.push(
+          `코가 항상 막혀서 ${region} ${name} 추천해줘`,
+          `코골이가 심한데 ${region} ${name} 어디가 좋아?`,
+          `귀가 잘 안 들리는데 ${region} ${name} 알려줘`,
+        );
+        break;
+      case 'PSYCHIATRY':
+        q.push(
+          `우울감이 심한데 ${region} ${name} 추천해줘`,
+          `잠을 잘 못 자는데 ${region} ${name} 어디가 좋아?`,
+          `불안감이 심해서 ${region} ${name} 상담 받고 싶어`,
+        );
+        break;
+      case 'OBSTETRICS':
+        q.push(
+          `임신 초기인데 ${region} ${name} 산전검사 잘하는 곳 추천해줘`,
+          `부인과 검진 받고 싶은데 ${region} ${name} 어디가 좋아?`,
+          `여의사 선생님 있는 ${region} ${name} 알려줘`,
+        );
+        break;
+      case 'PEDIATRICS':
+        q.push(
+          `아이 감기가 안 낫는데 ${region} ${name} 추천해줘`,
+          `영유아 예방접종 잘하는 ${region} ${name} 어디야?`,
+          `아이 성장이 걱정되는데 ${region} ${name} 알려줘`,
+        );
+        break;
       default:
         q.push(
           `몸이 안 좋은데 ${region} ${name} 추천해줘`,
@@ -536,6 +584,22 @@ export class HospitalsService {
       case 'OPHTHALMOLOGY':
         q.push(
           `라식 부작용 걱정되는데 ${region}에서 안전하게 잘하는 ${name} 추천해줘`,
+        );
+        break;
+      case 'PSYCHIATRY':
+        q.push(
+          `정신과 가는 게 부끄러운데 ${region}에서 프라이버시 보장되는 ${name} 있어?`,
+          `약을 먹어야 하나 걱정되는데 ${region} ${name} 중 상담 위주로 해주는 곳 추천해줘`,
+        );
+        break;
+      case 'OBSTETRICS':
+        q.push(
+          `산부인과 가기 무서운데 ${region}에서 편하게 진료 볼 수 있는 ${name} 추천해줘`,
+        );
+        break;
+      case 'PEDIATRICS':
+        q.push(
+          `아이가 주사를 무서워하는데 ${region}에서 아이 잘 달래주는 ${name} 있어?`,
         );
         break;
       default:
@@ -715,8 +779,15 @@ export class HospitalsService {
       DENTAL: '치과',
       DERMATOLOGY: '피부과',
       PLASTIC_SURGERY: '성형외과',
-      OPHTHALMOLOGY: '안과',
+      ORTHOPEDICS: '정형외과',
       KOREAN_MEDICINE: '한의원',
+      OPHTHALMOLOGY: '안과',
+      INTERNAL_MEDICINE: '내과',
+      UROLOGY: '비뇨의학과',
+      ENT: '이비인후과',
+      PSYCHIATRY: '정신건강의학과',
+      OBSTETRICS: '산부인과',
+      PEDIATRICS: '소아청소년과',
       OTHER: '병원',
     };
     return names[type] || '병원';

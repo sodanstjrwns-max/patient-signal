@@ -20,6 +20,8 @@ import {
   Lightbulb,
   Zap,
   PieChart,
+  Globe,
+  Target,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -30,6 +32,8 @@ const navigation = [
   { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
   { name: '실시간 질문', href: '/dashboard/live-query', icon: Zap },
   { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
+  { name: '인용 출처', href: '/dashboard/citations', icon: Globe },
+  { name: '기회 분석', href: '/dashboard/opportunities', icon: Target },
   { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
   { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
   { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
