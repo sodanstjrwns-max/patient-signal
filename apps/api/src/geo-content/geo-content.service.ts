@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nest
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { SPECIALTY_NAMES, SPECIALTY_PROCEDURES } from '../query-templates/query-templates.service';
-import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 
 /**
@@ -15,7 +15,7 @@ import { Prisma } from '@prisma/client';
  *  2. 퍼널 단계별 톤/구조 자동 설정
  *  3. 멀티 플랫폼 발행 관리 (네이버 블로그, 티스토리 등)
  *  4. 반말해라체 등 다양한 톤 지원
- *  5. GPT-4o 고급 모델 사용 (2,500자+ 풀 아티클)
+ *  5. Claude Sonnet 4 고급 모델 사용 (2,500자+ 풀 아티클)
  * ═══════════════════════════════════════════════════════════
  */
 
@@ -70,16 +70,16 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 @Injectable()
 export class GeoContentService {
   private readonly logger = new Logger(GeoContentService.name);
-  private openai: OpenAI | null = null;
+  private anthropic: Anthropic | null = null;
 
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
+    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     if (apiKey && apiKey.length > 20) {
-      this.openai = new OpenAI({ apiKey });
-      this.logger.log('OpenAI API 연결 완료 (GEO Content Agent)');
+      this.anthropic = new Anthropic({ apiKey });
+      this.logger.log('Anthropic Claude API 연결 완료 (GEO Content Agent)');
     }
   }
 
@@ -177,8 +177,8 @@ export class GeoContentService {
     relatedPromptIds?: string[];     // 연관 프롬프트
     additionalInstructions?: string; // 추가 지시사항
   }) {
-    if (!this.openai) {
-      throw new Error('OpenAI API가 설정되지 않았습니다');
+    if (!this.anthropic) {
+      throw new Error('Anthropic API가 설정되지 않았습니다');
     }
 
     // 병원 정보 로드
@@ -211,7 +211,7 @@ export class GeoContentService {
         relatedPromptIds: params.relatedPromptIds || [],
         procedure: params.procedure,
         status: 'GENERATING',
-        aiModel: 'gpt-4o',
+        aiModel: 'claude-sonnet-4-20250514',
         generationPrompt: params.topic,
         generationParams: {
           funnelStage: params.funnelStage,
@@ -351,18 +351,21 @@ ${additionalInstructions ? `## 사용자 추가 지시사항 (반드시 반영):
 }`;
 
     try {
-      const response = await this.openai!.chat.completions.create({
-        model: 'gpt-4o',
+      const response = await this.anthropic!.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 8000,
+        temperature: 0.7,
+        system: systemPrompt,
         messages: [
-          { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 8000,
-        response_format: { type: 'json_object' },
       });
 
-      const resultText = response.choices[0]?.message?.content || '{}';
+      const textBlock = response.content.find((b) => b.type === 'text') as { type: 'text'; text: string } | undefined;
+      const rawText = textBlock?.text || '{}';
+      // Claude는 JSON 앞뒤에 설명 텍스트를 붙일 수 있으므로 첫 { ~ 마지막 } 만 추출
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      const resultText = jsonMatch ? jsonMatch[0] : '{}';
       let result: any;
       try {
         result = JSON.parse(resultText);
