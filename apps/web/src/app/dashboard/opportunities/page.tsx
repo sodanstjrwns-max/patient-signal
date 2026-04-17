@@ -77,7 +77,7 @@ export default function OpportunitiesPage() {
   const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps'>('opportunities');
 
   const { data, isLoading } = useQuery({
-    queryKey: [...queryKeys.scores(hospitalId || ''), 'opportunities'],
+    queryKey: ['opportunities', hospitalId || ''],
     queryFn: () => fetchOpportunities(hospitalId || ''),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,

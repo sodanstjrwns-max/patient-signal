@@ -76,7 +76,7 @@ export default function CitationsPage() {
 
   // 실제 API 호출 (기존 scores 서비스의 getCitationAnalysis 활용)
   const { data: citationRaw, isLoading, error } = useQuery({
-    queryKey: [...queryKeys.scores(hospitalId || ''), 'citations'],
+    queryKey: ['citations', hospitalId || ''],
     queryFn: () => fetchCitationData(hospitalId || ''),
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
@@ -84,7 +84,7 @@ export default function CitationsPage() {
 
   // sourceHints 기반 AI응답에서 직접 가져오기 (fallback)
   const { data: responsesData } = useQuery({
-    queryKey: [...queryKeys.scores(hospitalId || ''), 'source-hints'],
+    queryKey: ['source-hints', hospitalId || ''],
     queryFn: async () => {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scores/${hospitalId}/source-hints`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
