@@ -20,6 +20,9 @@ export interface SourceHints {
   estimatedSources: string[];
 }
 
+// 【Area 2】Answer Position Taxonomy
+export type AnswerPositionType = 'PRIMARY_RECOMMEND' | 'COMPARISON_WINNER' | 'INFORMATION_CITE' | 'CONDITIONAL' | 'NEGATIVE';
+
 // AI 질의 결과
 export interface AIQueryResult {
   platform: AIPlatform;
@@ -42,6 +45,13 @@ export interface AIQueryResult {
   confidenceFactors?: Record<string, number>;
   isLowConfidence?: boolean;
   sourceHints?: SourceHints;
+  // 【Area 2】Answer Position 정밀 분류
+  answerPositionType?: AnswerPositionType;
+  // 【Area 4】Answer Quality Score
+  answerQualityScore?: number;
+  answerQualityFactors?: Record<string, number>;
+  // 【Area 2】시간대 세션
+  crawlSession?: string;
 }
 
 // 측정 결과 집계

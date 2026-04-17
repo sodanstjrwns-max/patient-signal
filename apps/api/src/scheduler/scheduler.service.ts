@@ -113,24 +113,46 @@ export class SchedulerService {
           }
         }
 
-        for (const prompt of hospital.prompts) {
-          try {
-            const crawlResults = await this.aiCrawlerService.queryAllPlatforms(
-              prompt.id,
-              hospital.id,
-              hospital.name,
-              prompt.promptText,
-              platforms,
-            );
-            
-            if (crawlResults.length > 0) {
+        // 【P3-1】크롤링 병렬화 (프롬프트 3개씩 동시 처리, rate-limit 대응)
+        const CONCURRENT_PROMPTS = 3;
+        const promptChunks: typeof hospital.prompts[] = [];
+        for (let i = 0; i < hospital.prompts.length; i += CONCURRENT_PROMPTS) {
+          promptChunks.push(hospital.prompts.slice(i, i + CONCURRENT_PROMPTS));
+        }
+
+        for (const chunk of promptChunks) {
+          const chunkResults = await Promise.allSettled(
+            chunk.map(async (prompt) => {
+              // 【Area 2】플랫폼별 맞춤 프롬프트 적용 (platformSpecific 필드 확인)
+              const effectivePlatforms = (prompt as any).platformSpecific
+                ? platforms.filter((p: string) => p === (prompt as any).platformSpecific)
+                : platforms;
+
+              const crawlResults = await this.aiCrawlerService.queryAllPlatforms(
+                prompt.id,
+                hospital.id,
+                hospital.name,
+                prompt.promptText,
+                effectivePlatforms,
+              );
+              return crawlResults;
+            }),
+          );
+
+          for (const settled of chunkResults) {
+            if (settled.status === 'fulfilled' && settled.value.length > 0) {
               completed++;
             } else {
               failed++;
+              if (settled.status === 'rejected') {
+                this.logger.error(`[${hospital.name}] 프롬프트 실패: ${settled.reason?.message || 'unknown'}`);
+              }
             }
-          } catch (error) {
-            failed++;
-            this.logger.error(`[${hospital.name}] 프롬프트 실패: ${error.message}`);
+          }
+          
+          // 청크 간 rate-limit 방지 딜레이
+          if (promptChunks.indexOf(chunk) < promptChunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
 
@@ -535,5 +557,376 @@ export class SchedulerService {
     const intersection = new Set([...setA].filter(x => setB.has(x)));
     const union = new Set([...setA, ...setB]);
     return union.size > 0 ? intersection.size / union.size : 0;
+  }
+
+  // ==================== 【Area 1】A/B 실험 프레임워크 ====================
+
+  /**
+   * 매일 생성된 10개 프롬프트 중 2개를 실험 그룹으로 태깅
+   * 7일 후 성과 비교하여 승리 패턴 자동 학습
+   */
+  async tagExperimentPrompts(hospitalId: string): Promise<{
+    tagged: number;
+    experimentType: string;
+  }> {
+    // 오늘 생성된 AUTO_GENERATED 프롬프트 조회
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayPrompts = await this.prisma.prompt.findMany({
+      where: {
+        hospitalId,
+        promptType: 'AUTO_GENERATED',
+        experimentGroup: null,
+        createdAt: { gte: today },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (todayPrompts.length < 4) return { tagged: 0, experimentType: 'none' };
+
+    // 10개 중 2개를 실험군으로 태깅 (랜덤 선택)
+    const experimentTypes = ['EXPERIMENT_TONE', 'EXPERIMENT_REGION', 'EXPERIMENT_INTENT'];
+    const selectedType = experimentTypes[Math.floor(Math.random() * experimentTypes.length)];
+
+    // 나머지는 CONTROL
+    const controlIds = todayPrompts.slice(0, todayPrompts.length - 2).map(p => p.id);
+    const experimentIds = todayPrompts.slice(-2).map(p => p.id);
+
+    await this.prisma.prompt.updateMany({
+      where: { id: { in: controlIds } },
+      data: { experimentGroup: 'CONTROL' as any },
+    });
+
+    await this.prisma.prompt.updateMany({
+      where: { id: { in: experimentIds } },
+      data: { experimentGroup: selectedType as any },
+    });
+
+    this.logger.log(`[A/B 실험] ${hospitalId}: ${controlIds.length}개 CONTROL, ${experimentIds.length}개 ${selectedType}`);
+
+    return { tagged: todayPrompts.length, experimentType: selectedType };
+  }
+
+  /**
+   * 7일 경과된 실험 프롬프트 성과 비교
+   */
+  async evaluateExperiments(hospitalId: string): Promise<{
+    evaluated: number;
+    winners: Array<{ promptId: string; group: string; mentionRate: number }>;
+    losers: Array<{ promptId: string; group: string; mentionRate: number }>;
+  }> {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // 7일 전 생성된 실험 프롬프트
+    const experimentPrompts = await this.prisma.prompt.findMany({
+      where: {
+        hospitalId,
+        experimentGroup: { not: null },
+        createdAt: { lte: sevenDaysAgo },
+      },
+      include: {
+        aiResponses: {
+          where: { createdAt: { gte: sevenDaysAgo } },
+          select: { isMentioned: true },
+        },
+      },
+    });
+
+    if (experimentPrompts.length === 0) return { evaluated: 0, winners: [], losers: [] };
+
+    const results = experimentPrompts.map(p => {
+      const total = p.aiResponses.length;
+      const mentioned = p.aiResponses.filter(r => r.isMentioned).length;
+      return {
+        promptId: p.id,
+        group: p.experimentGroup as string,
+        mentionRate: total > 0 ? Math.round((mentioned / total) * 100) : 0,
+      };
+    });
+
+    // CONTROL vs EXPERIMENT 비교
+    const controlAvg = results.filter(r => r.group === 'CONTROL');
+    const experimentAvg = results.filter(r => r.group !== 'CONTROL');
+
+    const controlMR = controlAvg.length > 0
+      ? controlAvg.reduce((sum, r) => sum + r.mentionRate, 0) / controlAvg.length
+      : 0;
+    const experimentMR = experimentAvg.length > 0
+      ? experimentAvg.reduce((sum, r) => sum + r.mentionRate, 0) / experimentAvg.length
+      : 0;
+
+    this.logger.log(`[A/B 결과] ${hospitalId}: CONTROL avg=${controlMR.toFixed(1)}%, EXPERIMENT avg=${experimentMR.toFixed(1)}%`);
+
+    // 상위 30% = winners, 하위 30% = losers
+    const sorted = [...results].sort((a, b) => b.mentionRate - a.mentionRate);
+    const winnerCount = Math.max(1, Math.floor(sorted.length * 0.3));
+    const loserCount = Math.max(1, Math.floor(sorted.length * 0.3));
+
+    return {
+      evaluated: results.length,
+      winners: sorted.slice(0, winnerCount),
+      losers: sorted.slice(-loserCount),
+    };
+  }
+
+  // ==================== 【Area 1】Golden Prompt 자동 탐지 + 복제 ====================
+
+  /**
+   * SoV 80%+ 프롬프트를 Golden Prompt로 마킹하고 변형 3~5개 자동 생성
+   */
+  async detectAndReplicateGoldenPrompts(hospitalId: string): Promise<{
+    newGoldenCount: number;
+    variantsCreated: number;
+    goldenPrompts: Array<{ promptId: string; promptText: string; mentionRate: number }>;
+  }> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    // 최근 30일 성과 데이터로 SoV 80%+ 프롬프트 탐지
+    const prompts = await this.prisma.prompt.findMany({
+      where: { hospitalId, isActive: true, isGoldenPrompt: false },
+      include: {
+        aiResponses: {
+          where: { createdAt: { gte: thirtyDaysAgo } },
+          select: { isMentioned: true },
+        },
+      },
+    });
+
+    const goldenCandidates = prompts.filter(p => {
+      if (p.aiResponses.length < 4) return false; // 최소 4회 측정
+      const mentionRate = p.aiResponses.filter(r => r.isMentioned).length / p.aiResponses.length;
+      return mentionRate >= 0.8;
+    });
+
+    let variantsCreated = 0;
+    const goldenPrompts: Array<{ promptId: string; promptText: string; mentionRate: number }> = [];
+
+    for (const golden of goldenCandidates) {
+      const mentionRate = Math.round(
+        (golden.aiResponses.filter(r => r.isMentioned).length / golden.aiResponses.length) * 100
+      );
+
+      // Golden으로 마킹
+      await this.prisma.prompt.update({
+        where: { id: golden.id },
+        data: { isGoldenPrompt: true, goldenDetectedAt: new Date() },
+      });
+
+      goldenPrompts.push({ promptId: golden.id, promptText: golden.promptText, mentionRate });
+
+      // 변형 3개 자동 생성
+      const variants = [
+        golden.promptText.replace(/추천해줘/, '비교해줘'),
+        golden.promptText.replace(/추천해줘/, '알려줘').replace(/어디야\?/, '어디가 좋을까?'),
+        golden.promptText + ' 실제 후기 기반으로.',
+      ].filter(v => v !== golden.promptText);
+
+      if (variants.length > 0) {
+        const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[
+          (await this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { planType: true } }))?.planType || 'FREE'
+        ] || PlanGuard.PLAN_LIMITS.FREE;
+        const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
+        const currentCount = await this.prisma.prompt.count({ where: { hospitalId, isActive: true } });
+
+        const slotsAvailable = Math.max(0, maxPrompts - currentCount);
+        const toCreate = variants.slice(0, Math.min(3, slotsAvailable));
+
+        if (toCreate.length > 0) {
+          await this.prisma.prompt.createMany({
+            data: toCreate.map(v => ({
+              hospitalId,
+              promptText: v,
+              promptType: 'AUTO_GENERATED' as const,
+              specialtyCategory: golden.specialtyCategory,
+              regionKeywords: golden.regionKeywords,
+              isActive: true,
+              experimentParentId: golden.id,
+            })),
+          });
+          variantsCreated += toCreate.length;
+        }
+      }
+    }
+
+    this.logger.log(`[Golden Prompt] ${hospitalId}: ${goldenCandidates.length}개 골든 감지, ${variantsCreated}개 변형 생성`);
+
+    return { newGoldenCount: goldenCandidates.length, variantsCreated, goldenPrompts };
+  }
+
+  // ==================== 【Area 5】주간 AI 코치 알림 생성 ====================
+
+  /**
+   * 매주 월요일 자동 3가지 실행 과제 생성
+   */
+  async generateWeeklyCoachActions(hospitalId: string): Promise<any> {
+    const lastWeek = new Date();
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const weekStart = new Date();
+    weekStart.setHours(0, 0, 0, 0);
+
+    // 이번 주 이미 생성된 액션이 있는지 확인
+    const existing = await this.prisma.weeklyCoachAction.findFirst({
+      where: { hospitalId, weekStartDate: weekStart },
+    });
+    if (existing) return existing;
+
+    // 최근 7일 데이터 수집
+    const [latestScore, contentGaps, goldenPrompts, lowPerformance] = await Promise.all([
+      this.prisma.dailyScore.findFirst({
+        where: { hospitalId },
+        orderBy: { scoreDate: 'desc' },
+      }),
+      this.prisma.contentGap.findMany({
+        where: { hospitalId, status: 'PENDING', createdAt: { gte: lastWeek } },
+        orderBy: { priorityScore: 'desc' },
+        take: 3,
+      }),
+      this.prisma.prompt.findMany({
+        where: { hospitalId, isGoldenPrompt: true, isActive: true },
+        take: 3,
+      }),
+      this.prisma.prompt.findMany({
+        where: { hospitalId, isActive: true },
+        include: {
+          aiResponses: {
+            where: { createdAt: { gte: lastWeek } },
+            select: { isMentioned: true, aiPlatform: true },
+          },
+        },
+      }),
+    ]);
+
+    // 3가지 액션 생성
+    const actions: any[] = [];
+
+    // 액션 1: Content Gap 기반
+    if (contentGaps.length > 0) {
+      const gap = contentGaps[0];
+      actions.push({
+        title: `"${gap.topic.substring(0, 30)}..." 콘텐츠 작성`,
+        description: `이 주제에서 경쟁사(${(gap.competitorNames || []).slice(0, 2).join(', ')})가 AI 추천을 받고 있습니다. 블로그 콘텐츠를 작성하면 SoV 상승 기회!`,
+        type: 'generate_geo',
+        priority: 'high',
+        relatedId: gap.id,
+      });
+    }
+
+    // 액션 2: Golden Prompt 변형
+    if (goldenPrompts.length > 0) {
+      actions.push({
+        title: `골든 프롬프트 "${goldenPrompts[0].promptText.substring(0, 25)}..." 변형 생성`,
+        description: `이 프롬프트가 80%+ SoV를 달성했습니다. 변형을 만들어 더 넓은 커버리지를 확보하세요.`,
+        type: 'create_prompt_variants',
+        priority: 'medium',
+        relatedId: goldenPrompts[0].id,
+      });
+    }
+
+    // 액션 3: 저성과 플랫폼 개선
+    const platformPerf = new Map<string, { mentioned: number; total: number }>();
+    for (const p of lowPerformance) {
+      for (const r of p.aiResponses) {
+        if (!platformPerf.has(r.aiPlatform)) platformPerf.set(r.aiPlatform, { mentioned: 0, total: 0 });
+        const perf = platformPerf.get(r.aiPlatform)!;
+        perf.total++;
+        if (r.isMentioned) perf.mentioned++;
+      }
+    }
+    const lowestPlatform = Array.from(platformPerf.entries())
+      .map(([platform, data]) => ({ platform, rate: data.total > 0 ? data.mentioned / data.total : 0 }))
+      .sort((a, b) => a.rate - b.rate)[0];
+
+    if (lowestPlatform && lowestPlatform.rate < 0.3) {
+      actions.push({
+        title: `${lowestPlatform.platform} 가시성 개선 (현재 ${Math.round(lowestPlatform.rate * 100)}%)`,
+        description: `${lowestPlatform.platform}에서 가시성이 낮습니다. 해당 플랫폼에 최적화된 프롬프트를 추가해보세요.`,
+        type: 'platform_optimization',
+        priority: 'medium',
+        relatedId: lowestPlatform.platform,
+      });
+    }
+
+    // 기본 액션 (부족하면 채우기)
+    if (actions.length < 3) {
+      actions.push({
+        title: '대시보드에서 최신 성과 확인하기',
+        description: `현재 종합 점수: ${latestScore?.overallScore ?? 0}점. 주간 트렌드를 확인하고 개선 포인트를 찾아보세요.`,
+        type: 'check_dashboard',
+        priority: 'low',
+        relatedId: null,
+      });
+    }
+
+    // DB 저장
+    const coachAction = await this.prisma.weeklyCoachAction.create({
+      data: {
+        hospitalId,
+        weekStartDate: weekStart,
+        actions: actions.slice(0, 3),
+      },
+    });
+
+    this.logger.log(`[주간 코치] ${hospitalId}: ${actions.length}개 액션 생성`);
+    return coachAction;
+  }
+
+  // ==================== 【Area 4】경쟁사 샘플링 벤치마크 ====================
+
+  /**
+   * 비용 최적화: 주 1회 전체 + 일 1회 상위 3개만 샘플링
+   * API 비용 ~70% 절감
+   */
+  async runSampledCompetitorBenchmark(
+    hospitalId: string,
+    mode: 'full' | 'sample' = 'sample',
+  ): Promise<{ measured: number; results: any[] }> {
+    const competitors = await this.prisma.competitor.findMany({
+      where: { hospitalId, isActive: true },
+      include: {
+        competitorScores: {
+          orderBy: { scoreDate: 'desc' },
+          take: 1,
+        },
+      },
+    });
+
+    if (competitors.length === 0) {
+      return { measured: 0, results: [] };
+    }
+
+    let targetCompetitors = competitors;
+
+    if (mode === 'sample') {
+      // 샘플 모드: 상위 3개만 (최근 점수 기준)
+      targetCompetitors = competitors
+        .sort((a, b) => {
+          const scoreA = a.competitorScores[0]?.overallScore ?? 0;
+          const scoreB = b.competitorScores[0]?.overallScore ?? 0;
+          return scoreB - scoreA;
+        })
+        .slice(0, 3);
+
+      this.logger.log(`[경쟁사 샘플링] ${hospitalId}: ${competitors.length}개 중 상위 3개만 측정`);
+    }
+
+    const results: any[] = [];
+    for (const competitor of targetCompetitors) {
+      try {
+        const score = await this.aiCrawlerService.measureCompetitorAEO(
+          hospitalId,
+          competitor.id,
+          competitor.competitorName,
+        );
+        results.push({ name: competitor.competitorName, ...score });
+      } catch (err) {
+        this.logger.error(`[경쟁사 벤치마크] ${competitor.competitorName} 실패: ${err.message}`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+
+    return { measured: results.length, results };
   }
 }

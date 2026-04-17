@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { GeoContentService } from './geo-content.service';
-import { AuthGuard } from '../auth/auth.guard';
+import { JwtAuthGuard as AuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('GEO 콘텐츠')
 @Controller('geo-content')

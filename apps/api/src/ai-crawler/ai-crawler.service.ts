@@ -11,6 +11,7 @@ import {
   SourceHints,
   CircuitBreakerState,
   PLATFORM_WEIGHTS,
+  AnswerPositionType,
 } from './types';
 
 @Injectable()
@@ -259,12 +260,21 @@ export class AICrawlerService {
               abhsContribution = sentFactor * depthScore * platformWeight * intentMultiplier;
               citedUrl = result.citedSources?.[0] || null;
             }
+
+            // 【Area 2】Answer Position 정밀 분류
+            result.answerPositionType = this.classifyAnswerPosition(result, sentimentV2, recDepth);
+
+            // 【Area 4】Answer Quality Score 계산
+            const aqs = this.calculateAnswerQualityScore(result, hospitalName, promptText);
+            result.answerQualityScore = aqs.score;
+            result.answerQualityFactors = aqs.factors;
           } else {
             // 미언급 시 의도만 분류
             queryIntent = this.classifyQueryIntentSimple(promptText);
           }
 
-          // DB에 저장 (ABHS 데이터 포함)
+          // DB에 저장 (ABHS + 신뢰도 데이터 통합)
+          // 【P0-2 FIX】confidenceScore를 create에 직접 포함 (불필요한 findFirst+update 제거)
           await this.prisma.aIResponse.create({
             data: {
               promptId,
@@ -293,31 +303,19 @@ export class AICrawlerService {
               citedUrl,
               // 소스 트래킹 데이터
               sourceHints: result.sourceHints ? JSON.parse(JSON.stringify(result.sourceHints)) : undefined,
+              // 할루시네이션 감소 신뢰도 데이터 (직접 포함)
+              confidenceScore: result.confidenceScore ?? null,
+              confidenceFactors: result.confidenceFactors ? (result.confidenceFactors as any) : undefined,
+              isLowConfidence: result.isLowConfidence ?? false,
+              // 【Area 2】Answer Position 정밀 분류
+              answerPositionType: result.answerPositionType as any ?? undefined,
+              // 【Area 4】Answer Quality Score
+              answerQualityScore: result.answerQualityScore ?? null,
+              answerQualityFactors: result.answerQualityFactors ? (result.answerQualityFactors as any) : undefined,
+              // 【Area 2】시간대 세션
+              crawlSession: result.crawlSession ?? undefined,
             },
           });
-
-          // 신뢰도 필드는 별도 업데이트 (DB 컬럼이 없을 수 있으므로)
-          if (result.confidenceScore !== undefined) {
-            try {
-              const created = await this.prisma.aIResponse.findFirst({
-                where: { hospitalId, promptId, aiPlatform: platform },
-                orderBy: { createdAt: 'desc' },
-                select: { id: true },
-              });
-              if (created) {
-                await this.prisma.aIResponse.update({
-                  where: { id: created.id },
-                  data: {
-                    confidenceScore: result.confidenceScore ?? null,
-                    confidenceFactors: result.confidenceFactors as any,
-                    isLowConfidence: result.isLowConfidence ?? false,
-                  },
-                });
-              }
-            } catch (confErr) {
-              this.logger.warn(`[신뢰도] DB 컬럼 미존재 - 신뢰도 저장 생략: ${confErr.message}`);
-            }
-          }
 
           // API 레이트 리밋 방지 (측정 사이 1.5초 딜레이)
           if (repeatIdx < this.REPEAT_COUNT - 1) {
@@ -844,7 +842,7 @@ export class AICrawlerService {
       
       // 【소스 트래킹】grounding metadata에서 인용 소스 추출
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-      const geminiSources: SourceItem[] = [];
+      // 【P0-1 FIX】외부 geminiSources에 직접 push (재선언 버그 수정)
       
       if (groundingMetadata?.groundingChunks) {
         for (const chunk of groundingMetadata.groundingChunks) {
@@ -2842,5 +2840,495 @@ JSON 형식으로만 답변:
       dist[depth] = (dist[depth] || 0) + 1;
     }
     return dist;
+  }
+
+  // ==================== 【Area 2】Answer Position 정밀 분류 ====================
+
+  /**
+   * Answer Position Taxonomy (5단계)
+   * - PRIMARY_RECOMMEND: 단독 또는 1순위 강력 추천
+   * - COMPARISON_WINNER: 비교 분석에서 우위 판정
+   * - INFORMATION_CITE: 정보 제공 맥락에서 인용
+   * - CONDITIONAL: 조건부 추천 ("~라면 괜찮다")
+   * - NEGATIVE: 부정적 언급 또는 비추천
+   */
+  private classifyAnswerPosition(
+    result: AIQueryResult,
+    sentimentV2: number | null,
+    recDepth: string | null,
+  ): AnswerPositionType {
+    // 부정적 감성 → NEGATIVE
+    if (sentimentV2 !== null && sentimentV2 <= -1) {
+      return 'NEGATIVE';
+    }
+
+    // 단독 추천 (R3) → PRIMARY_RECOMMEND
+    if (recDepth === 'R3') {
+      return 'PRIMARY_RECOMMEND';
+    }
+
+    // 1순위 + 긍정 감성 → PRIMARY_RECOMMEND
+    if (result.mentionPosition === 1 && sentimentV2 !== null && sentimentV2 >= 1) {
+      return 'PRIMARY_RECOMMEND';
+    }
+
+    // 비교 의도 + 상위 순위 → COMPARISON_WINNER
+    const promptLower = (result.response || '').toLowerCase();
+    const isComparisonContext = /비교|vs|차이|장단점|top\s*\d/.test(promptLower);
+    if (isComparisonContext && result.mentionPosition !== null && result.mentionPosition <= 2) {
+      return 'COMPARISON_WINNER';
+    }
+
+    // 조건부 추천 패턴 탐지
+    const conditionalPatterns = ['경우에', '라면', '다면', '할 때', '조건으로', '편이', '나쁘지 않'];
+    const mentionContext = result.matchedVariant 
+      ? this.extractMentionContext(result.response, result.matchedVariant, 100)
+      : '';
+    const isConditional = conditionalPatterns.some(p => mentionContext.includes(p));
+    if (isConditional && recDepth !== 'R3') {
+      return 'CONDITIONAL';
+    }
+
+    // R2 (상위 복수 추천) → 비교 맥락이면 COMPARISON_WINNER, 아니면 INFORMATION_CITE
+    if (recDepth === 'R2') {
+      return isComparisonContext ? 'COMPARISON_WINNER' : 'INFORMATION_CITE';
+    }
+
+    // R1 (단순 언급) → INFORMATION_CITE
+    return 'INFORMATION_CITE';
+  }
+
+  /**
+   * 언급 주변 텍스트 추출 (Answer Position 분석용)
+   */
+  private extractMentionContext(response: string, variant: string, radius: number): string {
+    const idx = response.toLowerCase().indexOf(variant.toLowerCase());
+    if (idx === -1) return '';
+    const start = Math.max(0, idx - radius);
+    const end = Math.min(response.length, idx + variant.length + radius);
+    return response.slice(start, end).toLowerCase();
+  }
+
+  // ==================== 【Area 4】Answer Quality Score ====================
+
+  /**
+   * Answer Quality Score (AQS)
+   * 정확한 주소/시술 매칭/오류/최신 정보에 가점/감점
+   * 범위: -50 ~ +100
+   */
+  private calculateAnswerQualityScore(
+    result: AIQueryResult,
+    hospitalName: string,
+    promptText: string,
+  ): { score: number; factors: Record<string, number> } {
+    const response = result.response;
+    const factors: Record<string, number> = {};
+    let score = 0;
+
+    // 1. 주소 정확도 (+20): 구체적 주소 정보가 있으면 가점
+    const hasAddress = /서울|경기|부산|대구|인천|광주|대전|울산|세종|강원|충북|충남|전북|전남|경북|경남|제주/.test(response)
+      && /[구동로길]\s?\d/.test(response);
+    const hasPhoneNumber = /0\d{1,2}[-.\s]?\d{3,4}[-.\s]?\d{4}/.test(response);
+    factors.addressAccuracy = (hasAddress ? 15 : 0) + (hasPhoneNumber ? 5 : 0);
+    score += factors.addressAccuracy;
+
+    // 2. 시술 매칭 (+15): 질문의 시술이 응답에도 등장하면 가점
+    const promptKeywords = promptText.split(/\s+/).filter(w => w.length >= 2);
+    const matchedProcedures = promptKeywords.filter(kw => response.includes(kw));
+    const procedureMatchRatio = promptKeywords.length > 0 ? matchedProcedures.length / promptKeywords.length : 0;
+    factors.procedureMatch = Math.round(procedureMatchRatio * 15);
+    score += factors.procedureMatch;
+
+    // 3. 오류 정보 감점 (-30): 불확실성·부정확성 마커
+    const errorMarkers = ['정확하지 않을 수', '폐업', '이전', '정보가 없', '찾을 수 없', '존재하지 않'];
+    const errorCount = errorMarkers.filter(m => response.includes(m)).length;
+    factors.errorPenalty = -Math.min(30, errorCount * 10);
+    score += factors.errorPenalty;
+
+    // 4. 최신 정보 가점 (+10): 최근 날짜·연도 언급
+    const currentYear = new Date().getFullYear();
+    const hasRecentDate = response.includes(String(currentYear)) || response.includes(String(currentYear - 1));
+    factors.recencyBonus = hasRecentDate ? 10 : 0;
+    score += factors.recencyBonus;
+
+    // 5. 웹검색 기반 가점 (+10)
+    factors.webSearchBonus = result.isWebSearch ? 10 : 0;
+    score += factors.webSearchBonus;
+
+    // 6. 인용 출처 가점 (+10)
+    const sourceCount = result.citedSources?.length || 0;
+    factors.citationBonus = Math.min(10, sourceCount * 3);
+    score += factors.citationBonus;
+
+    // 7. 구체적 시술/서비스 언급 (+15)
+    const specificTerms = ['임플란트', '교정', '라미네이트', '충치', '스케일링', '사랑니', '보철', '미백', 'CT', '디지털', '보톡스', '필러', '리프팅', 'MRI', '내시경'];
+    const specificCount = specificTerms.filter(t => response.includes(t)).length;
+    factors.specificityBonus = Math.min(15, specificCount * 3);
+    score += factors.specificityBonus;
+
+    // 범위 제한
+    score = Math.max(-50, Math.min(100, score));
+
+    return { score: Math.round(score), factors };
+  }
+
+  // ==================== 【Area 2】플랫폼별 맞춤 프롬프트 트윅 ====================
+
+  /**
+   * 플랫폼별 프롬프트 최적화
+   * - Perplexity: 출처 포함 요청
+   * - ChatGPT: 지역명 강화
+   * - Claude: 리스트형 응답 유도
+   * - Gemini: Google grounding 활용 유도
+   */
+  tweakPromptForPlatform(promptText: string, platform: AIPlatform): string {
+    switch (platform) {
+      case 'PERPLEXITY':
+        return `${promptText} 가능하면 출처(URL)도 함께 알려줘.`;
+      case 'CHATGPT':
+        // 지역명이 이미 포함되어 있으면 그대로, 없으면 구체적 답변 유도
+        return `${promptText} 구체적인 병원 이름과 위치를 포함해서 알려줘.`;
+      case 'CLAUDE':
+        return `${promptText} 번호 리스트 형식으로 각 병원의 장단점과 함께 알려줘.`;
+      case 'GEMINI':
+        return `${promptText} 최신 정보를 기반으로 알려줘.`;
+      default:
+        return promptText;
+    }
+  }
+
+  // ==================== 【Area 3】AEO→GEO Closed-Loop 파이프라인 ====================
+
+  /**
+   * AEO→GEO 자동 파이프라인 실행
+   * 1. Content Gap 감지 (미언급 + 경쟁사 언급)
+   * 2. GEO Content 자동 초안 생성
+   * 3. 파이프라인 레코드 생성
+   */
+  async runAeoPipeline(hospitalId: string): Promise<{
+    pipelinesCreated: number;
+    details: any[];
+  }> {
+    this.logger.log(`=== AEO→GEO Pipeline 시작: ${hospitalId} ===`);
+
+    const last14Days = new Date();
+    last14Days.setDate(last14Days.getDate() - 14);
+
+    // 1. 미언급 + 경쟁사 언급 응답 찾기
+    const missedResponses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        isMentioned: false,
+        responseDate: { gte: last14Days },
+        competitorsMentioned: { isEmpty: false },
+      },
+      select: {
+        promptId: true,
+        aiPlatform: true,
+        competitorsMentioned: true,
+        prompt: { select: { promptText: true, specialtyCategory: true } },
+      },
+      orderBy: { responseDate: 'desc' },
+    });
+
+    if (missedResponses.length === 0) {
+      return { pipelinesCreated: 0, details: [] };
+    }
+
+    // 2. 프롬프트별 그룹핑
+    const gapMap = new Map<string, {
+      promptText: string;
+      platforms: Set<string>;
+      competitors: Set<string>;
+      category: string;
+    }>();
+
+    for (const r of missedResponses) {
+      const key = r.promptId;
+      if (!gapMap.has(key)) {
+        gapMap.set(key, {
+          promptText: r.prompt?.promptText || '',
+          platforms: new Set(),
+          competitors: new Set(),
+          category: r.prompt?.specialtyCategory || '',
+        });
+      }
+      const gap = gapMap.get(key)!;
+      gap.platforms.add(r.aiPlatform);
+      r.competitorsMentioned.forEach(c => gap.competitors.add(c));
+    }
+
+    // 3. 기존 파이프라인과 중복 방지
+    const existingPipelines = await this.prisma.aeoPipeline.findMany({
+      where: { hospitalId, status: { in: ['GAP_DETECTED', 'CONTENT_DRAFTED'] } },
+      select: { gapPromptText: true },
+    });
+    const existingGapTexts = new Set(existingPipelines.map(p => p.gapPromptText));
+
+    // 4. 현재 SoV 측정 (파이프라인의 preSovPercent 기록용)
+    const latestScore = await this.prisma.dailyScore.findFirst({
+      where: { hospitalId },
+      orderBy: { scoreDate: 'desc' },
+      select: { sovPercent: true },
+    });
+
+    const details: any[] = [];
+    let created = 0;
+
+    for (const [, gap] of gapMap) {
+      if (existingGapTexts.has(gap.promptText)) continue;
+      if (gap.platforms.size < 2) continue; // 2개 이상 플랫폼에서 미언급인 경우만
+
+      try {
+        const pipeline = await this.prisma.aeoPipeline.create({
+          data: {
+            hospitalId,
+            gapDetectedAt: new Date(),
+            gapPromptText: gap.promptText,
+            gapPlatforms: Array.from(gap.platforms),
+            competitorsInGap: Array.from(gap.competitors),
+            preSovPercent: latestScore?.sovPercent ?? null,
+            status: 'GAP_DETECTED',
+          },
+        });
+
+        details.push({
+          pipelineId: pipeline.id,
+          promptText: gap.promptText,
+          platforms: Array.from(gap.platforms),
+          competitors: Array.from(gap.competitors),
+        });
+        created++;
+      } catch (err) {
+        this.logger.warn(`[AEO Pipeline] 생성 실패: ${err.message}`);
+      }
+    }
+
+    this.logger.log(`=== AEO→GEO Pipeline 완료: ${created}개 파이프라인 생성 ===`);
+    return { pipelinesCreated: created, details };
+  }
+
+  /**
+   * 【Area 3】AEO Impact Score 계산
+   * 발행 후 2주 경과된 파이프라인의 SoV 변화 측정
+   */
+  async calculateAeoImpact(hospitalId: string): Promise<{
+    measured: number;
+    results: Array<{ pipelineId: string; sovLift: number; impactScore: number }>;
+  }> {
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    // 발행된 지 2주 이상 된 파이프라인 중 아직 재측정 안 된 것
+    const pipelines = await this.prisma.aeoPipeline.findMany({
+      where: {
+        hospitalId,
+        status: 'PUBLISHED',
+        publishedAt: { lte: twoWeeksAgo },
+        remeasuredAt: null,
+      },
+    });
+
+    if (pipelines.length === 0) {
+      return { measured: 0, results: [] };
+    }
+
+    // 현재 SoV
+    const latestScore = await this.prisma.dailyScore.findFirst({
+      where: { hospitalId },
+      orderBy: { scoreDate: 'desc' },
+      select: { sovPercent: true },
+    });
+    const currentSov = latestScore?.sovPercent ?? 0;
+
+    const results: Array<{ pipelineId: string; sovLift: number; impactScore: number }> = [];
+
+    for (const pipeline of pipelines) {
+      const preSov = pipeline.preSovPercent ?? 0;
+      const sovLift = currentSov - preSov;
+
+      // Impact Score 계산
+      const platformCoverage = pipeline.gapPlatforms.length / 4; // 4개 플랫폼 기준
+      const competitorCount = pipeline.competitorsInGap.length;
+      const impactScore = Math.round(
+        (sovLift > 0 ? sovLift * 2 : sovLift) * 0.5 + // SoV 변화 50%
+        platformCoverage * 30 +                        // 플랫폼 커버리지 30%
+        Math.min(20, competitorCount * 5)              // 경쟁사 임팩트 20%
+      );
+
+      await this.prisma.aeoPipeline.update({
+        where: { id: pipeline.id },
+        data: {
+          remeasuredAt: new Date(),
+          postSovPercent: currentSov,
+          sovLift,
+          impactScore,
+          impactFactors: { sovLift, platformCoverage, competitorCount, preSov, currentSov },
+          status: 'IMPACT_CALCULATED',
+        },
+      });
+
+      results.push({ pipelineId: pipeline.id, sovLift, impactScore });
+    }
+
+    return { measured: results.length, results };
+  }
+
+  // ==================== 【Area 4】Weighted Intent SoV ====================
+
+  /**
+   * 의도별 전환 가치를 반영한 Weighted Intent SoV 계산
+   */
+  calculateWeightedIntentSov(intentScores: Record<string, number>): Record<string, { sov: number; valueScore: number; weightedSov: number }> {
+    const intentValues: Record<string, number> = {
+      reservation: 5,   // 예약 의도 → 매출 직결
+      review: 4,         // 후기 → 신뢰도 핵심
+      fear: 3,           // 공포/걱정 → 전환 기회
+      comparison: 2,     // 비교 → 경쟁 분석
+      information: 1,    // 정보 탐색 → 기본
+    };
+
+    const result: Record<string, { sov: number; valueScore: number; weightedSov: number }> = {};
+
+    for (const [intent, sov] of Object.entries(intentScores)) {
+      const value = intentValues[intent] || 1;
+      result[intent] = {
+        sov,
+        valueScore: value,
+        weightedSov: Math.round(sov * value / 5 * 100) / 100, // 정규화
+      };
+    }
+
+    return result;
+  }
+
+  // ==================== 【Area 5】1-Click Improve API ====================
+
+  /**
+   * 1-Click 개선 액션 처리
+   * type: 'generate_geo' | 'create_prompt_variants' | 'add_competitor'
+   */
+  async handleOneClickImprove(hospitalId: string, action: {
+    type: string;
+    relatedId?: string;
+    params?: Record<string, any>;
+  }): Promise<{ success: boolean; result: any }> {
+    switch (action.type) {
+      case 'generate_geo': {
+        // Content Gap → GEO 콘텐츠 초안 생성 트리거
+        if (!action.relatedId) return { success: false, result: { error: 'relatedId (contentGapId) 필요' } };
+        const blogDraft = await this.generateBlogDraft(hospitalId, action.relatedId);
+        return { success: true, result: blogDraft };
+      }
+      case 'create_prompt_variants': {
+        // Golden Prompt → 변형 생성 트리거
+        if (!action.relatedId) return { success: false, result: { error: 'relatedId (promptId) 필요' } };
+        const prompt = await this.prisma.prompt.findUnique({ where: { id: action.relatedId } });
+        if (!prompt || prompt.hospitalId !== hospitalId) return { success: false, result: { error: '프롬프트 미발견' } };
+        // 변형 3개 생성 (톤/지역 변형)
+        const variants = this.generatePromptVariants(prompt.promptText, 3);
+        const created = await this.prisma.prompt.createMany({
+          data: variants.map(v => ({
+            hospitalId,
+            promptText: v,
+            promptType: 'AUTO_GENERATED' as const,
+            specialtyCategory: prompt.specialtyCategory,
+            regionKeywords: prompt.regionKeywords,
+            isActive: true,
+            experimentGroup: 'EXPERIMENT_TONE' as const,
+            experimentParentId: prompt.id,
+          })),
+        });
+        return { success: true, result: { created: created.count, variants } };
+      }
+      case 'add_competitor': {
+        // 경쟁사 자동 등록
+        const name = action.params?.competitorName;
+        if (!name) return { success: false, result: { error: 'competitorName 필요' } };
+        const competitor = await this.prisma.competitor.create({
+          data: {
+            hospitalId,
+            competitorName: name,
+            isAutoDetected: true,
+            isActive: true,
+          },
+        });
+        return { success: true, result: competitor };
+      }
+      default:
+        return { success: false, result: { error: `알 수 없는 액션 타입: ${action.type}` } };
+    }
+  }
+
+  /**
+   * 프롬프트 변형 생성 (톤 변형)
+   */
+  private generatePromptVariants(originalText: string, count: number): string[] {
+    const toneVariants = [
+      (t: string) => t.replace(/추천해줘/, '알려줘').replace(/어디야\?/, '어디가 좋을까?'),
+      (t: string) => t.replace(/알려줘/, '소개해줘').replace(/좋아\?/, '좋을까요?'),
+      (t: string) => t + ' 실제 후기 기반으로.',
+      (t: string) => t + ' 가격 정보도 포함해서.',
+      (t: string) => t.replace(/추천해줘/, '비교해줘'),
+    ];
+
+    const variants: string[] = [];
+    for (let i = 0; i < Math.min(count, toneVariants.length); i++) {
+      const variant = toneVariants[i](originalText);
+      if (variant !== originalText) variants.push(variant);
+    }
+    return variants;
+  }
+
+  // ==================== 【Area 5】SoV 시뮬레이터 ====================
+
+  /**
+   * 프롬프트 추가 시 예상 SoV 상승 예측
+   */
+  async simulateSovLift(hospitalId: string, newPromptTexts: string[]): Promise<{
+    currentSov: number;
+    estimatedNewSov: number;
+    estimatedLift: number;
+    breakdown: Array<{ prompt: string; estimatedMentionProbability: number }>;
+  }> {
+    // 현재 SoV
+    const latestScore = await this.prisma.dailyScore.findFirst({
+      where: { hospitalId },
+      orderBy: { scoreDate: 'desc' },
+      select: { sovPercent: true, mentionCount: true },
+    });
+
+    const currentSov = latestScore?.sovPercent ?? 0;
+
+    // 기존 프롬프트 성과 기반 예측
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const existingResponses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: thirtyDaysAgo } },
+      select: { isMentioned: true, prompt: { select: { promptText: true } } },
+    });
+
+    // 기존 평균 언급률
+    const avgMentionRate = existingResponses.length > 0
+      ? existingResponses.filter(r => r.isMentioned).length / existingResponses.length
+      : 0.3; // 데이터 없으면 30% 가정
+
+    // 새 프롬프트 예측 (기존 평균의 80% 보수적 추정)
+    const breakdown = newPromptTexts.map(prompt => ({
+      prompt: prompt.substring(0, 60),
+      estimatedMentionProbability: Math.round(avgMentionRate * 0.8 * 100),
+    }));
+
+    // 예상 SoV 계산
+    const totalPrompts = existingResponses.length / 4 + newPromptTexts.length; // 4 = 플랫폼 수
+    const currentMentioned = existingResponses.filter(r => r.isMentioned).length / 4;
+    const expectedNewMentioned = newPromptTexts.length * avgMentionRate * 0.8;
+    const estimatedNewSov = totalPrompts > 0
+      ? Math.round(((currentMentioned + expectedNewMentioned) / totalPrompts) * 100)
+      : currentSov;
+    const estimatedLift = Math.round((estimatedNewSov - currentSov) * 10) / 10;
+
+    return { currentSov, estimatedNewSov, estimatedLift, breakdown };
   }
 }

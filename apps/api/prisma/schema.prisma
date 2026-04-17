@@ -121,6 +121,35 @@ enum CrawlStatus {
   FAILED
 }
 
+// ==================== Area 2: Answer Position Taxonomy ====================
+
+enum AnswerPositionType {
+  PRIMARY_RECOMMEND    // 단독 또는 1순위 강력 추천
+  COMPARISON_WINNER    // 비교 분석에서 우위 판정
+  INFORMATION_CITE     // 정보 제공 맥락에서 인용
+  CONDITIONAL          // 조건부 추천 ("~라면 괜찮다")
+  NEGATIVE             // 부정적 언급 또는 비추천
+}
+
+// ==================== Area 1: A/B Experiment Tag ====================
+
+enum ExperimentGroup {
+  CONTROL              // 대조군 (기존 프롬프트)
+  EXPERIMENT_TONE      // 실험군: 톤 변형
+  EXPERIMENT_REGION    // 실험군: 지역 변형
+  EXPERIMENT_INTENT    // 실험군: 의도 변형
+}
+
+// ==================== Area 3: AEO Pipeline Status ====================
+
+enum AeoPipelineStatus {
+  GAP_DETECTED         // 갭 감지됨
+  CONTENT_DRAFTED      // GEO 콘텐츠 초안 생성됨
+  PUBLISHED            // 발행됨
+  REMEASURED           // 재측정 완료
+  IMPACT_CALCULATED    // 효과 계산 완료
+}
+
 // ==================== MODELS ====================
 
 // 사용자 테이블
@@ -181,6 +210,7 @@ model Hospital {
   crawlJobs          CrawlJob[]
   reports            Report[]
   geoContents        GeoContent[]
+  aeoPipelines       AeoPipeline[]
 
   @@index([subscriptionStatus, planType])
   @@index([planType])
@@ -196,6 +226,14 @@ model Prompt {
   specialtyCategory String?   @map("specialty_category")
   regionKeywords   String[]   @map("region_keywords")
   isActive         Boolean    @default(true) @map("is_active")
+  // 【Area 1】A/B 실험 태깅
+  experimentGroup  ExperimentGroup? @map("experiment_group") // CONTROL, EXPERIMENT_TONE, etc.
+  experimentParentId String?  @map("experiment_parent_id")  // 원본 프롬프트 ID (변형의 원본 추적)
+  // 【Area 1】Golden Prompt 추적
+  isGoldenPrompt   Boolean    @default(false) @map("is_golden_prompt") // SoV 80%+ 골든 프롬프트
+  goldenDetectedAt DateTime?  @map("golden_detected_at")
+  // 【Area 2】플랫폼별 맞춤 프롬프트
+  platformSpecific String?    @map("platform_specific")  // 특정 플랫폼 전용 (null=공통)
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
@@ -203,6 +241,8 @@ model Prompt {
   aiResponses AIResponse[]
 
   @@index([hospitalId, isActive])
+  @@index([hospitalId, isGoldenPrompt])
+  @@index([experimentGroup])
   @@map("prompts")
 }
 
@@ -240,6 +280,13 @@ model AIResponse {
   confidenceScore      Float?        @map("confidence_score")     // 0.0~1.0 응답 신뢰도
   confidenceFactors    Json?         @map("confidence_factors")   // {crossValidation, uncertaintyMarker, sourceGrounding, ...}
   isLowConfidence      Boolean       @default(false) @map("is_low_confidence") // 신뢰도 < 0.4 플래그
+  // 【Area 2】Answer Position 정밀 분류
+  answerPositionType   AnswerPositionType? @map("answer_position_type") // PRIMARY_RECOMMEND, COMPARISON_WINNER, etc.
+  // 【Area 4】Answer Quality Score
+  answerQualityScore   Float?        @map("answer_quality_score")  // -50 ~ +100 품질 점수
+  answerQualityFactors Json?         @map("answer_quality_factors") // {addressAccuracy, procedureMatch, ...}
+  // 【Area 4】시간대 세션 (morning/afternoon/evening)
+  crawlSession         String?       @map("crawl_session")        // morning, afternoon, evening
   createdAt            DateTime      @default(now()) @map("created_at")
 
   prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
@@ -249,6 +296,7 @@ model AIResponse {
   @@index([promptId, aiPlatform])
   @@index([hospitalId, isMentioned, responseDate])
   @@index([hospitalId, createdAt])
+  @@index([answerPositionType, hospitalId])
   @@map("ai_responses")
 }
 
@@ -269,6 +317,14 @@ model DailyScore {
   platformContributions Json? @map("platform_contributions") // {chatgpt: {weight, score, contribution}}
   intentScores    Json?    @map("intent_scores")    // {reservation: 85, comparison: 72, ...}
   depthDistribution Json?  @map("depth_distribution") // {R0: 2, R1: 5, R2: 8, R3: 3}
+  // 【Area 4】Weighted Intent SoV
+  weightedIntentSov Json?  @map("weighted_intent_sov") // {reservation: {sov, value_score}, ...}
+  // 【Area 4】Answer Quality Score (일별 집계)
+  avgAnswerQuality Float?  @map("avg_answer_quality")  // 평균 AQS
+  // 【Area 2】시간대별 세션 분포
+  sessionDistribution Json? @map("session_distribution") // {morning: {score, count}, afternoon: {...}}
+  // 【Area 2】Answer Position 분포
+  positionTypeDistribution Json? @map("position_type_distribution") // {PRIMARY_RECOMMEND: 5, ...}
   createdAt       DateTime @default(now()) @map("created_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
@@ -811,6 +867,76 @@ model GeoContent {
   @@index([hospitalId, funnelStage])
   @@index([hospitalId, createdAt])
   @@map("geo_contents")
+}
+
+// ==================== AEO Pipeline (Closed-Loop) ====================
+
+// AEO→GEO 파이프라인 레코드 (측정→감지→생성→발행→재측정→효과계산)
+model AeoPipeline {
+  id                 String            @id @default(uuid())
+  hospitalId         String            @map("hospital_id")
+  
+  // 갭 감지 정보
+  contentGapId       String?           @map("content_gap_id")     // 연관 ContentGap
+  gapDetectedAt      DateTime          @map("gap_detected_at")    // 갭 감지 시점
+  gapPromptText      String?           @map("gap_prompt_text")    // 갭이 발견된 프롬프트 텍스트
+  gapPlatforms       String[]          @map("gap_platforms")      // 어느 플랫폼에서 미언급
+  competitorsInGap   String[]          @map("competitors_in_gap") // 갭에서 언급된 경쟁사
+  
+  // GEO 콘텐츠 생성
+  geoContentId       String?           @map("geo_content_id")     // 생성된 GEO 콘텐츠 ID
+  contentDraftedAt   DateTime?         @map("content_drafted_at")
+  
+  // 발행
+  publishedAt        DateTime?         @map("published_at")
+  publishedUrl       String?           @map("published_url")
+  publishPlatform    String?           @map("publish_platform")
+  
+  // 재측정 (발행 2주 후)
+  remeasuredAt       DateTime?         @map("remeasured_at")
+  preSovPercent      Float?            @map("pre_sov_percent")    // 발행 전 SoV %
+  postSovPercent     Float?            @map("post_sov_percent")   // 발행 후 SoV %
+  sovLift            Float?            @map("sov_lift")           // SoV 변화 (+12.5 = +12.5%p)
+  
+  // AEO Impact Score
+  impactScore        Float?            @map("impact_score")       // 종합 임팩트 점수
+  impactFactors      Json?             @map("impact_factors")     // {sovLift, platformCoverage, ...}
+  
+  // 상태
+  status             AeoPipelineStatus @default(GAP_DETECTED)
+  
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  
+  hospital           Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  
+  @@index([hospitalId, status])
+  @@index([hospitalId, gapDetectedAt])
+  @@map("aeo_pipelines")
+}
+
+// ==================== Weekly Coach Notifications ====================
+
+model WeeklyCoachAction {
+  id                 String   @id @default(uuid())
+  hospitalId         String   @map("hospital_id")
+  weekStartDate      DateTime @map("week_start_date") @db.Date
+  
+  // AI가 생성한 3가지 액션
+  actions            Json     // [{title, description, type, priority, relatedId}]
+  
+  // 발송 상태
+  sentViaEmail       Boolean  @default(false) @map("sent_via_email")
+  sentViaKakao       Boolean  @default(false) @map("sent_via_kakao")
+  sentAt             DateTime? @map("sent_at")
+  
+  // 사용자 반응
+  clickedActions     String[] @map("clicked_actions")  // 클릭한 액션 ID들
+  
+  createdAt          DateTime @default(now()) @map("created_at")
+  
+  @@unique([hospitalId, weekStartDate])
+  @@map("weekly_coach_actions")
 }
 
 // GEO 콘텐츠 발행 이력
