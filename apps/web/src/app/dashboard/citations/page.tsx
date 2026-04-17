@@ -6,22 +6,19 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
-import { queryKeys } from '@/lib/queryKeys';
+// queryKeys is centralized in @/lib/queryKeys (used inline here)
 import { 
   Globe, Link as LinkIcon, ExternalLink, FileText, 
   BarChart3, TrendingUp, ArrowUpRight, Search,
   Layers, Eye, Filter, ChevronRight,
 } from 'lucide-react';
 
-// ─── API 호출 ───
+// ─── API 호출 (axios interceptor 사용으로 토큰 자동 첨부) ───
+import { api } from '@/lib/api';
+
 const fetchCitationData = async (hospitalId: string) => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scores/${hospitalId}/citations`, {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`,
-    },
-  });
-  if (!res.ok) throw new Error('인용 데이터를 불러올 수 없습니다');
-  return res.json();
+  const { data } = await api.get(`/scores/${hospitalId}/citations`);
+  return data;
 };
 
 // ─── 도메인 추출 헬퍼 ───
@@ -86,11 +83,12 @@ export default function CitationsPage() {
   const { data: responsesData } = useQuery({
     queryKey: ['source-hints', hospitalId || ''],
     queryFn: async () => {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/scores/${hospitalId}/source-hints`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-      });
-      if (!res.ok) return { sources: [] };
-      return res.json();
+      try {
+        const { data } = await api.get(`/scores/${hospitalId}/source-hints`);
+        return data;
+      } catch {
+        return { sources: [] };
+      }
     },
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,

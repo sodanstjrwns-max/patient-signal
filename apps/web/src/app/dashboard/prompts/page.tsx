@@ -230,7 +230,7 @@ export default function PromptsPage() {
     setSelectedSuggestions(new Set());
     // 모든 카테고리 펼치기
     if (suggestData?.suggestions) {
-      const cats = new Set(suggestData.suggestions.map((s: any) => s.category));
+      const cats = new Set<string>(suggestData.suggestions.map((s: any) => s.category as string));
       setExpandedCategories(cats);
     }
   };
@@ -411,7 +411,7 @@ export default function PromptsPage() {
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-                  {Object.entries(groupedSuggestions).map(([category, items]: [string, any[]]) => {
+                  {(Object.entries(groupedSuggestions) as [string, any[]][]).map(([category, items]) => {
                     const config = categoryConfig[category] || categoryConfig['추천'];
                     const IconComp = config.icon;
                     const isExpanded = expandedCategories.has(category);

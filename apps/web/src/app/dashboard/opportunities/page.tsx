@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
-import { queryKeys } from '@/lib/queryKeys';
+import { api } from '@/lib/api';
 import { 
   Zap, Target, TrendingUp, AlertTriangle, CheckCircle, 
   ArrowRight, Eye, Users, MessageSquare, Lightbulb,
@@ -15,19 +15,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-// ─── API 호출: Content Gap + 경쟁사 언급 vs 우리 병원 미언급 ───
+// ─── API 호출: Content Gap + 경쟁사 언급 vs 우리 병원 미언급 (axios interceptor 사용) ───
 const fetchOpportunities = async (hospitalId: string) => {
-  const [gapsRes, responsesRes] = await Promise.all([
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/scores/${hospitalId}/content-gaps`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-    }),
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/scores/${hospitalId}/opportunity-analysis`, {
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-    }),
+  const [gapsRes, responsesRes] = await Promise.allSettled([
+    api.get(`/scores/${hospitalId}/content-gaps`),
+    api.get(`/scores/${hospitalId}/opportunity-analysis`),
   ]);
 
-  const gaps = gapsRes.ok ? await gapsRes.json() : [];
-  const opportunities = responsesRes.ok ? await responsesRes.json() : { opportunities: [], summary: {} };
+  const gaps = gapsRes.status === 'fulfilled' ? gapsRes.value.data : [];
+  const opportunities = responsesRes.status === 'fulfilled' ? responsesRes.value.data : { opportunities: [], summary: {} };
 
   return { gaps, opportunities: opportunities.opportunities || [], summary: opportunities.summary || {} };
 };
