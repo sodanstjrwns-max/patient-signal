@@ -35,6 +35,8 @@ import {
   Lightbulb,
   BarChart3,
   Zap,
+  RotateCcw,
+  Archive,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -99,12 +101,20 @@ export default function CompetitorsPage() {
   const [upgradeFeature, setUpgradeFeature] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
+  const [showInactive, setShowInactive] = useState(false);
 
   // 경쟁사 목록 조회 - 공유 queryKey 사용
   const { data: competitors, isLoading } = useQuery({
     queryKey: queryKeys.competitors.list(hospitalId!),
     queryFn: () => competitorsApi.list(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
+  });
+
+  // 비활성(삭제된) 경쟁사 조회
+  const { data: inactiveCompetitors } = useQuery({
+    queryKey: ['competitors-inactive', hospitalId],
+    queryFn: () => competitorsApi.getInactive(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId && showInactive,
   });
 
   // 경쟁사 비교 데이터 - 공유 훅 사용
@@ -145,6 +155,36 @@ export default function CompetitorsPage() {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
       toast.success('경쟁사가 삭제되었습니다.');
+    },
+  });
+
+  // 경쟁사 전체 복구
+  const restoreAllMutation = useMutation({
+    mutationFn: () => competitorsApi.restoreAll(hospitalId!),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitors-inactive', hospitalId] });
+      const count = res.data?.restored || 0;
+      toast.success(`${count}개 경쟁사가 복구되었습니다!`);
+      if (count === 0) {
+        toast.info('복구할 경쟁사가 없습니다. 데이터가 DB에서 완전히 삭제된 것일 수 있습니다.');
+      }
+      setShowInactive(false);
+    },
+    onError: () => {
+      toast.error('경쟁사 복구에 실패했습니다.');
+    },
+  });
+
+  // 개별 경쟁사 복구
+  const restoreOneMutation = useMutation({
+    mutationFn: (competitorId: string) => competitorsApi.restoreOne(hospitalId!, competitorId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitors-inactive', hospitalId] });
+      toast.success('경쟁사가 복구되었습니다!');
     },
   });
 
@@ -444,21 +484,126 @@ export default function CompetitorsPage() {
           </Card>
         )}
 
-        {/* 검색 */}
+        {/* 검색 + 복구 버튼 */}
         <div className="flex justify-between items-center">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="경쟁사 검색..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="경쟁사 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 w-64"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInactive(!showInactive)}
+              className="border-amber-200 hover:bg-amber-50 text-amber-700"
+            >
+              <Archive className="h-4 w-4 mr-1.5" />
+              삭제된 경쟁사
+            </Button>
           </div>
           <p className="text-sm text-gray-500">
             총 {filteredCompetitors?.length || 0}개 경쟁사
           </p>
         </div>
+
+        {/* ========== 비활성(삭제된) 경쟁사 복구 패널 ========== */}
+        {showInactive && (
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50/50 to-white">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-amber-800">
+                  <Archive className="h-5 w-5 text-amber-600" />
+                  삭제된 경쟁사 복구
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => restoreAllMutation.mutate()}
+                    disabled={restoreAllMutation.isPending || !inactiveCompetitors?.length}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {restoreAllMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    ) : (
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    전체 복구
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowInactive(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                이전에 삭제한 경쟁사를 다시 활성화할 수 있습니다
+              </p>
+            </CardHeader>
+            <CardContent>
+              {!inactiveCompetitors ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+                </div>
+              ) : inactiveCompetitors.length === 0 ? (
+                <div className="text-center py-6">
+                  <CheckCircle className="h-10 w-10 text-green-400 mx-auto mb-3" />
+                  <p className="text-gray-600 font-medium">삭제된 경쟁사가 없습니다</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    모든 경쟁사가 활성 상태이거나, DB에서 완전 삭제되었을 수 있습니다
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-amber-700 mb-3">
+                    {inactiveCompetitors.length}개의 삭제된 경쟁사를 발견했습니다
+                  </p>
+                  {inactiveCompetitors.map((comp: any) => (
+                    <div
+                      key={comp.id}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-lg bg-gray-100">
+                          <Building className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <div>
+                          <span className="font-medium text-gray-700">{comp.competitorName}</span>
+                          {comp.competitorRegion && (
+                            <span className="text-sm text-gray-400 ml-2">
+                              <MapPin className="h-3 w-3 inline" /> {comp.competitorRegion}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => restoreOneMutation.mutate(comp.id)}
+                        disabled={restoreOneMutation.isPending}
+                        className="border-amber-200 hover:bg-amber-50 text-amber-700"
+                      >
+                        {restoreOneMutation.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                        ) : (
+                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                        )}
+                        복구
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 경쟁사 목록 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

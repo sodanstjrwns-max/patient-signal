@@ -146,6 +146,44 @@ export class CompetitorsService {
   }
 
   /**
+   * 비활성(삭제된) 경쟁사 목록 조회
+   */
+  async findInactive(hospitalId: string) {
+    return this.prisma.competitor.findMany({
+      where: { hospitalId, isActive: false },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * 비활성 경쟁사 전체 복구
+   */
+  async restoreAll(hospitalId: string) {
+    const result = await this.prisma.competitor.updateMany({
+      where: { hospitalId, isActive: false },
+      data: { isActive: true },
+    });
+    this.logger.log(`[경쟁사 복구] hospitalId=${hospitalId}, 복구된 수: ${result.count}`);
+    return { restored: result.count };
+  }
+
+  /**
+   * 특정 비활성 경쟁사 복구
+   */
+  async restoreOne(competitorId: string, hospitalId: string) {
+    const competitor = await this.prisma.competitor.findUnique({
+      where: { id: competitorId },
+    });
+    if (!competitor || competitor.hospitalId !== hospitalId) {
+      throw new NotFoundException('경쟁사를 찾을 수 없습니다');
+    }
+    return this.prisma.competitor.update({
+      where: { id: competitorId },
+      data: { isActive: true },
+    });
+  }
+
+  /**
    * 경쟁사 삭제 (비활성화)
    */
   async remove(id: string, hospitalId: string) {

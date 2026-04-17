@@ -420,7 +420,7 @@ export default function DashboardPage() {
           </Link>
 
           {/* 인용 출처 요약 */}
-          <Link href="/dashboard/citations">
+          <Link href="/dashboard/insights?tab=sources">
             <Card className="hover:shadow-md transition-all cursor-pointer h-full">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-3">

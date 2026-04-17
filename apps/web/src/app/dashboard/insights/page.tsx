@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -70,8 +71,20 @@ const platformBgColors: Record<string, string> = {
 export default function InsightsPage() {
   const { user } = useAuthStore();
   const hospitalId = useHospitalId();
-  const [activeTab, setActiveTab] = useState<'mention' | 'trend' | 'sources' | 'positioning' | 'sourceQuality' | 'actions'>('actions');
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get('tab');
+  const validTabs = ['mention', 'trend', 'sources', 'positioning', 'sourceQuality', 'actions'] as const;
+  type TabType = typeof validTabs[number];
+  const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const queryClient = useQueryClient();
+
+  // URL 파라미터 변경 시 탭 동기화
+  useEffect(() => {
+    if (tabParam && validTabs.includes(tabParam as TabType)) {
+      setActiveTab(tabParam as TabType);
+    }
+  }, [tabParam]);
 
   // 【캐싱 통합 완료】공유 훅 사용 → 대시보드에서 프리페치된 데이터 자동 활용
   // lazy 파라미터로 비활성 탭은 fetch 안 함 (이미 캐시 있으면 즉시 표시)

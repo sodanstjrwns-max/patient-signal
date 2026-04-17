@@ -279,6 +279,12 @@ export const competitorsApi = {
     api.post(`/competitors/${hospitalId}/accept-suggestion`, data),
   getComparison: (hospitalId: string) =>
     api.get(`/competitors/${hospitalId}/comparison`),
+  getInactive: (hospitalId: string) =>
+    api.get(`/competitors/${hospitalId}/inactive`),
+  restoreAll: (hospitalId: string) =>
+    api.post(`/competitors/${hospitalId}/restore-all`),
+  restoreOne: (hospitalId: string, competitorId: string) =>
+    api.post(`/competitors/${hospitalId}/restore/${competitorId}`),
 };
 
 // Query Templates API (쿼리 템플릿 & 진료과 프리셋)

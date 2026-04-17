@@ -68,9 +68,9 @@ const navGroups: NavGroup[] = [
     items: [
       { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
       { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
-      { name: '인용 출처', href: '/dashboard/citations', icon: Globe, badge: 'NEW' },
       { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
       { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
+      { name: '인용 출처', href: '/dashboard/insights?tab=sources', icon: Globe },
     ],
   },
   {
@@ -90,6 +90,9 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+// href에서 pathname 부분만 추출 (query string 제거)
+const getPathname = (href: string) => href.split('?')[0];
+
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
@@ -99,7 +102,7 @@ export function Sidebar() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     navGroups.forEach((group) => {
-      const hasActive = group.items.some((item) => pathname === item.href);
+      const hasActive = group.items.some((item) => pathname === getPathname(item.href));
       initial[group.label] = hasActive || !!group.defaultOpen;
     });
     return initial;
@@ -111,7 +114,7 @@ export function Sidebar() {
     setOpenGroups((prev) => {
       const next = { ...prev };
       navGroups.forEach((group) => {
-        if (group.items.some((item) => pathname === item.href)) {
+        if (group.items.some((item) => pathname === getPathname(item.href))) {
           next[group.label] = true;
         }
       });
@@ -227,7 +230,7 @@ export function Sidebar() {
                 )}
               >
                 {group.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = pathname === getPathname(item.href);
                   return (
                     <Link
                       key={item.name}

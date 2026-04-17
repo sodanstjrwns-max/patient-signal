@@ -62,6 +62,27 @@ export class CompetitorsController {
     return this.competitorsService.suggestCompetitors(hospitalId);
   }
 
+  @Get(':hospitalId/inactive')
+  @ApiOperation({ summary: '비활성(삭제된) 경쟁사 목록 조회' })
+  async findInactive(@Param('hospitalId') hospitalId: string) {
+    return this.competitorsService.findInactive(hospitalId);
+  }
+
+  @Post(':hospitalId/restore-all')
+  @ApiOperation({ summary: '비활성 경쟁사 전체 복구' })
+  async restoreAll(@Param('hospitalId') hospitalId: string) {
+    return this.competitorsService.restoreAll(hospitalId);
+  }
+
+  @Post(':hospitalId/restore/:competitorId')
+  @ApiOperation({ summary: '특정 비활성 경쟁사 복구' })
+  async restoreOne(
+    @Param('hospitalId') hospitalId: string,
+    @Param('competitorId') competitorId: string,
+  ) {
+    return this.competitorsService.restoreOne(competitorId, hospitalId);
+  }
+
   @Get(':hospitalId/comparison')
   @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '경쟁사 비교 분석' })
