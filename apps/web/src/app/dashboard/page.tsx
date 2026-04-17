@@ -121,7 +121,10 @@ export default function DashboardPage() {
   if (dashboardLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-brand-600 mx-auto mb-3"></div>
+          <p className="text-sm text-slate-400 font-medium">데이터를 불러오는 중...</p>
+        </div>
       </div>
     );
   }
@@ -148,7 +151,7 @@ export default function DashboardPage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
+    <div className="min-h-screen">
       {/* 온보딩 튜토리얼 */}
       {showTutorial && (
         <OnboardingTutorial
@@ -193,28 +196,40 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="p-4 sm:p-6 space-y-5">
+      <div className="p-4 sm:p-6 space-y-5 stagger-children">
         {/* ═══════════════════════════════════════════
             🌟 HERO: SoV North-Star Metric 
         ═══════════════════════════════════════════ */}
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden">
-          {/* 배경 장식 */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        <div className="relative rounded-3xl p-6 sm:p-8 text-white overflow-hidden noise">
+          {/* Premium dark gradient background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#1e1b4b] to-slate-900" />
+          
+          {/* Animated mesh orbs */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/15 rounded-full blur-[100px] -translate-y-1/3 translate-x-1/4 animate-pulse-soft" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4 animate-pulse-soft" style={{ animationDelay: '1.5s' }} />
+          <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-blue-500/8 rounded-full blur-[60px] -translate-x-1/2 -translate-y-1/2" />
+          
+          {/* Grid pattern overlay */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)',
+            backgroundSize: '32px 32px'
+          }} />
           
           <div className="relative z-10">
             {/* 상단 라벨 */}
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-blue-400" />
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-400/20 flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-indigo-400" />
                 </div>
-                <span className="text-sm font-medium text-gray-300">Voice Share (SoV)</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">North-Star Metric</span>
+                <span className="text-sm font-semibold text-slate-300">Voice Share (SoV)</span>
+                <span className="text-[10px] px-2.5 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold border border-indigo-400/10">
+                  North-Star Metric
+                </span>
               </div>
               <Link href="/dashboard/analytics">
-                <span className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors">
-                  상세 분석 <ChevronRight className="h-3 w-3" />
+                <span className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors group">
+                  상세 분석 <ChevronRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
                 </span>
               </Link>
             </div>
@@ -223,20 +238,20 @@ export default function DashboardPage() {
             <div className="flex items-end gap-6 mb-6">
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-6xl sm:text-7xl font-bold tracking-tight">{sovPercent}</span>
-                  <span className="text-2xl sm:text-3xl font-semibold text-gray-400">%</span>
+                  <span className="text-6xl sm:text-7xl font-extrabold tracking-tighter tabular-nums">{sovPercent}</span>
+                  <span className="text-2xl sm:text-3xl font-bold text-slate-500">%</span>
                 </div>
-                <p className="text-sm text-gray-400 mt-1">
+                <p className="text-sm text-slate-400 mt-1.5 font-medium">
                   AI가 우리 병원을 추천하는 비율
                 </p>
               </div>
 
               {/* 주간 변동 */}
               {sovChange !== 0 && (
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium ${
+                <div className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold backdrop-blur-sm ${
                   sovChange > 0 
-                    ? 'bg-green-500/15 text-green-400' 
-                    : 'bg-red-500/15 text-red-400'
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-400/10' 
+                    : 'bg-red-500/15 text-red-400 border border-red-400/10'
                 }`}>
                   {sovChange > 0 ? (
                     <ArrowUpRight className="h-4 w-4" />
@@ -250,32 +265,32 @@ export default function DashboardPage() {
             </div>
 
             {/* 하단 서브 메트릭 3개 */}
-            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/10">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">ABHS 종합</p>
-                <p className="text-xl font-bold">{abhsScore}<span className="text-sm text-gray-500 ml-0.5">/100</span></p>
+            <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
+              <div className="p-3 rounded-xl bg-white/[0.04]">
+                <p className="text-[11px] text-slate-500 mb-1 font-medium">ABHS 종합</p>
+                <p className="text-xl font-bold tabular-nums">{abhsScore}<span className="text-sm text-slate-600 ml-0.5">/100</span></p>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">감성 톤</p>
-                <p className={`text-xl font-bold ${
-                  avgSentiment >= 0.5 ? 'text-green-400' : avgSentiment <= -0.5 ? 'text-red-400' : 'text-gray-300'
+              <div className="p-3 rounded-xl bg-white/[0.04]">
+                <p className="text-[11px] text-slate-500 mb-1 font-medium">감성 톤</p>
+                <p className={`text-xl font-bold tabular-nums ${
+                  avgSentiment >= 0.5 ? 'text-emerald-400' : avgSentiment <= -0.5 ? 'text-red-400' : 'text-slate-300'
                 }`}>
                   {avgSentiment > 0 ? '+' : ''}{avgSentiment.toFixed(1)}
                 </p>
               </div>
-              <div>
-                <p className="text-xs text-gray-500 mb-1">추천 깊이</p>
+              <div className="p-3 rounded-xl bg-white/[0.04]">
+                <p className="text-[11px] text-slate-500 mb-1 font-medium">추천 깊이</p>
                 <div className="flex items-center gap-2 text-sm">
                   {abhs?.depthDistribution ? (
                     <>
-                      <span className="font-bold text-green-400">R3 {abhs.depthDistribution.R3 ?? 0}</span>
-                      <span className="text-gray-600">·</span>
+                      <span className="font-bold text-emerald-400">R3 {abhs.depthDistribution.R3 ?? 0}</span>
+                      <span className="text-slate-700">·</span>
                       <span className="font-semibold text-blue-400">R2 {abhs.depthDistribution.R2 ?? 0}</span>
-                      <span className="text-gray-600">·</span>
-                      <span className="text-yellow-400">R1 {abhs.depthDistribution.R1 ?? 0}</span>
+                      <span className="text-slate-700">·</span>
+                      <span className="text-amber-400">R1 {abhs.depthDistribution.R1 ?? 0}</span>
                     </>
                   ) : (
-                    <span className="text-gray-500">수집 중</span>
+                    <span className="text-slate-500">수집 중</span>
                   )}
                 </div>
               </div>
@@ -308,28 +323,28 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {platformSovData.length > 0 ? (
             platformSovData.map((p) => (
-              <Card key={p.key} className="hover:shadow-md transition-shadow">
+              <Card key={p.key} className="hover-lift group cursor-default">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
-                      <span className="text-sm font-medium text-gray-700">{p.name}</span>
+                      <div className="w-2.5 h-2.5 rounded-full ring-2 ring-offset-1" style={{ backgroundColor: p.color, ['--tw-ring-color' as any]: p.color + '30' }} />
+                      <span className="text-sm font-semibold text-slate-700">{p.name}</span>
                     </div>
-                    {p.trend === 'UP' && <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
+                    {p.trend === 'UP' && <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />}
                     {p.trend === 'DOWN' && <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
                   </div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-gray-900">{p.mentionRate}</span>
-                    <span className="text-sm text-gray-400">%</span>
+                    <span className="text-2xl font-bold text-slate-900 tabular-nums">{p.mentionRate}</span>
+                    <span className="text-sm text-slate-400 font-medium">%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full mt-3 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-700"
+                      className="h-full rounded-full transition-all duration-1000 ease-out"
                       style={{ width: `${Math.min(p.mentionRate * 2, 100)}%`, backgroundColor: p.color }}
                     />
                   </div>
                   {p.trendChange !== 0 && (
-                    <p className={`text-[11px] mt-1.5 font-medium ${p.trendChange > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                    <p className={`text-[11px] mt-2 font-semibold ${p.trendChange > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                       {p.trendChange > 0 ? '+' : ''}{p.trendChange}%p vs 이전
                     </p>
                   )}

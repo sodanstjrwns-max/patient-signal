@@ -15,7 +15,6 @@ export default function DashboardLayout({
   const { isAuthenticated, user, updateUser, _hasHydrated } = useAuthStore();
   const router = useRouter();
 
-  // 인증 체크 후 리다이렉트 - Zustand persist hydration 완료 후에만 실행
   useEffect(() => {
     if (!_hasHydrated) return;
 
@@ -30,27 +29,24 @@ export default function DashboardLayout({
     }
   }, [_hasHydrated, isAuthenticated, user, router]);
 
-  // 대시보드 진입 시 서버에서 최신 hospital 정보 동기화 (planType 등)
   useEffect(() => {
     if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) return;
 
     hospitalApi.get(user.hospitalId).then(({ data }) => {
       if (data) {
-        // 항상 최신 hospital 데이터로 업데이트
         updateUser({ hospital: data });
       }
-    }).catch(() => {
-      // 네트워크 에러 시 무시 (캐시된 데이터 유지)
-    });
+    }).catch(() => {});
   }, [_hasHydrated, isAuthenticated, user?.hospitalId]);
 
-  // Zustand persist hydration 완료 전이거나 인증 체크 중
   if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 bg-mesh flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-sm text-gray-500">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-brand-600 mx-auto mb-4"></div>
+          </div>
+          <p className="text-sm text-slate-500 font-medium">
             {!_hasHydrated ? '로딩 중...' : 
              !isAuthenticated ? '로그인 확인 중...' : 
              '병원 정보 확인 중...'}
@@ -61,12 +57,14 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-slate-50">
       <Sidebar />
-      {/* pt-14: 모바일 top bar 높이만큼 패딩, lg:pt-0: 데스크톱은 패딩 없음 */}
-      <main className="flex-1 overflow-auto pt-14 lg:pt-0">
+      {/* Main content area with mesh background */}
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0 bg-mesh min-h-screen">
         <TrialBanner />
-        {children}
+        <div className="animate-fade-in">
+          {children}
+        </div>
       </main>
     </div>
   );

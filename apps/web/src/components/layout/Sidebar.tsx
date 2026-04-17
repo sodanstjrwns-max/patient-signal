@@ -23,14 +23,10 @@ import {
   Globe,
   Target,
   ChevronDown,
-  Eye,
-  Search,
-  TrendingUp,
-  Shield,
+  Crown,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
-// ─── 그룹핑 네비게이션 ───
 interface NavItem {
   name: string;
   href: string;
@@ -90,15 +86,21 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-// href에서 pathname 부분만 추출 (query string 제거)
 const getPathname = (href: string) => href.split('?')[0];
+
+const PLAN_STYLES: Record<string, { label: string; color: string; bg: string }> = {
+  ENTERPRISE: { label: 'Enterprise', color: 'text-amber-300', bg: 'bg-amber-500/10' },
+  PRO: { label: 'Pro', color: 'text-purple-300', bg: 'bg-purple-500/10' },
+  STANDARD: { label: 'Standard', color: 'text-blue-300', bg: 'bg-blue-500/10' },
+  STARTER: { label: 'Starter', color: 'text-emerald-300', bg: 'bg-emerald-500/10' },
+  FREE: { label: 'Free', color: 'text-slate-400', bg: 'bg-slate-500/10' },
+};
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // 그룹 열림/닫힘 상태 (현재 경로가 속한 그룹은 자동 오픈)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     navGroups.forEach((group) => {
@@ -108,7 +110,6 @@ export function Sidebar() {
     return initial;
   });
 
-  // 페이지 이동 시 모바일 메뉴 자동 닫기 + 해당 그룹 열기
   useEffect(() => {
     setMobileOpen(false);
     setOpenGroups((prev) => {
@@ -122,7 +123,6 @@ export function Sidebar() {
     });
   }, [pathname]);
 
-  // 모바일 메뉴 열렸을 때 body 스크롤 방지
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = 'hidden';
@@ -136,57 +136,58 @@ export function Sidebar() {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
+  const planType = user?.hospital?.planType || 'FREE';
+  const planStyle = PLAN_STYLES[planType] || PLAN_STYLES.FREE;
+
   const sidebarContent = (
-    <>
-      {/* 로고 */}
-      <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+    <div className="flex flex-col h-full">
+      {/* ─── Logo ─── */}
+      <div className="flex items-center justify-between h-16 px-5">
+        <Link href="/dashboard" className="flex items-center gap-3 group">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
             <Sparkles className="h-5 w-5 text-white" />
+            <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div>
-            <h1 className="font-bold text-gray-900">Patient Signal</h1>
-            <p className="text-[10px] text-gray-400">AI 검색 가시성 추적</p>
+            <h1 className="font-bold text-white text-[15px] tracking-tight">Patient Signal</h1>
+            <p className="text-[10px] text-slate-400 font-medium">AI Search Visibility</p>
           </div>
         </Link>
-        {/* 모바일 닫기 버튼 */}
         <button
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
         >
-          <X className="h-5 w-5 text-gray-500" />
+          <X className="h-5 w-5 text-slate-400" />
         </button>
       </div>
 
-      {/* 병원 정보 */}
+      {/* ─── Hospital Card ─── */}
       {user?.hospital && (
-        <div className="px-4 py-3 border-b border-gray-100">
-          <div className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-lg">
-            <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-              <Building2 className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium text-sm text-gray-900 truncate">
-                {user.hospital.name}
-              </p>
-              <p className={`text-xs font-medium ${
-                user.hospital.planType === 'PRO' ? 'text-purple-600' :
-                user.hospital.planType === 'STANDARD' ? 'text-blue-600' :
-                user.hospital.planType === 'STARTER' ? 'text-green-600' :
-                'text-gray-500'
-              }`}>
-                {user.hospital.planType === 'PRO' ? 'Pro' :
-                 user.hospital.planType === 'STANDARD' ? 'Standard' :
-                 user.hospital.planType === 'ENTERPRISE' ? 'Enterprise' :
-                 user.hospital.planType === 'STARTER' ? 'Starter' :
-                 'Free'}
-              </p>
+        <div className="px-4 pb-3 pt-1">
+          <div className="p-3 rounded-xl bg-white/[0.06] border border-white/[0.06] hover:bg-white/[0.08] transition-colors">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/10">
+                <Building2 className="h-4 w-4 text-indigo-300" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm text-white truncate">
+                  {user.hospital.name}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  {(planType === 'ENTERPRISE' || planType === 'PRO') && (
+                    <Crown className="h-3 w-3 text-amber-400" />
+                  )}
+                  <span className={`text-[11px] font-semibold ${planStyle.color}`}>
+                    {planStyle.label}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-          {(!user.hospital.planType || user.hospital.planType === 'FREE' || user.hospital.planType === 'STARTER') && (
+          {(!planType || planType === 'FREE' || planType === 'STARTER') && (
             <Link
               href="/dashboard/billing"
-              className="mt-2 flex items-center justify-center gap-1 w-full py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+              className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 text-xs font-semibold text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition-all border border-indigo-500/10 hover:border-indigo-500/20"
             >
               <Sparkles className="h-3 w-3" />
               업그레이드
@@ -195,34 +196,28 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* 그룹핑 네비게이션 */}
-      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-1">
+      {/* ─── Navigation ─── */}
+      <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
         {navGroups.map((group) => {
           const isGroupOpen = openGroups[group.label] ?? true;
-          const hasActiveItem = group.items.some((item) => pathname === item.href);
 
           return (
-            <div key={group.label}>
-              {/* 그룹 헤더 (토글) */}
+            <div key={group.label} className="mb-1">
               <button
                 onClick={() => toggleGroup(group.label)}
-                className="flex items-center justify-between w-full px-3 py-1.5 mb-0.5 group"
+                className="flex items-center justify-between w-full px-3 py-2 group/header"
               >
-                <span className={cn(
-                  'text-[11px] font-semibold uppercase tracking-wider',
-                  hasActiveItem ? 'text-blue-600' : 'text-gray-400'
-                )}>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                   {group.label}
                 </span>
                 <ChevronDown
                   className={cn(
-                    'h-3 w-3 text-gray-400 transition-transform duration-200',
+                    'h-3 w-3 text-slate-600 transition-transform duration-200',
                     isGroupOpen ? 'rotate-0' : '-rotate-90'
                   )}
                 />
               </button>
 
-              {/* 그룹 아이템들 */}
               <div
                 className={cn(
                   'overflow-hidden transition-all duration-200',
@@ -236,21 +231,25 @@ export function Sidebar() {
                       key={item.name}
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ml-1',
+                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group/item relative',
                         isActive
-                          ? 'bg-blue-50 text-blue-700 shadow-sm'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                          ? 'bg-white/[0.12] text-white shadow-sm'
+                          : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
                       )}
                     >
+                      {/* Active indicator */}
+                      {isActive && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-400 rounded-r-full" />
+                      )}
                       <item.icon
                         className={cn(
-                          'h-[18px] w-[18px] flex-shrink-0',
-                          isActive ? 'text-blue-600' : 'text-gray-400'
+                          'h-[17px] w-[17px] flex-shrink-0 transition-colors',
+                          isActive ? 'text-indigo-400' : 'text-slate-500 group-hover/item:text-slate-400'
                         )}
                       />
                       <span className="flex-1">{item.name}</span>
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-blue-500 text-white leading-none">
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-indigo-500/80 text-white leading-none animate-pulse-soft">
                           {item.badge}
                         </span>
                       )}
@@ -263,68 +262,68 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* 사용자 정보 */}
-      <div className="px-4 py-3 border-t border-gray-200">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-medium text-gray-600">
+      {/* ─── User Info ─── */}
+      <div className="px-4 py-3 border-t border-white/[0.06]">
+        <div className="flex items-center gap-3 mb-3 px-1">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center flex-shrink-0 ring-2 ring-white/[0.08]">
+            <span className="text-sm font-semibold text-white">
               {user?.name?.charAt(0) || 'U'}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-medium text-sm text-gray-900 truncate">{user?.name}</p>
-            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+            <p className="font-semibold text-sm text-white truncate">{user?.name}</p>
+            <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
           </div>
         </div>
         <button
           onClick={logout}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 rounded-lg transition-colors"
+          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 rounded-lg transition-all"
         >
           <LogOut className="h-4 w-4" />
           로그아웃
         </button>
       </div>
-    </>
+    </div>
   );
 
   return (
     <>
-      {/* 모바일 햄버거 버튼 (top bar) */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 h-14 flex items-center px-4">
+      {/* ─── Mobile Top Bar ─── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-strong h-14 flex items-center px-4 border-b border-slate-200/50">
         <button
           onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
         >
-          <Menu className="h-6 w-6 text-gray-700" />
+          <Menu className="h-5 w-5 text-slate-700" />
         </button>
-        <div className="flex items-center gap-2 ml-3">
-          <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+        <div className="flex items-center gap-2.5 ml-3">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-sm">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
-          <span className="font-semibold text-gray-900 text-sm">Patient Signal</span>
+          <span className="font-bold text-slate-900 text-sm tracking-tight">Patient Signal</span>
         </div>
       </div>
 
-      {/* 모바일 오버레이 */}
+      {/* ─── Mobile Overlay ─── */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/50 transition-opacity"
+          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* 모바일 사이드바 (슬라이드) */}
+      {/* ─── Mobile Sidebar ─── */}
       <div
         className={cn(
-          'lg:hidden fixed top-0 left-0 z-50 w-72 h-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out flex flex-col',
+          'lg:hidden fixed top-0 left-0 z-50 w-72 h-full glass-sidebar shadow-2xl transform transition-transform duration-300 ease-in-out',
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         {sidebarContent}
       </div>
 
-      {/* 데스크톱 사이드바 */}
-      <div className="hidden lg:flex lg:flex-col lg:w-64 bg-white border-r border-gray-200 h-screen sticky top-0">
+      {/* ─── Desktop Sidebar ─── */}
+      <div className="hidden lg:flex lg:flex-col lg:w-[272px] glass-sidebar h-screen sticky top-0">
         {sidebarContent}
       </div>
     </>
