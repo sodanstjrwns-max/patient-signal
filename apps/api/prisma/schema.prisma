@@ -180,6 +180,7 @@ model Hospital {
   notifications      Notification[]
   crawlJobs          CrawlJob[]
   reports            Report[]
+  geoContents        GeoContent[]
 
   @@index([subscriptionStatus, planType])
   @@index([planType])
@@ -718,4 +719,124 @@ model Payment {
   @@index([hospitalId])
   @@index([status])
   @@map("payments")
+}
+
+// ==================== GEO 콘텐츠 에이전트 ====================
+
+// 콘텐츠 상태
+enum GeoContentStatus {
+  DRAFT             // 초안
+  GENERATING        // AI 생성 중
+  REVIEW            // 검토 대기
+  PUBLISHED         // 발행 완료
+  SCHEDULED         // 발행 예약
+  FAILED            // 생성 실패
+}
+
+// 콘텐츠 톤
+enum ContentTone {
+  FORMAL            // 존댓말 (합쇼체)
+  POLITE            // 해요체
+  CASUAL            // 해라체 (반말해라체)
+  FRIENDLY          // 친근체
+  PROFESSIONAL      // 전문가톤
+}
+
+// 퍼널 단계
+enum FunnelStage {
+  AWARENESS         // 인지 (치료가 필요하다는 것을 알게 됨)
+  CONSIDERATION     // 고려 (어떤 병원/시술이 좋을지 비교)
+  DECISION          // 결정 (특정 병원으로 예약하려는 단계)
+  RETENTION         // 유지 (기존 환자 재방문 유도)
+  ADVOCACY          // 추천 (지인 소개, 후기 작성)
+}
+
+// 발행 플랫폼
+enum PublishPlatform {
+  NAVER_BLOG        // 네이버 블로그
+  TISTORY           // 티스토리
+  BRUNCH            // 브런치
+  WORDPRESS         // 워드프레스
+  HOSPITAL_SITE     // 병원 자체 사이트
+  SLIDESHARE        // 슬라이드쉐어
+  INSTAGRAM         // 인스타그램 (카드뉴스)
+  KAKAO             // 카카오 채널
+}
+
+// GEO 콘텐츠 (생성형 최적화 콘텐츠)
+model GeoContent {
+  id                 String            @id @default(uuid())
+  hospitalId         String            @map("hospital_id")
+  
+  // 콘텐츠 기본 정보
+  title              String                              // 콘텐츠 제목
+  subtitle           String?                             // 부제목
+  bodyHtml           String            @map("body_html") // HTML 본문
+  bodyMarkdown       String?           @map("body_markdown") // Markdown 본문
+  excerpt            String?                             // 요약/소개글 (메타 디스크립션)
+  
+  // 분류 & 태깅
+  funnelStage        FunnelStage       @map("funnel_stage")   // 퍼널 단계
+  contentTone        ContentTone       @map("content_tone")   // 톤
+  targetKeywords     String[]          @map("target_keywords") // 타겟 키워드
+  relatedPromptIds   String[]          @map("related_prompt_ids") // 연관 프롬프트 ID
+  procedure          String?                               // 관련 시술
+  
+  // GEO 최적화 요소 (체크리스트, FAQ, 표, 면책조항 등)
+  geoElements        Json?             @map("geo_elements")   // {checklist, faq, table, disclaimer, citations}
+  
+  // AI 생성 메타데이터
+  aiModel            String?           @map("ai_model")       // 사용된 AI 모델
+  generationPrompt   String?           @map("generation_prompt") // 생성에 사용된 프롬프트
+  generationParams   Json?             @map("generation_params") // 온도, 토큰 등
+  
+  // 상태 & 발행
+  status             GeoContentStatus  @default(DRAFT)
+  
+  // 카드뉴스 (슬라이드)
+  cardNewsSlides     Json?             @map("card_news_slides") // [{title, body, bgColor, imageUrl}]
+  
+  // SEO
+  metaTitle          String?           @map("meta_title")
+  metaDescription    String?           @map("meta_description")
+  slug               String?
+  
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+  
+  hospital           Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  publications       GeoPublication[]
+  
+  @@index([hospitalId, status])
+  @@index([hospitalId, funnelStage])
+  @@index([hospitalId, createdAt])
+  @@map("geo_contents")
+}
+
+// GEO 콘텐츠 발행 이력
+model GeoPublication {
+  id                String           @id @default(uuid())
+  contentId         String           @map("content_id")
+  platform          PublishPlatform
+  
+  // 발행 정보
+  publishedUrl      String?          @map("published_url")   // 발행된 URL
+  publishedAt       DateTime?        @map("published_at")
+  scheduledAt       DateTime?        @map("scheduled_at")    // 예약 발행
+  
+  // 성과 추적
+  viewCount         Int              @default(0) @map("view_count")
+  likeCount         Int              @default(0) @map("like_count")
+  commentCount      Int              @default(0) @map("comment_count")
+  
+  // 상태
+  isPublished       Boolean          @default(false) @map("is_published")
+  errorMessage      String?          @map("error_message")
+  
+  createdAt         DateTime         @default(now()) @map("created_at")
+  
+  content           GeoContent       @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  
+  @@unique([contentId, platform])
+  @@map("geo_publications")
 }

@@ -19,6 +19,7 @@ import { EmailModule } from './email/email.module';
 import { QueryTemplatesModule } from './query-templates/query-templates.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { AdminModule } from './admin/admin.module';
+import { GeoContentModule } from './geo-content/geo-content.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { AdminModule } from './admin/admin.module';
     QueryTemplatesModule,
     CouponsModule,
     AdminModule,
+    GeoContentModule,
   ],
   controllers: [AppController],
   providers: [

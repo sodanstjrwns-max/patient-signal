@@ -2,7 +2,16 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
 import { PlanGuard } from '../common/guards/plan.guard';
-import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES, WEEKLY_QUERY_TEMPLATES } from '../query-templates/query-templates.service';
+import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES } from '../query-templates/query-templates.service';
+import {
+  generateMatrixCandidates,
+  selectDailyPrompts,
+  applyPerformanceBoost,
+  getMatrixStats,
+  MatrixCandidate,
+  PerformanceData,
+  IntentType,
+} from './daily-prompt-matrix';
 
 @Injectable()
 export class SchedulerService {
@@ -125,7 +134,7 @@ export class SchedulerService {
           }
         }
 
-        // 【최적화 R3】crawlJob 업데이트를 루프 밖에서 1회만 실행 (기존 매 프롬프트마다 → 1회)
+        // crawlJob 업데이트
         await this.prisma.crawlJob.update({
           where: { id: crawlJob.id },
           data: { completed, failed },
@@ -174,7 +183,6 @@ export class SchedulerService {
               this.logger.error(`[경쟁사] ${competitor.competitorName} 측정 실패: ${error.message}`);
             }
             
-            // 경쟁사 간 딜레이
             await new Promise(resolve => setTimeout(resolve, 5000));
           }
           
@@ -206,7 +214,6 @@ export class SchedulerService {
         });
       }
 
-      // API 레이트 리밋 방지를 위한 딜레이 (10초)
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
@@ -221,9 +228,6 @@ export class SchedulerService {
     };
   }
 
-  /**
-   * 현재 시간 기반 세션 판별 (KST)
-   */
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {
     const kstHour = new Date().getUTCHours() + 9;
     const adjustedHour = kstHour >= 24 ? kstHour - 24 : kstHour;
@@ -233,12 +237,6 @@ export class SchedulerService {
     return 'evening';
   }
 
-  /**
-   * 세션별 플랫폼 분배 (찐 AI 4개만)
-   * - morning: 전체 플랫폼 (기본 크롤링)
-   * - afternoon: ChatGPT + Gemini (주요 2개만 - 비용 절감)
-   * - evening: 전체 + 경쟁사 분석
-   */
   private getPlatformsForSession(session: string): any[] {
     const basePlatforms: any[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
     
@@ -254,25 +252,30 @@ export class SchedulerService {
     }
   }
 
-  // ==================== V2: Daily Prompt Refresh (리텐션 드라이버) ====================
+  // ==================== V3: Daily Prompt Matrix Engine ====================
 
   /**
-   * 매일 자동 프롬프트 10개 생성
+   * 매일 자동 프롬프트 생성 (5×5 병원 범용 매트릭스)
    * 
-   * 전략:
-   * 1. 기존 질문 성과 분석 (언급률 높은 패턴 우선)
-   * 2. 시즌/트렌드 반영 질문 추가
-   * 3. Golden Prompt 패턴 적용 (ABHS 5축 최적화)
-   * 4. 기존 질문과 중복 제거
-   * 
-   * @returns 각 병원별 생성 결과
+   * V3 전략:
+   * 1. 5축 매트릭스로 수백 개 후보 생성 (의도×시술×톤×시즌×지역)
+   * 2. ABHS 성과 데이터 기반 가중치 부스팅
+   * 3. 다양성 보장 선택 (의도별 최소 1개 + 톤 다양성)
+   * 4. 기존 질문과 Jaccard 유사도 0.85 이상 중복 제거
+   * 5. 모든 진료과(13개) 범용 대응
    */
   async runDailyPromptRefresh(): Promise<{
     totalHospitals: number;
     refreshed: number;
-    results: Array<{ hospitalId: string; hospitalName: string; added: number; replaced: number }>;
+    results: Array<{
+      hospitalId: string;
+      hospitalName: string;
+      added: number;
+      replaced: number;
+      matrixStats?: any;
+    }>;
   }> {
-    this.logger.log('=== Daily Prompt Refresh 시작 ===');
+    this.logger.log('=== Daily Prompt Matrix Refresh V3 시작 ===');
 
     const hospitals = await this.prisma.hospital.findMany({
       where: { subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] } },
@@ -281,12 +284,18 @@ export class SchedulerService {
       },
     });
 
-    const results: Array<{ hospitalId: string; hospitalName: string; added: number; replaced: number }> = [];
+    const results: Array<{
+      hospitalId: string;
+      hospitalName: string;
+      added: number;
+      replaced: number;
+      matrixStats?: any;
+    }> = [];
     let refreshed = 0;
 
     for (const hospital of hospitals) {
       try {
-        const result = await this.generateDailyPrompts(hospital);
+        const result = await this.generateDailyPromptsV3(hospital);
         if (result.added > 0 || result.replaced > 0) {
           refreshed++;
         }
@@ -296,30 +305,35 @@ export class SchedulerService {
           ...result,
         });
       } catch (error) {
-        this.logger.error(`[${hospital.name}] Daily Prompt 생성 실패: ${error.message}`);
-        results.push({ hospitalId: hospital.id, hospitalName: hospital.name, added: 0, replaced: 0 });
+        this.logger.error(`[${hospital.name}] Daily Prompt V3 생성 실패: ${error.message}`);
+        results.push({
+          hospitalId: hospital.id,
+          hospitalName: hospital.name,
+          added: 0,
+          replaced: 0,
+        });
       }
     }
 
-    this.logger.log(`=== Daily Prompt Refresh 완료: ${refreshed}/${hospitals.length} 병원 갱신 ===`);
+    this.logger.log(`=== Daily Prompt Matrix Refresh V3 완료: ${refreshed}/${hospitals.length} 병원 갱신 ===`);
 
     return { totalHospitals: hospitals.length, refreshed, results };
   }
 
   /**
-   * 개별 병원의 Daily Prompt 생성
+   * 개별 병원 Daily Prompt V3 — 5×5 매트릭스 엔진
    */
-  private async generateDailyPrompts(hospital: any): Promise<{ added: number; replaced: number }> {
+  private async generateDailyPromptsV3(hospital: any): Promise<{
+    added: number;
+    replaced: number;
+    matrixStats?: any;
+  }> {
     const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
 
-    // 기존 질문 텍스트 세트
     const existingTexts = new Set<string>(hospital.prompts.map((p: any) => p.promptText));
     const currentCount = hospital.prompts.length;
-
-    // 남은 슬롯 확인
     const availableSlots = Math.max(0, maxPrompts - currentCount);
-    // 일일 새 질문은 최대 10개 (또는 남은 슬롯)
     const dailyTarget = Math.min(10, availableSlots);
 
     if (dailyTarget <= 0) {
@@ -327,128 +341,186 @@ export class SchedulerService {
       return { added: 0, replaced: 0 };
     }
 
-    // ── 질문 후보 생성 ──
-    const candidates: string[] = [];
-    const region = `${hospital.regionSido} ${hospital.regionSigungu}`;
-    const shortRegion = hospital.regionSigungu?.replace(/[시군구]$/, '') || '';
-    const specialty = SPECIALTY_NAMES[hospital.specialtyType] || '병원';
-    const treatments = hospital.coreTreatments?.length > 0
-      ? hospital.coreTreatments
-      : (hospital.keyProcedures?.length > 0
-        ? hospital.keyProcedures
-        : (SPECIALTY_PROCEDURES[hospital.specialtyType] || [])
-            .filter((p: any) => p.isPopular)
-            .slice(0, 3)
-            .map((p: any) => p.name));
-
-    const strengths = hospital.hospitalStrengths || [];
-    const targetRegions = hospital.targetRegions || [];
-
-    // 1. 시즌/트렌드 질문 (날짜 기반)
-    const month = new Date().getMonth() + 1;
-    const seasonalQuestions = this.getSeasonalQuestions(month, shortRegion, specialty, treatments);
-    candidates.push(...seasonalQuestions);
-
-    // 2. 다양한 말투 변형
-    const toneVariations = [
-      `${shortRegion} ${specialty} 좀 알아보는데 괜찮은 데 있어?`,
-      `${shortRegion}에서 믿고 갈 수 있는 ${specialty} 추천 좀`,
-      `${specialty} 가야 하는데 ${shortRegion} 쪽에 어디가 좋을까?`,
-      `${shortRegion} 근처 ${specialty} 진짜 잘하는 곳 알려줘`,
-    ];
-    candidates.push(...toneVariations);
-
-    // 3. 진료과 + 시술 조합 (아직 없는 것)
-    for (const t of treatments) {
-      const variations = [
-        `${shortRegion} ${t} 맛집 ${specialty} 어디야?`,
-        `${t} 고민인데 ${shortRegion}에서 상담 잘 해주는 ${specialty} 있나?`,
-        `${shortRegion} ${t} 실력파 ${specialty} 추천`,
-        `${t} 최신 기술 쓰는 ${shortRegion} ${specialty} 알려줘`,
-      ];
-      candidates.push(...variations);
-    }
-
-    // 4. 강점 기반 질문 변형
-    for (const s of strengths.slice(0, 3)) {
-      candidates.push(`${s} 잘하는 ${shortRegion} ${specialty} 추천해줘`);
-    }
-
-    // 5. 지역 특화 변형
-    for (const r of targetRegions.slice(0, 2)) {
-      if (treatments.length > 0) {
-        candidates.push(`${r} 주변 ${treatments[0]} 잘하는 ${specialty} 있어?`);
-      }
-    }
-
-    // 6. 경쟁사 관련 비교 질문
-    const competitors = await this.prisma.competitor.findMany({
-      where: { hospitalId: hospital.id, isActive: true },
-      select: { competitorName: true },
-      take: 3,
+    // ── Step 1: 5×5 매트릭스 후보 생성 ──
+    const candidates = generateMatrixCandidates({
+      name: hospital.name,
+      specialtyType: hospital.specialtyType,
+      regionSido: hospital.regionSido,
+      regionSigungu: hospital.regionSigungu,
+      regionDong: hospital.regionDong,
+      coreTreatments: hospital.coreTreatments || [],
+      keyProcedures: hospital.keyProcedures || [],
+      targetRegions: hospital.targetRegions || [],
+      hospitalStrengths: hospital.hospitalStrengths || [],
     });
-    if (competitors.length > 0 && treatments.length > 0) {
-      candidates.push(`${shortRegion} ${treatments[0]} ${specialty} 비교해서 알려줘. 장단점 포함해서`);
+
+    const stats = getMatrixStats(candidates);
+    this.logger.log(`[${hospital.name}] 매트릭스 후보: ${stats.totalCandidates}개 (의도: ${JSON.stringify(stats.byIntent)}, 톤: ${JSON.stringify(stats.byTone)})`);
+
+    // ── Step 2: ABHS 성과 데이터 수집 (최근 30일) ──
+    let boostedCandidates: MatrixCandidate[];
+    try {
+      const performanceData = await this.getPerformanceData(hospital.id);
+      boostedCandidates = applyPerformanceBoost(candidates, performanceData);
+      this.logger.log(`[${hospital.name}] ABHS 부스트 적용 (고성과 의도: ${performanceData.topIntents.join(',')})`);
+    } catch {
+      boostedCandidates = candidates;
+      this.logger.log(`[${hospital.name}] ABHS 데이터 없음 - 기본 가중치 사용`);
     }
 
-    // ── 중복 제거 & 기존 질문과 비교 ──
-    const uniqueCandidates = [...new Set(candidates)]
-      .filter(q => !existingTexts.has(q))
-      .filter(q => !Array.from(existingTexts).some(existing => 
-        this.textSimilarity(q, existing) > 0.85
-      ));
-
-    // 랜덤 셔플 후 상위 N개 선택
-    const shuffled = uniqueCandidates.sort(() => Math.random() - 0.5);
-    const selected = shuffled.slice(0, dailyTarget);
+    // ── Step 3: 다양성 보장 선택 ──
+    const selected = selectDailyPrompts(boostedCandidates, existingTexts, dailyTarget, true);
 
     if (selected.length === 0) {
+      this.logger.log(`[${hospital.name}] 유효 후보 없음 (모두 중복)`);
       return { added: 0, replaced: 0 };
     }
 
-    // ── DB 저장 ──
+    // ── Step 4: DB 저장 ──
     await this.prisma.prompt.createMany({
-      data: selected.map(text => ({
+      data: selected.map(s => ({
         hospitalId: hospital.id,
-        promptText: text,
+        promptText: s.text,
         promptType: 'AUTO_GENERATED' as const,
-        specialtyCategory: hospital.specialtyType,
+        specialtyCategory: s.procedure || hospital.specialtyType,
         regionKeywords: [hospital.regionSido, hospital.regionSigungu].filter(Boolean),
         isActive: true,
       })),
     });
 
-    this.logger.log(`[${hospital.name}] Daily Prompt: ${selected.length}개 추가`);
+    this.logger.log(`[${hospital.name}] Daily Prompt V3: ${selected.length}개 추가 (의도분포: ${this.summarizeIntents(selected)})`);
 
-    return { added: selected.length, replaced: 0 };
+    return {
+      added: selected.length,
+      replaced: 0,
+      matrixStats: {
+        ...stats,
+        selectedCount: selected.length,
+        selectedIntents: this.summarizeIntents(selected),
+      },
+    };
   }
 
   /**
-   * 시즌별 트렌드 질문 생성
+   * ABHS 성과 데이터 추출 (최근 30일)
    */
+  private async getPerformanceData(hospitalId: string): Promise<PerformanceData> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: {
+        isMentioned: true,
+        queryIntent: true,
+        abhsContribution: true,
+        prompt: { select: { promptText: true, specialtyCategory: true } },
+      },
+    });
+
+    if (responses.length === 0) {
+      return {
+        topIntents: ['RESERVATION', 'REVIEW'],
+        topProcedures: [],
+        goldenPatterns: [],
+        lowPerformanceIntents: ['INFORMATION'],
+      };
+    }
+
+    // 의도별 SoV 계산
+    const intentSoV: Record<string, { mentioned: number; total: number }> = {};
+    const procedureSoV: Record<string, { mentioned: number; total: number }> = {};
+
+    for (const r of responses) {
+      const intent = r.queryIntent || 'INFORMATION';
+      if (!intentSoV[intent]) intentSoV[intent] = { mentioned: 0, total: 0 };
+      intentSoV[intent].total++;
+      if (r.isMentioned) intentSoV[intent].mentioned++;
+
+      const proc = r.prompt?.specialtyCategory;
+      if (proc) {
+        if (!procedureSoV[proc]) procedureSoV[proc] = { mentioned: 0, total: 0 };
+        procedureSoV[proc].total++;
+        if (r.isMentioned) procedureSoV[proc].mentioned++;
+      }
+    }
+
+    // SoV 순 정렬
+    const sortedIntents = Object.entries(intentSoV)
+      .map(([intent, data]) => ({ intent, sov: data.total > 0 ? data.mentioned / data.total : 0 }))
+      .sort((a, b) => b.sov - a.sov);
+
+    const sortedProcedures = Object.entries(procedureSoV)
+      .map(([proc, data]) => ({ proc, sov: data.total > 0 ? data.mentioned / data.total : 0 }))
+      .sort((a, b) => b.sov - a.sov);
+
+    // Golden Prompt 패턴 (ABHS 기여도 높은 상위 5개 프롬프트의 키워드)
+    const goldenResponses = responses
+      .filter(r => r.abhsContribution && r.abhsContribution > 0.5)
+      .sort((a, b) => (b.abhsContribution || 0) - (a.abhsContribution || 0))
+      .slice(0, 5);
+
+    const goldenPatterns: string[] = [];
+    for (const r of goldenResponses) {
+      const text = r.prompt?.promptText || '';
+      // 키워드 추출 (2~6글자 명사)
+      const words = text.split(/\s+/).filter(w => w.length >= 2 && w.length <= 6);
+      goldenPatterns.push(...words);
+    }
+
+    return {
+      topIntents: sortedIntents.slice(0, 2).map(s => s.intent as IntentType),
+      topProcedures: sortedProcedures.slice(0, 3).map(s => s.proc),
+      goldenPatterns: [...new Set(goldenPatterns)].slice(0, 10),
+      lowPerformanceIntents: sortedIntents
+        .filter(s => s.sov < 0.3)
+        .slice(0, 2)
+        .map(s => s.intent as IntentType),
+    };
+  }
+
+  /**
+   * 선택된 프롬프트의 의도 분포 요약
+   */
+  private summarizeIntents(selected: MatrixCandidate[]): string {
+    const counts: Record<string, number> = {};
+    for (const s of selected) {
+      counts[s.intent] = (counts[s.intent] || 0) + 1;
+    }
+    return Object.entries(counts).map(([k, v]) => `${k}:${v}`).join(', ');
+  }
+
+  // ==================== V2 Legacy: 하위 호환용 (deprecated) ====================
+
+  /**
+   * @deprecated V3 매트릭스 엔진으로 대체됨
+   */
+  private async generateDailyPrompts(hospital: any): Promise<{ added: number; replaced: number }> {
+    // V3로 위임
+    const result = await this.generateDailyPromptsV3(hospital);
+    return { added: result.added, replaced: result.replaced };
+  }
+
   private getSeasonalQuestions(month: number, region: string, specialty: string, treatments: string[]): string[] {
     const q: string[] = [];
     const t0 = treatments[0] || '';
 
-    // 계절별 질문
     if (month >= 3 && month <= 5) {
-      // 봄
       q.push(`봄에 ${t0 || specialty} 받기 좋은 시기야? ${region} 추천해줘`);
       q.push(`${region} ${specialty} 봄 시즌 이벤트 하는 곳 있어?`);
     } else if (month >= 6 && month <= 8) {
-      // 여름
       q.push(`여름에 ${t0 || specialty} 받아도 괜찮을까? ${region} 추천해줘`);
       q.push(`여름 방학 때 ${t0 || '진료'} 받으려면 ${region} 어디가 좋아?`);
     } else if (month >= 9 && month <= 11) {
-      // 가을
       q.push(`${region} ${specialty} 가을에 받기 좋은 ${t0 || '시술'} 추천해줘`);
     } else {
-      // 겨울
       q.push(`연말 전에 ${t0 || '진료'} 받으려면 ${region} 어디가 좋을까?`);
       q.push(`새해 첫 ${specialty} 진료, ${region}에서 추천`);
     }
 
-    // 시간대 기반
     const dayOfWeek = new Date().getDay();
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       q.push(`주말에 갈 수 있는 ${region} ${specialty} 알려줘`);
@@ -457,9 +529,6 @@ export class SchedulerService {
     return q;
   }
 
-  /**
-   * 텍스트 유사도 계산 (Jaccard)
-   */
   private textSimilarity(a: string, b: string): number {
     const setA = new Set(a.replace(/\s+/g, '').split(''));
     const setB = new Set(b.replace(/\s+/g, '').split(''));

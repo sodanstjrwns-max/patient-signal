@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { promptsApi, hospitalApi, queryTemplatesApi } from '@/lib/api';
+import { promptsApi, hospitalApi, queryTemplatesApi, schedulerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
   Plus,
@@ -29,6 +29,12 @@ import {
   Heart,
   BarChart3,
   TrendingUp,
+  Zap,
+  Calendar,
+  Grid3X3,
+  RefreshCw,
+  Target,
+  Layers,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { UsageBar, UpgradeModal, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -47,12 +53,67 @@ const categoryConfig: Record<string, { icon: any; color: string; bgColor: string
   '플랫폼': { icon: Stethoscope, color: 'text-slate-700', bgColor: 'bg-slate-50 border-slate-200' },
 };
 
+// 의도별 아이콘 & 색상
+const intentConfig: Record<string, { icon: any; label: string; color: string; bgColor: string }> = {
+  RESERVATION: { icon: Target, label: '예약', color: 'text-blue-700', bgColor: 'bg-blue-50' },
+  COMPARISON: { icon: BarChart3, label: '비교', color: 'text-purple-700', bgColor: 'bg-purple-50' },
+  INFORMATION: { icon: Lightbulb, label: '정보', color: 'text-amber-700', bgColor: 'bg-amber-50' },
+  REVIEW: { icon: MessageSquare, label: '후기', color: 'text-teal-700', bgColor: 'bg-teal-50' },
+  FEAR: { icon: Heart, label: '불안해소', color: 'text-red-700', bgColor: 'bg-red-50' },
+};
+
+// 톤별 라벨
+const toneLabels: Record<string, string> = {
+  casual: '구어체',
+  polite: '정중체',
+  comparison: '비교형',
+  emotional: '감성형',
+  professional: '전문형',
+  seasonal: '시즌',
+  symptom: '증상',
+  strength: '강점',
+  competitor: '경쟁비교',
+};
+
+// 진료과별 placeholder 예시
+const specialtyPlaceholders: Record<string, string> = {
+  DENTAL: '예: 강남역 근처 임플란트 잘하는 치과 추천해줘',
+  DERMATOLOGY: '예: 강남 보톡스 잘하는 피부과 추천해줘',
+  ORTHOPEDICS: '예: 잠실 무릎관절 잘하는 정형외과 추천해줘',
+  KOREAN_MEDICINE: '예: 홍대 추나요법 잘하는 한의원 추천해줘',
+  OPHTHALMOLOGY: '예: 신촌 라식 잘하는 안과 추천해줘',
+  INTERNAL_MEDICINE: '예: 건강검진 꼼꼼한 강남 내과 추천해줘',
+  UROLOGY: '예: 강남 전립선 검사 잘하는 비뇨기과 추천해줘',
+  PLASTIC_SURGERY: '예: 압구정 눈성형 자연스러운 성형외과 추천해줘',
+  ENT: '예: 코골이 수술 잘하는 이비인후과 추천해줘',
+  PSYCHIATRY: '예: 강남 우울증 상담 잘하는 정신건강의학과 추천해줘',
+  OBSTETRICS: '예: 산전검사 꼼꼼한 산부인과 추천해줘',
+  PEDIATRICS: '예: 영유아 예방접종 잘하는 소아과 추천해줘',
+  OTHER: '예: 지역명 + 시술/증상 + 병원 추천해줘',
+};
+
+// 진료과 한글 이름
+const specialtyNames: Record<string, string> = {
+  DENTAL: '치과',
+  DERMATOLOGY: '피부과',
+  ORTHOPEDICS: '정형외과',
+  KOREAN_MEDICINE: '한의원',
+  OPHTHALMOLOGY: '안과',
+  INTERNAL_MEDICINE: '내과',
+  UROLOGY: '비뇨기과',
+  PLASTIC_SURGERY: '성형외과',
+  ENT: '이비인후과',
+  PSYCHIATRY: '정신건강의학과',
+  OBSTETRICS: '산부인과',
+  PEDIATRICS: '소아과',
+  OTHER: '기타',
+};
+
 export default function PromptsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const hospitalId = user?.hospitalId;
 
-  // 서버에서 최신 hospital 데이터 가져오기 (planType 동기화)
   const { data: hospitalData } = useQuery({
     queryKey: ['hospital', hospitalId],
     queryFn: () => hospitalApi.get(hospitalId!).then(r => r.data),
@@ -67,11 +128,11 @@ export default function PromptsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState('');
-  
-  // 질문 제안 패널 상태
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+  const [showMatrix, setShowMatrix] = useState(false);
+  const [selectedMatrixPrompts, setSelectedMatrixPrompts] = useState<Set<string>>(new Set());
 
   // 프롬프트 목록 조회
   const { data: prompts, isLoading } = useQuery({
@@ -81,10 +142,17 @@ export default function PromptsPage() {
   });
 
   // 질문 제안 조회
-  const { data: suggestData, isLoading: isSuggestLoading, refetch: refetchSuggestions } = useQuery({
+  const { data: suggestData, isLoading: isSuggestLoading } = useQuery({
     queryKey: ['suggestions', hospitalId],
     queryFn: () => queryTemplatesApi.suggestQuestions(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId && showSuggestions,
+  });
+
+  // 매트릭스 미리보기
+  const { data: matrixData, isLoading: isMatrixLoading, refetch: refetchMatrix } = useQuery({
+    queryKey: ['matrix-preview', hospitalId],
+    queryFn: () => schedulerApi.matrixPreview(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId && showMatrix,
   });
 
   // 프롬프트 추가
@@ -106,10 +174,9 @@ export default function PromptsPage() {
     },
   });
 
-  // 제안 질문 일괄 추가
+  // 제안/매트릭스 질문 일괄 추가
   const bulkAddMutation = useMutation({
     mutationFn: async (texts: string[]) => {
-      // 하나씩 순차적으로 추가 (에러 시에도 가능한 것까지 추가)
       let added = 0;
       for (const text of texts) {
         try {
@@ -128,7 +195,9 @@ export default function PromptsPage() {
     onSuccess: (added) => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
       queryClient.invalidateQueries({ queryKey: ['suggestions'] });
+      queryClient.invalidateQueries({ queryKey: ['matrix-preview'] });
       setSelectedSuggestions(new Set());
+      setSelectedMatrixPrompts(new Set());
       if (added > 0) {
         toast.success(`${added}개 질문이 추가되었습니다!`);
       }
@@ -143,7 +212,7 @@ export default function PromptsPage() {
     },
   });
 
-  // 프롬프트 활성화/비활성화
+  // 활성화/비활성화
   const toggleMutation = useMutation({
     mutationFn: (id: string) => promptsApi.toggle(id),
     onSuccess: () => {
@@ -151,7 +220,7 @@ export default function PromptsPage() {
     },
   });
 
-  // AI 추천 질문 생성
+  // AI 연관 질문 생성
   const generateMutation = useMutation({
     mutationFn: (promptId: string) => promptsApi.generateFanouts(promptId),
     onSuccess: () => {
@@ -183,7 +252,6 @@ export default function PromptsPage() {
     prompt.promptText.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 제안 질문 선택 토글
   const toggleSuggestionSelect = (query: string) => {
     setSelectedSuggestions(prev => {
       const next = new Set(prev);
@@ -191,7 +259,7 @@ export default function PromptsPage() {
         next.delete(query);
       } else {
         if (next.size >= remainingSlots) {
-          toast.warning(`남은 슬롯이 ${remainingSlots}개입니다. 그 이상 선택할 수 없습니다.`);
+          toast.warning(`남은 슬롯이 ${remainingSlots}개입니다.`);
           return prev;
         }
         next.add(query);
@@ -200,7 +268,22 @@ export default function PromptsPage() {
     });
   };
 
-  // 카테고리 접기/펼치기
+  const toggleMatrixSelect = (text: string) => {
+    setSelectedMatrixPrompts(prev => {
+      const next = new Set(prev);
+      if (next.has(text)) {
+        next.delete(text);
+      } else {
+        if (next.size >= remainingSlots) {
+          toast.warning(`남은 슬롯이 ${remainingSlots}개입니다.`);
+          return prev;
+        }
+        next.add(text);
+      }
+      return next;
+    });
+  };
+
   const toggleCategory = (cat: string) => {
     setExpandedCategories(prev => {
       const next = new Set(prev);
@@ -210,25 +293,28 @@ export default function PromptsPage() {
     });
   };
 
-  // 제안 카테고리별 그룹화
   const groupedSuggestions = suggestData?.suggestions?.reduce((acc: Record<string, any[]>, s: any) => {
     if (!acc[s.category]) acc[s.category] = [];
     acc[s.category].push(s);
     return acc;
   }, {} as Record<string, any[]>) || {};
 
-  // 선택한 질문 일괄 추가
   const handleBulkAdd = () => {
     const texts = Array.from(selectedSuggestions);
     if (texts.length === 0) return;
     bulkAddMutation.mutate(texts);
   };
 
-  // 질문 제안 패널 열기
+  const handleMatrixBulkAdd = () => {
+    const texts = Array.from(selectedMatrixPrompts);
+    if (texts.length === 0) return;
+    bulkAddMutation.mutate(texts);
+  };
+
   const handleOpenSuggestions = () => {
     setShowSuggestions(true);
+    setShowMatrix(false);
     setSelectedSuggestions(new Set());
-    // 모든 카테고리 펼치기
     if (suggestData?.suggestions) {
       const cats = new Set<string>(suggestData.suggestions.map((s: any) => s.category as string));
       setExpandedCategories(cats);
@@ -263,7 +349,9 @@ export default function PromptsPage() {
     <div className="min-h-screen">
       <Header
         title="질문 관리"
-        description="AI에게 물어볼 질문을 관리합니다"
+        description={hospitalData?.specialtyType 
+          ? `${specialtyNames[hospitalData.specialtyType] || '병원'} AI 모니터링 질문을 관리합니다`
+          : 'AI에게 물어볼 질문을 관리합니다'}
       />
 
       <div className="p-6 space-y-6">
@@ -312,7 +400,7 @@ export default function PromptsPage() {
               <>
                 <div className="flex gap-3">
                   <Input
-                    placeholder="예: 강남역 근처 임플란트 잘하는 치과 추천해줘"
+                    placeholder={specialtyPlaceholders[hospitalData?.specialtyType || 'DENTAL'] || specialtyPlaceholders.OTHER}
                     value={newPrompt}
                     onChange={(e) => setNewPrompt(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPrompt()}
@@ -334,20 +422,269 @@ export default function PromptsPage() {
                   <p className="text-sm text-slate-500">
                     💡 팁: 환자들이 실제로 검색할 만한 질문을 추가해보세요 (남은 슬롯: {remainingSlots}개)
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleOpenSuggestions}
-                    className="text-amber-700 border-amber-300 hover:bg-amber-50 flex-shrink-0"
-                  >
-                    <Lightbulb className="h-4 w-4 mr-1.5" />
-                    질문 제안
-                  </Button>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => { setShowMatrix(true); setShowSuggestions(false); setSelectedMatrixPrompts(new Set()); }}
+                      className="text-brand-700 border-brand-300 hover:bg-brand-50"
+                    >
+                      <Grid3X3 className="h-4 w-4 mr-1.5" />
+                      매트릭스 엔진
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleOpenSuggestions}
+                      className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                    >
+                      <Lightbulb className="h-4 w-4 mr-1.5" />
+                      질문 제안
+                    </Button>
+                  </div>
                 </div>
               </>
             )}
           </CardContent>
         </Card>
+
+        {/* ==================== 5×5 매트릭스 엔진 패널 ==================== */}
+        {showMatrix && (
+          <Card className="border-brand-200 bg-gradient-to-br from-brand-50/60 to-white shadow-lg">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Grid3X3 className="h-5 w-5 text-brand-600" />
+                  5×5 매트릭스 프롬프트 엔진
+                  <span className="text-xs font-normal bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">
+                    V3
+                  </span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => refetchMatrix()}
+                    disabled={isMatrixLoading}
+                    title="새로고침"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isMatrixLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                  {selectedMatrixPrompts.size > 0 && (
+                    <Button
+                      size="sm"
+                      onClick={handleMatrixBulkAdd}
+                      disabled={bulkAddMutation.isPending}
+                      className="bg-brand-600 hover:bg-brand-700 text-white"
+                    >
+                      {bulkAddMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-1" />
+                      )}
+                      {selectedMatrixPrompts.size}개 추가
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setShowMatrix(false); setSelectedMatrixPrompts(new Set()); }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardTitle>
+              <p className="text-xs text-slate-500 mt-1">
+                의도 × 시술 × 톤 × 시즌 × 지역 — 5축 매트릭스에서 매일 최적 프롬프트를 자동 선별합니다
+                {hospitalData?.specialtyType && (
+                  <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-brand-100 text-brand-700 rounded-full text-[10px] font-semibold">
+                    <Stethoscope className="h-2.5 w-2.5" />
+                    {specialtyNames[hospitalData.specialtyType] || hospitalData.specialtyType} 전용 매트릭스
+                  </span>
+                )}
+              </p>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {isMatrixLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-brand-600 mb-3" />
+                  <p className="text-sm text-slate-500">매트릭스 후보를 생성하고 있습니다...</p>
+                </div>
+              ) : matrixData ? (
+                <div className="space-y-4">
+                  {/* 매트릭스 통계 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-200 p-3 text-center">
+                      <div className="text-2xl font-bold text-brand-600">{matrixData.matrix?.totalCandidates || 0}</div>
+                      <div className="text-xs text-slate-500">총 후보</div>
+                    </div>
+                    {Object.entries(matrixData.matrix?.byIntent || {}).slice(0, 4).map(([intent, count]) => {
+                      const config = intentConfig[intent];
+                      return (
+                        <div key={intent} className={`${config?.bgColor || 'bg-slate-50'} rounded-2xl border border-slate-200 p-3 text-center`}>
+                          <div className={`text-2xl font-bold ${config?.color || 'text-slate-700'}`}>{count as number}</div>
+                          <div className="text-xs text-slate-500">{config?.label || intent}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 시술별 분포 미니차트 */}
+                  {matrixData.matrix?.byProcedure && Object.keys(matrixData.matrix.byProcedure).length > 0 && (
+                    <div className="bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-200 p-3">
+                      <div className="text-xs font-semibold text-slate-600 mb-2 flex items-center gap-1">
+                        <Layers className="h-3.5 w-3.5" />
+                        시술별 후보 분포
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(matrixData.matrix.byProcedure).map(([proc, count]) => {
+                          const max = Math.max(...Object.values(matrixData.matrix.byProcedure).map(Number));
+                          const pct = max > 0 ? ((count as number) / max) * 100 : 0;
+                          return (
+                            <div key={proc} className="flex-1 min-w-[120px]">
+                              <div className="flex items-center justify-between text-xs mb-0.5">
+                                <span className="text-slate-700 font-medium truncate">{proc}</span>
+                                <span className="text-slate-400">{count as number}</span>
+                              </div>
+                              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 시즌 태그 */}
+                  {matrixData.matrix?.bySeason && Object.keys(matrixData.matrix.bySeason).length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                      <span className="text-xs text-slate-500">오늘의 시즌:</span>
+                      {Object.entries(matrixData.matrix.bySeason).map(([season, count]) => (
+                        <span key={season} className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full font-medium">
+                          {season} ({count as number})
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 오늘의 추천 프롬프트 */}
+                  <div className="border-t border-brand-100 pt-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                        <Zap className="h-4 w-4 text-brand-500" />
+                        오늘의 추천 ({matrixData.todayCount}개)
+                      </h4>
+                      <span className="text-xs text-slate-400">
+                        기존 {matrixData.existingCount}개 질문 제외 · 다양성 최적화
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                      {matrixData.todaySelection?.map((item: any, idx: number) => {
+                        const isSelected = selectedMatrixPrompts.has(item.text);
+                        const iConfig = intentConfig[item.intent];
+                        const IntentIcon = iConfig?.icon || Target;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => toggleMatrixSelect(item.text)}
+                            className={`w-full text-left px-3 py-3 rounded-2xl border text-sm transition-all ${
+                              isSelected
+                                ? 'border-brand-400 bg-brand-50 ring-1 ring-brand-300'
+                                : 'border-transparent bg-white/80 hover:bg-white backdrop-blur-sm hover:border-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition ${
+                                isSelected
+                                  ? 'bg-brand-500 border-brand-500'
+                                  : 'border-slate-300 bg-white'
+                              }`}>
+                                {isSelected && <Check className="h-3 w-3 text-white" />}
+                              </div>
+                              <div className="flex-1">
+                                <span className={`${isSelected ? 'text-brand-900 font-medium' : 'text-slate-700'}`}>
+                                  {item.text}
+                                </span>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${iConfig?.bgColor || 'bg-slate-50'} ${iConfig?.color || 'text-slate-600'}`}>
+                                    <IntentIcon className="h-2.5 w-2.5" />
+                                    {iConfig?.label || item.intent}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 px-1.5 py-0.5 bg-slate-50 rounded-full">
+                                    {toneLabels[item.tone] || item.tone}
+                                  </span>
+                                  {item.season && (
+                                    <span className="text-[10px] text-amber-600 px-1.5 py-0.5 bg-amber-50 rounded-full">
+                                      🗓 {item.season}
+                                    </span>
+                                  )}
+                                  {item.procedure && (
+                                    <span className="text-[10px] text-slate-400">
+                                      {item.procedure}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-300 ml-auto">
+                                    가중치 {item.weight}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 하단 액션 바 */}
+                  <div className="flex items-center justify-between pt-3 border-t border-brand-100">
+                    <div className="text-sm text-slate-600">
+                      <span className="font-medium text-brand-700">{matrixData.todayCount}</span>개 추천 중{' '}
+                      <span className="font-medium text-brand-700">{selectedMatrixPrompts.size}</span>개 선택
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (selectedMatrixPrompts.size > 0) {
+                            setSelectedMatrixPrompts(new Set());
+                          } else {
+                            const all = (matrixData.todaySelection || []).slice(0, remainingSlots).map((s: any) => s.text);
+                            setSelectedMatrixPrompts(new Set(all));
+                          }
+                        }}
+                      >
+                        {selectedMatrixPrompts.size > 0 ? '전체 해제' : `전체 선택`}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleMatrixBulkAdd}
+                        disabled={selectedMatrixPrompts.size === 0 || bulkAddMutation.isPending}
+                        className="bg-brand-600 hover:bg-brand-700 text-white"
+                      >
+                        {bulkAddMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                        ) : (
+                          <Plus className="h-4 w-4 mr-1" />
+                        )}
+                        {selectedMatrixPrompts.size}개 추가하기
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  매트릭스 데이터를 불러올 수 없습니다.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* ==================== 질문 제안 패널 ==================== */}
         {showSuggestions && (
@@ -419,7 +756,6 @@ export default function PromptsPage() {
 
                     return (
                       <div key={category} className={`border rounded-2xl overflow-hidden ${config.bgColor}`}>
-                        {/* 카테고리 헤더 */}
                         <button
                           onClick={() => toggleCategory(category)}
                           className="w-full flex items-center justify-between px-4 py-2.5 hover:opacity-80 transition"
@@ -435,7 +771,6 @@ export default function PromptsPage() {
                           {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
                         </button>
 
-                        {/* 질문 목록 */}
                         {isExpanded && (
                           <div className="px-3 pb-3 space-y-1.5">
                             {items.map((s: any) => {
@@ -473,7 +808,6 @@ export default function PromptsPage() {
                 </div>
               )}
 
-              {/* 하단 액션 바 */}
               {suggestData && Object.keys(groupedSuggestions).length > 0 && (
                 <div className="flex items-center justify-between mt-4 pt-3 border-t border-amber-200">
                   <div className="text-sm text-slate-600">
@@ -488,7 +822,6 @@ export default function PromptsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        // 전체 선택/해제
                         if (selectedSuggestions.size === suggestData.suggestions.length || selectedSuggestions.size >= remainingSlots) {
                           setSelectedSuggestions(new Set());
                         } else {
@@ -531,7 +864,7 @@ export default function PromptsPage() {
             />
           </div>
           <p className="text-sm text-slate-500">
-            크롤링은 매일 자동으로 실행됩니다
+            매일 매트릭스 엔진이 자동으로 프롬프트를 생성합니다
           </p>
         </div>
 
@@ -557,7 +890,9 @@ export default function PromptsPage() {
                   {searchTerm ? '검색 결과가 없습니다' : '등록된 질문이 없습니다'}
                 </p>
                 <p className="text-sm text-slate-400 mt-1">
-                  위에서 새 질문을 추가하거나 <button onClick={handleOpenSuggestions} className="text-amber-600 underline font-medium">질문 제안</button>을 이용해보세요
+                  위에서 새 질문을 추가하거나{' '}
+                  <button onClick={() => { setShowMatrix(true); setShowSuggestions(false); }} className="text-brand-600 underline font-medium">매트릭스 엔진</button>
+                  을 이용해보세요
                 </p>
               </div>
             ) : (
@@ -585,6 +920,11 @@ export default function PromptsPage() {
                         {prompt.specialtyCategory && (
                           <span className="text-xs text-slate-500">
                             {prompt.specialtyCategory}
+                          </span>
+                        )}
+                        {prompt._count?.aiResponses > 0 && (
+                          <span className="text-xs text-slate-400">
+                            응답 {prompt._count.aiResponses}개
                           </span>
                         )}
                       </div>
@@ -644,7 +984,6 @@ export default function PromptsPage() {
         </Card>
       </div>
 
-      {/* 업그레이드 모달 */}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}

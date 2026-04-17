@@ -311,6 +311,16 @@ export const queryTemplatesApi = {
     api.post('/query-templates/seed/templates'),
 };
 
+// Scheduler / Matrix API
+export const schedulerApi = {
+  // 매트릭스 미리보기 (저장 없이)
+  matrixPreview: (hospitalId: string) =>
+    api.get(`/scheduler/matrix-preview/${hospitalId}`),
+  // 스케줄러 상태
+  status: () =>
+    api.get('/scheduler/status'),
+};
+
 // Subscriptions API
 export const subscriptionsApi = {
   getMySubscription: () =>

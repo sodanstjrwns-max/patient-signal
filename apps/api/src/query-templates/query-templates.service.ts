@@ -118,6 +118,11 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '소아천식', alias: ['천식', '소아호흡기', '기관지'], category: 'core', isPopular: false },
     { name: '소아비만', alias: ['비만', '소아체중', '식이관리'], category: 'general', isPopular: false },
   ],
+  OTHER: [
+    { name: '일반진료', alias: ['진료', '진찰', '상담'], category: 'general', isPopular: true },
+    { name: '검진', alias: ['건강검진', '종합검진'], category: 'core', isPopular: true },
+    { name: '예방접종', alias: ['접종', '백신'], category: 'general', isPopular: false },
+  ],
 };
 
 // ==================== 14개 핵심 쿼리 템플릿 ====================
