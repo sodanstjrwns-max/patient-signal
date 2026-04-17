@@ -41,7 +41,7 @@ export default function DashboardLayout({
 
   if (!_hasHydrated || !isAuthenticated || !user?.hospitalId) {
     return (
-      <div className="min-h-screen bg-slate-50 bg-mesh flex items-center justify-center">
+      <div className="min-h-screen bg-mesh flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-brand-600 mx-auto mb-4"></div>
@@ -57,13 +57,17 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-mesh">
       <Sidebar />
-      {/* Main content area with mesh background */}
-      <main className="flex-1 overflow-auto pt-14 lg:pt-0 bg-mesh min-h-screen">
-        <TrialBanner />
-        <div className="animate-fade-in">
-          {children}
+      {/* Main content - glassmorphism backdrop */}
+      <main className="flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen relative">
+        {/* Subtle grid pattern behind glass cards */}
+        <div className="absolute inset-0 grid-pattern pointer-events-none" />
+        <div className="relative z-10">
+          <TrialBanner />
+          <div className="animate-fade-in">
+            {children}
+          </div>
         </div>
       </main>
     </div>
