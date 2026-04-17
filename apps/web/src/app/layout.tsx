@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { Providers } from './providers';
-
-const inter = Inter({ subsets: ['latin'] });
 
 // Google Analytics ID - 나중에 실제 ID로 교체
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID || 'G-XXXXXXXXXX';
@@ -38,7 +35,7 @@ export default function RootLayout({
           `}
         </Script>
       </head>
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
       </body>
     </html>
