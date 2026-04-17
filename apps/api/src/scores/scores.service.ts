@@ -490,7 +490,7 @@ export class ScoresService {
       where: {
         hospitalId,
         createdAt: { gte: last30Days },
-        sourceHints: { not: null },
+        sourceHints: { not: undefined },
       },
       select: {
         sourceHints: true,

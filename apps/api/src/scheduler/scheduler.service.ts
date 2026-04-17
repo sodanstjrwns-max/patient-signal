@@ -314,7 +314,7 @@ export class SchedulerService {
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
 
     // 기존 질문 텍스트 세트
-    const existingTexts = new Set(hospital.prompts.map((p: any) => p.promptText));
+    const existingTexts = new Set<string>(hospital.prompts.map((p: any) => p.promptText));
     const currentCount = hospital.prompts.length;
 
     // 남은 슬롯 확인
