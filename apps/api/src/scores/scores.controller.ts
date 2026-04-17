@@ -111,4 +111,16 @@ export class ScoresController {
   async getActionIntelligence(@Param('hospitalId') hospitalId: string) {
     return this.abhsService.generateActionIntelligence(hospitalId);
   }
+
+  @Get(':hospitalId/abhs/golden-prompts')
+  @ApiOperation({ 
+    summary: '【V2】Golden Prompt 분석',
+    description: 'ABHS 5축 기준으로 가장 성과 좋은 질문 패턴 식별. 상위 10개 Golden Prompt + 각 축별 성과' 
+  })
+  async getGoldenPrompts(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    return this.abhsService.analyzeGoldenPrompts(hospitalId, parseInt(days || '30'));
+  }
 }

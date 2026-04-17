@@ -51,6 +51,29 @@ export class SchedulerController {
   }
 
   /**
+   * Daily Prompt Refresh - 매일 자동 질문 생성
+   * Cron: 매일 오전 8시 (KST) - 크롤링 전에 실행
+   */
+  @Post('daily-prompt-refresh')
+  @ApiOperation({ summary: '일일 자동 프롬프트 생성 (리텐션 드라이버)' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async dailyPromptRefresh(
+    @Headers('x-cron-secret') cronSecret: string,
+  ) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const result = await this.schedulerService.runDailyPromptRefresh();
+    return {
+      success: true,
+      timestamp: new Date().toISOString(),
+      ...result,
+    };
+  }
+
+  /**
    * 상태 확인 엔드포인트 (공개)
    */
   @Get('status')

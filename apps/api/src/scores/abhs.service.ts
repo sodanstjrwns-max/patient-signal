@@ -584,4 +584,131 @@ export class ABHSService {
       maxPossibleScore: 0,
     };
   }
+
+  // ==================== V2: Golden Prompt 분석 ====================
+
+  /**
+   * Golden Prompt 분석 - ABHS 5축 기준으로 가장 성과 좋은 질문 패턴 식별
+   * 
+   * Golden Prompt = ABHS 기여분이 가장 높은 질문
+   * - 높은 SoV (자주 언급됨)
+   * - 높은 Sentiment (긍정적 추천)
+   * - 높은 Depth (R3=단독추천 비율 높음)
+   * - 예약 의도 매칭 (RESERVATION intent)
+   * 
+   * @returns 상위 10개 Golden Prompt + 각 축별 성과
+   */
+  async analyzeGoldenPrompts(hospitalId: string, days: number = 30): Promise<{
+    goldenPrompts: Array<{
+      promptText: string;
+      goldenScore: number;
+      sov: number;
+      avgSentiment: number;
+      r3Rate: number;
+      topPlatform: string;
+      totalResponses: number;
+      mentionCount: number;
+      intent: string;
+    }>;
+    insights: string[];
+    overallPattern: string;
+  }> {
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - days);
+
+    // 프롬프트별 응답 데이터 조회
+    const prompts = await this.prisma.prompt.findMany({
+      where: { hospitalId, isActive: true },
+      include: {
+        aiResponses: {
+          where: { createdAt: { gte: dateFrom } },
+          select: {
+            isMentioned: true,
+            sentimentScoreV2: true,
+            recommendationDepth: true,
+            queryIntent: true,
+            aiPlatform: true,
+            platformWeight: true,
+            abhsContribution: true,
+          },
+        },
+      },
+    });
+
+    const goldenPrompts = prompts
+      .filter(p => p.aiResponses.length > 0)
+      .map(p => {
+        const responses = p.aiResponses;
+        const total = responses.length;
+        const mentioned = responses.filter(r => r.isMentioned);
+        const mentionCount = mentioned.length;
+        const sov = total > 0 ? (mentionCount / total) * 100 : 0;
+
+        // 평균 감성
+        const sentiments = mentioned.filter(r => r.sentimentScoreV2 !== null);
+        const avgSentiment = sentiments.length > 0
+          ? sentiments.reduce((sum, r) => sum + (r.sentimentScoreV2 || 0), 0) / sentiments.length
+          : 0;
+
+        // R3 비율
+        const r3Count = mentioned.filter(r => r.recommendationDepth === 'R3').length;
+        const r3Rate = mentionCount > 0 ? (r3Count / mentionCount) * 100 : 0;
+
+        // 최고 성과 플랫폼
+        const platformMentions: Record<string, number> = {};
+        for (const r of mentioned) {
+          platformMentions[r.aiPlatform] = (platformMentions[r.aiPlatform] || 0) + 1;
+        }
+        const topPlatform = Object.entries(platformMentions)
+          .sort((a, b) => b[1] - a[1])[0]?.[0] || 'NONE';
+
+        // Golden Score = SoV × (1 + avgSentiment/2) × (1 + r3Rate/100) × intentMultiplier
+        const intent = responses[0]?.queryIntent || 'INFORMATION';
+        const intentMult = INTENT_MULTIPLIERS[intent] || 1.0;
+        const goldenScore = sov * (1 + avgSentiment / 2) * (1 + r3Rate / 100) * intentMult;
+
+        return {
+          promptText: p.promptText,
+          goldenScore: Math.round(goldenScore * 10) / 10,
+          sov: Math.round(sov * 10) / 10,
+          avgSentiment: Math.round(avgSentiment * 100) / 100,
+          r3Rate: Math.round(r3Rate * 10) / 10,
+          topPlatform,
+          totalResponses: total,
+          mentionCount,
+          intent,
+        };
+      })
+      .sort((a, b) => b.goldenScore - a.goldenScore)
+      .slice(0, 10);
+
+    // 인사이트 생성
+    const insights: string[] = [];
+    if (goldenPrompts.length > 0) {
+      const top = goldenPrompts[0];
+      insights.push(`🏆 최고 성과 질문: "${top.promptText.substring(0, 40)}..." (Golden Score: ${top.goldenScore})`);
+      
+      if (top.sov > 70) insights.push(`✅ Voice Share ${top.sov}%로 우수한 노출률`);
+      if (top.r3Rate > 50) insights.push(`⭐ R3(단독추천) 비율 ${top.r3Rate}%로 AI가 적극 추천`);
+      if (top.avgSentiment > 1) insights.push(`💚 매우 긍정적인 추천 톤 (${top.avgSentiment})`);
+
+      // 패턴 분석
+      const reservationPrompts = goldenPrompts.filter(p => p.intent === 'RESERVATION');
+      if (reservationPrompts.length >= 3) {
+        insights.push(`🎯 예약 의도 질문에서 특히 성과가 좋습니다 (${reservationPrompts.length}개/Top10)`);
+      }
+    }
+
+    // 전체 패턴
+    const avgSoV = goldenPrompts.length > 0
+      ? goldenPrompts.reduce((s, p) => s + p.sov, 0) / goldenPrompts.length
+      : 0;
+    const overallPattern = avgSoV > 60
+      ? '강한 AI 가시성 - Golden Prompt 패턴을 다른 질문에도 적용하세요'
+      : avgSoV > 30
+      ? '보통 AI 가시성 - 상위 질문 패턴을 분석하여 전체 질문 품질을 높이세요'
+      : '약한 AI 가시성 - 블로그/웹사이트 콘텐츠 보강이 먼저 필요합니다';
+
+    return { goldenPrompts, insights, overallPattern };
+  }
 }
