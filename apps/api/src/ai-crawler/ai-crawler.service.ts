@@ -97,8 +97,9 @@ export class AICrawlerService {
       },
     );
     const data = await response.json();
-    if (data.error) throw new Error(`Gemini 에러: ${data.error.message}`);
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (data.error) throw new Error(`Gemini 에러: [${data.error.code}] ${data.error.message}`);
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
     return { response: text, model: 'gemini-2.5-flash' };
   }
 
@@ -794,19 +795,21 @@ export class AICrawlerService {
   }
 
   /**
-   * 【개선1+2+8】Gemini 질의 - temperature 0, 시스템 프롬프트 제거, grounding with Google Search
+   * 【개선1+2+8】Gemini 질의 - gemini-2.5-flash + Google Search grounding
+   * 2.5-flash는 thinking model이므로 temperature 미설정 (기본값 사용)
+   * 3단계 폴백: grounding → 일반 2.5-flash → 2.5-flash-lite
    */
   private async queryGemini(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
     
-    this.logger.log(`[Gemini] API 호출 시작 (temp=0, Google Search grounding)`);
+    this.logger.log(`[Gemini] API 호출 시작 (gemini-2.5-flash, Google Search grounding)`);
     
     let text = '';
     let isWebSearch = false;
     let geminiSources: SourceItem[] = [];
 
     try {
-      // 【개선8】Google Search grounding 활성화
+      // STEP 1: Google Search grounding 활성화
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
@@ -815,16 +818,15 @@ export class AICrawlerService {
           body: JSON.stringify({
             contents: [
               {
-                parts: [{ text: promptText }],  // 【개선2】시스템 프롬프트 없음
+                parts: [{ text: promptText }],
               },
             ],
             generationConfig: {
-              temperature: 0,  // 【개선1】temperature 0
               maxOutputTokens: 2000,
             },
             tools: [
               {
-                google_search: {},  // 【개선8】Google Search grounding
+                google_search: {},
               },
             ],
           }),
@@ -834,15 +836,16 @@ export class AICrawlerService {
       const data = await response.json();
       
       if (data.error) {
-        throw new Error(data.error.message);
+        throw new Error(`[${data.error.code}] ${data.error.message}`);
       }
       
-      text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      // 2.5-flash는 parts가 여러개일 수 있음 (thinking + response)
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
       isWebSearch = true;
       
       // 【소스 트래킹】grounding metadata에서 인용 소스 추출
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-      // 【P0-1 FIX】외부 geminiSources에 직접 push (재선언 버그 수정)
       
       if (groundingMetadata?.groundingChunks) {
         for (const chunk of groundingMetadata.groundingChunks) {
@@ -859,37 +862,64 @@ export class AICrawlerService {
         this.logger.log(`[Gemini] grounding 소스 ${geminiSources.length}개 추출`);
       }
       
-      // searchEntryPoint에서 검색 쿼리 정보도 저장
       if (groundingMetadata?.searchEntryPoint?.renderedContent) {
         this.logger.log(`[Gemini] Google Search grounding 활성 확인`);
       }
       
     } catch (groundingError) {
-      // grounding 실패 시 일반 모드로 폴백
-      this.logger.warn(`[Gemini] grounding 실패, 일반 모드: ${groundingError.message}`);
+      // STEP 2: grounding 실패 → 일반 모드 폴백
+      this.logger.warn(`[Gemini] grounding 실패: ${groundingError.message}, 일반 모드 시도`);
       
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: promptText }],  // 【개선2】시스템 프롬프트 없음
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: promptText }],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 2000,
               },
-            ],
-            generationConfig: {
-              temperature: 0,  // 【개선1】temperature 0
-              maxOutputTokens: 2000,
-            },
-          }),
-        },
-      );
+            }),
+          },
+        );
 
-      const data = await response.json();
-      if (data.error) throw new Error(`Gemini API 에러: ${data.error.message}`);
-      text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const data = await response.json();
+        if (data.error) throw new Error(`[${data.error.code}] ${data.error.message}`);
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
+      } catch (fallbackError) {
+        // STEP 3: 2.5-flash 자체 실패 → 2.5-flash-lite로 최종 폴백
+        this.logger.warn(`[Gemini] 2.5-flash 실패: ${fallbackError.message}, 2.5-flash-lite 시도`);
+        
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: promptText }],
+                },
+              ],
+              generationConfig: {
+                maxOutputTokens: 2000,
+              },
+            }),
+          },
+        );
+
+        const data = await response.json();
+        if (data.error) throw new Error(`Gemini 전체 실패: [${data.error.code}] ${data.error.message}`);
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
+      }
     }
 
     const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.5-flash');
