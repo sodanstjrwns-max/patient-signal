@@ -86,7 +86,7 @@ export class AICrawlerService {
     const geminiKey = process.env.GEMINI_API_KEY?.trim();
     if (!geminiKey) throw new Error('Gemini API 키가 없습니다');
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ export class AICrawlerService {
     const data = await response.json();
     if (data.error) throw new Error(`Gemini 에러: ${data.error.message}`);
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    return { response: text, model: 'gemini-2.0-flash' };
+    return { response: text, model: 'gemini-2.5-flash' };
   }
 
   async testClaudeCall(): Promise<any> {
@@ -808,7 +808,7 @@ export class AICrawlerService {
     try {
       // 【개선8】Google Search grounding 활성화
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -869,7 +869,7 @@ export class AICrawlerService {
       this.logger.warn(`[Gemini] grounding 실패, 일반 모드: ${groundingError.message}`);
       
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -892,7 +892,7 @@ export class AICrawlerService {
       text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
-    const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.0-flash');
+    const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.5-flash');
     result.isWebSearch = isWebSearch;
     
     // 【소스 트래킹】Gemini 소스 구조화
