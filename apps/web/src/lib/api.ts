@@ -270,6 +270,30 @@ export const geoContentApi = {
     api.post(`/geo-content/${id}/publish`, data),
 };
 
+// Citation Analysis & Content Calendar API
+export const citationApi = {
+  // 인용 역분석
+  analyze: (hospitalId: string, data: { query: string; maxPages?: number }) =>
+    api.post(`/citation-analysis/${hospitalId}/analyze`, data, { timeout: 120000 }),
+  analyzeBulk: (hospitalId: string, data?: { limit?: number }) =>
+    api.post(`/citation-analysis/${hospitalId}/analyze-bulk`, data || {}, { timeout: 300000 }),
+  getRecent: (hospitalId: string, limit?: number) =>
+    api.get(`/citation-analysis/${hospitalId}/recent`, { params: { limit } }),
+  getStats: (hospitalId: string) =>
+    api.get(`/citation-analysis/${hospitalId}/stats`),
+  getGeoPrompt: (hospitalId: string, targetKeyword: string) =>
+    api.post(`/citation-analysis/${hospitalId}/geo-prompt`, { targetKeyword }, { timeout: 120000 }),
+  // 56주 콘텐츠 캘린더
+  generateCalendar: (hospitalId: string) =>
+    api.post(`/citation-analysis/${hospitalId}/calendar`, {}, { timeout: 120000 }),
+  getCalendar: (hospitalId: string, params?: { status?: string; limit?: number; offset?: number }) =>
+    api.get(`/citation-analysis/${hospitalId}/calendar`, { params }),
+  analyzeCalendarWeek: (hospitalId: string, weekNumber: number) =>
+    api.post(`/citation-analysis/${hospitalId}/calendar/${weekNumber}/analyze`, {}, { timeout: 120000 }),
+  updateCalendarItem: (hospitalId: string, weekNumber: number, data: any) =>
+    api.patch(`/citation-analysis/${hospitalId}/calendar/${weekNumber}`, data),
+};
+
 // Scores API
 export const scoresApi = {
   getLatest: (hospitalId: string) =>

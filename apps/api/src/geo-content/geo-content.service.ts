@@ -1,7 +1,8 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Inject, forwardRef, Optional } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { SPECIALTY_NAMES, SPECIALTY_PROCEDURES } from '../query-templates/query-templates.service';
+import { CitationAnalyzerService } from '../ai-crawler/citation-analyzer.service';
 import Anthropic from '@anthropic-ai/sdk';
 import { Prisma } from '@prisma/client';
 
@@ -76,11 +77,15 @@ export class GeoContentService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    @Optional() private citationAnalyzer?: CitationAnalyzerService,
   ) {
     const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
     if (apiKey && apiKey.length > 20) {
       this.anthropic = new Anthropic({ apiKey });
       this.logger.log('Anthropic Claude API 연결 완료 (GEO Content Agent)');
+    }
+    if (this.citationAnalyzer) {
+      this.logger.log('Citation Analyzer 연동 완료 → GEO 콘텐츠 생성 시 역분석 지시어 자동 주입');
     }
   }
 
@@ -199,6 +204,27 @@ export class GeoContentService {
     const funnelConfig = FUNNEL_TONE_MAP[params.funnelStage] || FUNNEL_TONE_MAP.AWARENESS;
     const tone = params.contentTone || funnelConfig.defaultTone;
     const toneInstruction = TONE_INSTRUCTIONS[tone] || TONE_INSTRUCTIONS.POLITE;
+
+    // ═══ 인용 역분석 기반 SEO 지시어 자동 주입 ═══
+    let citationEnhancement = '';
+    if (this.citationAnalyzer) {
+      try {
+        const targetKw = (params.targetKeywords?.[0]) || params.topic;
+        const enhancement = await this.citationAnalyzer.buildGeoPromptEnhancement(hospitalId, targetKw);
+        citationEnhancement = enhancement.additionalInstructions || '';
+        this.logger.log(`[GEO] 역분석 지시어 ${enhancement.seoDirectives.length}개 주입 (키워드: ${targetKw})`);
+      } catch (err) {
+        this.logger.warn(`[GEO] 역분석 지시어 조회 실패 (무시하고 진행): ${err.message}`);
+      }
+    }
+    // 기존 additionalInstructions에 역분석 지시어 병합
+    const mergedInstructions = [
+      params.additionalInstructions,
+      citationEnhancement,
+    ].filter(Boolean).join('\n\n');
+    if (mergedInstructions) {
+      params.additionalInstructions = mergedInstructions;
+    }
 
     // 콘텐츠 DB 레코드 생성 (GENERATING 상태)
     const content = await this.prisma.geoContent.create({

@@ -212,6 +212,8 @@ model Hospital {
   reports            Report[]
   geoContents        GeoContent[]
   aeoPipelines       AeoPipeline[]
+  citationAnalyses   CitationAnalysis[]
+  contentCalendars   ContentCalendar[]
 
   @@index([subscriptionStatus, planType])
   @@index([planType])
@@ -938,6 +940,81 @@ model WeeklyCoachAction {
   
   @@unique([hospitalId, weekStartDate])
   @@map("weekly_coach_actions")
+}
+
+// AI 인용 역분석 결과
+model CitationAnalysis {
+  id                String   @id @default(uuid())
+  hospitalId        String   @map("hospital_id")
+  
+  // 분석 입력
+  queryText         String   @map("query_text")          // 원래 질문
+  targetKeyword     String?  @map("target_keyword")      // 타겟 키워드 (예: "강남 임플란트")
+  
+  // 인용 페이지 분석 결과
+  analyzedUrls      String[] @map("analyzed_urls")        // 분석한 URL 목록
+  topCitationCount  Int      @default(0) @map("top_citation_count") // 분석된 인용 페이지 수
+  
+  // AI 분석 결과 (JSON)
+  citationPatterns  Json?    @map("citation_patterns")    // 인용 페이지 공통 패턴
+  gapAnalysis       Json?    @map("gap_analysis")         // 우리 콘텐츠와의 GAP
+  directives        Json?    @map("directives")           // 구체 지시어 목록
+  contentScore      Json?    @map("content_score")        // 인용 가능성 점수
+  
+  // 메타데이터
+  analysisModel     String?  @map("analysis_model")       // 분석에 사용한 AI 모델
+  costEstimate      Float?   @map("cost_estimate")        // 분석 비용 (원)
+  status            String   @default("COMPLETED")        // RUNNING, COMPLETED, FAILED
+  errorMessage      String?  @map("error_message")
+  
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  hospital          Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  
+  @@index([hospitalId, createdAt])
+  @@index([targetKeyword])
+  @@map("citation_analyses")
+}
+
+// ==================== 56주 콘텐츠 캘린더 ====================
+
+model ContentCalendar {
+  id                 String   @id @default(uuid())
+  hospitalId         String   @map("hospital_id")
+  
+  // 캘린더 정보
+  weekNumber         Int      @map("week_number")            // 1~56주
+  yearWeek           String   @map("year_week")              // "2026-W17" 형태
+  scheduledDate      DateTime @map("scheduled_date") @db.Date // 해당 주 발행 예정일
+  
+  // 콘텐츠 정보
+  topic              String                                   // 주제
+  targetKeyword      String   @map("target_keyword")         // 타겟 키워드
+  funnelStage        String   @map("funnel_stage")           // AWARENESS, CONSIDERATION 등
+  procedure          String?                                  // 관련 시술
+  contentType        String   @default("BLOG") @map("content_type") // BLOG, FAQ, COMPARISON 등
+  
+  // 인용 역분석 연동
+  citationAnalysisId String?  @map("citation_analysis_id")   // 연결된 인용 분석 결과
+  seoDirectives      Json?    @map("seo_directives")         // 역분석에서 추출한 SEO 지시어
+  
+  // 생성된 콘텐츠 연동
+  geoContentId       String?  @map("geo_content_id")         // 생성된 GEO 콘텐츠 ID
+  
+  // 상태
+  status             String   @default("PLANNED")            // PLANNED, ANALYZED, GENERATING, PUBLISHED, SKIPPED
+  priority           String   @default("MEDIUM")             // HIGH, MEDIUM, LOW
+  notes              String?                                  // 메모
+  
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  
+  hospital           Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  
+  @@unique([hospitalId, weekNumber])
+  @@index([hospitalId, status])
+  @@index([hospitalId, scheduledDate])
+  @@map("content_calendars")
 }
 
 // GEO 콘텐츠 발행 이력
