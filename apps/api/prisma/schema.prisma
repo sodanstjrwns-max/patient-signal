@@ -180,6 +180,7 @@ model User {
 model Hospital {
   id                 String             @id @default(uuid())
   name               String
+  nameAliases        String[]           @default([]) @map("name_aliases")  // 병원 별칭 (편의 명칭, 약칭 등)
   businessNumber     String?            @unique @map("business_number")
   specialtyType      SpecialtyType      @map("specialty_type")
   subSpecialties     String[]           @map("sub_specialties") // ['임플란트', '교정', '미백']

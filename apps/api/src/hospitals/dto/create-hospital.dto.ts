@@ -7,6 +7,15 @@ export class CreateHospitalDto {
   @IsString()
   name: string;
 
+  @ApiPropertyOptional({ 
+    example: ['서울비디', '서울BD치과', '서울비디치과의원'], 
+    description: '병원 별칭 (편의 명칭, 약칭, 온라인에서 쓰이는 다른 이름 등)' 
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  nameAliases?: string[];
+
   @ApiPropertyOptional({ example: '123-45-67890', description: '사업자등록번호' })
   @IsOptional()
   @IsString()

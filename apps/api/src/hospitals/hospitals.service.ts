@@ -21,6 +21,7 @@ export class HospitalsService {
       hospital = await this.prisma.hospital.create({
         data: {
           name: dto.name,
+          nameAliases: dto.nameAliases || [],
           businessNumber: sanitize(dto.businessNumber),
           specialtyType: dto.specialtyType,
           subSpecialties: dto.subSpecialties || [],
@@ -183,6 +184,7 @@ export class HospitalsService {
       where: { id: hospitalId },
       data: {
         name: dto.name,
+        nameAliases: dto.nameAliases,
         businessNumber: dto.businessNumber?.trim() || null,
         specialtyType: dto.specialtyType,
         subSpecialties: dto.subSpecialties,

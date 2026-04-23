@@ -1472,11 +1472,16 @@ export class AICrawlerController {
   ) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { id: true, name: true, planType: true },
+      select: { id: true, name: true, nameAliases: true, planType: true },
     });
 
     if (!hospital) {
       throw new NotFoundException('병원을 찾을 수 없습니다');
+    }
+
+    // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
+    if (hospital.nameAliases && hospital.nameAliases.length > 0) {
+      this.aiCrawlerService.setHospitalAliases(hospital.name, hospital.nameAliases);
     }
 
     const { question, platforms } = body;
@@ -2342,6 +2347,11 @@ export class AICrawlerController {
     // 플랜에 따라 허용된 플랫폼만 사용
     const platforms: any[] = allowedPlatforms || ['CHATGPT', 'PERPLEXITY'];
     this.logger.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개, 플랫폼: ${platforms.join(', ')}`);
+
+    // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
+    if (hospital.nameAliases && hospital.nameAliases.length > 0) {
+      this.aiCrawlerService.setHospitalAliases(hospital.name, hospital.nameAliases);
+    }
 
     for (const prompt of prompts) {
       try {

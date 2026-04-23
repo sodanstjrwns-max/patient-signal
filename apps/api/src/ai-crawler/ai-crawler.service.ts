@@ -1690,8 +1690,36 @@ JSON 형식으로만 답변:
 
   // ==================== 기존 분석 로직 (유지) ====================
 
-  private generateHospitalNameVariants(hospitalName: string): string[] {
+  private generateHospitalNameVariants(hospitalName: string, nameAliases: string[] = []): string[] {
     const variants: Set<string> = new Set();
+    
+    // ── 별칭(alias)도 1급 변형으로 추가 ──
+    // 사용자가 직접 등록한 편의 명칭을 우선 포함
+    for (const alias of nameAliases) {
+      const trimmed = alias.trim();
+      if (trimmed.length >= 2) {
+        variants.add(trimmed);
+        variants.add(trimmed.toLowerCase());
+        variants.add(trimmed.replace(/\s+/g, ''));
+        // 별칭에 대해서도 suffix 조합 생성
+        const aliasSuffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉'];
+        for (const suffix of aliasSuffixes) {
+          if (!trimmed.endsWith(suffix)) {
+            variants.add(trimmed + suffix);
+          }
+        }
+        // 별칭에서 suffix를 제거한 core도 추가
+        const aliasCore = trimmed
+          .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)$/, '')
+          .trim();
+        if (aliasCore.length >= 2 && aliasCore !== trimmed) {
+          variants.add(aliasCore);
+          for (const suffix of aliasSuffixes) {
+            variants.add(aliasCore + suffix);
+          }
+        }
+      }
+    }
     
     variants.add(hospitalName);
     variants.add(hospitalName.toLowerCase());
@@ -1834,10 +1862,24 @@ JSON 형식으로만 답변:
 
   // 【최적화】병원명 변형 캐시 (같은 병원에 대해 반복 생성 방지)
   private variantCache = new Map<string, string[]>();
+  // 별칭 캐시 (DB에서 조회한 별칭을 저장하여 반복 조회 방지)
+  private aliasCache = new Map<string, string[]>();
+
+  /**
+   * 병원별 별칭 설정 (크롤 시작 시 한번 호출)
+   * 이후 getCachedVariants에서 자동으로 별칭을 포함한 변형 생성
+   */
+  setHospitalAliases(hospitalName: string, aliases: string[]) {
+    const cacheKey = hospitalName;
+    this.aliasCache.set(cacheKey, aliases);
+    // 별칭 변경 시 기존 변형 캐시도 무효화
+    this.variantCache.delete(cacheKey);
+  }
 
   private getCachedVariants(hospitalName: string): string[] {
     if (!this.variantCache.has(hospitalName)) {
-      this.variantCache.set(hospitalName, this.generateHospitalNameVariants(hospitalName));
+      const aliases = this.aliasCache.get(hospitalName) || [];
+      this.variantCache.set(hospitalName, this.generateHospitalNameVariants(hospitalName, aliases));
       // 캐시 사이즈 제한 (100개 초과 시 오래된 것 제거)
       if (this.variantCache.size > 100) {
         const firstKey = this.variantCache.keys().next().value;

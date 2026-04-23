@@ -15,7 +15,6 @@ import {
   MapPin,
   Globe,
   CreditCard,
-
   Shield,
   Loader2,
   Save,
@@ -27,6 +26,10 @@ import {
   RefreshCw,
   ChevronRight,
   Eye,
+  Plus,
+  X,
+  Tags,
+  Info,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 
@@ -184,6 +187,8 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: '', address: '', websiteUrl: '', naverPlaceId: '',
   });
+  const [nameAliases, setNameAliases] = useState<string[]>([]);
+  const [newAlias, setNewAlias] = useState('');
 
   useEffect(() => {
     if (hospital) {
@@ -191,6 +196,7 @@ export default function SettingsPage() {
         name: hospital.name || '', address: hospital.address || '',
         websiteUrl: hospital.websiteUrl || '', naverPlaceId: hospital.naverPlaceId || '',
       });
+      setNameAliases(hospital.nameAliases || []);
       // keyProcedures 우선, 없으면 coreTreatments fallback
       if (hospital.keyProcedures?.length > 0) {
         setSelectedProcedures(hospital.keyProcedures);
@@ -199,6 +205,39 @@ export default function SettingsPage() {
       }
     }
   }, [hospital]);
+
+  // 별칭 추가
+  const addAlias = () => {
+    const trimmed = newAlias.trim();
+    if (!trimmed) return;
+    if (nameAliases.includes(trimmed)) {
+      toast.warning('이미 등록된 별칭입니다.');
+      return;
+    }
+    if (nameAliases.length >= 10) {
+      toast.warning('별칭은 최대 10개까지 등록 가능합니다.');
+      return;
+    }
+    setNameAliases([...nameAliases, trimmed]);
+    setNewAlias('');
+  };
+
+  // 별칭 삭제
+  const removeAlias = (alias: string) => {
+    setNameAliases(nameAliases.filter(a => a !== alias));
+  };
+
+  // 별칭 저장
+  const saveAliasesMutation = useMutation({
+    mutationFn: () => hospitalApi.update(hospitalId!, { nameAliases }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hospital'] });
+      toast.success('병원 별칭이 저장되었습니다. 다음 크롤링/실시간 질문부터 반영됩니다.');
+    },
+    onError: () => {
+      toast.error('별칭 저장에 실패했습니다.');
+    },
+  });
 
   // 병원 정보 업데이트
   const updateMutation = useMutation({
@@ -241,7 +280,7 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
-    updateMutation.mutate(formData);
+    updateMutation.mutate({ ...formData, nameAliases });
   };
 
   if (!hospitalId) {
@@ -318,6 +357,100 @@ export default function SettingsPage() {
                   수정
                 </Button>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ==================== 병원 별칭(Alias) 관리 ==================== */}
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50/30 to-white">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Tags className="h-5 w-5 text-purple-600" />
+              병원 별칭 관리
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">NEW</span>
+            </CardTitle>
+            <CardDescription>
+              AI가 우리 병원을 다른 이름으로 언급할 때도 인식할 수 있도록 별칭을 등록하세요
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* 안내 */}
+            <div className="flex items-start gap-2 p-3 bg-purple-50 rounded-xl border border-purple-100">
+              <Info className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-purple-700">
+                <p className="font-medium mb-1">왜 별칭이 필요한가요?</p>
+                <p className="text-purple-600">
+                  예를 들어 공식명칭이 "바른얼굴치과교정과치과의원"이지만 AI가 "바른얼굴교정치과"로 답변할 수 있어요. 
+                  별칭을 등록하면 이런 변형 명칭도 <strong>'언급됨'</strong>으로 정확하게 잡아냅니다.
+                </p>
+              </div>
+            </div>
+
+            {/* 현재 공식명칭 */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">공식명칭:</span>
+              <span className="px-3 py-1 bg-slate-100 text-slate-800 text-sm rounded-full font-medium">
+                {hospital?.name}
+              </span>
+            </div>
+
+            {/* 등록된 별칭 목록 */}
+            {nameAliases.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-slate-500">등록된 별칭:</span>
+                {nameAliases.map((alias) => (
+                  <span key={alias} className="px-3 py-1 bg-purple-100 text-purple-800 text-sm rounded-full font-medium flex items-center gap-1.5 group">
+                    {alias}
+                    <button
+                      onClick={() => removeAlias(alias)}
+                      className="opacity-50 group-hover:opacity-100 hover:text-red-600 transition-opacity"
+                      title="별칭 삭제"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* 별칭 입력 */}
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="별칭 입력 (예: 바른얼굴교정치과)"
+                value={newAlias}
+                onChange={(e) => setNewAlias(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addAlias(); } }}
+                className="flex-1"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addAlias}
+                disabled={!newAlias.trim()}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                추가
+              </Button>
+            </div>
+
+            {/* 저장 버튼 */}
+            <div className="flex items-center justify-between pt-2 border-t">
+              <p className="text-xs text-slate-400">
+                별칭은 최대 10개까지 등록 가능합니다 ({nameAliases.length}/10)
+              </p>
+              <Button
+                onClick={() => saveAliasesMutation.mutate()}
+                disabled={saveAliasesMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-700"
+                size="sm"
+              >
+                {saveAliasesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                별칭 저장
+              </Button>
             </div>
           </CardContent>
         </Card>

@@ -96,6 +96,11 @@ export class SchedulerService {
         
         this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
 
+        // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
+        if ((hospital as any).nameAliases && (hospital as any).nameAliases.length > 0) {
+          this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
+        }
+
         // 월간 크롤링 횟수 체크
         if (planLimits.crawlsPerMonth !== -1) {
           const now = new Date();
