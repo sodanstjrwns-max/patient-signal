@@ -23,6 +23,7 @@ import {
   useMentionInsight,
   useSourceInsight,
   useABHS,
+  useRanking,
 } from '@/hooks/useQueries';
 import { 
   Activity, 
@@ -115,6 +116,7 @@ export default function DashboardPage() {
   const { data: mentionInsight } = useMentionInsight();
   const { data: sourceInsight } = useSourceInsight();
   const { data: abhs } = useABHS();
+  const { data: ranking } = useRanking();
 
   const handleRefresh = () => {
     refetch();
@@ -242,6 +244,40 @@ export default function DashboardPage() {
                   </span>
                 </Link>
               </div>
+
+              {/* ── 랭킹 뱃지 (인라인) ── */}
+              {ranking?.rank && (
+                <div className="mb-5 flex items-center gap-3">
+                  <div className={`relative flex items-center gap-2.5 px-4 py-2.5 rounded-2xl backdrop-blur-md border ${
+                    ranking.badge === 'DIAMOND' ? 'bg-cyan-500/15 border-cyan-400/20' :
+                    ranking.badge === 'PLATINUM' ? 'bg-slate-300/15 border-slate-300/20' :
+                    ranking.badge === 'GOLD' ? 'bg-yellow-500/15 border-yellow-400/20' :
+                    ranking.badge === 'SILVER' ? 'bg-slate-200/15 border-slate-200/20' :
+                    ranking.badge === 'BRONZE' ? 'bg-orange-500/15 border-orange-400/20' :
+                    'bg-slate-500/15 border-slate-400/20'
+                  }`}>
+                    <span className="text-lg">{ranking.badgeEmoji}</span>
+                    <div>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className={`text-sm font-black ${
+                          ranking.badge === 'DIAMOND' ? 'text-cyan-300' :
+                          ranking.badge === 'PLATINUM' ? 'text-slate-200' :
+                          ranking.badge === 'GOLD' ? 'text-yellow-300' :
+                          ranking.badge === 'SILVER' ? 'text-slate-300' :
+                          ranking.badge === 'BRONZE' ? 'text-orange-300' :
+                          'text-slate-400'
+                        }`}>{ranking.badgeLabel}</span>
+                        <span className="text-[10px] text-white/40 font-bold">등급</span>
+                      </div>
+                      <p className="text-[11px] text-white/50 font-medium mt-0.5">
+                        전체 {ranking.totalHospitals}개 중 <span className="text-white/80 font-black">{ranking.rank}위</span>
+                        <span className="mx-1 text-white/20">·</span>
+                        상위 <span className="text-white/80 font-black">{ranking.topPercent}%</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-end gap-6 mb-6">
                 <div>

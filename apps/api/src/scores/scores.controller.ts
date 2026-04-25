@@ -80,6 +80,17 @@ export class ScoresController {
     return this.scoresService.getPromptHeatmap(hospitalId);
   }
 
+  // ==================== 전체 순위 + 등급 뱃지 ====================
+
+  @Get(':hospitalId/ranking')
+  @ApiOperation({ 
+    summary: '전체 순위 + 상위 % + 등급 뱃지',
+    description: '전체 병원 중 내 순위, 상위 몇 %, 등급 뱃지(DIAMOND~IRON) 반환' 
+  })
+  async getRanking(@Param('hospitalId') hospitalId: string) {
+    return this.scoresService.getRanking(hospitalId);
+  }
+
   // ==================== 초고도화: ABHS 엔드포인트 ====================
 
   @Get(':hospitalId/abhs')

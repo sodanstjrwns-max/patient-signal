@@ -18,6 +18,7 @@ export const queryKeys = {
     abhs: (hospitalId: string) => ['abhs', hospitalId] as const,
     competitiveShare: (hospitalId: string) => ['competitiveShare', hospitalId] as const,
     actionIntelligence: (hospitalId: string) => ['actions', hospitalId] as const,
+    ranking: (hospitalId: string) => ['ranking', hospitalId] as const,
   },
 
   // === Insights (대시보드 + 인사이트 페이지 공유) ===

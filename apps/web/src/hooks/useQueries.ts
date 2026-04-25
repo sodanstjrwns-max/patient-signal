@@ -83,6 +83,16 @@ export function useABHS() {
   });
 }
 
+export function useRanking() {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.scores.ranking(hospitalId!),
+    queryFn: () => scoresApi.getRanking(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId,
+    staleTime: STALE_TIMES.INSIGHTS,
+  });
+}
+
 export function useCompetitiveShare() {
   const hospitalId = useHospitalId();
   return useQuery({

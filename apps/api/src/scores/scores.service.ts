@@ -477,6 +477,183 @@ export class ScoresService {
     return 'NEUTRAL';
   }
 
+  // ==================== 전체 순위 + 상위 % + 등급 뱃지 ====================
+
+  /**
+   * 전체 병원 중 순위, 상위 %, 등급 뱃지 계산
+   * - 가장 최근 DailyScore 기준으로 전체 병원 overallScore 비교
+   * - 등급: DIAMOND(상위 1%), PLATINUM(5%), GOLD(10%), SILVER(20%), BRONZE(40%), IRON(나머지)
+   */
+  async getRanking(hospitalId: string) {
+    // 1) 각 병원의 가장 최근 점수를 가져온다 (subscriptionStatus=ACTIVE만)
+    //    Prisma raw query로 "병원별 최신 1건" 추출
+    const latestScores: Array<{
+      hospital_id: string;
+      overall_score: number;
+      score_date: Date;
+      hospital_name: string;
+      plan_type: string;
+    }> = await this.prisma.$queryRaw`
+      SELECT DISTINCT ON (ds.hospital_id)
+        ds.hospital_id,
+        ds.overall_score,
+        ds.score_date,
+        h.name AS hospital_name,
+        h.plan_type
+      FROM daily_scores ds
+      JOIN hospitals h ON h.id = ds.hospital_id
+      WHERE h.subscription_status = 'ACTIVE'
+        AND ds.overall_score > 0
+      ORDER BY ds.hospital_id, ds.score_date DESC
+    `;
+
+    if (latestScores.length === 0) {
+      return {
+        rank: null,
+        totalHospitals: 0,
+        topPercent: null,
+        badge: 'IRON' as const,
+        badgeLabel: '아이언',
+        badgeColor: '#94a3b8',
+        score: 0,
+        message: '아직 점수 데이터가 없습니다.',
+      };
+    }
+
+    // 2) 점수 내림차순 정렬 → 동점이면 같은 순위
+    const sorted = [...latestScores].sort((a, b) => b.overall_score - a.overall_score);
+
+    // 3) 내 병원 찾기
+    const myEntry = sorted.find(s => s.hospital_id === hospitalId);
+    if (!myEntry) {
+      return {
+        rank: null,
+        totalHospitals: sorted.length,
+        topPercent: null,
+        badge: 'IRON' as const,
+        badgeLabel: '아이언',
+        badgeColor: '#94a3b8',
+        score: 0,
+        message: '아직 점수 데이터가 없습니다.',
+      };
+    }
+
+    // 4) 순위 계산 (동점 = 같은 순위)
+    let rank = 1;
+    for (const entry of sorted) {
+      if (entry.overall_score > myEntry.overall_score) {
+        rank++;
+      } else {
+        break;
+      }
+    }
+
+    const totalHospitals = sorted.length;
+    const topPercent = Math.round((rank / totalHospitals) * 100);
+
+    // 5) 등급 뱃지 결정
+    const badge = this.determineBadge(topPercent);
+
+    // 6) 근처 순위 병원들 (앞뒤 2개씩, 이름 마스킹)
+    const myIndex = sorted.findIndex(s => s.hospital_id === hospitalId);
+    const nearbyStart = Math.max(0, myIndex - 2);
+    const nearbyEnd = Math.min(sorted.length, myIndex + 3);
+    const nearby = sorted.slice(nearbyStart, nearbyEnd).map((s, i) => ({
+      rank: nearbyStart + i + 1,
+      score: s.overall_score,
+      isMe: s.hospital_id === hospitalId,
+      name: s.hospital_id === hospitalId
+        ? s.hospital_name
+        : this.maskHospitalName(s.hospital_name),
+    }));
+
+    return {
+      rank,
+      totalHospitals,
+      topPercent,
+      badge: badge.key,
+      badgeLabel: badge.label,
+      badgeColor: badge.color,
+      badgeEmoji: badge.emoji,
+      score: myEntry.overall_score,
+      scoreDate: myEntry.score_date,
+      nearby,
+      message: badge.message(rank, totalHospitals),
+    };
+  }
+
+  /**
+   * 등급 뱃지 결정 로직
+   */
+  private determineBadge(topPercent: number): {
+    key: string;
+    label: string;
+    color: string;
+    emoji: string;
+    message: (rank: number, total: number) => string;
+  } {
+    if (topPercent <= 1) {
+      return {
+        key: 'DIAMOND',
+        label: '다이아몬드',
+        color: '#b9f2ff',
+        emoji: '💎',
+        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 1% 최정상급 AI 가시성입니다.`,
+      };
+    }
+    if (topPercent <= 5) {
+      return {
+        key: 'PLATINUM',
+        label: '플래티넘',
+        color: '#e5e4e2',
+        emoji: '👑',
+        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 5% 최상위 그룹입니다.`,
+      };
+    }
+    if (topPercent <= 10) {
+      return {
+        key: 'GOLD',
+        label: '골드',
+        color: '#ffd700',
+        emoji: '🥇',
+        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 10% 우수한 AI 가시성입니다.`,
+      };
+    }
+    if (topPercent <= 20) {
+      return {
+        key: 'SILVER',
+        label: '실버',
+        color: '#c0c0c0',
+        emoji: '🥈',
+        message: (r, t) => `전체 ${t}개 병원 중 ${r}위. 상위 20% — 조금 더 올리면 골드!`,
+      };
+    }
+    if (topPercent <= 40) {
+      return {
+        key: 'BRONZE',
+        label: '브론즈',
+        color: '#cd7f32',
+        emoji: '🥉',
+        message: (r, t) => `전체 ${t}개 병원 중 ${r}위. 콘텐츠 보강으로 실버 도전!`,
+      };
+    }
+    return {
+      key: 'IRON',
+      label: '아이언',
+      color: '#94a3b8',
+      emoji: '🛡️',
+      message: (r, t) => `전체 ${t}개 병원 중 ${r}위. AI 가시성 개선이 필요합니다.`,
+    };
+  }
+
+  /**
+   * 병원 이름 마스킹 (경쟁사 이름 비공개)
+   */
+  private maskHospitalName(name: string): string {
+    if (name.length <= 2) return name[0] + '*';
+    return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+  }
+
   // ==================== V2: 소스 힌트 / Content Gap / Opportunity ====================
 
   /**
