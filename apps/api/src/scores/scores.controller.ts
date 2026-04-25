@@ -80,12 +80,12 @@ export class ScoresController {
     return this.scoresService.getPromptHeatmap(hospitalId);
   }
 
-  // ==================== 전체 순위 + 등급 뱃지 ====================
+  // ==================== 전체 순위 / 상위 % / 등급 뱃지 ====================
 
   @Get(':hospitalId/ranking')
   @ApiOperation({ 
     summary: '전체 순위 + 상위 % + 등급 뱃지',
-    description: '전체 병원 중 내 순위, 상위 몇 %, 등급 뱃지(DIAMOND~IRON) 반환' 
+    description: '전체 병원 중 내 순위, 상위 퍼센트, Diamond~Starter 등급 뱃지, 순위 변동, 근접 경쟁자 점수 갭, 점수 분포' 
   })
   async getRanking(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getRanking(hospitalId);

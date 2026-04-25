@@ -477,181 +477,217 @@ export class ScoresService {
     return 'NEUTRAL';
   }
 
-  // ==================== 전체 순위 + 상위 % + 등급 뱃지 ====================
+  // ==================== 전체 순위 / 상위 % / 등급 뱃지 ====================
 
   /**
    * 전체 병원 중 순위, 상위 %, 등급 뱃지 계산
-   * - 가장 최근 DailyScore 기준으로 전체 병원 overallScore 비교
-   * - 등급: DIAMOND(상위 1%), PLATINUM(5%), GOLD(10%), SILVER(20%), BRONZE(40%), IRON(나머지)
+   * - 최신 overallScore 기준으로 전체 병원 순위 매김
+   * - 상위 %와 등급 뱃지(Diamond/Platinum/Gold/Silver/Bronze) 반환
    */
   async getRanking(hospitalId: string) {
-    // 1) 각 병원의 가장 최근 점수를 가져온다 (subscriptionStatus=ACTIVE만)
-    //    Prisma raw query로 "병원별 최신 1건" 추출
-    const latestScores: Array<{
-      hospital_id: string;
-      overall_score: number;
-      score_date: Date;
-      hospital_name: string;
-      plan_type: string;
-    }> = await this.prisma.$queryRaw`
-      SELECT DISTINCT ON (ds.hospital_id)
-        ds.hospital_id,
-        ds.overall_score,
-        ds.score_date,
-        h.name AS hospital_name,
-        h.plan_type
+    // 1. 모든 병원의 최신 점수를 가져오기 (각 병원별 가장 최근 DailyScore)
+    const allHospitals = await this.prisma.hospital.findMany({
+      where: { subscriptionStatus: 'ACTIVE' },
+      select: {
+        id: true,
+        name: true,
+        specialtyType: true,
+        regionSido: true,
+        regionSigungu: true,
+        planType: true,
+      },
+    });
+
+    if (allHospitals.length === 0) {
+      return this.buildRankingResponse(hospitalId, null, 0, 0, []);
+    }
+
+    // 2. 각 병원의 최신 점수를 한 번에 가져오기
+    //    서브쿼리로 각 병원별 최신 날짜를 찾고, 그 점수를 조회
+    const latestScores = await this.prisma.$queryRaw<
+      Array<{ hospital_id: string; overall_score: number; score_date: Date }>
+    >`
+      SELECT ds.hospital_id, ds.overall_score, ds.score_date
       FROM daily_scores ds
-      JOIN hospitals h ON h.id = ds.hospital_id
-      WHERE h.subscription_status = 'ACTIVE'
-        AND ds.overall_score > 0
-      ORDER BY ds.hospital_id, ds.score_date DESC
+      INNER JOIN (
+        SELECT hospital_id, MAX(score_date) as max_date
+        FROM daily_scores
+        GROUP BY hospital_id
+      ) latest ON ds.hospital_id = latest.hospital_id AND ds.score_date = latest.max_date
+      ORDER BY ds.overall_score DESC
     `;
 
-    if (latestScores.length === 0) {
-      return {
-        rank: null,
-        totalHospitals: 0,
-        topPercent: null,
-        badge: 'IRON' as const,
-        badgeLabel: '아이언',
-        badgeColor: '#94a3b8',
-        score: 0,
-        message: '아직 점수 데이터가 없습니다.',
-      };
+    // 3. 병원 ID → 점수 매핑
+    const scoreMap = new Map<string, number>();
+    for (const row of latestScores) {
+      scoreMap.set(row.hospital_id, row.overall_score);
     }
 
-    // 2) 점수 내림차순 정렬 → 동점이면 같은 순위
-    const sorted = [...latestScores].sort((a, b) => b.overall_score - a.overall_score);
+    // 4. 전체 병원 리스트에 점수를 붙여서 정렬 (점수 없는 병원은 0점 처리)
+    const rankedList = allHospitals
+      .map(h => ({
+        hospitalId: h.id,
+        name: h.name,
+        score: scoreMap.get(h.id) ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score);
 
-    // 3) 내 병원 찾기
-    const myEntry = sorted.find(s => s.hospital_id === hospitalId);
-    if (!myEntry) {
-      return {
-        rank: null,
-        totalHospitals: sorted.length,
-        topPercent: null,
-        badge: 'IRON' as const,
-        badgeLabel: '아이언',
-        badgeColor: '#94a3b8',
-        score: 0,
-        message: '아직 점수 데이터가 없습니다.',
-      };
+    // 5. 순위 계산 (동점 처리: 같은 점수면 같은 순위)
+    const rankings: Array<{ hospitalId: string; name: string; score: number; rank: number }> = [];
+    let currentRank = 1;
+    for (let i = 0; i < rankedList.length; i++) {
+      if (i > 0 && rankedList[i].score < rankedList[i - 1].score) {
+        currentRank = i + 1;
+      }
+      rankings.push({ ...rankedList[i], rank: currentRank });
     }
 
-    // 4) 순위 계산 (동점 = 같은 순위)
-    let rank = 1;
-    for (const entry of sorted) {
-      if (entry.overall_score > myEntry.overall_score) {
-        rank++;
-      } else {
-        break;
+    // 6. 내 병원 찾기
+    const myRanking = rankings.find(r => r.hospitalId === hospitalId);
+    const totalHospitals = rankings.length;
+
+    if (!myRanking) {
+      return this.buildRankingResponse(hospitalId, null, 0, totalHospitals, rankings);
+    }
+
+    // 7. 이전 점수로 순위 변동 계산
+    const previousScores = await this.prisma.$queryRaw<
+      Array<{ hospital_id: string; overall_score: number }>
+    >`
+      SELECT ds.hospital_id, ds.overall_score
+      FROM daily_scores ds
+      INNER JOIN (
+        SELECT hospital_id, MAX(score_date) as max_date
+        FROM daily_scores
+        WHERE score_date < (
+          SELECT MAX(score_date) FROM daily_scores WHERE hospital_id = ${hospitalId}
+        )
+        GROUP BY hospital_id
+      ) prev ON ds.hospital_id = prev.hospital_id AND ds.score_date = prev.max_date
+      ORDER BY ds.overall_score DESC
+    `;
+
+    let previousRank: number | null = null;
+    if (previousScores.length > 0) {
+      const prevSorted = previousScores.sort((a, b) => b.overall_score - a.overall_score);
+      let prevCurrentRank = 1;
+      for (let i = 0; i < prevSorted.length; i++) {
+        if (i > 0 && prevSorted[i].overall_score < prevSorted[i - 1].overall_score) {
+          prevCurrentRank = i + 1;
+        }
+        if (prevSorted[i].hospital_id === hospitalId) {
+          previousRank = prevCurrentRank;
+          break;
+        }
       }
     }
 
-    const totalHospitals = sorted.length;
-    const topPercent = Math.round((rank / totalHospitals) * 100);
-
-    // 5) 등급 뱃지 결정
-    const badge = this.determineBadge(topPercent);
-
-    // 6) 근처 순위 병원들 (앞뒤 2개씩, 이름 마스킹)
-    const myIndex = sorted.findIndex(s => s.hospital_id === hospitalId);
-    const nearbyStart = Math.max(0, myIndex - 2);
-    const nearbyEnd = Math.min(sorted.length, myIndex + 3);
-    const nearby = sorted.slice(nearbyStart, nearbyEnd).map((s, i) => ({
-      rank: nearbyStart + i + 1,
-      score: s.overall_score,
-      isMe: s.hospital_id === hospitalId,
-      name: s.hospital_id === hospitalId
-        ? s.hospital_name
-        : this.maskHospitalName(s.hospital_name),
-    }));
-
-    return {
-      rank,
-      totalHospitals,
-      topPercent,
-      badge: badge.key,
-      badgeLabel: badge.label,
-      badgeColor: badge.color,
-      badgeEmoji: badge.emoji,
-      score: myEntry.overall_score,
-      scoreDate: myEntry.score_date,
-      nearby,
-      message: badge.message(rank, totalHospitals),
-    };
+    return this.buildRankingResponse(hospitalId, myRanking, totalHospitals, totalHospitals, rankings, previousRank);
   }
 
   /**
-   * 등급 뱃지 결정 로직
+   * 등급 뱃지 결정
    */
-  private determineBadge(topPercent: number): {
-    key: string;
+  private getBadge(topPercent: number): {
+    tier: string;
     label: string;
-    color: string;
     emoji: string;
-    message: (rank: number, total: number) => string;
+    color: string;
+    description: string;
   } {
     if (topPercent <= 1) {
-      return {
-        key: 'DIAMOND',
-        label: '다이아몬드',
-        color: '#b9f2ff',
-        emoji: '💎',
-        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 1% 최정상급 AI 가시성입니다.`,
-      };
+      return { tier: 'DIAMOND', label: 'Diamond', emoji: '💎', color: '#B9F2FF', description: '상위 1% — AI 가시성의 정점' };
     }
     if (topPercent <= 5) {
-      return {
-        key: 'PLATINUM',
-        label: '플래티넘',
-        color: '#e5e4e2',
-        emoji: '👑',
-        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 5% 최상위 그룹입니다.`,
-      };
+      return { tier: 'PLATINUM', label: 'Platinum', emoji: '👑', color: '#E5E4E2', description: '상위 5% — 최상위 AI 가시성' };
     }
-    if (topPercent <= 10) {
-      return {
-        key: 'GOLD',
-        label: '골드',
-        color: '#ffd700',
-        emoji: '🥇',
-        message: (r, t) => `전체 ${t}개 병원 중 ${r}위! 상위 10% 우수한 AI 가시성입니다.`,
-      };
+    if (topPercent <= 15) {
+      return { tier: 'GOLD', label: 'Gold', emoji: '🥇', color: '#FFD700', description: '상위 15% — 우수한 AI 가시성' };
     }
-    if (topPercent <= 20) {
-      return {
-        key: 'SILVER',
-        label: '실버',
-        color: '#c0c0c0',
-        emoji: '🥈',
-        message: (r, t) => `전체 ${t}개 병원 중 ${r}위. 상위 20% — 조금 더 올리면 골드!`,
-      };
+    if (topPercent <= 30) {
+      return { tier: 'SILVER', label: 'Silver', emoji: '🥈', color: '#C0C0C0', description: '상위 30% — 양호한 AI 가시성' };
     }
-    if (topPercent <= 40) {
-      return {
-        key: 'BRONZE',
-        label: '브론즈',
-        color: '#cd7f32',
-        emoji: '🥉',
-        message: (r, t) => `전체 ${t}개 병원 중 ${r}위. 콘텐츠 보강으로 실버 도전!`,
-      };
+    if (topPercent <= 50) {
+      return { tier: 'BRONZE', label: 'Bronze', emoji: '🥉', color: '#CD7F32', description: '상위 50% — 성장 가능성 높음' };
     }
+    return { tier: 'STARTER', label: 'Starter', emoji: '🌱', color: '#90EE90', description: 'AI 가시성 개선 여정을 시작하세요' };
+  }
+
+  /**
+   * 랭킹 응답 빌더
+   */
+  private buildRankingResponse(
+    hospitalId: string,
+    myRanking: { hospitalId: string; name: string; score: number; rank: number } | null,
+    totalHospitals: number,
+    _total: number,
+    rankings: Array<{ hospitalId: string; name: string; score: number; rank: number }>,
+    previousRank?: number | null,
+  ) {
+    const myRank = myRanking?.rank ?? null;
+    const myScore = myRanking?.score ?? 0;
+    const topPercent = myRank && totalHospitals > 0
+      ? Math.max(1, Math.round((myRank / totalHospitals) * 100))
+      : 100;
+
+    const badge = this.getBadge(topPercent);
+
+    // 순위 변동
+    let rankChange: number | null = null;
+    let rankTrend: 'UP' | 'DOWN' | 'STABLE' | 'NEW' = 'NEW';
+    if (previousRank !== undefined && previousRank !== null && myRank !== null) {
+      rankChange = previousRank - myRank; // 양수 = 순위 상승
+      rankTrend = rankChange > 0 ? 'UP' : rankChange < 0 ? 'DOWN' : 'STABLE';
+    }
+
+    // 상위/하위 근접 병원 (익명화)
+    const myIndex = rankings.findIndex(r => r.hospitalId === hospitalId);
+    const neighbors: { above: { score: number; gap: number } | null; below: { score: number; gap: number } | null } = {
+      above: null,
+      below: null,
+    };
+
+    if (myIndex > 0) {
+      const aboveScore = rankings[myIndex - 1].score;
+      neighbors.above = { score: aboveScore, gap: aboveScore - myScore };
+    }
+    if (myIndex >= 0 && myIndex < rankings.length - 1) {
+      const belowScore = rankings[myIndex + 1].score;
+      neighbors.below = { score: belowScore, gap: myScore - belowScore };
+    }
+
     return {
-      key: 'IRON',
-      label: '아이언',
-      color: '#94a3b8',
-      emoji: '🛡️',
-      message: (r, t) => `전체 ${t}개 병원 중 ${r}위. AI 가시성 개선이 필요합니다.`,
+      hospitalId,
+      rank: myRank,
+      totalHospitals,
+      topPercent,
+      score: myScore,
+      badge,
+      rankChange,
+      rankTrend,
+      neighbors,
+      // 스코어 분포 (히스토그램용)
+      distribution: this.buildDistribution(rankings),
     };
   }
 
   /**
-   * 병원 이름 마스킹 (경쟁사 이름 비공개)
+   * 점수 분포 계산 (10점 단위 히스토그램)
    */
-  private maskHospitalName(name: string): string {
-    if (name.length <= 2) return name[0] + '*';
-    return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1];
+  private buildDistribution(rankings: Array<{ score: number }>) {
+    const buckets = Array.from({ length: 10 }, (_, i) => ({
+      range: `${i * 10}-${i * 10 + 9}`,
+      min: i * 10,
+      max: i * 10 + 9,
+      count: 0,
+    }));
+
+    for (const r of rankings) {
+      const idx = Math.min(Math.floor(r.score / 10), 9);
+      buckets[idx].count++;
+    }
+
+    return buckets;
   }
 
   // ==================== V2: 소스 힌트 / Content Gap / Opportunity ====================

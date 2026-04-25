@@ -306,7 +306,7 @@ export const scoresApi = {
     api.get(`/scores/${hospitalId}/specialties`),
   getWeekly: (hospitalId: string) =>
     api.get(`/scores/${hospitalId}/weekly`),
-  // 전체 순위 + 등급 뱃지
+  // 전체 순위 + 상위 % + 등급 뱃지
   getRanking: (hospitalId: string) =>
     api.get(`/scores/${hospitalId}/ranking`),
   // 초고도화 ABHS

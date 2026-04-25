@@ -246,27 +246,22 @@ export default function DashboardPage() {
               </div>
 
               {/* ── 랭킹 뱃지 (인라인) ── */}
-              {ranking?.rank && (
+              {ranking?.rank && ranking?.badge && (
                 <div className="mb-5 flex items-center gap-3">
                   <div className={`relative flex items-center gap-2.5 px-4 py-2.5 rounded-2xl backdrop-blur-md border ${
-                    ranking.badge === 'DIAMOND' ? 'bg-cyan-500/15 border-cyan-400/20' :
-                    ranking.badge === 'PLATINUM' ? 'bg-slate-300/15 border-slate-300/20' :
-                    ranking.badge === 'GOLD' ? 'bg-yellow-500/15 border-yellow-400/20' :
-                    ranking.badge === 'SILVER' ? 'bg-slate-200/15 border-slate-200/20' :
-                    ranking.badge === 'BRONZE' ? 'bg-orange-500/15 border-orange-400/20' :
-                    'bg-slate-500/15 border-slate-400/20'
+                    ranking.badge.tier === 'DIAMOND' ? 'bg-cyan-500/15 border-cyan-400/20' :
+                    ranking.badge.tier === 'PLATINUM' ? 'bg-slate-300/15 border-slate-300/20' :
+                    ranking.badge.tier === 'GOLD' ? 'bg-yellow-500/15 border-yellow-400/20' :
+                    ranking.badge.tier === 'SILVER' ? 'bg-slate-200/15 border-slate-200/20' :
+                    ranking.badge.tier === 'BRONZE' ? 'bg-orange-500/15 border-orange-400/20' :
+                    'bg-emerald-500/15 border-emerald-400/20'
                   }`}>
-                    <span className="text-lg">{ranking.badgeEmoji}</span>
+                    <span className="text-xl leading-none">{ranking.badge.emoji}</span>
                     <div>
                       <div className="flex items-baseline gap-1.5">
-                        <span className={`text-sm font-black ${
-                          ranking.badge === 'DIAMOND' ? 'text-cyan-300' :
-                          ranking.badge === 'PLATINUM' ? 'text-slate-200' :
-                          ranking.badge === 'GOLD' ? 'text-yellow-300' :
-                          ranking.badge === 'SILVER' ? 'text-slate-300' :
-                          ranking.badge === 'BRONZE' ? 'text-orange-300' :
-                          'text-slate-400'
-                        }`}>{ranking.badgeLabel}</span>
+                        <span className="text-sm font-black" style={{ color: ranking.badge.color }}>
+                          {ranking.badge.label}
+                        </span>
                         <span className="text-[10px] text-white/40 font-bold">등급</span>
                       </div>
                       <p className="text-[11px] text-white/50 font-medium mt-0.5">
@@ -276,6 +271,26 @@ export default function DashboardPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* 순위 변동 */}
+                  {ranking.rankChange !== null && ranking.rankChange !== 0 && (
+                    <div className={`flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold backdrop-blur-md border ${
+                      ranking.rankChange > 0
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-400/15'
+                        : 'bg-red-500/15 text-red-400 border-red-400/15'
+                    }`}>
+                      {ranking.rankChange > 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                      {Math.abs(ranking.rankChange)}계단
+                    </div>
+                  )}
+
+                  {/* 이웃 병원 갭 */}
+                  {ranking.neighbors?.above && (
+                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.04] text-[11px] text-white/40 font-medium">
+                      <ArrowUpRight className="h-3 w-3 text-amber-400" />
+                      <span>다음 순위까지 <span className="text-amber-300 font-black">{ranking.neighbors.above.gap}점</span></span>
+                    </div>
+                  )}
                 </div>
               )}
 
