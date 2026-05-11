@@ -20,6 +20,7 @@ import { QueryTemplatesModule } from './query-templates/query-templates.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { AdminModule } from './admin/admin.module';
 import { GeoContentModule } from './geo-content/geo-content.module';
+import { PublicApiModule } from './public-api/public-api.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { GeoContentModule } from './geo-content/geo-content.module';
     CouponsModule,
     AdminModule,
     GeoContentModule,
+    PublicApiModule,
   ],
   controllers: [AppController],
   providers: [

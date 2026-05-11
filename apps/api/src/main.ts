@@ -21,6 +21,10 @@ async function bootstrap() {
       'https://patient-signal-web-2bbe.vercel.app',
       'https://patientsignal.kr',
       'https://www.patientsignal.kr',
+      // Patient Pulse 외부 연동
+      ...(process.env.PATIENT_PULSE_URL ? [process.env.PATIENT_PULSE_URL] : []),
+      'https://patientpulse.kr',
+      'https://www.patientpulse.kr',
     ],
     credentials: true,
   });

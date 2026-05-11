@@ -1044,3 +1044,31 @@ model GeoPublication {
   @@unique([contentId, platform])
   @@map("geo_publications")
 }
+
+// ==================== Public API Key ====================
+
+model ApiKey {
+  id              String    @id @default(uuid())
+  name            String                                // API Key 이름 (예: "Patient Pulse Production")
+  keyHash         String    @unique @map("key_hash")    // SHA-256 해시 (원본 키는 저장하지 않음)
+  keyPrefix       String    @map("key_prefix")          // 키 앞 8자 (식별용: "ps_live_ab")
+  
+  // 권한 스코프
+  scopes          String[]  @default(["read:aeo"])       // 허용 스코프 목록
+  
+  // 속도 제한
+  rateLimitPerMin Int       @default(60) @map("rate_limit_per_min")
+  
+  // 상태
+  isActive        Boolean   @default(true) @map("is_active")
+  lastUsedAt      DateTime? @map("last_used_at")
+  usageCount      Int       @default(0) @map("usage_count")
+  expiresAt       DateTime? @map("expires_at")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  
+  @@index([keyHash])
+  @@index([isActive])
+  @@map("api_keys")
+}
