@@ -400,6 +400,16 @@ export const couponsApi = {
     api.post('/coupons/apply', { code, planType }),
 };
 
+// API Key 관리 API
+export const apiKeyApi = {
+  create: (data: { name?: string }) =>
+    api.post('/api-keys', data),
+  list: () =>
+    api.get('/api-keys'),
+  revoke: (keyId: string) =>
+    api.delete(`/api-keys/${keyId}`),
+};
+
 // Payments API
 export const paymentsApi = {
   confirm: (data: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string }) =>

@@ -170,6 +170,7 @@ model User {
 
   hospital      Hospital?       @relation(fields: [hospitalId], references: [id])
   notifications Notification[]
+  apiKeys       ApiKey[]
 
   @@index([lastLoginAt])
   @@index([hospitalId, role])
@@ -214,6 +215,7 @@ model Hospital {
   aeoPipelines       AeoPipeline[]
   citationAnalyses   CitationAnalysis[]
   contentCalendars   ContentCalendar[]
+  apiKeys            ApiKey[]
 
   @@index([subscriptionStatus, planType])
   @@index([planType])
@@ -1049,9 +1051,13 @@ model GeoPublication {
 
 model ApiKey {
   id              String    @id @default(uuid())
-  name            String                                // API Key 이름 (예: "Patient Pulse Production")
+  name            String                                // API Key 이름 (예: "내 병원 API Key")
   keyHash         String    @unique @map("key_hash")    // SHA-256 해시 (원본 키는 저장하지 않음)
-  keyPrefix       String    @map("key_prefix")          // 키 앞 8자 (식별용: "ps_live_ab")
+  keyPrefix       String    @map("key_prefix")          // 키 앞 16자 (식별용: "ps_live_6e3ade0c")
+  
+  // 소유자 바인딩 (병원 + 유저)
+  hospitalId      String    @map("hospital_id")
+  userId          String    @map("user_id")
   
   // 권한 스코프
   scopes          String[]  @default(["read:aeo"])       // 허용 스코프 목록
@@ -1068,7 +1074,12 @@ model ApiKey {
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   
+  hospital        Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   @@index([keyHash])
   @@index([isActive])
+  @@index([hospitalId])
+  @@index([userId])
   @@map("api_keys")
 }

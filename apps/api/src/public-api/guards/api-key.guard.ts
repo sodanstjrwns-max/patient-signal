@@ -30,7 +30,7 @@ export class ApiKeyGuard implements CanActivate {
     });
 
     if (!keyRecord) {
-      this.logger.warn(`[API Key] 유효하지 않은 키 시도: ${apiKey.substring(0, 8)}...`);
+      this.logger.warn(`[API Key] 유효하지 않은 키 시도: ${apiKey.substring(0, 16)}...`);
       throw new UnauthorizedException('유효하지 않은 API Key입니다');
     }
 
@@ -52,7 +52,9 @@ export class ApiKeyGuard implements CanActivate {
       },
     }).catch(err => this.logger.warn(`[API Key] 사용 통계 업데이트 실패: ${err.message}`));
 
-    // request에 스코프 정보 첨부 (컨트롤러에서 참조 가능)
+    // request에 병원 + 스코프 정보 첨부 (컨트롤러에서 자동 참조)
+    request.apiKeyHospitalId = keyRecord.hospitalId;
+    request.apiKeyUserId = keyRecord.userId;
     request.apiKeyScopes = keyRecord.scopes;
     request.apiKeyId = keyRecord.id;
 

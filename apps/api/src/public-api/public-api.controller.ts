@@ -1,5 +1,5 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader, ApiQuery, ApiParam } from '@nestjs/swagger';
+import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
 import { PublicApiService } from './public-api.service';
 import { ApiKeyGuard } from './guards/api-key.guard';
 
@@ -8,7 +8,7 @@ import { ApiKeyGuard } from './guards/api-key.guard';
 @UseGuards(ApiKeyGuard)
 @ApiHeader({
   name: 'X-API-Key',
-  description: 'Patient Signal API Key',
+  description: 'Patient Signal API Key (병원별 발급)',
   required: true,
 })
 export class PublicApiController {
@@ -16,54 +16,50 @@ export class PublicApiController {
 
   // ==================== 1. AEO 상태 요약 ====================
 
-  @Get('hospitals/:hospitalId/aeo-status')
+  @Get('my/aeo-status')
   @ApiOperation({
-    summary: '병원 AEO 상태 요약',
+    summary: '내 병원 AEO 상태 요약',
     description: '현재 점수, 순위, 뱃지, 플랫폼별/의도별 스냅샷, SoV 등 핵심 지표를 한 번에 조회합니다.',
   })
-  @ApiParam({ name: 'hospitalId', description: '병원 UUID' })
-  async getAeoStatus(@Param('hospitalId') hospitalId: string) {
-    return this.publicApiService.getAeoStatus(hospitalId);
+  async getAeoStatus(@Req() req: any) {
+    return this.publicApiService.getAeoStatus(req.apiKeyHospitalId);
   }
 
   // ==================== 2. 점수 히스토리 ====================
 
-  @Get('hospitals/:hospitalId/score-history')
+  @Get('my/score-history')
   @ApiOperation({
     summary: '점수 히스토리',
     description: '일별 점수 추이를 조회합니다. 최대 90일.',
   })
-  @ApiParam({ name: 'hospitalId', description: '병원 UUID' })
   @ApiQuery({ name: 'days', required: false, description: '조회 기간 (기본 30, 최대 90)' })
   async getScoreHistory(
-    @Param('hospitalId') hospitalId: string,
+    @Req() req: any,
     @Query('days') days?: string,
   ) {
-    return this.publicApiService.getScoreHistory(hospitalId, parseInt(days || '30'));
+    return this.publicApiService.getScoreHistory(req.apiKeyHospitalId, parseInt(days || '30'));
   }
 
   // ==================== 3. 플랫폼별 분석 ====================
 
-  @Get('hospitals/:hospitalId/platform-breakdown')
+  @Get('my/platform-breakdown')
   @ApiOperation({
     summary: '플랫폼별 분석',
     description: 'ChatGPT, Claude, Gemini, Perplexity 각각의 언급률/순위/감성 분석 결과.',
   })
-  @ApiParam({ name: 'hospitalId', description: '병원 UUID' })
-  async getPlatformBreakdown(@Param('hospitalId') hospitalId: string) {
-    return this.publicApiService.getPlatformBreakdown(hospitalId);
+  async getPlatformBreakdown(@Req() req: any) {
+    return this.publicApiService.getPlatformBreakdown(req.apiKeyHospitalId);
   }
 
   // ==================== 4. 의도별 분석 ====================
 
-  @Get('hospitals/:hospitalId/intent-breakdown')
+  @Get('my/intent-breakdown')
   @ApiOperation({
     summary: '질문 의도별 분석',
     description: 'RESERVATION, COMPARISON, INFORMATION, REVIEW, FEAR 각 의도별 성과 분석.',
   })
-  @ApiParam({ name: 'hospitalId', description: '병원 UUID' })
-  async getIntentBreakdown(@Param('hospitalId') hospitalId: string) {
-    return this.publicApiService.getIntentBreakdown(hospitalId);
+  async getIntentBreakdown(@Req() req: any) {
+    return this.publicApiService.getIntentBreakdown(req.apiKeyHospitalId);
   }
 
   // ==================== 5. 전체 랭킹 ====================
@@ -93,13 +89,12 @@ export class PublicApiController {
 
   // ==================== 6. 경쟁사 비교 ====================
 
-  @Get('hospitals/:hospitalId/competitors')
+  @Get('my/competitors')
   @ApiOperation({
     summary: '경쟁사 비교 분석',
     description: '등록된 경쟁사와의 점수 비교, 우리가 미언급될 때 언급된 경쟁사 빈도 분석.',
   })
-  @ApiParam({ name: 'hospitalId', description: '병원 UUID' })
-  async getCompetitorComparison(@Param('hospitalId') hospitalId: string) {
-    return this.publicApiService.getCompetitorComparison(hospitalId);
+  async getCompetitorComparison(@Req() req: any) {
+    return this.publicApiService.getCompetitorComparison(req.apiKeyHospitalId);
   }
 }

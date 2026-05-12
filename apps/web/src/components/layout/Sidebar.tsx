@@ -27,6 +27,7 @@ import {
   PenTool,
   Search,
   CalendarDays,
+  Key,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -92,6 +93,7 @@ const navGroups: NavGroup[] = [
     label: '관리',
     defaultOpen: false,
     items: [
+      { name: 'API 연동', href: '/dashboard/api-keys', icon: Key, badge: 'NEW' },
       { name: '결제/구독', href: '/dashboard/billing', icon: CreditCard },
       { name: '설정', href: '/dashboard/settings', icon: Settings },
     ],
