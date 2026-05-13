@@ -265,8 +265,6 @@ export default function DashboardPage() {
                         <span className="text-[10px] text-white/40 font-bold">등급</span>
                       </div>
                       <p className="text-[11px] text-white/50 font-medium mt-0.5">
-                        전체 {ranking.totalHospitals}개 중 <span className="text-white/80 font-black">{ranking.rank}위</span>
-                        <span className="mx-1 text-white/20">·</span>
                         상위 <span className="text-white/80 font-black">{ranking.topPercent}%</span>
                       </p>
                     </div>

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
+import { WeightCalibrationService } from '../scores/weight-calibration.service';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES } from '../query-templates/query-templates.service';
 import {
@@ -20,7 +21,68 @@ export class SchedulerService {
   constructor(
     private prisma: PrismaService,
     private aiCrawlerService: AICrawlerService,
+    private weightCalibrationService: WeightCalibrationService,
   ) {}
+
+  // ==================== Weekly ABHS Weight Auto-Recalibration ====================
+
+  /**
+   * 주간 자동 가중치 재캘리브레이션
+   * Cron: 매주 일요일 새벽 03:00 KST (= 토요일 18:00 UTC)
+   *
+   * 정책:
+   *  - save=true (DB에 RUN 저장, 비활성 상태)
+   *  - activate=false (운영 반영은 관리자가 수동 검토 후)
+   *  - 데이터 누적될수록 가중치 정밀도 ↑
+   *
+   * 활성화: npx ts-node scripts/abhs-weight-activate.ts <runId>
+   */
+  async runWeeklyWeightCalibration(): Promise<{
+    success: boolean;
+    runId?: string;
+    profilesUpserted?: number;
+    activated?: boolean;
+    insights: string[];
+    dataScope: { totalResponses: number; rangeDays: number; activeHospitals: number };
+    bigDeltaCount: number;
+    error?: string;
+  }> {
+    this.logger.log('=== [Weekly Cron] ABHS 가중치 자동 재캘리브레이션 시작 ===');
+    try {
+      const result = await this.weightCalibrationService.runCalibration({
+        save: true,
+        activate: false, // 안전 정책: 자동 활성화 금지, 수동 검토 후 활성화
+        triggeredBy: 'CRON:weekly',
+      });
+
+      const bigDeltaCount = result.abhsScoreComparison.filter(h => Math.abs(h.delta) >= 5).length;
+
+      this.logger.log(
+        `=== [Weekly Cron] 완료: RUN=${result.saved?.runId}, ` +
+        `데이터=${result.dataScope.totalResponses}건/${result.dataScope.activeHospitals}병원, ` +
+        `±5 이상 변동 ${bigDeltaCount}개 병원, insights=${result.insights.length}건 ===`,
+      );
+
+      return {
+        success: true,
+        runId: result.saved?.runId,
+        profilesUpserted: result.saved?.profilesUpserted,
+        activated: result.saved?.activated,
+        insights: result.insights,
+        dataScope: result.dataScope,
+        bigDeltaCount,
+      };
+    } catch (error: any) {
+      this.logger.error(`[Weekly Cron] 캘리브레이션 실패: ${error.message}`, error.stack);
+      return {
+        success: false,
+        insights: [],
+        dataScope: { totalResponses: 0, rangeDays: 0, activeHospitals: 0 },
+        bigDeltaCount: 0,
+        error: error.message,
+      };
+    }
+  }
 
   /**
    * 모든 활성 병원에 대해 크롤링 실행

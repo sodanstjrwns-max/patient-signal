@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AIPlatform, RecommendationDepth, QueryIntent } from '@prisma/client';
+import { WeightService, FALLBACK_WEIGHTS } from './weight.service';
 
 /**
  * ABHS (AI-Based Hospital Score) 초고도화 평가 프레임워크
@@ -13,41 +14,10 @@ import { AIPlatform, RecommendationDepth, QueryIntent } from '@prisma/client';
  * 5. Query Intent Match - 질문 의도 매칭
  * 
  * ABHS = Σ(SoV × Sentiment × RecommendationDepth × PlatformWeight × IntentMatch) → 0~100 정규화
+ *
+ * [Phase A 변경] 가중치는 더 이상 코드 상수가 아니라 WeightService를 통해 DB에서 동적 로딩됨.
+ * 우선순위: HOSPITAL > SPECIALTY > GLOBAL > FALLBACK_WEIGHTS (코드 안전망)
  */
-
-// 플랫폼별 가중치
-const PLATFORM_WEIGHTS: Record<string, number> = {
-  PERPLEXITY: 1.4,  // 소스 URL 품질
-  CHATGPT: 1.3,     // 최대 사용자 기반
-  GEMINI: 1.2,      // 구글 로컬 검색 연동
-  CLAUDE: 1.0,      // 분석 중심
-};
-
-// 추천 깊이 점수
-const DEPTH_SCORES: Record<string, number> = {
-  R3: 4.0,  // 단독 추천
-  R2: 3.0,  // 복수 추천 중 상위
-  R1: 1.5,  // 단순 언급
-  R0: 0.0,  // 부정적 / 미언급
-};
-
-// 질문 의도별 배율
-const INTENT_MULTIPLIERS: Record<string, number> = {
-  RESERVATION: 1.5,   // 예약 의도 (매출 직결)
-  REVIEW: 1.3,         // 후기/리뷰 (신뢰도 핵심)
-  FEAR: 1.2,           // 공포/걱정 (전환 기회)
-  COMPARISON: 1.1,     // 비교 의도 (경쟁 분석)
-  INFORMATION: 1.0,    // 정보 탐색 (기본값)
-};
-
-// 감성 점수 매핑 (V2: -2 ~ +2)
-const SENTIMENT_V2_SCORES: Record<number, number> = {
-  2: 2.0,   // 강한 긍정 (강력 추천)
-  1: 1.0,   // 긍정
-  0: 0.5,   // 중립 (0이 아닌 0.5로 설정 - 언급 자체에 가치 부여)
-  [-1]: -1.0, // 부정
-  [-2]: -2.0, // 강한 부정
-};
 
 export interface ABHSResult {
   abhsScore: number;                    // 종합 ABHS 점수 (0~100)
@@ -84,14 +54,32 @@ export interface ABHSResponseAnalysis {
 export class ABHSService {
   private readonly logger = new Logger(ABHSService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private weightService: WeightService,
+  ) {}
 
   /**
    * 병원의 ABHS 종합 점수 계산
+   *
+   * 가중치 로딩 우선순위: HOSPITAL > SPECIALTY > GLOBAL > FALLBACK
+   * - hospitalId로 HOSPITAL 스코프 먼저 시도
+   * - 병원의 specialty가 있으면 SPECIALTY 스코프로 보충
+   * - 그래도 없는 키는 GLOBAL/FALLBACK으로 보충
    */
   async calculateABHS(hospitalId: string, days: number = 30): Promise<ABHSResult> {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
+
+    // 가중치 번들 로딩 (병원/진료과 컨텍스트 포함)
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { specialtyType: true },
+    });
+    const weights = await this.weightService.getWeightBundle({
+      hospitalId,
+      specialtyCategory: hospital?.specialtyType,
+    });
 
     // ABHS 데이터가 있는 응답들 조회 (select로 필요한 필드만)
     const responses = await this.prisma.aIResponse.findMany({
@@ -137,11 +125,16 @@ export class ABHSService {
     let totalWeightedScore = 0;
     let totalMaxScore = 0;
 
+    // 동적 max 값 계산 (현재 활성 가중치 기준)
+    const maxDepthScore = Math.max(...Object.values(weights.depth), 0.0001);
+    const maxIntentMult = Math.max(...Object.values(weights.intent), 0.0001);
+    const maxSentimentFactor = Math.max(...Object.values(weights.sentiment), 1.5);
+
     for (const platform of platforms) {
       const platResponses = responses.filter(r => r.aiPlatform === platform);
       if (platResponses.length === 0) continue;
 
-      const weight = PLATFORM_WEIGHTS[platform] || 1.0;
+      const weight = weights.platform[platform] ?? FALLBACK_WEIGHTS.PLATFORM[platform] ?? 1.0;
       const platMentioned = platResponses.filter(r => r.isMentioned);
       const platSoV = platResponses.length > 0 ? platMentioned.length / platResponses.length : 0;
 
@@ -157,15 +150,15 @@ export class ABHSService {
         const depth = (resp as any).recommendationDepth ?? this.inferRecommendationDepth(resp);
         const intent = (resp as any).queryIntent ?? 'INFORMATION';
         
-        const sentimentFactor = this.sentimentToFactor(sentV2);
-        const depthScore = DEPTH_SCORES[depth] || 0;
-        const intentMultiplier = INTENT_MULTIPLIERS[intent] || 1.0;
+        const sentimentFactor = this.sentimentToFactor(sentV2, weights.sentiment);
+        const depthScore = weights.depth[depth] ?? FALLBACK_WEIGHTS.DEPTH[depth] ?? 0;
+        const intentMultiplier = weights.intent[intent] ?? FALLBACK_WEIGHTS.INTENT[intent] ?? 1.0;
 
         // 개별 응답 ABHS 기여분 = SoV점수 × Sentiment × Depth × PlatformWeight × IntentMatch
         const contribution = (resp.isMentioned ? 1.0 : 0.0) * sentimentFactor * depthScore * weight * intentMultiplier;
         
-        // 최대 가능 점수 (R3, sentiment +2, reservation intent)
-        const maxContribution = 1.0 * 2.0 * 4.0 * weight * 1.5;
+        // 최대 가능 점수 (동적: 현재 가중치 세트의 max 값 사용)
+        const maxContribution = 1.0 * maxSentimentFactor * maxDepthScore * weight * maxIntentMult;
 
         platScore += contribution;
         platMaxScore += maxContribution;
@@ -174,7 +167,7 @@ export class ABHSService {
           sentimentSum += sentV2;
           sentimentCount++;
         }
-        depthSum += DEPTH_SCORES[depth] || 0;
+        depthSum += depthScore;
       }
 
       totalWeightedScore += platScore;
@@ -216,7 +209,7 @@ export class ABHSService {
         ? intentSentiments.reduce((a: number, b: number) => a + b, 0) / intentSentiments.length 
         : 0;
       
-      intentScores[intent] = Math.round(intentSoV * 100 * this.sentimentToFactor(avgSent));
+      intentScores[intent] = Math.round(intentSoV * 100 * this.sentimentToFactor(avgSent, weights.sentiment));
     }
 
     // 4. Depth 분포 계산
@@ -312,8 +305,10 @@ export class ABHSService {
   /**
    * 단일 AI 응답에 대한 ABHS 분석 수행
    * (크롤링 후 각 응답에 대해 호출)
+   *
+   * [Phase A] 가중치를 DB에서 동적 로딩. hospitalId가 주어지면 병원별 가중치 우선 적용.
    */
-  analyzeResponseForABHS(
+  async analyzeResponseForABHS(
     response: {
       isMentioned: boolean;
       mentionPosition: number | null;
@@ -324,7 +319,11 @@ export class ABHSService {
     },
     platform: AIPlatform,
     promptText: string,
-  ): ABHSResponseAnalysis {
+    context?: { hospitalId?: string; specialtyCategory?: string },
+  ): Promise<ABHSResponseAnalysis> {
+    // 0. 가중치 번들 로딩 (DB → 캐시 → fallback)
+    const weights = await this.weightService.getWeightBundle(context || {});
+
     // 1. 추천 깊이 추론
     const recommendationDepth = this.inferRecommendationDepthFromData(
       response.isMentioned,
@@ -336,8 +335,8 @@ export class ABHSService {
     // 2. 질문 의도 분류
     const queryIntent = this.classifyQueryIntent(promptText);
 
-    // 3. 플랫폼 가중치
-    const platformWeight = PLATFORM_WEIGHTS[platform] || 1.0;
+    // 3. 플랫폼 가중치 (DB 우선)
+    const platformWeight = weights.platform[platform] ?? FALLBACK_WEIGHTS.PLATFORM[platform] ?? 1.0;
 
     // 4. 감성 V2 (기존 sentimentScore를 V2로 변환)
     const sentimentScoreV2 = this.legacySentimentToV2(
@@ -345,10 +344,10 @@ export class ABHSService {
       response.sentimentLabel as any,
     );
 
-    // 5. ABHS 기여분 계산
-    const sentimentFactor = this.sentimentToFactor(sentimentScoreV2);
-    const depthScore = DEPTH_SCORES[recommendationDepth] || 0;
-    const intentMultiplier = INTENT_MULTIPLIERS[queryIntent] || 1.0;
+    // 5. ABHS 기여분 계산 (DB 가중치 사용)
+    const sentimentFactor = this.sentimentToFactor(sentimentScoreV2, weights.sentiment);
+    const depthScore = weights.depth[recommendationDepth] ?? FALLBACK_WEIGHTS.DEPTH[recommendationDepth] ?? 0;
+    const intentMultiplier = weights.intent[queryIntent] ?? FALLBACK_WEIGHTS.INTENT[queryIntent] ?? 1.0;
     const abhsContribution = (response.isMentioned ? 1.0 : 0.0) * sentimentFactor * depthScore * platformWeight * intentMultiplier;
 
     // 6. 대표 인용 URL
@@ -493,21 +492,24 @@ export class ABHSService {
 
   /**
    * 감성 점수를 ABHS 계산용 팩터로 변환
+   * sentimentWeights가 주어지면 DB의 캘리브레이션된 값을 우선 사용,
+   * 없으면 FALLBACK_WEIGHTS.SENTIMENT 사용.
    */
-  private sentimentToFactor(sentV2: number): number {
-    // -2 → 0, -1 → 0.25, 0 → 0.5, 1 → 1.0, 2 → 1.5
-    switch (sentV2) {
-      case -2: return 0;
-      case -1: return 0.25;
-      case 0: return 0.5;
-      case 1: return 1.0;
-      case 2: return 1.5;
-      default: 
-        // 연속값인 경우 선형 보간
-        if (sentV2 < -2) return 0;
-        if (sentV2 > 2) return 1.5;
-        return Math.max(0, (sentV2 + 2) / 4 * 1.5);
+  private sentimentToFactor(sentV2: number, sentimentWeights?: Record<string, number>): number {
+    const weights = sentimentWeights ?? FALLBACK_WEIGHTS.SENTIMENT;
+
+    // 정수값이면 직접 lookup
+    if (Number.isInteger(sentV2)) {
+      const v = weights[String(sentV2)];
+      if (v !== undefined) return v;
     }
+
+    // 연속값인 경우 양 끝점 기준 선형 보간 (캘리브레이션된 -2와 +2 값 사용)
+    const minFactor = weights['-2'] ?? 0;
+    const maxFactor = weights['2'] ?? 1.5;
+    if (sentV2 <= -2) return minFactor;
+    if (sentV2 >= 2) return maxFactor;
+    return Math.max(0, minFactor + ((sentV2 + 2) / 4) * (maxFactor - minFactor));
   }
 
   /**
@@ -616,6 +618,16 @@ export class ABHSService {
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - days);
 
+    // Golden Score 계산용 가중치 로딩 (병원 컨텍스트 포함)
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { specialtyType: true },
+    });
+    const intentWeights = await this.weightService.getWeightsByKind('INTENT', {
+      hospitalId,
+      specialtyCategory: hospital?.specialtyType,
+    });
+
     // 프롬프트별 응답 데이터 조회
     const prompts = await this.prisma.prompt.findMany({
       where: { hospitalId, isActive: true },
@@ -662,9 +674,9 @@ export class ABHSService {
         const topPlatform = Object.entries(platformMentions)
           .sort((a, b) => b[1] - a[1])[0]?.[0] || 'NONE';
 
-        // Golden Score = SoV × (1 + avgSentiment/2) × (1 + r3Rate/100) × intentMultiplier
+        // Golden Score = SoV × (1 + avgSentiment/2) × (1 + r3Rate/100) × intentMultiplier (DB 가중치)
         const intent = responses[0]?.queryIntent || 'INFORMATION';
-        const intentMult = INTENT_MULTIPLIERS[intent] || 1.0;
+        const intentMult = intentWeights[intent] ?? FALLBACK_WEIGHTS.INTENT[intent] ?? 1.0;
         const goldenScore = sov * (1 + avgSentiment / 2) * (1 + r3Rate / 100) * intentMult;
 
         return {

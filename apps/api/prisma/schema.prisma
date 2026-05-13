@@ -14,18 +14,18 @@ datasource db {
 // ==================== ENUMS ====================
 
 enum SpecialtyType {
-  DENTAL            // 치과
-  DERMATOLOGY       // 피부과
-  PLASTIC_SURGERY   // 성형외과
-  ORTHOPEDICS       // 정형외과
-  KOREAN_MEDICINE   // 한의원
-  OPHTHALMOLOGY     // 안과
+  DENTAL // 치과
+  DERMATOLOGY // 피부과
+  PLASTIC_SURGERY // 성형외과
+  ORTHOPEDICS // 정형외과
+  KOREAN_MEDICINE // 한의원
+  OPHTHALMOLOGY // 안과
   INTERNAL_MEDICINE // 내과
-  UROLOGY           // 비뇨기과
-  ENT               // 이비인후과
-  PSYCHIATRY        // 정신건강의학과
-  OBSTETRICS        // 산부인과
-  PEDIATRICS        // 소아과
+  UROLOGY // 비뇨기과
+  ENT // 이비인후과
+  PSYCHIATRY // 정신건강의학과
+  OBSTETRICS // 산부인과
+  PEDIATRICS // 소아과
   OTHER
 }
 
@@ -72,19 +72,19 @@ enum SentimentLabel {
 
 // 초고도화: 추천 깊이
 enum RecommendationDepth {
-  R0  // 부정적 언급 / 비추천
-  R1  // 단순 언급
-  R2  // 복수 추천 중 상위
-  R3  // 단독 추천
+  R0 // 부정적 언급 / 비추천
+  R1 // 단순 언급
+  R2 // 복수 추천 중 상위
+  R3 // 단독 추천
 }
 
 // 초고도화: 질문 의도
 enum QueryIntent {
-  RESERVATION   // 예약 의도 (×1.5)
-  COMPARISON    // 비교 의도 (×1.0)
-  INFORMATION   // 정보 탐색 (×1.0)
-  REVIEW        // 후기/리뷰 (×1.0)
-  FEAR          // 공포/걱정 (×1.0)
+  RESERVATION // 예약 의도 (×1.5)
+  COMPARISON // 비교 의도 (×1.0)
+  INFORMATION // 정보 탐색 (×1.0)
+  REVIEW // 후기/리뷰 (×1.0)
+  FEAR // 공포/걱정 (×1.0)
 }
 
 enum NotificationType {
@@ -124,30 +124,30 @@ enum CrawlStatus {
 // ==================== Area 2: Answer Position Taxonomy ====================
 
 enum AnswerPositionType {
-  PRIMARY_RECOMMEND    // 단독 또는 1순위 강력 추천
-  COMPARISON_WINNER    // 비교 분석에서 우위 판정
-  INFORMATION_CITE     // 정보 제공 맥락에서 인용
-  CONDITIONAL          // 조건부 추천 ("~라면 괜찮다")
-  NEGATIVE             // 부정적 언급 또는 비추천
+  PRIMARY_RECOMMEND // 단독 또는 1순위 강력 추천
+  COMPARISON_WINNER // 비교 분석에서 우위 판정
+  INFORMATION_CITE // 정보 제공 맥락에서 인용
+  CONDITIONAL // 조건부 추천 ("~라면 괜찮다")
+  NEGATIVE // 부정적 언급 또는 비추천
 }
 
 // ==================== Area 1: A/B Experiment Tag ====================
 
 enum ExperimentGroup {
-  CONTROL              // 대조군 (기존 프롬프트)
-  EXPERIMENT_TONE      // 실험군: 톤 변형
-  EXPERIMENT_REGION    // 실험군: 지역 변형
-  EXPERIMENT_INTENT    // 실험군: 의도 변형
+  CONTROL // 대조군 (기존 프롬프트)
+  EXPERIMENT_TONE // 실험군: 톤 변형
+  EXPERIMENT_REGION // 실험군: 지역 변형
+  EXPERIMENT_INTENT // 실험군: 의도 변형
 }
 
 // ==================== Area 3: AEO Pipeline Status ====================
 
 enum AeoPipelineStatus {
-  GAP_DETECTED         // 갭 감지됨
-  CONTENT_DRAFTED      // GEO 콘텐츠 초안 생성됨
-  PUBLISHED            // 발행됨
-  REMEASURED           // 재측정 완료
-  IMPACT_CALCULATED    // 효과 계산 완료
+  GAP_DETECTED // 갭 감지됨
+  CONTENT_DRAFTED // GEO 콘텐츠 초안 생성됨
+  PUBLISHED // 발행됨
+  REMEASURED // 재측정 완료
+  IMPACT_CALCULATED // 효과 계산 완료
 }
 
 // ==================== MODELS ====================
@@ -168,7 +168,7 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  hospital      Hospital?       @relation(fields: [hospitalId], references: [id])
+  hospital      Hospital?      @relation(fields: [hospitalId], references: [id])
   notifications Notification[]
   apiKeys       ApiKey[]
 
@@ -181,20 +181,20 @@ model User {
 model Hospital {
   id                 String             @id @default(uuid())
   name               String
-  nameAliases        String[]           @default([]) @map("name_aliases")  // 병원 별칭 (편의 명칭, 약칭 등)
+  nameAliases        String[]           @default([]) @map("name_aliases") // 병원 별칭 (편의 명칭, 약칭 등)
   businessNumber     String?            @unique @map("business_number")
   specialtyType      SpecialtyType      @map("specialty_type")
   subSpecialties     String[]           @map("sub_specialties") // ['임플란트', '교정', '미백']
-  keyProcedures      String[]           @map("key_procedures")  // 핵심 시술 3개 (쿼리 생성에 사용)
-  regionSido         String             @map("region_sido")     // 시/도
-  regionSigungu      String             @map("region_sigungu")  // 시/군/구
-  regionDong         String?            @map("region_dong")     // 동/읍/면
+  keyProcedures      String[]           @map("key_procedures") // 핵심 시술 3개 (쿼리 생성에 사용)
+  regionSido         String             @map("region_sido") // 시/도
+  regionSigungu      String             @map("region_sigungu") // 시/군/구
+  regionDong         String?            @map("region_dong") // 동/읍/면
   address            String?
   websiteUrl         String?            @map("website_url")
   naverPlaceId       String?            @map("naver_place_id")
-  coreTreatments     String[]           @map("core_treatments")     // 주력 진료/시술
-  targetRegions      String[]           @map("target_regions")      // 주요 내원 지역
-  hospitalStrengths  String[]           @map("hospital_strengths")  // 병원 강점
+  coreTreatments     String[]           @map("core_treatments") // 주력 진료/시술
+  targetRegions      String[]           @map("target_regions") // 주요 내원 지역
+  hospitalStrengths  String[]           @map("hospital_strengths") // 병원 강점
   planType           PlanType           @default(FREE) @map("plan_type")
   subscriptionStatus SubscriptionStatus @default(ACTIVE) @map("subscription_status")
   createdAt          DateTime           @default(now()) @map("created_at")
@@ -224,23 +224,23 @@ model Hospital {
 
 // 모니터링 질문 테이블
 model Prompt {
-  id               String     @id @default(uuid())
-  hospitalId       String     @map("hospital_id")
-  promptText       String     @map("prompt_text")
-  promptType       PromptType @map("prompt_type")
-  specialtyCategory String?   @map("specialty_category")
-  regionKeywords   String[]   @map("region_keywords")
-  isActive         Boolean    @default(true) @map("is_active")
+  id                 String           @id @default(uuid())
+  hospitalId         String           @map("hospital_id")
+  promptText         String           @map("prompt_text")
+  promptType         PromptType       @map("prompt_type")
+  specialtyCategory  String?          @map("specialty_category")
+  regionKeywords     String[]         @map("region_keywords")
+  isActive           Boolean          @default(true) @map("is_active")
   // 【Area 1】A/B 실험 태깅
-  experimentGroup  ExperimentGroup? @map("experiment_group") // CONTROL, EXPERIMENT_TONE, etc.
-  experimentParentId String?  @map("experiment_parent_id")  // 원본 프롬프트 ID (변형의 원본 추적)
+  experimentGroup    ExperimentGroup? @map("experiment_group") // CONTROL, EXPERIMENT_TONE, etc.
+  experimentParentId String?          @map("experiment_parent_id") // 원본 프롬프트 ID (변형의 원본 추적)
   // 【Area 1】Golden Prompt 추적
-  isGoldenPrompt   Boolean    @default(false) @map("is_golden_prompt") // SoV 80%+ 골든 프롬프트
-  goldenDetectedAt DateTime?  @map("golden_detected_at")
+  isGoldenPrompt     Boolean          @default(false) @map("is_golden_prompt") // SoV 80%+ 골든 프롬프트
+  goldenDetectedAt   DateTime?        @map("golden_detected_at")
   // 【Area 2】플랫폼별 맞춤 프롬프트
-  platformSpecific String?    @map("platform_specific")  // 특정 플랫폼 전용 (null=공통)
-  createdAt        DateTime   @default(now()) @map("created_at")
-  updatedAt        DateTime   @updatedAt @map("updated_at")
+  platformSpecific   String?          @map("platform_specific") // 특정 플랫폼 전용 (null=공통)
+  createdAt          DateTime         @default(now()) @map("created_at")
+  updatedAt          DateTime         @updatedAt @map("updated_at")
 
   hospital    Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   aiResponses AIResponse[]
@@ -253,46 +253,46 @@ model Prompt {
 
 // AI 응답 테이블
 model AIResponse {
-  id                   String        @id @default(uuid())
-  promptId             String        @map("prompt_id")
-  hospitalId           String        @map("hospital_id")
-  aiPlatform           AIPlatform    @map("ai_platform")
-  aiModelVersion       String?       @map("ai_model_version")
-  responseText         String        @map("response_text")
-  responseDate         DateTime      @map("response_date") @db.Date
-  isMentioned          Boolean       @default(false) @map("is_mentioned")
-  mentionPosition      Int?          @map("mention_position")
-  totalRecommendations Int?          @map("total_recommendations")
-  sentimentScore       Float?        @map("sentiment_score") // -1 ~ 1
-  sentimentLabel       SentimentLabel? @map("sentiment_label")
-  citedSources         String[]      @map("cited_sources")
-  competitorsMentioned String[]      @map("competitors_mentioned")
+  id                   String               @id @default(uuid())
+  promptId             String               @map("prompt_id")
+  hospitalId           String               @map("hospital_id")
+  aiPlatform           AIPlatform           @map("ai_platform")
+  aiModelVersion       String?              @map("ai_model_version")
+  responseText         String               @map("response_text")
+  responseDate         DateTime             @map("response_date") @db.Date
+  isMentioned          Boolean              @default(false) @map("is_mentioned")
+  mentionPosition      Int?                 @map("mention_position")
+  totalRecommendations Int?                 @map("total_recommendations")
+  sentimentScore       Float?               @map("sentiment_score") // -1 ~ 1
+  sentimentLabel       SentimentLabel?      @map("sentiment_label")
+  citedSources         String[]             @map("cited_sources")
+  competitorsMentioned String[]             @map("competitors_mentioned")
   // 개선: 반복 측정 메타데이터
-  repeatIndex          Int?          @map("repeat_index")        // 반복 측정 인덱스 (0,1,2)
-  isWebSearch          Boolean       @default(false) @map("is_web_search") // 웹 검색 모드 사용 여부
-  isVerified           Boolean       @default(true) @map("is_verified")     // 환각 필터링 통과 여부
-  verificationSource   String?       @map("verification_source")             // 검증 소스 (naver_place, kakao_map 등)
+  repeatIndex          Int?                 @map("repeat_index") // 반복 측정 인덱스 (0,1,2)
+  isWebSearch          Boolean              @default(false) @map("is_web_search") // 웹 검색 모드 사용 여부
+  isVerified           Boolean              @default(true) @map("is_verified") // 환각 필터링 통과 여부
+  verificationSource   String?              @map("verification_source") // 검증 소스 (naver_place, kakao_map 등)
   // 초고도화 ABHS 프레임워크 컬럼
-  sentimentScoreV2     Int?          @map("sentiment_score_v2")   // -2 ~ +2 (강한부정~강한긍정)
+  sentimentScoreV2     Int?                 @map("sentiment_score_v2") // -2 ~ +2 (강한부정~강한긍정)
   recommendationDepth  RecommendationDepth? @map("recommendation_depth") // R0~R3
-  queryIntent          QueryIntent?  @map("query_intent")         // 질문 의도
-  platformWeight       Float?        @map("platform_weight")      // 플랫폼 가중치 (1.0~1.4)
-  abhsContribution     Float?        @map("abhs_contribution")    // 이 응답의 ABHS 기여분
-  citedUrl             String?       @map("cited_url")            // Perplexity 인용 URL (대표)
+  queryIntent          QueryIntent?         @map("query_intent") // 질문 의도
+  platformWeight       Float?               @map("platform_weight") // 플랫폼 가중치 (1.0~1.4)
+  abhsContribution     Float?               @map("abhs_contribution") // 이 응답의 ABHS 기여분
+  citedUrl             String?              @map("cited_url") // Perplexity 인용 URL (대표)
   // 출처 분석 (소스 트래킹)
-  sourceHints          Json?         @map("source_hints")         // {sources: [{url, title, type, platform}], hintKeywords: ["네이버 평점", ...]}
+  sourceHints          Json?                @map("source_hints") // {sources: [{url, title, type, platform}], hintKeywords: ["네이버 평점", ...]}
   // 할루시네이션 감소 신뢰도 필드
-  confidenceScore      Float?        @map("confidence_score")     // 0.0~1.0 응답 신뢰도
-  confidenceFactors    Json?         @map("confidence_factors")   // {crossValidation, uncertaintyMarker, sourceGrounding, ...}
-  isLowConfidence      Boolean       @default(false) @map("is_low_confidence") // 신뢰도 < 0.4 플래그
+  confidenceScore      Float?               @map("confidence_score") // 0.0~1.0 응답 신뢰도
+  confidenceFactors    Json?                @map("confidence_factors") // {crossValidation, uncertaintyMarker, sourceGrounding, ...}
+  isLowConfidence      Boolean              @default(false) @map("is_low_confidence") // 신뢰도 < 0.4 플래그
   // 【Area 2】Answer Position 정밀 분류
-  answerPositionType   AnswerPositionType? @map("answer_position_type") // PRIMARY_RECOMMEND, COMPARISON_WINNER, etc.
+  answerPositionType   AnswerPositionType?  @map("answer_position_type") // PRIMARY_RECOMMEND, COMPARISON_WINNER, etc.
   // 【Area 4】Answer Quality Score
-  answerQualityScore   Float?        @map("answer_quality_score")  // -50 ~ +100 품질 점수
-  answerQualityFactors Json?         @map("answer_quality_factors") // {addressAccuracy, procedureMatch, ...}
+  answerQualityScore   Float?               @map("answer_quality_score") // -50 ~ +100 품질 점수
+  answerQualityFactors Json?                @map("answer_quality_factors") // {addressAccuracy, procedureMatch, ...}
   // 【Area 4】시간대 세션 (morning/afternoon/evening)
-  crawlSession         String?       @map("crawl_session")        // morning, afternoon, evening
-  createdAt            DateTime      @default(now()) @map("created_at")
+  crawlSession         String?              @map("crawl_session") // morning, afternoon, evening
+  createdAt            DateTime             @default(now()) @map("created_at")
 
   prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
@@ -307,30 +307,30 @@ model AIResponse {
 
 // 일일 점수 테이블
 model DailyScore {
-  id              String   @id @default(uuid())
-  hospitalId      String   @map("hospital_id")
-  scoreDate       DateTime @map("score_date") @db.Date
-  overallScore    Int      @map("overall_score") // 0~100
-  specialtyScores Json     @map("specialty_scores") // {implant: 72, ortho: 65}
-  platformScores  Json     @map("platform_scores")  // {chatgpt: 70, perplexity: 68}
-  mentionCount    Int      @default(0) @map("mention_count")
-  positiveRatio   Float    @default(0) @map("positive_ratio")
+  id                       String   @id @default(uuid())
+  hospitalId               String   @map("hospital_id")
+  scoreDate                DateTime @map("score_date") @db.Date
+  overallScore             Int      @map("overall_score") // 0~100
+  specialtyScores          Json     @map("specialty_scores") // {implant: 72, ortho: 65}
+  platformScores           Json     @map("platform_scores") // {chatgpt: 70, perplexity: 68}
+  mentionCount             Int      @default(0) @map("mention_count")
+  positiveRatio            Float    @default(0) @map("positive_ratio")
   // 초고도화 ABHS 프레임워크
-  abhsScore       Float?   @map("abhs_score")       // ABHS 종합 점수 (0~100)
-  sovPercent      Float?   @map("sov_percent")      // Voice Share %
-  avgSentimentV2  Float?   @map("avg_sentiment_v2") // 평균 감성 (-2~+2)
-  platformContributions Json? @map("platform_contributions") // {chatgpt: {weight, score, contribution}}
-  intentScores    Json?    @map("intent_scores")    // {reservation: 85, comparison: 72, ...}
-  depthDistribution Json?  @map("depth_distribution") // {R0: 2, R1: 5, R2: 8, R3: 3}
+  abhsScore                Float?   @map("abhs_score") // ABHS 종합 점수 (0~100)
+  sovPercent               Float?   @map("sov_percent") // Voice Share %
+  avgSentimentV2           Float?   @map("avg_sentiment_v2") // 평균 감성 (-2~+2)
+  platformContributions    Json?    @map("platform_contributions") // {chatgpt: {weight, score, contribution}}
+  intentScores             Json?    @map("intent_scores") // {reservation: 85, comparison: 72, ...}
+  depthDistribution        Json?    @map("depth_distribution") // {R0: 2, R1: 5, R2: 8, R3: 3}
   // 【Area 4】Weighted Intent SoV
-  weightedIntentSov Json?  @map("weighted_intent_sov") // {reservation: {sov, value_score}, ...}
+  weightedIntentSov        Json?    @map("weighted_intent_sov") // {reservation: {sov, value_score}, ...}
   // 【Area 4】Answer Quality Score (일별 집계)
-  avgAnswerQuality Float?  @map("avg_answer_quality")  // 평균 AQS
+  avgAnswerQuality         Float?   @map("avg_answer_quality") // 평균 AQS
   // 【Area 2】시간대별 세션 분포
-  sessionDistribution Json? @map("session_distribution") // {morning: {score, count}, afternoon: {...}}
+  sessionDistribution      Json?    @map("session_distribution") // {morning: {score, count}, afternoon: {...}}
   // 【Area 2】Answer Position 분포
-  positionTypeDistribution Json? @map("position_type_distribution") // {PRIMARY_RECOMMEND: 5, ...}
-  createdAt       DateTime @default(now()) @map("created_at")
+  positionTypeDistribution Json?    @map("position_type_distribution") // {PRIMARY_RECOMMEND: 5, ...}
+  createdAt                DateTime @default(now()) @map("created_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
@@ -372,20 +372,20 @@ model CompetitorScore {
 
 // 콘텐츠 갭 테이블
 model ContentGap {
-  id                String       @id @default(uuid())
-  hospitalId        String       @map("hospital_id")
-  gapType           GapType      @map("gap_type")
-  topic             String
-  competitorHas     Boolean      @default(true) @map("competitor_has")
-  priorityScore     Int          @default(0) @map("priority_score")
-  suggestedAction   String?      @map("suggested_action")
-  status            ActionStatus @default(PENDING)
+  id               String       @id @default(uuid())
+  hospitalId       String       @map("hospital_id")
+  gapType          GapType      @map("gap_type")
+  topic            String
+  competitorHas    Boolean      @default(true) @map("competitor_has")
+  priorityScore    Int          @default(0) @map("priority_score")
+  suggestedAction  String?      @map("suggested_action")
+  status           ActionStatus @default(PENDING)
   // 개선5: Content Gap 자동 생성 관련
-  competitorNames   String[]     @map("competitor_names")       // 해당 갭에서 경쟁사 이름들
-  relatedPromptIds  String[]     @map("related_prompt_ids")     // 관련 프롬프트 ID들
-  aiGeneratedGuide  String?      @map("ai_generated_guide")     // AI가 생성한 개선 가이드
-  createdAt         DateTime     @default(now()) @map("created_at")
-  updatedAt         DateTime     @updatedAt @map("updated_at")
+  competitorNames  String[]     @map("competitor_names") // 해당 갭에서 경쟁사 이름들
+  relatedPromptIds String[]     @map("related_prompt_ids") // 관련 프롬프트 ID들
+  aiGeneratedGuide String?      @map("ai_generated_guide") // AI가 생성한 개선 가이드
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
@@ -430,9 +430,9 @@ model Subscription {
   nextBillingDate    DateTime?          @map("next_billing_date")
   lastBillingDate    DateTime?          @map("last_billing_date")
   failedBillingCount Int                @default(0) @map("failed_billing_count")
-  
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
@@ -488,14 +488,14 @@ model Region {
 // ==================== 진료과별 프리셋 시술 DB ====================
 
 model SpecialtyPreset {
-  id              String        @id @default(uuid())
-  specialtyType   SpecialtyType @map("specialty_type")
-  procedureName   String        @map("procedure_name")    // '임플란트', '교정', '미백' 등
-  procedureAlias  String[]      @map("procedure_alias")   // 별칭들 ['임플', 'implant']
-  category        String        @default("core")          // 'core', 'cosmetic', 'general'
-  isPopular       Boolean       @default(false) @map("is_popular")
-  sortOrder       Int           @default(0) @map("sort_order")
-  createdAt       DateTime      @default(now()) @map("created_at")
+  id             String        @id @default(uuid())
+  specialtyType  SpecialtyType @map("specialty_type")
+  procedureName  String        @map("procedure_name") // '임플란트', '교정', '미백' 등
+  procedureAlias String[]      @map("procedure_alias") // 별칭들 ['임플', 'implant']
+  category       String        @default("core") // 'core', 'cosmetic', 'general'
+  isPopular      Boolean       @default(false) @map("is_popular")
+  sortOrder      Int           @default(0) @map("sort_order")
+  createdAt      DateTime      @default(now()) @map("created_at")
 
   @@unique([specialtyType, procedureName])
   @@map("specialty_presets")
@@ -505,16 +505,16 @@ model SpecialtyPreset {
 
 // 의도 카테고리별 쿼리 템플릿
 model QueryTemplate {
-  id              String      @id @default(uuid())
-  intentCategory  QueryIntent @map("intent_category")   // RESERVATION, COMPARISON, etc.
-  templateText    String      @map("template_text")      // "{region} {specialty} {procedure} 추천해줘"
-  description     String?                                // "예약 의도 기본 쿼리"
+  id               String      @id @default(uuid())
+  intentCategory   QueryIntent @map("intent_category") // RESERVATION, COMPARISON, etc.
+  templateText     String      @map("template_text") // "{region} {specialty} {procedure} 추천해줘"
+  description      String? // "예약 의도 기본 쿼리"
   platformSpecific AIPlatform? @map("platform_specific") // 특정 플랫폼전용 (null=공통)
-  isWeekly        Boolean     @default(true) @map("is_weekly")   // 주간 14개 쿼리 포함
-  isMonthly       Boolean     @default(false) @map("is_monthly") // 월간 20개 추가 쿼리 포함 (Pro)
-  sortOrder       Int         @default(0) @map("sort_order")
-  isActive        Boolean     @default(true) @map("is_active")
-  createdAt       DateTime    @default(now()) @map("created_at")
+  isWeekly         Boolean     @default(true) @map("is_weekly") // 주간 14개 쿼리 포함
+  isMonthly        Boolean     @default(false) @map("is_monthly") // 월간 20개 추가 쿼리 포함 (Pro)
+  sortOrder        Int         @default(0) @map("sort_order")
+  isActive         Boolean     @default(true) @map("is_active")
+  createdAt        DateTime    @default(now()) @map("created_at")
 
   @@map("query_templates")
 }
@@ -533,35 +533,35 @@ enum ReportStatus {
 }
 
 model Report {
-  id              String       @id @default(uuid())
-  hospitalId      String       @map("hospital_id")
-  reportType      ReportType   @map("report_type")
-  reportDate      DateTime     @map("report_date") @db.Date  // 리포트 기준일
-  periodStart     DateTime     @map("period_start") @db.Date
-  periodEnd       DateTime     @map("period_end") @db.Date
-  status          ReportStatus @default(GENERATING)
-  
+  id          String       @id @default(uuid())
+  hospitalId  String       @map("hospital_id")
+  reportType  ReportType   @map("report_type")
+  reportDate  DateTime     @map("report_date") @db.Date // 리포트 기준일
+  periodStart DateTime     @map("period_start") @db.Date
+  periodEnd   DateTime     @map("period_end") @db.Date
+  status      ReportStatus @default(GENERATING)
+
   // ABHS 요약
-  abhsScore       Float?       @map("abhs_score")
-  abhsChange      Float?       @map("abhs_change")        // 전주 대비 변화
-  sovPercent      Float?       @map("sov_percent")
-  avgSentimentV2  Float?       @map("avg_sentiment_v2")
-  competitiveShare Float?      @map("competitive_share")
-  
+  abhsScore        Float? @map("abhs_score")
+  abhsChange       Float? @map("abhs_change") // 전주 대비 변화
+  sovPercent       Float? @map("sov_percent")
+  avgSentimentV2   Float? @map("avg_sentiment_v2")
+  competitiveShare Float? @map("competitive_share")
+
   // 상세 데이터 (JSON)
-  platformBreakdown  Json?     @map("platform_breakdown")  // 플랫폼별 상세
-  intentBreakdown    Json?     @map("intent_breakdown")    // 의도별 상세
-  depthBreakdown     Json?     @map("depth_breakdown")     // 추천깊이 상세
-  competitorComparison Json?   @map("competitor_comparison")
-  actionInsights     Json?     @map("action_insights")     // AI 생성 인사이트
-  topKeywords        Json?     @map("top_keywords")        // 주요 키워드 분석
-  
+  platformBreakdown    Json? @map("platform_breakdown") // 플랫폼별 상세
+  intentBreakdown      Json? @map("intent_breakdown") // 의도별 상세
+  depthBreakdown       Json? @map("depth_breakdown") // 추천깊이 상세
+  competitorComparison Json? @map("competitor_comparison")
+  actionInsights       Json? @map("action_insights") // AI 생성 인사이트
+  topKeywords          Json? @map("top_keywords") // 주요 키워드 분석
+
   // 요약 텍스트
-  executiveSummary   String?   @map("executive_summary")   // AI 생성 1문장 요약
-  
-  totalQueriesRun    Int       @default(0) @map("total_queries_run")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  executiveSummary String? @map("executive_summary") // AI 생성 1문장 요약
+
+  totalQueriesRun Int      @default(0) @map("total_queries_run")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
@@ -571,38 +571,38 @@ model Report {
 
 // 실시간 질문 카테고리
 enum LiveQueryCategory {
-  PROCEDURE       // 시술/진료 (임플란트, 교정, 라미네이트 등)
-  EMOTION         // 감성/경험 (친절한, 무서운데, 편안한 등)
-  COST            // 비용/가격 (저렴한, 가성비, 가격)
-  REGION          // 지역 기반 (강남, 홍대 근처 등)
-  REVIEW          // 후기/평판 (후기 좋은, 유명한 등)
-  COMPARISON      // 비교 (A vs B, 차이, 뭐가 좋아)
-  GENERAL         // 기타
+  PROCEDURE // 시술/진료 (임플란트, 교정, 라미네이트 등)
+  EMOTION // 감성/경험 (친절한, 무서운데, 편안한 등)
+  COST // 비용/가격 (저렴한, 가성비, 가격)
+  REGION // 지역 기반 (강남, 홍대 근처 등)
+  REVIEW // 후기/평판 (후기 좋은, 유명한 등)
+  COMPARISON // 비교 (A vs B, 차이, 뭐가 좋아)
+  GENERAL // 기타
 }
 
 // 실시간 질문 사용량 테이블
 model LiveQueryUsage {
-  id              String            @id @default(uuid())
-  hospitalId      String            @map("hospital_id")
-  userId          String?           @map("user_id")         // 질문한 사용자
-  queryText       String            @map("query_text")
-  platforms       String[]          // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
-  platformCount   Int               @default(4) @map("platform_count")
+  id                   String            @id @default(uuid())
+  hospitalId           String            @map("hospital_id")
+  userId               String?           @map("user_id") // 질문한 사용자
+  queryText            String            @map("query_text")
+  platforms            String[] // 사용한 플랫폼들 ['CHATGPT', 'PERPLEXITY']
+  platformCount        Int               @default(4) @map("platform_count")
   // 카테고리 & 분류
-  category        LiveQueryCategory @default(GENERAL)
-  categoryTag     String?           @map("category_tag")    // 세부 태그 (예: "임플란트", "교정", "친절")
+  category             LiveQueryCategory @default(GENERAL)
+  categoryTag          String?           @map("category_tag") // 세부 태그 (예: "임플란트", "교정", "친절")
   // 결과 요약 (카테고리별 성과 분석용)
-  successCount    Int               @default(0) @map("success_count")
-  mentionedCount  Int               @default(0) @map("mentioned_count")
-  mentionRate     Int               @default(0) @map("mention_rate")    // 0~100
+  successCount         Int               @default(0) @map("success_count")
+  mentionedCount       Int               @default(0) @map("mentioned_count")
+  mentionRate          Int               @default(0) @map("mention_rate") // 0~100
   // 경쟁사 & 인사이트
-  competitorsMentioned String[]     @map("competitors_mentioned")  // 응답에 등장한 경쟁 병원들
-  avgPosition     Float?            @map("avg_position")           // 평균 추천 순위 (1위=1.0)
-  sentimentSummary String?          @map("sentiment_summary")      // POSITIVE/NEUTRAL/NEGATIVE
-  usedAt          DateTime          @default(now()) @map("used_at")
+  competitorsMentioned String[]          @map("competitors_mentioned") // 응답에 등장한 경쟁 병원들
+  avgPosition          Float?            @map("avg_position") // 평균 추천 순위 (1위=1.0)
+  sentimentSummary     String?           @map("sentiment_summary") // POSITIVE/NEUTRAL/NEGATIVE
+  usedAt               DateTime          @default(now()) @map("used_at")
 
   // 각 플랫폼별 상세 응답
-  responses       LiveQueryResponse[]
+  responses LiveQueryResponse[]
 
   @@index([hospitalId, usedAt])
   @@index([hospitalId, category])
@@ -615,17 +615,17 @@ model LiveQueryUsage {
 model LiveQueryResponse {
   id                   String   @id @default(uuid())
   liveQueryId          String   @map("live_query_id")
-  platform             String                          // CHATGPT, CLAUDE, PERPLEXITY, GEMINI
+  platform             String // CHATGPT, CLAUDE, PERPLEXITY, GEMINI
   success              Boolean  @default(false)
-  responseText         String?  @map("response_text")  // AI 원문 응답 (전체 저장)
+  responseText         String?  @map("response_text") // AI 원문 응답 (전체 저장)
   isMentioned          Boolean  @default(false) @map("is_mentioned")
-  mentionPosition      Int?     @map("mention_position")       // 몇 번째로 추천됐는지
-  totalRecommendations Int?     @map("total_recommendations")  // 전체 추천 수
-  competitorsMentioned String[] @map("competitors_mentioned")  // 이 응답에서 언급된 경쟁사
-  citedSources         String[] @map("cited_sources")          // 인용된 출처
-  sentimentLabel       String?  @map("sentiment_label")        // POSITIVE/NEUTRAL/NEGATIVE
-  errorMessage         String?  @map("error_message")          // 실패 시 에러 메시지
-  responseTimeMs       Int?     @map("response_time_ms")       // 응답 소요 시간 (ms)
+  mentionPosition      Int?     @map("mention_position") // 몇 번째로 추천됐는지
+  totalRecommendations Int?     @map("total_recommendations") // 전체 추천 수
+  competitorsMentioned String[] @map("competitors_mentioned") // 이 응답에서 언급된 경쟁사
+  citedSources         String[] @map("cited_sources") // 인용된 출처
+  sentimentLabel       String?  @map("sentiment_label") // POSITIVE/NEUTRAL/NEGATIVE
+  errorMessage         String?  @map("error_message") // 실패 시 에러 메시지
+  responseTimeMs       Int?     @map("response_time_ms") // 응답 소요 시간 (ms)
   createdAt            DateTime @default(now()) @map("created_at")
 
   liveQuery LiveQueryUsage @relation(fields: [liveQueryId], references: [id], onDelete: Cascade)
@@ -660,121 +660,121 @@ model CrawlJob {
 
 // 쿠폰 상태
 enum CouponType {
-  PERCENT_OFF    // % 할인
-  AMOUNT_OFF     // 금액 할인
-  FREE_PERIOD    // 무료 기간 제공
+  PERCENT_OFF // % 할인
+  AMOUNT_OFF // 금액 할인
+  FREE_PERIOD // 무료 기간 제공
 }
 
 // 쿠폰 테이블
 model Coupon {
-  id              String      @id @default(uuid())
-  code            String      @unique                    // 쿠폰 코드 (ex: PF2026-SPRING)
-  name            String                                 // 쿠폰명 (ex: 페이션트퍼널 수강생 쿠폰)
-  description     String?                                // 설명
+  id          String  @id @default(uuid())
+  code        String  @unique // 쿠폰 코드 (ex: PF2026-SPRING)
+  name        String // 쿠폰명 (ex: 페이션트퍼널 수강생 쿠폰)
+  description String? // 설명
 
-  couponType      CouponType  @map("coupon_type")
-  discountPercent Int?        @map("discount_percent")   // % 할인 (100 = 100%)
-  discountAmount  Int?        @map("discount_amount")    // 금액 할인
-  freeMonths      Int?        @map("free_months")        // 무료 개월 수
+  couponType      CouponType @map("coupon_type")
+  discountPercent Int?       @map("discount_percent") // % 할인 (100 = 100%)
+  discountAmount  Int?       @map("discount_amount") // 금액 할인
+  freeMonths      Int?       @map("free_months") // 무료 개월 수
 
   // 적용 대상
-  applicablePlans PlanType[]  @map("applicable_plans")   // 적용 가능 플랜 (빈 배열 = 모든 플랜)
+  applicablePlans PlanType[] @map("applicable_plans") // 적용 가능 플랜 (빈 배열 = 모든 플랜)
 
   // 제한
-  maxUses         Int         @default(0) @map("max_uses")        // 최대 사용 횟수 (0=무제한)
-  currentUses     Int         @default(0) @map("current_uses")    // 현재 사용 횟수
-  maxUsesPerUser  Int         @default(1) @map("max_uses_per_user") // 유저당 최대 사용 횟수
+  maxUses        Int @default(0) @map("max_uses") // 최대 사용 횟수 (0=무제한)
+  currentUses    Int @default(0) @map("current_uses") // 현재 사용 횟수
+  maxUsesPerUser Int @default(1) @map("max_uses_per_user") // 유저당 최대 사용 횟수
 
   // 유효 기간
-  startsAt        DateTime    @default(now()) @map("starts_at")
-  expiresAt       DateTime?   @map("expires_at")
-  isActive        Boolean     @default(true) @map("is_active")
+  startsAt  DateTime  @default(now()) @map("starts_at")
+  expiresAt DateTime? @map("expires_at")
+  isActive  Boolean   @default(true) @map("is_active")
 
-  createdAt       DateTime    @default(now()) @map("created_at")
-  updatedAt       DateTime    @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // 사용 이력
-  redemptions     CouponRedemption[]
+  redemptions CouponRedemption[]
 
   @@map("coupons")
 }
 
 // 쿠폰 사용 이력
 model CouponRedemption {
-  id              String    @id @default(uuid())
-  couponId        String    @map("coupon_id")
-  userId          String    @map("user_id")
-  hospitalId      String    @map("hospital_id")
-  
+  id         String @id @default(uuid())
+  couponId   String @map("coupon_id")
+  userId     String @map("user_id")
+  hospitalId String @map("hospital_id")
+
   // 적용 정보
-  appliedPlan     PlanType  @map("applied_plan")
-  discountAmount  Int       @map("discount_amount")     // 실제 할인 금액
-  freeMonths      Int       @default(0) @map("free_months")  // 적용된 무료 개월 수
-  
-  redeemedAt      DateTime  @default(now()) @map("redeemed_at")
+  appliedPlan    PlanType @map("applied_plan")
+  discountAmount Int      @map("discount_amount") // 실제 할인 금액
+  freeMonths     Int      @default(0) @map("free_months") // 적용된 무료 개월 수
 
-  coupon          Coupon    @relation(fields: [couponId], references: [id])
+  redeemedAt DateTime @default(now()) @map("redeemed_at")
 
-  @@unique([couponId, hospitalId])  // 같은 병원에 같은 쿠폰 중복 사용 방지
+  coupon Coupon @relation(fields: [couponId], references: [id])
+
+  @@unique([couponId, hospitalId]) // 같은 병원에 같은 쿠폰 중복 사용 방지
   @@map("coupon_redemptions")
 }
 
 enum PaymentStatus {
-  PENDING          // 결제 대기 (가상계좌 입금 대기)
-  DONE             // 결제 완료
-  CANCELED         // 결제 취소
+  PENDING // 결제 대기 (가상계좌 입금 대기)
+  DONE // 결제 완료
+  CANCELED // 결제 취소
   PARTIAL_CANCELED // 부분 취소
-  EXPIRED          // 만료
-  FAILED           // 결제 실패
+  EXPIRED // 만료
+  FAILED // 결제 실패
 }
 
 enum PaymentMethod {
-  CARD             // 카드
-  VIRTUAL_ACCOUNT  // 가상계좌
-  TRANSFER         // 계좌이체
-  MOBILE_PHONE     // 휴대폰
-  EASY_PAY         // 간편결제
+  CARD // 카드
+  VIRTUAL_ACCOUNT // 가상계좌
+  TRANSFER // 계좌이체
+  MOBILE_PHONE // 휴대폰
+  EASY_PAY // 간편결제
 }
 
 // 결제 테이블
 model Payment {
-  id              String        @id @default(uuid())
-  orderId         String        @unique @map("order_id")       // 토스 주문번호
-  paymentKey      String?       @unique @map("payment_key")    // 토스 결제키
-  userId          String?       @map("user_id")
-  hospitalId      String?       @map("hospital_id")
-  
+  id         String  @id @default(uuid())
+  orderId    String  @unique @map("order_id") // 토스 주문번호
+  paymentKey String? @unique @map("payment_key") // 토스 결제키
+  userId     String? @map("user_id")
+  hospitalId String? @map("hospital_id")
+
   // 결제 정보
-  amount          Int                                          // 결제 금액
-  status          PaymentStatus  @default(PENDING)
-  method          PaymentMethod?
-  
+  amount Int // 결제 금액
+  status PaymentStatus  @default(PENDING)
+  method PaymentMethod?
+
   // 플랜 정보
-  planType        PlanType       @map("plan_type")
-  billingType     String         @map("billing_type")          // monthly, yearly
-  
+  planType    PlanType @map("plan_type")
+  billingType String   @map("billing_type") // monthly, yearly
+
   // 토스페이먼츠 응답 데이터
-  approvedAt      DateTime?      @map("approved_at")           // 결제 승인 시간
-  receiptUrl      String?        @map("receipt_url")           // 영수증 URL
-  transactionKey  String?        @map("transaction_key")       // 거래 키
-  
+  approvedAt     DateTime? @map("approved_at") // 결제 승인 시간
+  receiptUrl     String?   @map("receipt_url") // 영수증 URL
+  transactionKey String?   @map("transaction_key") // 거래 키
+
   // 가상계좌 정보
-  virtualAccount  Json?          @map("virtual_account")       // {bank, accountNumber, dueDate}
-  
+  virtualAccount Json? @map("virtual_account") // {bank, accountNumber, dueDate}
+
   // 카드 정보
-  cardInfo        Json?          @map("card_info")             // {company, number, installments}
-  
+  cardInfo Json? @map("card_info") // {company, number, installments}
+
   // 간편결제 정보
-  easyPayInfo     Json?          @map("easy_pay_info")         // {provider}
-  
+  easyPayInfo Json? @map("easy_pay_info") // {provider}
+
   // 실패 정보
-  failReason      String?        @map("fail_reason")
-  
+  failReason String? @map("fail_reason")
+
   // 메타데이터
-  metadata        Json?
-  
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  metadata Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([hospitalId])
@@ -786,88 +786,88 @@ model Payment {
 
 // 콘텐츠 상태
 enum GeoContentStatus {
-  DRAFT             // 초안
-  GENERATING        // AI 생성 중
-  REVIEW            // 검토 대기
-  PUBLISHED         // 발행 완료
-  SCHEDULED         // 발행 예약
-  FAILED            // 생성 실패
+  DRAFT // 초안
+  GENERATING // AI 생성 중
+  REVIEW // 검토 대기
+  PUBLISHED // 발행 완료
+  SCHEDULED // 발행 예약
+  FAILED // 생성 실패
 }
 
 // 콘텐츠 톤
 enum ContentTone {
-  FORMAL            // 존댓말 (합쇼체)
-  POLITE            // 해요체
-  CASUAL            // 해라체 (반말해라체)
-  FRIENDLY          // 친근체
-  PROFESSIONAL      // 전문가톤
+  FORMAL // 존댓말 (합쇼체)
+  POLITE // 해요체
+  CASUAL // 해라체 (반말해라체)
+  FRIENDLY // 친근체
+  PROFESSIONAL // 전문가톤
 }
 
 // 퍼널 단계
 enum FunnelStage {
-  AWARENESS         // 인지 (치료가 필요하다는 것을 알게 됨)
-  CONSIDERATION     // 고려 (어떤 병원/시술이 좋을지 비교)
-  DECISION          // 결정 (특정 병원으로 예약하려는 단계)
-  RETENTION         // 유지 (기존 환자 재방문 유도)
-  ADVOCACY          // 추천 (지인 소개, 후기 작성)
+  AWARENESS // 인지 (치료가 필요하다는 것을 알게 됨)
+  CONSIDERATION // 고려 (어떤 병원/시술이 좋을지 비교)
+  DECISION // 결정 (특정 병원으로 예약하려는 단계)
+  RETENTION // 유지 (기존 환자 재방문 유도)
+  ADVOCACY // 추천 (지인 소개, 후기 작성)
 }
 
 // 발행 플랫폼
 enum PublishPlatform {
-  NAVER_BLOG        // 네이버 블로그
-  TISTORY           // 티스토리
-  BRUNCH            // 브런치
-  WORDPRESS         // 워드프레스
-  HOSPITAL_SITE     // 병원 자체 사이트
-  SLIDESHARE        // 슬라이드쉐어
-  INSTAGRAM         // 인스타그램 (카드뉴스)
-  KAKAO             // 카카오 채널
+  NAVER_BLOG // 네이버 블로그
+  TISTORY // 티스토리
+  BRUNCH // 브런치
+  WORDPRESS // 워드프레스
+  HOSPITAL_SITE // 병원 자체 사이트
+  SLIDESHARE // 슬라이드쉐어
+  INSTAGRAM // 인스타그램 (카드뉴스)
+  KAKAO // 카카오 채널
 }
 
 // GEO 콘텐츠 (생성형 최적화 콘텐츠)
 model GeoContent {
-  id                 String            @id @default(uuid())
-  hospitalId         String            @map("hospital_id")
-  
+  id         String @id @default(uuid())
+  hospitalId String @map("hospital_id")
+
   // 콘텐츠 기본 정보
-  title              String                              // 콘텐츠 제목
-  subtitle           String?                             // 부제목
-  bodyHtml           String            @map("body_html") // HTML 본문
-  bodyMarkdown       String?           @map("body_markdown") // Markdown 본문
-  excerpt            String?                             // 요약/소개글 (메타 디스크립션)
-  
+  title        String // 콘텐츠 제목
+  subtitle     String? // 부제목
+  bodyHtml     String  @map("body_html") // HTML 본문
+  bodyMarkdown String? @map("body_markdown") // Markdown 본문
+  excerpt      String? // 요약/소개글 (메타 디스크립션)
+
   // 분류 & 태깅
-  funnelStage        FunnelStage       @map("funnel_stage")   // 퍼널 단계
-  contentTone        ContentTone       @map("content_tone")   // 톤
-  targetKeywords     String[]          @map("target_keywords") // 타겟 키워드
-  relatedPromptIds   String[]          @map("related_prompt_ids") // 연관 프롬프트 ID
-  procedure          String?                               // 관련 시술
-  
+  funnelStage      FunnelStage @map("funnel_stage") // 퍼널 단계
+  contentTone      ContentTone @map("content_tone") // 톤
+  targetKeywords   String[]    @map("target_keywords") // 타겟 키워드
+  relatedPromptIds String[]    @map("related_prompt_ids") // 연관 프롬프트 ID
+  procedure        String? // 관련 시술
+
   // GEO 최적화 요소 (체크리스트, FAQ, 표, 면책조항 등)
-  geoElements        Json?             @map("geo_elements")   // {checklist, faq, table, disclaimer, citations}
-  
+  geoElements Json? @map("geo_elements") // {checklist, faq, table, disclaimer, citations}
+
   // AI 생성 메타데이터
-  aiModel            String?           @map("ai_model")       // 사용된 AI 모델
-  generationPrompt   String?           @map("generation_prompt") // 생성에 사용된 프롬프트
-  generationParams   Json?             @map("generation_params") // 온도, 토큰 등
-  
+  aiModel          String? @map("ai_model") // 사용된 AI 모델
+  generationPrompt String? @map("generation_prompt") // 생성에 사용된 프롬프트
+  generationParams Json?   @map("generation_params") // 온도, 토큰 등
+
   // 상태 & 발행
-  status             GeoContentStatus  @default(DRAFT)
-  
+  status GeoContentStatus @default(DRAFT)
+
   // 카드뉴스 (슬라이드)
-  cardNewsSlides     Json?             @map("card_news_slides") // [{title, body, bgColor, imageUrl}]
-  
+  cardNewsSlides Json? @map("card_news_slides") // [{title, body, bgColor, imageUrl}]
+
   // SEO
-  metaTitle          String?           @map("meta_title")
-  metaDescription    String?           @map("meta_description")
-  slug               String?
-  
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("updated_at")
-  
-  hospital           Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  publications       GeoPublication[]
-  
+  metaTitle       String? @map("meta_title")
+  metaDescription String? @map("meta_description")
+  slug            String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hospital     Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  publications GeoPublication[]
+
   @@index([hospitalId, status])
   @@index([hospitalId, funnelStage])
   @@index([hospitalId, createdAt])
@@ -878,43 +878,43 @@ model GeoContent {
 
 // AEO→GEO 파이프라인 레코드 (측정→감지→생성→발행→재측정→효과계산)
 model AeoPipeline {
-  id                 String            @id @default(uuid())
-  hospitalId         String            @map("hospital_id")
-  
+  id         String @id @default(uuid())
+  hospitalId String @map("hospital_id")
+
   // 갭 감지 정보
-  contentGapId       String?           @map("content_gap_id")     // 연관 ContentGap
-  gapDetectedAt      DateTime          @map("gap_detected_at")    // 갭 감지 시점
-  gapPromptText      String?           @map("gap_prompt_text")    // 갭이 발견된 프롬프트 텍스트
-  gapPlatforms       String[]          @map("gap_platforms")      // 어느 플랫폼에서 미언급
-  competitorsInGap   String[]          @map("competitors_in_gap") // 갭에서 언급된 경쟁사
-  
+  contentGapId     String?  @map("content_gap_id") // 연관 ContentGap
+  gapDetectedAt    DateTime @map("gap_detected_at") // 갭 감지 시점
+  gapPromptText    String?  @map("gap_prompt_text") // 갭이 발견된 프롬프트 텍스트
+  gapPlatforms     String[] @map("gap_platforms") // 어느 플랫폼에서 미언급
+  competitorsInGap String[] @map("competitors_in_gap") // 갭에서 언급된 경쟁사
+
   // GEO 콘텐츠 생성
-  geoContentId       String?           @map("geo_content_id")     // 생성된 GEO 콘텐츠 ID
-  contentDraftedAt   DateTime?         @map("content_drafted_at")
-  
+  geoContentId     String?   @map("geo_content_id") // 생성된 GEO 콘텐츠 ID
+  contentDraftedAt DateTime? @map("content_drafted_at")
+
   // 발행
-  publishedAt        DateTime?         @map("published_at")
-  publishedUrl       String?           @map("published_url")
-  publishPlatform    String?           @map("publish_platform")
-  
+  publishedAt     DateTime? @map("published_at")
+  publishedUrl    String?   @map("published_url")
+  publishPlatform String?   @map("publish_platform")
+
   // 재측정 (발행 2주 후)
-  remeasuredAt       DateTime?         @map("remeasured_at")
-  preSovPercent      Float?            @map("pre_sov_percent")    // 발행 전 SoV %
-  postSovPercent     Float?            @map("post_sov_percent")   // 발행 후 SoV %
-  sovLift            Float?            @map("sov_lift")           // SoV 변화 (+12.5 = +12.5%p)
-  
+  remeasuredAt   DateTime? @map("remeasured_at")
+  preSovPercent  Float?    @map("pre_sov_percent") // 발행 전 SoV %
+  postSovPercent Float?    @map("post_sov_percent") // 발행 후 SoV %
+  sovLift        Float?    @map("sov_lift") // SoV 변화 (+12.5 = +12.5%p)
+
   // AEO Impact Score
-  impactScore        Float?            @map("impact_score")       // 종합 임팩트 점수
-  impactFactors      Json?             @map("impact_factors")     // {sovLift, platformCoverage, ...}
-  
+  impactScore   Float? @map("impact_score") // 종합 임팩트 점수
+  impactFactors Json?  @map("impact_factors") // {sovLift, platformCoverage, ...}
+
   // 상태
-  status             AeoPipelineStatus @default(GAP_DETECTED)
-  
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("updated_at")
-  
-  hospital           Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  
+  status AeoPipelineStatus @default(GAP_DETECTED)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
   @@index([hospitalId, status])
   @@index([hospitalId, gapDetectedAt])
   @@map("aeo_pipelines")
@@ -923,56 +923,56 @@ model AeoPipeline {
 // ==================== Weekly Coach Notifications ====================
 
 model WeeklyCoachAction {
-  id                 String   @id @default(uuid())
-  hospitalId         String   @map("hospital_id")
-  weekStartDate      DateTime @map("week_start_date") @db.Date
-  
+  id            String   @id @default(uuid())
+  hospitalId    String   @map("hospital_id")
+  weekStartDate DateTime @map("week_start_date") @db.Date
+
   // AI가 생성한 3가지 액션
-  actions            Json     // [{title, description, type, priority, relatedId}]
-  
+  actions Json // [{title, description, type, priority, relatedId}]
+
   // 발송 상태
-  sentViaEmail       Boolean  @default(false) @map("sent_via_email")
-  sentViaKakao       Boolean  @default(false) @map("sent_via_kakao")
-  sentAt             DateTime? @map("sent_at")
-  
+  sentViaEmail Boolean   @default(false) @map("sent_via_email")
+  sentViaKakao Boolean   @default(false) @map("sent_via_kakao")
+  sentAt       DateTime? @map("sent_at")
+
   // 사용자 반응
-  clickedActions     String[] @map("clicked_actions")  // 클릭한 액션 ID들
-  
-  createdAt          DateTime @default(now()) @map("created_at")
-  
+  clickedActions String[] @map("clicked_actions") // 클릭한 액션 ID들
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@unique([hospitalId, weekStartDate])
   @@map("weekly_coach_actions")
 }
 
 // AI 인용 역분석 결과
 model CitationAnalysis {
-  id                String   @id @default(uuid())
-  hospitalId        String   @map("hospital_id")
-  
+  id         String @id @default(uuid())
+  hospitalId String @map("hospital_id")
+
   // 분석 입력
-  queryText         String   @map("query_text")          // 원래 질문
-  targetKeyword     String?  @map("target_keyword")      // 타겟 키워드 (예: "강남 임플란트")
-  
+  queryText     String  @map("query_text") // 원래 질문
+  targetKeyword String? @map("target_keyword") // 타겟 키워드 (예: "강남 임플란트")
+
   // 인용 페이지 분석 결과
-  analyzedUrls      String[] @map("analyzed_urls")        // 분석한 URL 목록
-  topCitationCount  Int      @default(0) @map("top_citation_count") // 분석된 인용 페이지 수
-  
+  analyzedUrls     String[] @map("analyzed_urls") // 분석한 URL 목록
+  topCitationCount Int      @default(0) @map("top_citation_count") // 분석된 인용 페이지 수
+
   // AI 분석 결과 (JSON)
-  citationPatterns  Json?    @map("citation_patterns")    // 인용 페이지 공통 패턴
-  gapAnalysis       Json?    @map("gap_analysis")         // 우리 콘텐츠와의 GAP
-  directives        Json?    @map("directives")           // 구체 지시어 목록
-  contentScore      Json?    @map("content_score")        // 인용 가능성 점수
-  
+  citationPatterns Json? @map("citation_patterns") // 인용 페이지 공통 패턴
+  gapAnalysis      Json? @map("gap_analysis") // 우리 콘텐츠와의 GAP
+  directives       Json? @map("directives") // 구체 지시어 목록
+  contentScore     Json? @map("content_score") // 인용 가능성 점수
+
   // 메타데이터
-  analysisModel     String?  @map("analysis_model")       // 분석에 사용한 AI 모델
-  costEstimate      Float?   @map("cost_estimate")        // 분석 비용 (원)
-  status            String   @default("COMPLETED")        // RUNNING, COMPLETED, FAILED
-  errorMessage      String?  @map("error_message")
-  
-  createdAt         DateTime @default(now()) @map("created_at")
-  
-  hospital          Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  
+  analysisModel String? @map("analysis_model") // 분석에 사용한 AI 모델
+  costEstimate  Float?  @map("cost_estimate") // 분석 비용 (원)
+  status        String  @default("COMPLETED") // RUNNING, COMPLETED, FAILED
+  errorMessage  String? @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
   @@index([hospitalId, createdAt])
   @@index([targetKeyword])
   @@map("citation_analyses")
@@ -981,38 +981,38 @@ model CitationAnalysis {
 // ==================== 56주 콘텐츠 캘린더 ====================
 
 model ContentCalendar {
-  id                 String   @id @default(uuid())
-  hospitalId         String   @map("hospital_id")
-  
+  id         String @id @default(uuid())
+  hospitalId String @map("hospital_id")
+
   // 캘린더 정보
-  weekNumber         Int      @map("week_number")            // 1~56주
-  yearWeek           String   @map("year_week")              // "2026-W17" 형태
-  scheduledDate      DateTime @map("scheduled_date") @db.Date // 해당 주 발행 예정일
-  
+  weekNumber    Int      @map("week_number") // 1~56주
+  yearWeek      String   @map("year_week") // "2026-W17" 형태
+  scheduledDate DateTime @map("scheduled_date") @db.Date // 해당 주 발행 예정일
+
   // 콘텐츠 정보
-  topic              String                                   // 주제
-  targetKeyword      String   @map("target_keyword")         // 타겟 키워드
-  funnelStage        String   @map("funnel_stage")           // AWARENESS, CONSIDERATION 등
-  procedure          String?                                  // 관련 시술
-  contentType        String   @default("BLOG") @map("content_type") // BLOG, FAQ, COMPARISON 등
-  
+  topic         String // 주제
+  targetKeyword String  @map("target_keyword") // 타겟 키워드
+  funnelStage   String  @map("funnel_stage") // AWARENESS, CONSIDERATION 등
+  procedure     String? // 관련 시술
+  contentType   String  @default("BLOG") @map("content_type") // BLOG, FAQ, COMPARISON 등
+
   // 인용 역분석 연동
-  citationAnalysisId String?  @map("citation_analysis_id")   // 연결된 인용 분석 결과
-  seoDirectives      Json?    @map("seo_directives")         // 역분석에서 추출한 SEO 지시어
-  
+  citationAnalysisId String? @map("citation_analysis_id") // 연결된 인용 분석 결과
+  seoDirectives      Json?   @map("seo_directives") // 역분석에서 추출한 SEO 지시어
+
   // 생성된 콘텐츠 연동
-  geoContentId       String?  @map("geo_content_id")         // 생성된 GEO 콘텐츠 ID
-  
+  geoContentId String? @map("geo_content_id") // 생성된 GEO 콘텐츠 ID
+
   // 상태
-  status             String   @default("PLANNED")            // PLANNED, ANALYZED, GENERATING, PUBLISHED, SKIPPED
-  priority           String   @default("MEDIUM")             // HIGH, MEDIUM, LOW
-  notes              String?                                  // 메모
-  
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-  
-  hospital           Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  
+  status   String  @default("PLANNED") // PLANNED, ANALYZED, GENERATING, PUBLISHED, SKIPPED
+  priority String  @default("MEDIUM") // HIGH, MEDIUM, LOW
+  notes    String? // 메모
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
   @@unique([hospitalId, weekNumber])
   @@index([hospitalId, status])
   @@index([hospitalId, scheduledDate])
@@ -1021,28 +1021,28 @@ model ContentCalendar {
 
 // GEO 콘텐츠 발행 이력
 model GeoPublication {
-  id                String           @id @default(uuid())
-  contentId         String           @map("content_id")
-  platform          PublishPlatform
-  
+  id        String          @id @default(uuid())
+  contentId String          @map("content_id")
+  platform  PublishPlatform
+
   // 발행 정보
-  publishedUrl      String?          @map("published_url")   // 발행된 URL
-  publishedAt       DateTime?        @map("published_at")
-  scheduledAt       DateTime?        @map("scheduled_at")    // 예약 발행
-  
+  publishedUrl String?   @map("published_url") // 발행된 URL
+  publishedAt  DateTime? @map("published_at")
+  scheduledAt  DateTime? @map("scheduled_at") // 예약 발행
+
   // 성과 추적
-  viewCount         Int              @default(0) @map("view_count")
-  likeCount         Int              @default(0) @map("like_count")
-  commentCount      Int              @default(0) @map("comment_count")
-  
+  viewCount    Int @default(0) @map("view_count")
+  likeCount    Int @default(0) @map("like_count")
+  commentCount Int @default(0) @map("comment_count")
+
   // 상태
-  isPublished       Boolean          @default(false) @map("is_published")
-  errorMessage      String?          @map("error_message")
-  
-  createdAt         DateTime         @default(now()) @map("created_at")
-  
-  content           GeoContent       @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  
+  isPublished  Boolean @default(false) @map("is_published")
+  errorMessage String? @map("error_message")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  content GeoContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
   @@unique([contentId, platform])
   @@map("geo_publications")
 }
@@ -1050,36 +1050,108 @@ model GeoPublication {
 // ==================== Public API Key ====================
 
 model ApiKey {
-  id              String    @id @default(uuid())
-  name            String                                // API Key 이름 (예: "내 병원 API Key")
-  keyHash         String    @unique @map("key_hash")    // SHA-256 해시 (원본 키는 저장하지 않음)
-  keyPrefix       String    @map("key_prefix")          // 키 앞 16자 (식별용: "ps_live_6e3ade0c")
-  
+  id        String @id @default(uuid())
+  name      String // API Key 이름 (예: "내 병원 API Key")
+  keyHash   String @unique @map("key_hash") // SHA-256 해시 (원본 키는 저장하지 않음)
+  keyPrefix String @map("key_prefix") // 키 앞 16자 (식별용: "ps_live_6e3ade0c")
+
   // 소유자 바인딩 (병원 + 유저)
-  hospitalId      String    @map("hospital_id")
-  userId          String    @map("user_id")
-  
+  hospitalId String @map("hospital_id")
+  userId     String @map("user_id")
+
   // 권한 스코프
-  scopes          String[]  @default(["read:aeo"])       // 허용 스코프 목록
-  
+  scopes String[] @default(["read:aeo"]) // 허용 스코프 목록
+
   // 속도 제한
-  rateLimitPerMin Int       @default(60) @map("rate_limit_per_min")
-  
+  rateLimitPerMin Int @default(60) @map("rate_limit_per_min")
+
   // 상태
-  isActive        Boolean   @default(true) @map("is_active")
-  lastUsedAt      DateTime? @map("last_used_at")
-  usageCount      Int       @default(0) @map("usage_count")
-  expiresAt       DateTime? @map("expires_at")
-  
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-  
-  hospital        Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  isActive   Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at")
+  usageCount Int       @default(0) @map("usage_count")
+  expiresAt  DateTime? @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([keyHash])
   @@index([isActive])
   @@index([hospitalId])
   @@index([userId])
   @@map("api_keys")
+}
+
+// ==================== ABHS Weight Calibration (Phase A — Tier 1) ====================
+// 직관 기반 하드코딩 가중치를 실데이터로 캘리브레이션한 결과 저장
+// 스코프: GLOBAL | SPECIALTY | HOSPITAL (덮어쓰기 우선순위: HOSPITAL > SPECIALTY > GLOBAL)
+
+enum WeightScope {
+  GLOBAL
+  SPECIALTY
+  HOSPITAL
+}
+
+enum WeightKind {
+  PLATFORM // PLATFORM_WEIGHTS (CHATGPT, PERPLEXITY, ...)
+  DEPTH // DEPTH_SCORES (R0~R3)
+  INTENT // INTENT_MULTIPLIERS (RESERVATION, COMPARISON, ...)
+  SENTIMENT // SENTIMENT_V2_SCORES (-2~+2)
+}
+
+model WeightProfile {
+  id               String      @id @default(uuid())
+  scope            WeightScope @default(GLOBAL)
+  kind             WeightKind
+  scopeKey         String      @default("GLOBAL") @map("scope_key") // HOSPITAL이면 hospitalId, SPECIALTY면 enum값, GLOBAL이면 "GLOBAL"
+  weightKey        String      @map("weight_key") // ex: "CHATGPT", "R3", "RESERVATION", "2"
+  weightValue      Float       @map("weight_value")
+  // 메타데이터
+  isActive         Boolean     @default(true) @map("is_active")
+  source           String      @default("CALIBRATED") // CALIBRATED | MANUAL | DEFAULT
+  calibrationRunId String?     @map("calibration_run_id") // 어느 캘리브레이션 실행에서 나온 값인지
+  evidence         Json? // {responses, sovPercent, avgSentiment, rationale, ...}
+  notes            String?
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+
+  calibrationRun WeightCalibrationRun? @relation(fields: [calibrationRunId], references: [id], onDelete: SetNull)
+
+  @@unique([scope, scopeKey, kind, weightKey])
+  @@index([scope, kind, isActive])
+  @@index([scopeKey])
+  @@map("weight_profiles")
+}
+
+// 캘리브레이션 실행 이력 (감사/롤백/A-B 비교용)
+model WeightCalibrationRun {
+  id                String      @id @default(uuid())
+  triggeredBy       String      @default("SYSTEM") @map("triggered_by") // SYSTEM | CRON | USER:{userId}
+  scope             WeightScope @default(GLOBAL)
+  scopeKey          String      @default("GLOBAL") @map("scope_key")
+  // 데이터 스코프
+  dataRangeDays     Int         @map("data_range_days")
+  responsesAnalyzed Int         @map("responses_analyzed")
+  hospitalsAnalyzed Int         @map("hospitals_analyzed")
+  // 결과
+  status            String      @default("COMPLETED") // RUNNING | COMPLETED | FAILED | ROLLBACK
+  insightsJson      Json?       @map("insights_json") // 인사이트 배열
+  weightDiffs       Json?       @map("weight_diffs") // {platform: {old, new, delta}, ...}
+  scoreImpactJson   Json?       @map("score_impact_json") // 병원별 점수 변화 시뮬레이션
+  errorMessage      String?     @map("error_message")
+  // 활성 여부 (활성=현재 사용 중인 가중치 세트)
+  isActive          Boolean     @default(false) @map("is_active")
+  activatedAt       DateTime?   @map("activated_at")
+  activatedBy       String?     @map("activated_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  profiles WeightProfile[]
+
+  @@index([scope, scopeKey, isActive])
+  @@index([status])
+  @@index([createdAt])
+  @@map("weight_calibration_runs")
 }

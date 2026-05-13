@@ -144,6 +144,38 @@ export class SchedulerController {
   }
 
   /**
+   * Weekly Weight Calibration - ABHS 가중치 자동 재캘리브레이션
+   * Cron: 매주 일요일 새벽 03:00 KST (= 토요일 18:00 UTC)
+   *
+   * 정책: save=true / activate=false
+   *   → DB에 RUN 저장만, 운영 반영은 관리자가 수동 검토 후 별도 활성화
+   *
+   * Render Cron 등록 예:
+   *   curl -X POST https://<api>/scheduler/weekly-weight-calibration \
+   *        -H "x-cron-secret: $CRON_SECRET"
+   */
+  @Post('weekly-weight-calibration')
+  @ApiOperation({
+    summary: '주간 ABHS 가중치 자동 재캘리브레이션 (save only, no auto-activate)',
+    description: 'Cron Job에서 호출. 실데이터 기반으로 가중치 재산정 후 DB에 저장하되 활성화는 하지 않음 (수동 검토 필요).',
+  })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async weeklyWeightCalibration(
+    @Headers('x-cron-secret') cronSecret: string,
+  ) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const result = await this.schedulerService.runWeeklyWeightCalibration();
+    return {
+      timestamp: new Date().toISOString(),
+      ...result,
+    };
+  }
+
+  /**
    * 상태 확인 엔드포인트 (공개)
    */
   @Get('status')
@@ -174,6 +206,7 @@ export class SchedulerController {
       cronSchedule: {
         promptRefresh: '매일 오전 8시 (KST) - 5×5 매트릭스 프롬프트 생성',
         dailyCrawl: '매일 오전 9시 (KST) - 전체 플랫폼 크롤링',
+        weeklyWeightCalibration: '매주 일요일 새벽 3시 (KST) - ABHS 가중치 자동 재캘리브레이션 (save only)',
       },
       supportedSpecialties: [
         'DENTAL (치과)', 'DERMATOLOGY (피부과)', 'PLASTIC_SURGERY (성형외과)',
