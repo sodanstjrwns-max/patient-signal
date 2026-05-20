@@ -951,14 +951,18 @@ export class AICrawlerService {
 
   /**
    * 【NEW】Grok (xAI) 질의 — 실시간 X(Twitter) 통합 + 웹검색 강점
-   * 모델: grok-2-latest (또는 grok-2-1212)
+   * 모델: grok-4 (2026.05 기준 플래그십, 256K 컨텍스트, $3/$15 per M tokens)
+   *   - 폴백 후보: grok-4-0709, grok-3-fast
+   *   - 환경변수 GROK_MODEL 로 오버라이드 가능
    * 엔드포인트: https://api.x.ai/v1/chat/completions (OpenAI 호환)
    */
   private async queryGrok(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const xaiApiKey = process.env.XAI_API_KEY?.trim();
     if (!xaiApiKey) throw new Error('XAI_API_KEY가 설정되지 않았습니다');
 
-    this.logger.log(`[Grok] API 호출 시작 (grok-2-latest, temp=0)`);
+    const modelName = process.env.GROK_MODEL?.trim() || 'grok-4';
+
+    this.logger.log(`[Grok] API 호출 시작 (${modelName}, temp=0)`);
 
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
@@ -967,7 +971,7 @@ export class AICrawlerService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'grok-2-latest',
+        model: modelName,
         messages: [
           {
             role: 'user',
@@ -987,7 +991,7 @@ export class AICrawlerService {
 
     const text = data.choices?.[0]?.message?.content || '';
 
-    const result = this.analyzeResponse(text, hospitalName, 'GROK', 'grok-2-latest');
+    const result = this.analyzeResponse(text, hospitalName, 'GROK', modelName);
     // Grok은 X 실시간 데이터 + 웹검색 가능. 명시적으로 표시.
     result.isWebSearch = true;
 
