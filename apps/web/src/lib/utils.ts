@@ -49,6 +49,8 @@ export function getPlatformName(platform: string): string {
     CLAUDE: 'Claude',
     GEMINI: 'Gemini',
     GOOGLE_AI_OVERVIEW: 'Google AI Overview',
+    GROK: 'Grok',
+    CLOVA_X: 'CLOVA X',
   };
   return names[platform] || platform;
 }
@@ -60,6 +62,8 @@ export function getPlatformColor(platform: string): string {
     CLAUDE: '#7c3aed',
     GEMINI: '#4285f4',
     GOOGLE_AI_OVERVIEW: '#ea4335',
+    GROK: '#000000',      // xAI 브랜드 색상 (블랙)
+    CLOVA_X: '#03c75a',   // 네이버 그린
   };
   return colors[platform] || '#6b7280';
 }

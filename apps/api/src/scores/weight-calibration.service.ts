@@ -17,8 +17,9 @@ import { WeightService } from './weight.service';
  */
 
 // 비교 베이스라인 (기존 하드코딩 값 — 변동 감지용)
+// 신규 플랫폼(GROK, CLOVA_X)은 데이터 충분 누적 후 캘리브레이션으로 자동 산정
 const BASELINE_PLATFORM: Record<string, number> = {
-  PERPLEXITY: 1.4, CHATGPT: 1.3, GEMINI: 1.2, CLAUDE: 1.0,
+  PERPLEXITY: 1.4, CHATGPT: 1.3, GEMINI: 1.2, GROK: 1.2, CLAUDE: 1.0, CLOVA_X: 1.0,
 };
 const BASELINE_DEPTH: Record<string, number> = {
   R3: 4.0, R2: 3.0, R1: 1.5, R0: 0.0,
@@ -199,7 +200,8 @@ export class WeightCalibrationService {
 
   // ========== Phase A.1: 플랫폼 가중치 ==========
   private async calibratePlatformWeights() {
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    // GROK, CLOVA_X는 데이터 누적되면 자동 포함되어 가중치 산출됨
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
     const evidence: Record<string, any> = {};
 
     for (const platform of platforms) {

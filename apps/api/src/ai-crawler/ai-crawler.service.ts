@@ -187,7 +187,7 @@ export class AICrawlerService {
     hospitalId: string,
     hospitalName: string,
     promptText: string,
-    platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'],
+    platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'],
   ): Promise<AIQueryResult[]> {
     const allResults: AIQueryResult[] = [];
     
@@ -394,6 +394,12 @@ export class AICrawlerService {
       case 'GEMINI':
         const geminiKey = process.env.GEMINI_API_KEY?.trim();
         return !!geminiKey && geminiKey.length > 10;
+      case 'GROK':
+        const xaiKey = process.env.XAI_API_KEY?.trim();
+        return !!xaiKey && xaiKey.length > 10;
+      case 'CLOVA_X':
+        const clovaKey = process.env.CLOVA_X_API_KEY?.trim();
+        return !!clovaKey && clovaKey.length > 10;
       default:
         return false;
     }
@@ -509,6 +515,10 @@ export class AICrawlerService {
         return this.withRetry(() => this.queryPerplexity(promptText, hospitalName), 'Perplexity');
       case 'GEMINI':
         return this.withRetry(() => this.queryGemini(promptText, hospitalName), 'Gemini');
+      case 'GROK':
+        return this.withRetry(() => this.queryGrok(promptText, hospitalName), 'Grok');
+      case 'CLOVA_X':
+        return this.withRetry(() => this.queryClovaX(promptText, hospitalName), 'CLOVA X');
       default:
         throw new Error(`지원하지 않는 플랫폼: ${platform}`);
     }
@@ -939,7 +949,145 @@ export class AICrawlerService {
     return result;
   }
 
+  /**
+   * 【NEW】Grok (xAI) 질의 — 실시간 X(Twitter) 통합 + 웹검색 강점
+   * 모델: grok-2-latest (또는 grok-2-1212)
+   * 엔드포인트: https://api.x.ai/v1/chat/completions (OpenAI 호환)
+   */
+  private async queryGrok(promptText: string, hospitalName: string): Promise<AIQueryResult> {
+    const xaiApiKey = process.env.XAI_API_KEY?.trim();
+    if (!xaiApiKey) throw new Error('XAI_API_KEY가 설정되지 않았습니다');
 
+    this.logger.log(`[Grok] API 호출 시작 (grok-2-latest, temp=0)`);
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${xaiApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'grok-2-latest',
+        messages: [
+          {
+            role: 'user',
+            content: promptText, // 시스템 프롬프트 없음 — 다른 플랫폼과 일관성
+          },
+        ],
+        temperature: 0,
+        stream: false,
+      }),
+    });
+
+    const data: any = await response.json();
+
+    if (data.error) {
+      throw new Error(`Grok 에러: ${JSON.stringify(data.error)}`);
+    }
+
+    const text = data.choices?.[0]?.message?.content || '';
+
+    const result = this.analyzeResponse(text, hospitalName, 'GROK', 'grok-2-latest');
+    // Grok은 X 실시간 데이터 + 웹검색 가능. 명시적으로 표시.
+    result.isWebSearch = true;
+
+    // 텍스트 내 소스 힌트 추출 (Grok citation 미지원 시 텍스트에서 URL 패턴 검출)
+    const inlineUrls = this.extractInlineUrls(text, 'GROK');
+    const textHints = this.extractSourceHintsFromText(text);
+    if (inlineUrls.length > 0) {
+      result.citedSources = [...new Set([...result.citedSources, ...inlineUrls.map((s) => s.url)])].slice(0, 15);
+    }
+    result.sourceHints = {
+      sources: inlineUrls,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
+    };
+
+    this.logger.log(`[Grok] 응답 ${text.length}자, URL ${inlineUrls.length}개 추출`);
+    return result;
+  }
+
+  /**
+   * 【NEW】Naver HyperCLOVA X 질의 — 한국 시장 토종 LLM
+   * 모델: HCX-005 (최신 chat completion 모델)
+   * 엔드포인트: https://clovastudio.stream.ntruss.com/testapp/v3/chat-completions/HCX-005
+   * 인증: Authorization: Bearer {CLOVA_X_API_KEY}
+   */
+  private async queryClovaX(promptText: string, hospitalName: string): Promise<AIQueryResult> {
+    const clovaKey = process.env.CLOVA_X_API_KEY?.trim();
+    if (!clovaKey) throw new Error('CLOVA_X_API_KEY가 설정되지 않았습니다');
+
+    this.logger.log(`[CLOVA X] API 호출 시작 (HCX-005, 한국어 최적화)`);
+
+    const endpoint =
+      process.env.CLOVA_X_ENDPOINT?.trim() ||
+      'https://clovastudio.stream.ntruss.com/testapp/v3/chat-completions/HCX-005';
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${clovaKey}`,
+        'Content-Type': 'application/json',
+        'X-NCP-CLOVASTUDIO-REQUEST-ID': `psv2-${Date.now()}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'user',
+            content: promptText,
+          },
+        ],
+        topP: 0.8,
+        topK: 0,
+        maxTokens: 1024,
+        temperature: 0.1, // CLOVA X는 0 비허용, 최저값 사용
+        repeatPenalty: 5.0,
+        stopBefore: [],
+        includeAiFilters: false,
+      }),
+    });
+
+    const rawText = await response.text();
+    let data: any;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      throw new Error(`CLOVA X 응답 JSON 파싱 실패: ${rawText.slice(0, 200)}`);
+    }
+
+    if (data.status?.code && data.status.code !== '20000') {
+      throw new Error(`CLOVA X 에러: ${data.status.code} - ${data.status.message || rawText.slice(0, 200)}`);
+    }
+
+    // CLOVA X 응답 구조: data.result.message.content
+    const text =
+      data.result?.message?.content ||
+      data.message?.content ||
+      data.choices?.[0]?.message?.content ||
+      '';
+
+    if (!text) {
+      throw new Error(`CLOVA X 빈 응답: ${rawText.slice(0, 200)}`);
+    }
+
+    const result = this.analyzeResponse(text, hospitalName, 'CLOVA_X', 'HCX-005');
+    // CLOVA X는 기본 학습 데이터 기반 (네이버 플레이스 통합은 별도 옵션)
+    result.isWebSearch = false;
+
+    const inlineUrls = this.extractInlineUrls(text, 'CLOVA_X');
+    const textHints = this.extractSourceHintsFromText(text);
+    if (inlineUrls.length > 0) {
+      result.citedSources = [...new Set([...result.citedSources, ...inlineUrls.map((s) => s.url)])].slice(0, 15);
+    }
+    result.sourceHints = {
+      sources: inlineUrls,
+      hintKeywords: textHints.hintKeywords,
+      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
+    };
+
+    this.logger.log(`[CLOVA X] 응답 ${text.length}자, URL ${inlineUrls.length}개 추출`);
+    return result;
+  }
 
   // ==================== 초고도화: ABHS 통합 AI 분석 ====================
 
@@ -1233,7 +1381,7 @@ JSON만 답변:
     const platformResults: Record<string, { mentioned: number; total: number }> = {};
 
     // 각 플랫폼에서 경쟁사 이름으로 측정
-    const platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'GEMINI'];
+    const platforms: AIPlatform[] = ['CHATGPT', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'];
     const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
 
     for (const prompt of prompts) {
@@ -1625,7 +1773,7 @@ JSON 형식으로만 답변:
       const mentionRate = totalQueries > 0 ? (mentionedResponses.length / totalQueries) * 100 : 0;
       
       // 플랫폼별 성과
-      const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'] as const;
+      const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
       const platformPerformance: Record<string, any> = {};
       
       for (const platform of platforms) {
@@ -2446,7 +2594,9 @@ JSON 형식으로만 답변:
       PERPLEXITY: 0.85,   // 항상 웹검색 + 출처 인용
       CHATGPT: 0.70,      // gpt-4o-search-preview 사용 시 높음
       GEMINI: 0.65,       // Google 검색 통합 가능
+      GROK: 0.70,         // X 실시간 + 웹검색, Perplexity와 ChatGPT 중간
       CLAUDE: 0.55,       // 웹검색 없음, 학습 데이터 기반
+      CLOVA_X: 0.50,      // 한국어 특화 학습, 웹검색 기본 미지원 (캘리브레이션으로 보정 예정)
     };
 
     let score = baseReliability[platform] || 0.5;
@@ -2552,11 +2702,14 @@ JSON 형식으로만 답변:
    * 플랫폼별 가중치
    */
   private getPlatformWeight(platform: AIPlatform): number {
+    // 폴백 가중치 (실제 운영은 WeightProfile DB에서 동적 로드, 캘리브레이션 RUN으로 갱신됨)
     const weights: Record<string, number> = {
       PERPLEXITY: 1.4,
       CHATGPT: 1.3,
       GEMINI: 1.2,
+      GROK: 1.2,        // 초기값 — 실데이터 누적 후 캘리브레이션
       CLAUDE: 1.0,
+      CLOVA_X: 1.0,     // 초기값 — 한국 시장 특화 데이터 누적 후 재산정
     };
     return weights[platform] || 1.0;
   }
@@ -2769,7 +2922,7 @@ JSON 형식으로만 답변:
     const adjustedScore = Math.round(overallScore * reliabilityFactor * confidencePenalty);
 
     // 플랫폼별 점수 (다수결 기반)
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
     const platformScores: Record<string, number> = {};
     
     for (const platform of platforms) {
@@ -2864,7 +3017,7 @@ JSON 형식으로만 답변:
   }
 
   private calculatePlatformContributions(responses: any[]): any {
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
     const result: any = {};
     
     for (const platform of platforms) {

@@ -38,7 +38,7 @@ export class PlanGuard implements CanActivate {
     STARTER: {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // 4개 AI 전체 개방 (데이터 품질 > 비용 절감)
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // STARTER는 기존 4개 유지
       crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
       maxDailyLiveQueries: 5,      // 실시간 질문 5회/일
       exportEnabled: false,
@@ -49,7 +49,7 @@ export class PlanGuard implements CanActivate {
     STANDARD: {
       maxPrompts: 15,
       maxCompetitors: 5,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'], // 6개 AI 전체 (백서 v2.0)
       crawlsPerMonth: 30,          // 매일
       maxDailyLiveQueries: 10,     // 실시간 질문 10회/일
       exportEnabled: true,
@@ -60,7 +60,7 @@ export class PlanGuard implements CanActivate {
     PRO: {
       maxPrompts: 35,
       maxCompetitors: 10,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
       crawlsPerMonth: 30,          // 매일
       maxDailyLiveQueries: 30,     // 실시간 질문 30회/일
       exportEnabled: true,
@@ -71,7 +71,7 @@ export class PlanGuard implements CanActivate {
     ENTERPRISE: {
       maxPrompts: -1,              // unlimited
       maxCompetitors: -1,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
       crawlsPerMonth: -1,
       maxDailyLiveQueries: -1,     // 실시간 질문 무제한 (실질 100회)
       exportEnabled: true,

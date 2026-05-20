@@ -40,6 +40,8 @@ const platformColors: Record<string, string> = {
   PERPLEXITY: '#1E88E5',
   CLAUDE: '#D97706',
   GEMINI: '#8B5CF6',
+  GROK: '#000000',
+  CLOVA_X: '#03c75a',
 };
 
 const platformNames: Record<string, string> = {
@@ -47,6 +49,8 @@ const platformNames: Record<string, string> = {
   PERPLEXITY: 'Perplexity',
   CLAUDE: 'Claude',
   GEMINI: 'Gemini',
+  GROK: 'Grok',
+  CLOVA_X: 'CLOVA X',
 };
 
 export function PlatformStats({ data, planType: propPlanType }: PlatformStatsProps) {
@@ -61,7 +65,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
     return <DetailedPlatformStats data={data as PlatformDetail[]} allowedPlatforms={allowedPlatforms} />;
   }
   
-  const allPlatforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'];
+  const allPlatforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'];
   const scoreData = data as Record<string, number>;
   const platforms = allPlatforms.map(platform => ({
     key: platform,

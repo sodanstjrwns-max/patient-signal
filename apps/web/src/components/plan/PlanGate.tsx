@@ -34,7 +34,7 @@ export const PLAN_LIMITS = {
   STANDARD: {
     maxPrompts: 15,
     maxCompetitors: 5,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
     crawlsPerMonth: 8,
     exportEnabled: true,
     aiRecommendations: true,
@@ -47,7 +47,7 @@ export const PLAN_LIMITS = {
   PRO: {
     maxPrompts: 35,
     maxCompetitors: 10,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
     crawlsPerMonth: 30,
     exportEnabled: true,
     aiRecommendations: true,
@@ -60,7 +60,7 @@ export const PLAN_LIMITS = {
   ENTERPRISE: {
     maxPrompts: -1,
     maxCompetitors: -1,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
     crawlsPerMonth: -1,
     exportEnabled: true,
     aiRecommendations: true,

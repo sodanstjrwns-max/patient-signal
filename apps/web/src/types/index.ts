@@ -1,5 +1,5 @@
 // AI 플랫폼
-export type AIPlatform = 'CHATGPT' | 'PERPLEXITY' | 'CLAUDE' | 'GEMINI' | 'GOOGLE_AI_OVERVIEW';
+export type AIPlatform = 'CHATGPT' | 'PERPLEXITY' | 'CLAUDE' | 'GEMINI' | 'GOOGLE_AI_OVERVIEW' | 'GROK' | 'CLOVA_X';
 
 // 감성 레이블
 export type SentimentLabel = 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE';
