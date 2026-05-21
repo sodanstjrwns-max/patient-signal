@@ -327,13 +327,18 @@ export class SchedulerService {
   }
 
   private getPlatformsForSession(session: string): any[] {
-    const basePlatforms: any[] = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
-    
+    // 【2026.05】6대 플랫폼 — GROK(xAI) + CLOVA_X(Naver) 추가
+    // 가용성은 AICrawlerService.isPlatformAvailable()이 env 키 유무로 판정
+    const basePlatforms: any[] = [
+      'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X',
+    ];
+
     switch (session) {
       case 'morning':
         return basePlatforms;
       case 'afternoon':
-        return ['CHATGPT', 'GEMINI'];
+        // 비용 절감을 위해 일부 세션은 핵심 4종만 (GROK/CLOVA_X는 비교적 비쌈 + 한국 시장 토종)
+        return ['CHATGPT', 'GEMINI', 'GROK', 'CLOVA_X'];
       case 'evening':
         return basePlatforms;
       default:
