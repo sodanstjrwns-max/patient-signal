@@ -98,8 +98,8 @@ function LoginForm() {
             추천하고 있을까요?
           </h2>
           <p className="text-brand-200 text-base leading-relaxed mb-10">
-            ChatGPT, Perplexity, Claude, Gemini<br />
-            4개 AI 플랫폼에서의 병원 노출을 자동 추적합니다.
+            ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X<br />
+            글로벌·국내 6개 AI 플랫폼에서의 병원 노출을 자동 추적합니다.
           </p>
 
           <div className="space-y-4">
@@ -252,7 +252,7 @@ function LoginForm() {
             <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
               <div className="flex items-center gap-1">
                 <Bot className="h-3.5 w-3.5" />
-                <span>4개 AI 플랫폼</span>
+                <span>6개 AI 플랫폼</span>
               </div>
               <div className="flex items-center gap-1">
                 <BarChart3 className="h-3.5 w-3.5" />

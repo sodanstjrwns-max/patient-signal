@@ -59,6 +59,7 @@ const PLAN_INFO: Record<string, {
       '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
       '매일 크롤링 (월 30회)',
       '경쟁사 1개 비교 분석',
+      // STARTER는 4 AI baseline (Grok/CLOVA X 제외)
       'ABHS 점수 & 주간 리포트',
     ],
     color: 'blue',
@@ -70,7 +71,7 @@ const PLAN_INFO: Record<string, {
     description: '개원의를 위한 핵심 플랜',
     features: [
       '모니터링 질문 15개',
-      '4개 AI 플랫폼 전체',
+      '6개 AI 플랫폼 전체 (Grok·CLOVA X 포함)',
       '매일 크롤링 (월 30회)',
       '경쟁사 5개 비교 분석',
       'AI 질문 변형 & 액션 인텔리전스',
@@ -84,7 +85,7 @@ const PLAN_INFO: Record<string, {
     description: '데이터 드리븐 원장을 위한 프로 플랜',
     features: [
       '모니터링 질문 35개',
-      '4개 AI 플랫폼 전체',
+      '6개 AI 플랫폼 전체 (Grok·CLOVA X 포함)',
       '매일 크롤링 (월 30회)',
       '경쟁사 10개 비교 분석',
       'Content Gap & 딥리포트',

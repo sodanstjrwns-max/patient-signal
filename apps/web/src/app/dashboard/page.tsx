@@ -438,7 +438,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <h3 className="font-black mb-1">AI 크롤링이 곧 시작됩니다!</h3>
-                <p className="text-slate-400 text-sm font-medium">매일 ChatGPT, Perplexity, Claude, Gemini에서 AI 가시성을 자동 분석합니다.</p>
+                <p className="text-slate-400 text-sm font-medium">매일 ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X에서 AI 가시성을 자동 분석합니다.</p>
               </div>
             </div>
           </div>

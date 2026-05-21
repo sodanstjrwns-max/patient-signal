@@ -295,7 +295,7 @@ export default function ResponsesPage() {
                 ) : (
                   <>
                     <p className="text-slate-500 mb-2">
-                      AI 크롤링이 실행되면 ChatGPT, Perplexity, Claude, Gemini의
+                      AI 크롤링이 실행되면 ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X의
                       응답 내역이 이곳에 표시됩니다.
                     </p>
                     <div className="flex items-center justify-center gap-2 text-sm text-brand-600 mb-6">
@@ -452,7 +452,7 @@ export default function ResponsesPage() {
                 </div>
                 <div>
                   <p className="text-sm font-bold text-slate-900">AI에게 직접 질문해보기</p>
-                  <p className="text-xs text-slate-500">원하는 질문을 실시간으로 4개 AI에 동시에 물어보세요</p>
+                  <p className="text-xs text-slate-500">원하는 질문을 실시간으로 6개 AI에 동시에 물어보세요</p>
                 </div>
               </div>
               <Button size="sm" className="bg-gradient-to-r from-purple-600 to-brand-600 hover:from-purple-700 hover:to-brand-700 text-white">

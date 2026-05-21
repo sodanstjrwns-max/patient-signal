@@ -69,7 +69,7 @@ export default function RegisterPage() {
           <div className="space-y-4">
             {[
               { icon: <Zap className="h-5 w-5" />, title: '무료로 시작', desc: '신용카드 없이 바로 이용 가능' },
-              { icon: <Bot className="h-5 w-5" />, title: '4개 AI 플랫폼', desc: 'ChatGPT, Perplexity, Claude, Gemini' },
+              { icon: <Bot className="h-5 w-5" />, title: '6개 AI 플랫폼', desc: 'ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X' },
               { icon: <BarChart3 className="h-5 w-5" />, title: '매일 자동 분석', desc: '설정 후 자동으로 추적 & 리포트' },
               { icon: <Shield className="h-5 w-5" />, title: '경쟁사 비교', desc: '같은 지역 병원 대비 AI 노출 현황' },
             ].map((item, i) => (
@@ -219,7 +219,7 @@ export default function RegisterPage() {
               </div>
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                <span>4개 AI 플랫폼</span>
+                <span>6개 AI 플랫폼</span>
               </div>
               <div className="flex items-center gap-1">
                 <CheckCircle className="h-3.5 w-3.5 text-green-500" />

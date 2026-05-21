@@ -28,12 +28,12 @@ const ABHS_AXES = [
   { axis: 'Voice Share', desc: 'AI 응답에서 우리 병원이 언급되는 비율', icon: Activity, iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
   { axis: 'Sentiment', desc: '언급 시 긍정·중립·부정 톤 분석', icon: Shield, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
   { axis: 'Rec Depth', desc: '단독추천(R3)부터 단순언급(R1)까지', icon: Layers, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-  { axis: 'Platform', desc: '4개 플랫폼별 가중치 적용 점수', icon: Globe, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600' },
+  { axis: 'Platform', desc: '6개 플랫폼별 가중치 적용 점수', icon: Globe, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600' },
   { axis: 'Intent', desc: '예약·비교·공포 등 질문 의도별 분석', icon: Target, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
 ];
 
 const FEATURES = [
-  { icon: Eye, title: 'SoV 기반 가시성 점수', desc: '4개 AI 플랫폼에서 우리 병원이 차지하는 Voice Share를 매일 추적합니다. 점수 변동과 트렌드를 한눈에 확인하세요.', iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
+  { icon: Eye, title: 'SoV 기반 가시성 점수', desc: '글로벌·국내 6개 AI 플랫폼에서 우리 병원이 차지하는 Voice Share를 매일 추적합니다. 점수 변동과 트렌드를 한눈에 확인하세요.', iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
   { icon: TrendingUp, title: '경쟁사 AEO 비교', desc: '같은 지역 경쟁 병원의 AI 노출 현황을 자동으로 비교합니다. 누가 AI의 1순위 추천을 받고 있는지 파악하세요.', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
   { icon: Shield, title: '감성 & 추천 깊이 분석', desc: 'AI가 우리 병원을 긍정적으로 추천하는지(R3), 단순 언급(R1)인지, 부정적(R0)인지 자동으로 분류합니다.', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
   { icon: FileText, title: '인용 출처 추적', desc: 'AI가 우리 병원을 추천할 때 어떤 출처(블로그, 리뷰 등)를 참고하는지 추적합니다. 소스 관리 전략에 활용하세요.', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
@@ -88,7 +88,7 @@ export default function HomePage() {
           </h1>
           
           <p className="text-lg sm:text-xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
-            ChatGPT, Perplexity, Claude, Gemini에게 물어보세요.<br />
+            ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X에게 물어보세요.<br />
             <strong className="text-slate-900">"우리 동네 병원 추천해줘"</strong> — 거기에 우리 병원이 나오나요?
           </p>
           <p className="text-base text-slate-500 mb-12 max-w-2xl mx-auto font-medium">
@@ -203,7 +203,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
               { icon: MessageSquare, step: 'STEP 1', title: '병원 정보 입력', desc: '병원명, 진료과, 위치, 주력 진료만\n입력하면 AI 모니터링 질문이\n자동으로 생성됩니다', iconBg: 'bg-brand-100', iconColor: 'text-brand-600', stepColor: 'text-brand-600' },
-              { icon: Search, step: 'STEP 2', title: 'AI 자동 분석', desc: '매일, ChatGPT·Perplexity·Claude·Gemini\n4개 플랫폼에 자동으로 질문하고\nABHS 5축 분석을 수행합니다', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', stepColor: 'text-emerald-600' },
+              { icon: Search, step: 'STEP 2', title: 'AI 자동 분석', desc: '매일, ChatGPT·Perplexity·Claude·Gemini·Grok·CLOVA X\n6개 플랫폼에 자동으로 질문하고\nABHS 5축 분석을 수행합니다', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', stepColor: 'text-emerald-600' },
               { icon: BarChart3, step: 'STEP 3', title: '인사이트 확인', desc: 'SoV(Voice Share) 중심 대시보드에서\n가시성 점수, 경쟁사 비교,\n개선 기회를 확인하세요', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', stepColor: 'text-violet-600' },
             ].map((item, i) => (
               <div key={i} className="text-center glass rounded-2xl p-8 hover-lift">

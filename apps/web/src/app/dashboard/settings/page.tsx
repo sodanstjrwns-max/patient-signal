@@ -90,6 +90,7 @@ const PLANS = [
       '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
       '매일 크롤링 (월 30회)',
       '경쟁사 1개 비교 분석',
+      // STARTER: 4 AI baseline (Grok/CLOVA X는 상위 플랜)
       'ABHS 점수',
       '주간 리포트',
     ],
@@ -109,7 +110,7 @@ const PLANS = [
     description: '개원의를 위한 핵심 플랜',
     features: [
       '모니터링 질문 15개',
-      '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
+      '6개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini, Grok, CLOVA X)',
       '매일 크롤링 (월 30회)',
       'ABHS 점수',
       '주간 리포트',
@@ -133,7 +134,7 @@ const PLANS = [
     description: '데이터 드리븐 원장을 위한 프로 플랜',
     features: [
       '모니터링 질문 35개',
-      '4개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini)',
+      '6개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini, Grok, CLOVA X)',
       '매일 크롤링 (월 30회)',
       'ABHS 점수',
       '주간 + 월간 딥리포트',

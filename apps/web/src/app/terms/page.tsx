@@ -18,7 +18,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">제2조 (정의)</h2>
             <ul className="list-disc list-inside text-slate-600 space-y-2">
-              <li><strong>"서비스"</strong>란 회사가 제공하는 AI 플랫폼(ChatGPT, Claude, Perplexity, Gemini 등)에서의 
+              <li><strong>"서비스"</strong>란 회사가 제공하는 AI 플랫폼(ChatGPT, Claude, Perplexity, Gemini, Grok, CLOVA X 등)에서의 
                 병원/의료기관 검색 가시성 분석, 경쟁사 비교, 개선 인사이트 제공 등의 서비스를 말합니다.</li>
               <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 병원, 의료기관 또는 개인을 말합니다.</li>
               <li><strong>"구독"</strong>이란 이용자가 서비스를 이용하기 위해 가입하는 이용권을 말합니다.</li>

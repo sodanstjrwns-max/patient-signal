@@ -209,10 +209,10 @@ export default function OnboardingPage() {
           </h2>
           <p className="text-slate-500 mb-6">
             {formData.name}의 AI 검색 가시성을<br />
-            4개 플랫폼에서 자동으로 확인합니다
+            6개 플랫폼에서 자동으로 확인합니다
           </p>
           <div className="space-y-3">
-            {['모니터링 질문 자동 생성 중...', '4개 AI 플랫폼 연결 중...', '대시보드 준비 중...'].map((text, i) => (
+            {['모니터링 질문 자동 생성 중...', '6개 AI 플랫폼 연결 중...', '대시보드 준비 중...'].map((text, i) => (
               <div key={i} className="flex items-center gap-3 justify-center text-sm text-slate-600">
                 <Loader2 className="h-4 w-4 animate-spin text-brand-500" />
                 <span>{text}</span>
@@ -617,8 +617,8 @@ export default function OnboardingPage() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-white/80 rounded-2xl p-2.5 text-center">
                       <BarChart3 className="h-5 w-5 text-brand-500 mx-auto mb-1" />
-                      <p className="text-[11px] font-medium text-slate-700">4개 AI 플랫폼</p>
-                      <p className="text-[10px] text-slate-400">ChatGPT·Perplexity·Claude·Gemini</p>
+                      <p className="text-[11px] font-medium text-slate-700">6개 AI 플랫폼</p>
+                      <p className="text-[10px] text-slate-400">ChatGPT·Perplexity·Claude·Gemini·Grok·CLOVA X</p>
                     </div>
                     <div className="bg-white/80 rounded-2xl p-2.5 text-center">
                       <Target className="h-5 w-5 text-green-500 mx-auto mb-1" />
