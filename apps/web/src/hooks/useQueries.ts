@@ -204,6 +204,69 @@ export function useBreadthInsight(lazy = false) {
   });
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Source Intelligence — 출처 인텔리전스 (페이지 본문/감성/인스타)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/** 출처 인텔리전스 통합 요약 */
+export function useSourceIntelSummary(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.summary(hospitalId!),
+    queryFn: () => crawlerApi.getSourceIntelSummary(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** TOP 영향력 출처 */
+export function useTopSources(lazy = false, tone?: string, limit = 30) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.topSources(hospitalId!, tone),
+    queryFn: () => crawlerApi.getTopSources(hospitalId!, limit, tone).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** Instagram 인사이트 */
+export function useInstagramIntel(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.instagram(hospitalId!),
+    queryFn: () => crawlerApi.getInstagramIntel(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** AI hint keywords */
+export function useHintKeywords(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.hintKeywords(hospitalId!),
+    queryFn: () => crawlerApi.getHintKeywords(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** Enrich 진행 상태 — polling */
+export function useEnrichStatus(hospitalId: string | undefined, polling = false) {
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.status(hospitalId!),
+    queryFn: () => crawlerApi.getEnrichStatus(hospitalId!).then(r => r.data),
+    enabled: !!hospitalId,
+    refetchInterval: polling ? 3000 : false,
+    staleTime: 0,
+  });
+}
+
 /** 포지셔닝 맵 */
 export function usePositioningInsight(lazy = false) {
   const hospitalId = useHospitalId();

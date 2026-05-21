@@ -21,6 +21,7 @@ import { CouponsModule } from './coupons/coupons.module';
 import { AdminModule } from './admin/admin.module';
 import { GeoContentModule } from './geo-content/geo-content.module';
 import { PublicApiModule } from './public-api/public-api.module';
+import { SourceIntelModule } from './source-intel/source-intel.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { PublicApiModule } from './public-api/public-api.module';
     AdminModule,
     GeoContentModule,
     PublicApiModule,
+    SourceIntelModule,
   ],
   controllers: [AppController],
   providers: [

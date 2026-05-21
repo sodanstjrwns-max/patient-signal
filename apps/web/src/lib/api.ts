@@ -227,6 +227,21 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/url-matrix/${hospitalId}`, { params: { days, topN }, timeout: 60000 }),
   getBreadthInsights: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/breadth/${hospitalId}`, { params: { days }, timeout: 120000 }),
+  // Source Intelligence (출처 인텔리전스 — 페이지 본문/감성/인스타)
+  getSourceIntelSummary: (hospitalId: string) =>
+    api.get(`/source-intel/summary/${hospitalId}`, { timeout: 60000 }),
+  getTopSources: (hospitalId: string, limit?: number, tone?: string) =>
+    api.get(`/source-intel/top-sources/${hospitalId}`, { params: { limit, tone }, timeout: 60000 }),
+  getInstagramIntel: (hospitalId: string, days?: number) =>
+    api.get(`/source-intel/instagram/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getHintKeywords: (hospitalId: string, days?: number) =>
+    api.get(`/source-intel/hint-keywords/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getSourceDetail: (snapshotId: string, hospitalId?: string) =>
+    api.get(`/source-intel/source-detail/${snapshotId}`, { params: { hospitalId }, timeout: 60000 }),
+  enrichSources: (hospitalId: string, days?: number, limit?: number, analyze = true) =>
+    api.post(`/source-intel/enrich/${hospitalId}`, null, { params: { days, limit, analyze: analyze ? 'true' : 'false' }, timeout: 30000 }),
+  getEnrichStatus: (hospitalId: string) =>
+    api.get(`/source-intel/status/${hospitalId}`, { timeout: 15000 }),
   // Phase 2: 심화 인사이트
   getPositioningMap: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days }, timeout: 60000 }),

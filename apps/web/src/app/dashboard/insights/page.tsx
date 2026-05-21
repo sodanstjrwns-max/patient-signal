@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import { toast } from '@/hooks/useToast';
 import {
   useMentionInsight,
   useTrendInsight,
@@ -16,6 +17,11 @@ import {
   useUrlMatrix,
   useSourceDiagnostic,
   useBreadthInsight,
+  useSourceIntelSummary,
+  useTopSources,
+  useInstagramIntel,
+  useHintKeywords,
+  useEnrichStatus,
   usePositioningInsight,
   useSourceQualityInsight,
   useActionInsight,
@@ -49,6 +55,12 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
+  Instagram,
+  Sparkles,
+  Eye,
+  FileSearch,
+  Hash,
+  MessageCircle,
 } from 'lucide-react';
 
 const platformNames: Record<string, string> = {
@@ -86,7 +98,7 @@ export default function InsightsPage() {
   const hospitalId = useHospitalId();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'breadth', 'positioning', 'sourceQuality', 'actions'] as const;
+  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'breadth', 'sourceIntel', 'positioning', 'sourceQuality', 'actions'] as const;
   type TabType = typeof validTabs[number];
   const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -108,6 +120,10 @@ export default function InsightsPage() {
   const { data: topUrlsData, isLoading: topUrlsLoading, error: topUrlsError } = useTopUrls(activeTab !== 'topUrls', 100);
   const { data: urlMatrixData, isLoading: urlMatrixLoading, error: urlMatrixError } = useUrlMatrix(activeTab !== 'urlMatrix', 30);
   const { data: breadthData, isLoading: breadthLoading, error: breadthError } = useBreadthInsight(activeTab !== 'breadth');
+  const { data: siSummary, isLoading: siSummaryLoading, error: siSummaryError } = useSourceIntelSummary(activeTab !== 'sourceIntel');
+  const { data: siTopSources, isLoading: siTopLoading } = useTopSources(activeTab !== 'sourceIntel');
+  const { data: siInstagram, isLoading: siIgLoading } = useInstagramIntel(activeTab !== 'sourceIntel');
+  const { data: siHints, isLoading: siHintsLoading } = useHintKeywords(activeTab !== 'sourceIntel');
   const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
   const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
   const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
@@ -122,6 +138,7 @@ export default function InsightsPage() {
     (activeTab === 'topUrls' && topUrlsError) ||
     (activeTab === 'urlMatrix' && urlMatrixError) ||
     (activeTab === 'breadth' && breadthError) ||
+    (activeTab === 'sourceIntel' && siSummaryError) ||
     (activeTab === 'positioning' && positionError) ||
     (activeTab === 'sourceQuality' && sourceQualityError) ||
     (activeTab === 'actions' && actionError)
@@ -135,6 +152,7 @@ export default function InsightsPage() {
     (activeTab === 'topUrls' && topUrlsLoading) ||
     (activeTab === 'urlMatrix' && urlMatrixLoading) ||
     (activeTab === 'breadth' && breadthLoading) ||
+    (activeTab === 'sourceIntel' && siSummaryLoading && siTopLoading && siIgLoading && siHintsLoading) ||
     (activeTab === 'positioning' && positionLoading) ||
     (activeTab === 'sourceQuality' && sourceQualityLoading) ||
     (activeTab === 'actions' && actionLoading)
@@ -165,6 +183,7 @@ export default function InsightsPage() {
             { key: 'topUrls', icon: ExternalLink, label: 'Top URL 랭킹' },
             { key: 'urlMatrix', icon: BarChart3, label: 'AI×URL 매트릭스' },
             { key: 'breadth', icon: Award, label: 'Breadth 리포트' },
+            { key: 'sourceIntel', icon: Sparkles, label: '출처 인텔리전스 🆕' },
             { key: 'sourceQuality', icon: Shield, label: '출처 품질' },
           ].map(tab => (
             <Button
@@ -219,6 +238,15 @@ export default function InsightsPage() {
             {activeTab === 'topUrls' && topUrlsData && <TopUrlsRanking data={topUrlsData} />}
             {activeTab === 'urlMatrix' && urlMatrixData && <UrlMatrix data={urlMatrixData} />}
             {activeTab === 'breadth' && breadthData && <BreadthInsights data={breadthData} />}
+            {activeTab === 'sourceIntel' && (
+              <SourceIntelDashboard
+                summary={siSummary}
+                topSources={siTopSources}
+                instagram={siInstagram}
+                hints={siHints}
+                hospitalId={hospitalId!}
+              />
+            )}
             {activeTab === 'sourceQuality' && sourceQualityData && <SourceQuality data={sourceQualityData} />}
           </>
         )}
@@ -1374,6 +1402,661 @@ function BreadthInsights({ data }: { data: any }) {
               )}
             </Button>
           )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ==================== 출처 인텔리전스 대시보드 ====================
+function SourceIntelDashboard({
+  summary,
+  topSources,
+  instagram,
+  hints,
+  hospitalId,
+}: {
+  summary: any;
+  topSources: any;
+  instagram: any;
+  hints: any;
+  hospitalId: string;
+}) {
+  const [subTab, setSubTab] = useState<'overview' | 'quotes' | 'instagram' | 'hints' | 'top'>('overview');
+  const [enrichTriggered, setEnrichTriggered] = useState(false);
+  const { data: enrichStatus } = useEnrichStatus(hospitalId, enrichTriggered);
+  const queryClient = useQueryClient();
+
+  const handleEnrich = async () => {
+    try {
+      await crawlerApi.enrichSources(hospitalId, 30, 200, true);
+      setEnrichTriggered(true);
+      toast.success('🔥 분석 시작 — AI가 인용 페이지를 크롤링하고 분석 중입니다 (약 5-10분)');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.message || '분석 시작 실패');
+    }
+  };
+
+  // 폴링 상태에 따라 캐시 무효화
+  useEffect(() => {
+    if (enrichStatus?.status === 'done' && enrichTriggered) {
+      setEnrichTriggered(false);
+      queryClient.invalidateQueries({ queryKey: ['source-intel-summary', hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['source-intel-top', hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['source-intel-instagram', hospitalId] });
+      toast.success(`✅ 분석 완료 — ${enrichStatus.processed}개 페이지 처리, ${enrichStatus.aiAnalyzed}개 AI 분석 완료`);
+    }
+  }, [enrichStatus?.status, enrichTriggered, queryClient, hospitalId]);
+
+  const isRunning = enrichStatus?.status === 'running';
+  const enrichProgress = isRunning && enrichStatus?.total > 0
+    ? Math.round((enrichStatus.processed / enrichStatus.total) * 100)
+    : 0;
+
+  return (
+    <div className="space-y-6">
+      {/* 상단 — 분석 트리거 */}
+      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                출처 인텔리전스 🆕
+              </h3>
+              <p className="text-sm text-slate-600">
+                AI가 인용한 페이지의 <strong>실제 본문 + 우리 병원이 어떻게 묘사되는지</strong>를 분석합니다.
+                인스타 릴/포스트, 블로그, 모두닥 등 모든 인용 출처를 심층 추적.
+              </p>
+            </div>
+            <div className="flex-shrink-0">
+              {isRunning ? (
+                <div className="flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-2 text-sm font-medium text-purple-700">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    분석 중 {enrichStatus?.processed || 0}/{enrichStatus?.total || 0}
+                  </div>
+                  <div className="w-40 h-2 bg-purple-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-500 transition-all" style={{ width: `${enrichProgress}%` }} />
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={handleEnrich} size="sm" className="bg-purple-600 hover:bg-purple-700">
+                  <Sparkles className="h-4 w-4 mr-1.5" />
+                  AI 분석 실행
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* sub tabs */}
+      <div className="flex gap-2 overflow-x-auto border-b pb-2">
+        {[
+          { key: 'overview', icon: Eye, label: '개요' },
+          { key: 'quotes', icon: MessageCircle, label: 'Quote & 정확성' },
+          { key: 'top', icon: Award, label: 'Top 영향 출처' },
+          { key: 'instagram', icon: Instagram, label: '인스타 인사이트' },
+          { key: 'hints', icon: Hash, label: 'AI 단서 키워드' },
+        ].map(t => (
+          <button
+            key={t.key}
+            onClick={() => setSubTab(t.key as any)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg whitespace-nowrap transition-colors ${
+              subTab === t.key
+                ? 'bg-purple-100 text-purple-700 font-semibold'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <t.icon className="h-4 w-4" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* sub content */}
+      {subTab === 'overview' && <SI_Overview summary={summary} instagram={instagram} hospitalId={hospitalId} />}
+      {subTab === 'quotes' && <SI_Quotes summary={summary} />}
+      {subTab === 'top' && <SI_TopSources data={topSources} />}
+      {subTab === 'instagram' && <SI_Instagram data={instagram} />}
+      {subTab === 'hints' && <SI_HintKeywords data={hints} />}
+    </div>
+  );
+}
+
+// ━━━ 출처 인텔: 개요 ━━━
+function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagram: any; hospitalId: string }) {
+  if (!summary) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <FileSearch className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+          <p className="text-slate-500 mb-3">아직 분석된 출처가 없습니다</p>
+          <p className="text-xs text-slate-400">위의 'AI 분석 실행' 버튼을 눌러 시작하세요</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const td = summary.toneDistribution || {};
+  const ai = summary.accuracyIssues || {};
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-purple-600 font-medium">분석된 페이지</p>
+            <p className="text-2xl font-bold text-purple-800">{summary.analyzed?.toLocaleString() || 0}</p>
+            <p className="text-xs text-purple-600 mt-1">/ {summary.totalSnapshots?.toLocaleString() || 0} 스냅샷 ({summary.coverage}%)</p>
+          </CardContent>
+        </Card>
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-green-600 font-medium">우리 병원 언급</p>
+            <p className="text-2xl font-bold text-green-800">{summary.mentionsUs?.toLocaleString() || 0}</p>
+            <p className="text-xs text-green-600 mt-1">{td.positiveRate || 0}% 긍정</p>
+          </CardContent>
+        </Card>
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-amber-600 font-medium">정확성 이슈</p>
+            <p className="text-2xl font-bold text-amber-800">{ai.total || 0}</p>
+            <p className="text-xs text-amber-600 mt-1">옛 정보 {ai.outdated || 0} · 오류 {ai.incorrect || 0}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
+            <p className="text-2xl font-bold text-pink-800">{instagram?.summary?.igCitations?.toLocaleString() || 0}</p>
+            <p className="text-xs text-pink-600 mt-1">{instagram?.summary?.igPercent || 0}% (전체 대비)</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tone 분포 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-purple-600" />
+            AI 인용 출처가 우리 병원을 묘사하는 톤
+          </h3>
+          <div className="space-y-2">
+            {[
+              { label: '😊 긍정', count: td.positive || 0, color: 'bg-green-500' },
+              { label: '😐 중립', count: td.neutral || 0, color: 'bg-slate-400' },
+              { label: '⚖️ 비교 (vs 경쟁사)', count: td.comparative || 0, color: 'bg-amber-500' },
+              { label: '😞 부정', count: td.negative || 0, color: 'bg-red-500' },
+            ].map(t => {
+              const total = (td.positive || 0) + (td.neutral || 0) + (td.comparative || 0) + (td.negative || 0);
+              const pct = total > 0 ? (t.count / total) * 100 : 0;
+              return (
+                <div key={t.label}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-slate-700">{t.label}</span>
+                    <span className="font-medium">{t.count}회 ({pct.toFixed(1)}%)</span>
+                  </div>
+                  <div className="bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div className={`h-full ${t.color} transition-all`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ━━━ 출처 인텔: Quote & 정확성 ━━━
+function SI_Quotes({ summary }: { summary: any }) {
+  if (!summary) {
+    return (
+      <Card><CardContent className="p-8 text-center text-slate-500">분석된 데이터가 없습니다</CardContent></Card>
+    );
+  }
+  const positiveQuotes = summary.positiveQuotes || [];
+  const negativeQuotes = summary.negativeQuotes || [];
+  const alerts = summary.accuracyAlerts || [];
+
+  return (
+    <div className="space-y-4">
+      {/* 정확성 알림 */}
+      {alerts.length > 0 && (
+        <Card className="border-red-200 bg-red-50/30">
+          <CardContent className="p-5">
+            <h3 className="text-base font-semibold text-red-900 mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              🚨 정정 필요 출처 ({alerts.length}건)
+            </h3>
+            <div className="space-y-2">
+              {alerts.map((a: any, i: number) => (
+                <div key={i} className="bg-white rounded-xl p-3 border border-red-100 flex items-start gap-3">
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${
+                    a.type === 'INCORRECT' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {a.type === 'INCORRECT' ? '잘못된 정보' : '옛 정보'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-slate-900">{a.action || '내용 검토 필요'}</p>
+                    <p className="text-xs text-slate-400 mt-1 truncate">snapshot: {a.snapId.substring(0, 8)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 긍정 quotes */}
+      <Card className="border-green-200">
+        <CardContent className="p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <Quote className="h-5 w-5 text-green-600" />
+            💎 우리 병원 핵심 quote ({positiveQuotes.length}개)
+          </h3>
+          {positiveQuotes.length > 0 ? (
+            <div className="space-y-3">
+              {positiveQuotes.map((q: any, i: number) => (
+                <div key={i} className="bg-green-50/50 rounded-xl p-3 border-l-4 border-green-400">
+                  <p className="text-sm text-slate-800 italic leading-relaxed">"{q.quote}"</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">아직 긍정 quote가 수집되지 않았습니다</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 부정 quotes */}
+      {negativeQuotes.length > 0 && (
+        <Card className="border-red-200">
+          <CardContent className="p-5">
+            <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              ⚠️ 부정적 묘사 ({negativeQuotes.length}개) — 평판 관리 대상
+            </h3>
+            <div className="space-y-3">
+              {negativeQuotes.map((q: any, i: number) => (
+                <div key={i} className="bg-red-50/50 rounded-xl p-3 border-l-4 border-red-400">
+                  <p className="text-sm text-slate-800 italic leading-relaxed">"{q.quote}"</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ━━━ 출처 인텔: Top Sources ━━━
+function SI_TopSources({ data }: { data: any }) {
+  if (!data || !data.sources?.length) {
+    return <Card><CardContent className="p-8 text-center text-slate-500">분석된 출처가 없습니다</CardContent></Card>;
+  }
+  return (
+    <div className="space-y-3">
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Award className="h-5 w-5 text-purple-600" />
+            영향력 TOP {data.sources.length} 출처
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">권위도 × 인용빈도 × AI 다양성 × 신선도 × 톤 가중 점수 (0~10)</p>
+          <div className="space-y-2">
+            {data.sources.map((s: any, i: number) => (
+              <SourceCard key={s.id} source={s} rank={i + 1} />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function SourceCard({ source, rank }: { source: any; rank: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const a = source.analysis;
+  const toneColor =
+    a?.ourTone === 'POSITIVE' ? 'bg-green-100 text-green-700' :
+    a?.ourTone === 'NEGATIVE' ? 'bg-red-100 text-red-700' :
+    a?.ourTone === 'COMPARATIVE' ? 'bg-amber-100 text-amber-700' :
+    'bg-slate-100 text-slate-600';
+
+  return (
+    <div className="border rounded-xl p-3 hover:bg-slate-50/50 transition-colors">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-purple-600 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+            {rank}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="font-mono text-xs text-slate-700 truncate">{source.domain}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+                Authority {source.authorityScore}/10
+              </span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+                Influence {source.influenceScore?.toFixed(2)}
+              </span>
+              {a && (
+                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${toneColor}`}>
+                  {a.ourTone === 'POSITIVE' ? '😊 긍정' :
+                   a.ourTone === 'NEGATIVE' ? '😞 부정' :
+                   a.ourTone === 'COMPARATIVE' ? '⚖️ 비교' :
+                   a.ourTone === 'NEUTRAL' ? '😐 중립' : '— 미언급'}
+                </span>
+              )}
+              {a?.claimAccuracy && a.claimAccuracy !== 'ACCURATE' && (
+                <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">
+                  ⚠️ {a.claimAccuracy === 'OUTDATED' ? '옛정보' : a.claimAccuracy === 'INCORRECT' ? '오류' : a.claimAccuracy}
+                </span>
+              )}
+            </div>
+            <p className="text-sm font-medium text-slate-900 truncate">{source.title || source.url}</p>
+            {a?.extractedQuote && (
+              <p className="text-xs text-slate-600 italic mt-1 line-clamp-2">"{a.extractedQuote}"</p>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+          <span className="text-xs text-slate-500">{source.totalCitations}회 인용</span>
+          <div className="flex gap-1">
+            {source.citingAiPlatforms?.slice(0, 4).map((p: string) => (
+              <span key={p} className={`w-2 h-2 rounded-full ${platformColors[p] || 'bg-slate-300'}`} title={platformNames[p]} />
+            ))}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="mt-2 text-xs text-purple-600 hover:underline flex items-center gap-1"
+      >
+        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        상세 보기
+      </button>
+      {expanded && (
+        <div className="mt-3 p-3 bg-slate-50 rounded-lg text-xs space-y-2">
+          <div><span className="font-semibold text-slate-700">URL:</span> <a href={source.url} target="_blank" rel="noreferrer" className="text-purple-600 hover:underline break-all">{source.url}</a></div>
+          {source.publisher && <div><span className="font-semibold text-slate-700">매체:</span> {source.publisher}</div>}
+          {source.author && <div><span className="font-semibold text-slate-700">작성자:</span> {source.author}</div>}
+          {source.publishedAt && <div><span className="font-semibold text-slate-700">게시일:</span> {new Date(source.publishedAt).toLocaleDateString('ko-KR')}</div>}
+          {a?.topicSummary && <div><span className="font-semibold text-slate-700">주제:</span> {a.topicSummary}</div>}
+          {a?.ourContext && (
+            <div>
+              <span className="font-semibold text-slate-700">우리 병원 언급 컨텍스트:</span>
+              <p className="mt-1 text-slate-600 leading-relaxed">{a.ourContext}</p>
+            </div>
+          )}
+          {a?.recommendedAction && (
+            <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+              <span className="font-semibold text-amber-800">🎯 추천 액션:</span> <span className="text-amber-700">{a.recommendedAction}</span>
+            </div>
+          )}
+          {a?.mentionedCompetitors?.length > 0 && (
+            <div>
+              <span className="font-semibold text-slate-700">함께 언급된 경쟁사:</span> {a.mentionedCompetitors.slice(0, 5).join(', ')}
+            </div>
+          )}
+          {a?.signalKeywords?.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              <span className="font-semibold text-slate-700">시그널 키워드:</span>
+              {a.signalKeywords.map((k: string, i: number) => (
+                <span key={i} className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{k}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ━━━ 출처 인텔: Instagram ━━━
+function SI_Instagram({ data }: { data: any }) {
+  if (!data) {
+    return <Card><CardContent className="p-8 text-center text-slate-500">인스타 데이터가 없습니다</CardContent></Card>;
+  }
+  const s = data.summary || {};
+  const diag = data.diagnosis || [];
+
+  return (
+    <div className="space-y-4">
+      {/* 요약 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
+            <p className="text-2xl font-bold text-pink-800">{s.igCitations?.toLocaleString() || 0}</p>
+            <p className="text-xs text-pink-600 mt-1">{s.igPercent}% (전체 대비)</p>
+          </CardContent>
+        </Card>
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-purple-600 font-medium">고유 URL</p>
+            <p className="text-2xl font-bold text-purple-800">{s.uniqueUrls || 0}</p>
+            <p className="text-xs text-purple-600 mt-1">{s.uniqueHandles || 0}개 핸들</p>
+          </CardContent>
+        </Card>
+        {data.ourHandle ? (
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+            <CardContent className="p-4">
+              <p className="text-xs text-emerald-600 font-medium">우리 병원 핸들</p>
+              <p className="text-base font-bold text-emerald-800 truncate">{data.ourHandle.handle}</p>
+              <p className="text-xs text-emerald-600 mt-1">{data.ourHandle.citations}회 ({data.ourHandle.sharePercent}%)</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100">
+            <CardContent className="p-4">
+              <p className="text-xs text-red-600 font-medium">우리 병원 핸들</p>
+              <p className="text-base font-bold text-red-800">🚨 부재</p>
+              <p className="text-xs text-red-600 mt-1">인스타 SEO 미진입</p>
+            </CardContent>
+          </Card>
+        )}
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
+          <CardContent className="p-4">
+            <p className="text-xs text-brand-600 font-medium">AI 분석된 URL</p>
+            <p className="text-2xl font-bold text-brand-800">{s.analyzedCount || 0}</p>
+            <p className="text-xs text-brand-600 mt-1">/ {s.snapshotsAvailable || 0} 스냅샷</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 진단 */}
+      {diag.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/30">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-amber-600" /> 진단
+            </h4>
+            <ul className="text-sm text-slate-700 space-y-1">
+              {diag.map((d: string, i: number) => <li key={i}>{d}</li>)}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI 플랫폼별 */}
+      <Card>
+        <CardContent className="p-5">
+          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-pink-600" /> AI 플랫폼별 인스타 인용
+          </h4>
+          <div className="space-y-2">
+            {(data.aiPlatformDistribution || []).map((p: any) => (
+              <div key={p.platform}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${platformBgColors[p.platform] || 'bg-slate-100'}`}>
+                    {platformNames[p.platform] || p.platform}
+                  </span>
+                  <span className="font-medium">{p.citations}회 ({p.percent}%)</span>
+                </div>
+                <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div className={`h-full ${platformColors[p.platform] || 'bg-slate-400'}`} style={{ width: `${p.percent}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Handles */}
+      <Card>
+        <CardContent className="p-5">
+          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <Instagram className="h-4 w-4 text-pink-600" /> Top 인스타 핸들
+          </h4>
+          <div className="space-y-1">
+            {(data.topHandles || []).slice(0, 10).map((h: any, i: number) => (
+              <div key={h.handle} className={`flex items-center justify-between p-2 rounded-lg ${h.isOurs ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-slate-50'}`}>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <span className="text-xs w-6 text-slate-500">#{i + 1}</span>
+                  <span className="font-mono text-sm truncate">{h.handle}</span>
+                  {h.isOurs && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800">우리</span>}
+                </div>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="text-slate-500">{h.urls} URL</span>
+                  <span className="font-bold text-slate-900">{h.count}회</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top URLs (포스트/릴) */}
+      <Card>
+        <CardContent className="p-5">
+          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <ExternalLink className="h-4 w-4 text-pink-600" /> Top 인용 인스타 포스트/릴
+          </h4>
+          <div className="space-y-2">
+            {(data.topUrls || []).slice(0, 15).map((u: any, i: number) => (
+              <div key={i} className="border rounded-xl p-3 hover:bg-slate-50/50">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1 flex-wrap mb-1">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-medium">
+                        {u.snapshot?.mediaType === 'reel' ? '🎬 릴' : u.snapshot?.mediaType === 'post' ? '📷 포스트' : '📱'}
+                      </span>
+                      {u.snapshot?.handle && (
+                        <span className="text-xs font-mono text-slate-700">{u.snapshot.handle}</span>
+                      )}
+                      <span className="text-xs text-slate-500">멘션률 {u.mentionRate}%</span>
+                    </div>
+                    <a href={u.url} target="_blank" rel="noreferrer" className="text-xs text-purple-600 hover:underline truncate block">
+                      {u.url}
+                    </a>
+                    {u.snapshot?.caption && (
+                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">{u.snapshot.caption}</p>
+                    )}
+                    {u.analysis?.extractedQuote && (
+                      <p className="text-xs text-slate-700 italic mt-1 line-clamp-2">💬 "{u.analysis.extractedQuote}"</p>
+                    )}
+                    {u.topCoCompetitors?.length > 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        🥊 동시언급: {u.topCoCompetitors.slice(0, 3).map((c: any) => c.name).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <span className="text-sm font-bold text-slate-900 flex-shrink-0">{u.citations}회</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ━━━ 출처 인텔: Hint Keywords ━━━
+function SI_HintKeywords({ data }: { data: any }) {
+  if (!data || !data.keywords?.length) {
+    return <Card><CardContent className="p-8 text-center text-slate-500">아직 hint keyword가 누적되지 않았습니다</CardContent></Card>;
+  }
+
+  const categoryLabels: Record<string, string> = {
+    REVIEW_SIGNAL: '⭐ 리뷰/평점',
+    OFFICIAL_SIGNAL: '🏥 공식 홈페이지',
+    AUTHORITY_SIGNAL: '🏛 공공/권위',
+    VIDEO_SIGNAL: '🎬 영상/유튜브',
+    SOCIAL_SIGNAL: '📱 SNS/인스타',
+    BLOG_SIGNAL: '✍️ 블로그',
+    MAP_SIGNAL: '🗺 지도/플레이스',
+    NEWS_SIGNAL: '📰 뉴스',
+    OTHER: '기타',
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* 카테고리 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <Hash className="h-5 w-5 text-purple-600" />
+            AI가 인용 시 사용한 단서 신호 (카테고리별)
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">AI가 응답을 만들 때 어떤 종류의 출처 단서를 참조하는지</p>
+          <div className="space-y-2">
+            {(data.byCategory || []).map((c: any) => {
+              const max = data.byCategory[0]?.total || 1;
+              const pct = (c.total / max) * 100;
+              return (
+                <div key={c.category}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-slate-700">{categoryLabels[c.category] || c.category}</span>
+                    <span className="text-xs text-slate-500">
+                      전체 {c.total} · 우리 {c.withUs} · 경쟁사 {c.withCompetitor}
+                    </span>
+                  </div>
+                  <div className="bg-slate-100 rounded-full h-3 overflow-hidden">
+                    <div className="h-full bg-purple-500" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top 키워드 */}
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <Search className="h-5 w-5 text-purple-600" />
+            Top {Math.min(30, data.keywords.length)} 단서 키워드
+          </h3>
+          <div className="space-y-1">
+            {data.keywords.slice(0, 30).map((k: any) => {
+              const total = data.keywords[0]?.total || 1;
+              const pct = (k.total / total) * 100;
+              return (
+                <div key={k.keyword} className="border rounded-lg p-2 hover:bg-slate-50/50">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-sm font-medium text-slate-900 truncate">{k.keyword}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{categoryLabels[k.category] || k.category}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs flex-shrink-0">
+                      <span className="text-green-600">우리 {k.usShare}%</span>
+                      <span className="text-red-600">경쟁사 {k.compShare}%</span>
+                      <span className="font-bold text-slate-900 w-8 text-right">{k.total}</span>
+                    </div>
+                  </div>
+                  <div className="bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    <div className="h-full bg-purple-400" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -36,6 +36,15 @@ export const queryKeys = {
     contentGap: (hospitalId: string) => ['content-gap', hospitalId] as const,
   },
 
+  // === Source Intelligence ===
+  sourceIntel: {
+    summary: (hospitalId: string) => ['source-intel-summary', hospitalId] as const,
+    topSources: (hospitalId: string, tone?: string) => ['source-intel-top', hospitalId, tone] as const,
+    instagram: (hospitalId: string) => ['source-intel-instagram', hospitalId] as const,
+    hintKeywords: (hospitalId: string) => ['source-intel-hint-keywords', hospitalId] as const,
+    status: (hospitalId: string) => ['source-intel-status', hospitalId] as const,
+  },
+
   // === GEO Content ===
   geoContent: {
     list: (status?: string, funnelStage?: string) => ['geo-content', status, funnelStage] as const,

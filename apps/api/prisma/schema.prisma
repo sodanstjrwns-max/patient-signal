@@ -307,6 +307,68 @@ model AIResponse {
   @@map("ai_responses")
 }
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 출처 스냅샷 — AI가 인용한 페이지의 실제 콘텐츠/메타/감성
+// 같은 URL은 한 row로 캐싱, 우리 병원 언급/경쟁사 언급은 인용 시점마다 재집계
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+model CitedSourceSnapshot {
+  id                String   @id @default(uuid())
+  url               String   @unique
+  normalizedUrl     String   @map("normalized_url")  // utm 등 제거
+  domain            String   @map("domain")          // bdseoulbd.com 등
+  sourceType        String?  @map("source_type")      // 'instagram_reel' | 'instagram_post' | 'naver_blog' | 'web' ...
+  category          String?  @map("category")         // breadth classifier 결과 (MEDICAL_PORTAL 등)
+  authorityScore    Int?     @map("authority_score")  // 1-10
+
+  // 페이지 메타
+  title             String?  @map("title")
+  description       String?  @map("description") @db.Text
+  ogImage           String?  @map("og_image")
+  author            String?  @map("author")           // 작성자/매체명
+  publisher         String?  @map("publisher")        // 매체 (조선일보, 모두닥 등)
+  publishedAt       DateTime? @map("published_at")    // 페이지 게시일
+  language          String?  @map("language")         // ko, en
+
+  // 본문 (Readability/Cheerio로 추출)
+  bodyText          String?  @map("body_text") @db.Text  // 본문 (최대 8000자 저장)
+  bodyLength        Int?     @map("body_length")
+  wordCount         Int?     @map("word_count")
+
+  // 인스타 전용
+  igHandle          String?  @map("ig_handle")        // @seoul_bddc
+  igMediaType       String?  @map("ig_media_type")    // reel, post, story
+  igCaption         String?  @map("ig_caption") @db.Text
+  igLikeCount       Int?     @map("ig_like_count")    // (없을 수도 있음)
+
+  // 우리 병원 관련 (병원별로 다를 수 있으므로 JSON으로 hospital_id별 분석 저장)
+  // 키: hospitalId, 값: {mentionsUs, ourContext, ourTone, extractedQuote, claimType, claimAccuracy, mentionedCompetitors[]}
+  hospitalAnalysis  Json?    @map("hospital_analysis")
+
+  // 크롤 메타
+  fetchStatus       String   @map("fetch_status")     // 'success' | 'blocked' | 'not_found' | 'timeout' | 'error'
+  fetchedAt         DateTime @map("fetched_at")
+  httpStatus        Int?     @map("http_status")
+  fetchErrorMessage String?  @map("fetch_error_message")
+  fetchDurationMs   Int?     @map("fetch_duration_ms")
+  freshnessScore    Float?   @map("freshness_score")  // 0~1 (publishedAt 또는 fetchedAt 기반)
+
+  // 인용 통계 (전체 hospital 통합) — 빠른 ranking용
+  totalCitations    Int      @default(0) @map("total_citations")
+  citingAiPlatforms String[] @map("citing_ai_platforms")
+  influenceScore    Float?   @map("influence_score")  // 가중 점수
+  lastCitedAt       DateTime? @map("last_cited_at")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([domain])
+  @@index([category])
+  @@index([sourceType])
+  @@index([influenceScore])
+  @@index([lastCitedAt])
+  @@map("cited_source_snapshots")
+}
+
 // 일일 점수 테이블
 model DailyScore {
   id                       String   @id @default(uuid())
