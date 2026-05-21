@@ -64,6 +64,8 @@ const PLATFORM_META: Record<string, { name: string; color: string; bg: string; t
   PERPLEXITY: { name: 'Perplexity', color: '#1E88E5', bg: 'bg-brand-50', text: 'text-brand-700', ringClass: 'ring-blue-200' },
   CLAUDE: { name: 'Claude', color: '#D97706', bg: 'bg-amber-50', text: 'text-amber-700', ringClass: 'ring-amber-200' },
   GEMINI: { name: 'Gemini', color: '#8B5CF6', bg: 'bg-purple-50', text: 'text-purple-700', ringClass: 'ring-violet-200' },
+  GROK: { name: 'Grok', color: '#000000', bg: 'bg-slate-50', text: 'text-slate-700', ringClass: 'ring-slate-300' },
+  CLOVA_X: { name: 'CLOVA X', color: '#03c75a', bg: 'bg-green-50', text: 'text-green-700', ringClass: 'ring-green-300' },
 };
 
 // Journey step config
@@ -389,8 +391,8 @@ export default function DashboardPage() {
         {/* ═══════════════════════════════════════════
             BENTO ROW 2: Platform cards (4 cols)
         ═══════════════════════════════════════════ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {(platformSovData.length > 0 ? platformSovData : ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'].map(key => ({
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {(platformSovData.length > 0 ? platformSovData : ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'].map(key => ({
             key,
             name: PLATFORM_META[key]?.name || key,
             mentionRate: (dashboard?.platformScores as any)?.[key.toLowerCase()] ?? 0,

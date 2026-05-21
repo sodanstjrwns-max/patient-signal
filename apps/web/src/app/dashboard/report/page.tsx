@@ -35,13 +35,13 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 const platformNames: Record<string, string> = {
-  CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini',
+  CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini', GROK: 'Grok', CLOVA_X: 'CLOVA X',
 };
 const platformColors: Record<string, string> = {
-  CHATGPT: '#10A37F', CLAUDE: '#CC785C', PERPLEXITY: '#3B82F6', GEMINI: '#8B5CF6',
+  CHATGPT: '#10A37F', CLAUDE: '#CC785C', PERPLEXITY: '#3B82F6', GEMINI: '#8B5CF6', GROK: '#000000', CLOVA_X: '#03C75A',
 };
 const platformWeights: Record<string, number> = {
-  CHATGPT: 1.3, CLAUDE: 1.0, PERPLEXITY: 1.4, GEMINI: 1.2,
+  CHATGPT: 1.3, CLAUDE: 1.0, PERPLEXITY: 1.4, GEMINI: 1.2, GROK: 1.2, CLOVA_X: 1.0,
 };
 const intentNames: Record<string, string> = {
   reservation: '예약 의도', comparison: '비교 의도', information: '정보 탐색',

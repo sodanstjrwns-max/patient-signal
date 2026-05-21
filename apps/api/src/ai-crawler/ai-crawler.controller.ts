@@ -626,7 +626,7 @@ export class AICrawlerController {
 
     // 플랫폼별 전체 트렌드
     const platformTrend: Record<string, { total: number; mentioned: number; mentionRate: number; trend: string }> = {};
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'];
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'];
     for (const p of platforms) {
       const pResponses = responses.filter(r => r.aiPlatform === p);
       const total = pResponses.length;
@@ -1559,8 +1559,8 @@ export class AICrawlerController {
 
     // 플랫폼 선택 (기본: 전체)
     const selectedPlatforms = (platforms && platforms.length > 0) 
-      ? platforms.filter((p: string) => ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'].includes(p))
-      : ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+      ? platforms.filter((p: string) => ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'].includes(p))
+      : ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'];
 
     this.logger.log(`[LiveQuery] 질문: "${question.substring(0, 50)}", 플랫폼: ${selectedPlatforms.join(', ')}, 사용량: ${todayCount + 1}/${maxDaily === -1 ? '∞' : maxDaily}`);
 

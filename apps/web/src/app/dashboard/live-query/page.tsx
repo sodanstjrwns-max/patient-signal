@@ -51,6 +51,8 @@ const platformColors: Record<string, string> = {
   CLAUDE: 'bg-orange-100 text-orange-800',
   PERPLEXITY: 'bg-brand-100 text-brand-800',
   GEMINI: 'bg-purple-100 text-purple-800',
+  GROK: 'bg-slate-200 text-slate-900',
+  CLOVA_X: 'bg-emerald-100 text-emerald-800',
 };
 
 const platformNames: Record<string, string> = {
@@ -58,6 +60,8 @@ const platformNames: Record<string, string> = {
   CLAUDE: 'Claude',
   PERPLEXITY: 'Perplexity',
   GEMINI: 'Gemini',
+  GROK: 'Grok',
+  CLOVA_X: 'CLOVA X',
 };
 
 const planDisplayNames: Record<string, string> = {
@@ -114,7 +118,7 @@ export default function LiveQueryPage() {
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const [platforms, setPlatforms] = useState<string[]>(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI']);
+  const [platforms, setPlatforms] = useState<string[]>(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X']);
   const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -287,7 +291,7 @@ export default function LiveQueryPage() {
                 <div className="mb-4">
                   <p className="text-xs font-medium text-slate-600 mb-2">질문할 AI 플랫폼</p>
                   <div className="flex flex-wrap gap-2">
-                    {(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'] as const).map(platform => (
+                    {(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'] as const).map(platform => (
                       <button key={platform} onClick={() => togglePlatform(platform)}
                         className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all ${platforms.includes(platform) ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm` : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
                         {platformNames[platform]}

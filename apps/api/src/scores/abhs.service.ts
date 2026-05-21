@@ -120,7 +120,7 @@ export class ABHSService {
 
     // 2. 플랫폼별 기여도 계산
     const platformContributions: Record<string, PlatformContribution> = {};
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
 
     let totalWeightedScore = 0;
     let totalMaxScore = 0;
@@ -425,7 +425,7 @@ export class ABHSService {
     }
 
     // 2. 특정 플랫폼에서 SoV 급락 감지
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
     for (const platform of platforms) {
       const platResponses = recentResponses.filter(r => r.aiPlatform === platform);
       if (platResponses.length < 3) continue;

@@ -1110,7 +1110,7 @@ export class HospitalsService {
     // 새 플랫폼 추가 확인
     const newPlatforms = newLimits.platforms.filter((p: string) => !prevLimits.platforms.includes(p));
     if (newPlatforms.length > 0) {
-      const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
+      const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini', GROK: 'Grok', CLOVA_X: 'CLOVA X' };
       newFeatures.push(`새 AI 플랫폼: ${newPlatforms.map((p: string) => platformNames[p] || p).join(', ')}`);
     }
 

@@ -46,7 +46,7 @@ export class ScoresService {
   }
 
   /**
-   * 플랫폼별 분석 (상세) - 찐 AI 4개 플랫폼
+   * 플랫폼별 분석 (상세) - 6대 AI 플랫폼
    */
   async getPlatformAnalysis(hospitalId: string) {
     const last30Days = new Date();
@@ -80,16 +80,18 @@ export class ScoresService {
       }),
     ]);
 
-    // 찐 AI 4개 플랫폼만
-    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'] as const;
+    // 6대 AI 플랫폼 (Grok, CLOVA X 포함)
+    const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'] as const;
     const platformNames: Record<string, string> = {
       CHATGPT: 'ChatGPT',
       PERPLEXITY: 'Perplexity',
       CLAUDE: 'Claude',
       GEMINI: 'Gemini',
+      GROK: 'Grok',
+      CLOVA_X: 'CLOVA X',
     };
 
-    // 항상 4개 플랫폼 모두 반환 (데이터 없으면 0으로 표시)
+    // 항상 6개 플랫폼 모두 반환 (데이터 없으면 0으로 표시)
     return platforms.map(platform => {
       const platformResponses = allResponses.filter(r => r.aiPlatform === platform);
       const recentResponses = last7DaysResponses.filter(r => r.aiPlatform === platform);
@@ -180,7 +182,7 @@ export class ScoresService {
         repeatConsistency: repeatAnalysis,
         hasData: totalQueries > 0,  // 데이터 유무 표시
       };
-    }); // 항상 4개 플랫폼 모두 반환 (데이터 없으면 visibilityScore=0)
+    }); // 항상 6개 플랫폼 모두 반환 (데이터 없으면 visibilityScore=0)
   }
 
   /**
@@ -430,7 +432,7 @@ export class ScoresService {
       },
     });
 
-    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'];
+    const platforms = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'];
 
     return prompts.map(prompt => {
       const heatmapRow: Record<string, any> = {

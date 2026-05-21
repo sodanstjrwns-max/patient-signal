@@ -196,7 +196,7 @@ export default function ResponsesPage() {
               >
                 전체
               </Button>
-              {['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'].map((platform) => (
+              {['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'].map((platform) => (
                 <Button
                   key={platform}
                   variant={selectedPlatform === platform ? 'default' : 'outline'}

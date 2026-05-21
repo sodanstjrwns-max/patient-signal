@@ -823,7 +823,7 @@ export class SubscriptionsService {
         } catch {}
 
         const platformEntries = Object.entries(platformData).sort((a, b) => b[1] - a[1]);
-        const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini' };
+        const platformNames: Record<string, string> = { CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini', GROK: 'Grok', CLOVA_X: 'CLOVA X' };
 
         // 크롤링 횟수
         const totalCrawls = await this.prisma.crawlJob.count({
