@@ -8,6 +8,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 import { LiveQueryCategory } from '@prisma/client';
+import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT',
@@ -1674,6 +1675,390 @@ export class AICrawlerController {
         platform: p,
         total: columnTotals[p],
       })),
+    };
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Breadth-B: 25 카테고리 + 권위도 + 감성 + 경쟁사 갭 분석
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  @Get('insights/breadth/:hospitalId')
+  @ApiOperation({
+    summary: 'Breadth 분석 - 25 카테고리 출처 분포 + 권위도 점수 + 감성 매핑 + 경쟁사 갭',
+    description: 'AI 인용 출처를 25개 카테고리로 세분화하고, 카테고리별 권위도/감성/경쟁사 노출을 비교합니다.',
+  })
+  async getBreadthInsights(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const [hospital, responses] = await Promise.all([
+      this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { name: true, websiteUrl: true, nameAliases: true },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, createdAt: { gte: since } },
+        select: {
+          citedSources: true,
+          citedUrl: true,
+          aiPlatform: true,
+          isMentioned: true,
+          sentimentLabel: true,
+          competitorsMentioned: true,
+          sourceHints: true,
+        },
+      }),
+    ]);
+
+    if (!hospital) {
+      throw new NotFoundException('병원을 찾을 수 없습니다');
+    }
+
+    // ━━━ 1) 카테고리별 집계 ━━━
+    type CatStat = {
+      category: string;
+      label: string;
+      count: number;
+      uniqueDomains: Set<string>;
+      authoritySum: number;
+      authorityCount: number;
+      mentioned: number;   // 우리 병원이 언급된 응답에서 인용된 횟수
+      positive: number;
+      negative: number;
+      neutral: number;
+      competitorCount: number;  // 경쟁사 언급 응답에서 인용된 횟수
+      ownCount: number;         // 우리 도메인 인용 횟수
+      platforms: Set<string>;
+      topDomains: Map<string, number>;
+      subCategories: Map<string, number>;
+    };
+
+    const catMap = new Map<string, CatStat>();
+    const ensureCat = (cat: string): CatStat => {
+      let s = catMap.get(cat);
+      if (!s) {
+        s = {
+          category: cat,
+          label: CATEGORY_LABELS[cat] || cat,
+          count: 0,
+          uniqueDomains: new Set(),
+          authoritySum: 0,
+          authorityCount: 0,
+          mentioned: 0,
+          positive: 0,
+          negative: 0,
+          neutral: 0,
+          competitorCount: 0,
+          ownCount: 0,
+          platforms: new Set(),
+          topDomains: new Map(),
+          subCategories: new Map(),
+        };
+        catMap.set(cat, s);
+      }
+      return s;
+    };
+
+    // 경쟁사 도메인 인용 추적 (갭 분석용)
+    type CompStat = {
+      category: string;
+      label: string;
+      ourPresence: number;       // 우리 응답에 우리 자체 도메인이 인용된 횟수
+      competitorPresence: number; // 경쟁사 언급 응답에서 비-우리 도메인이 인용된 횟수
+    };
+    const gapMap = new Map<string, CompStat>();
+    const ensureGap = (cat: string): CompStat => {
+      let g = gapMap.get(cat);
+      if (!g) {
+        g = {
+          category: cat,
+          label: CATEGORY_LABELS[cat] || cat,
+          ourPresence: 0,
+          competitorPresence: 0,
+        };
+        gapMap.set(cat, g);
+      }
+      return g;
+    };
+
+    // 디코딩 헬퍼 (이미 위 컨트롤러에서 정의된 extractRealDomain 의 로컬 버전)
+    const extractRealDomainLocal = (s: any): string | null => {
+      if (!s || typeof s !== 'object') return null;
+      const title = (s.title || '').toString().trim().toLowerCase();
+      const domain = (s.domain || '').toString().trim().toLowerCase();
+      const ok = (x: string) =>
+        x.length > 0 && x.includes('.') && !x.includes(' ') && !x.includes('vertexaisearch');
+      if (ok(title)) return title.replace(/^www\./, '');
+      if (ok(domain)) return domain.replace(/^www\./, '');
+      return null;
+    };
+
+    let totalUrls = 0;
+
+    for (const r of responses) {
+      const rawUrls = [
+        ...(r.citedSources || []),
+        ...(r.citedUrl ? [r.citedUrl] : []),
+      ];
+
+      // Gemini 디코딩
+      const hints: string[] = [];
+      if (r.aiPlatform === 'GEMINI' && r.sourceHints) {
+        try {
+          const arr = Array.isArray((r.sourceHints as any)?.sources) ? (r.sourceHints as any).sources : [];
+          for (const s of arr) {
+            const real = extractRealDomainLocal(s);
+            if (real) hints.push(real);
+          }
+        } catch {}
+      }
+
+      const hasCompetitor = (r.competitorsMentioned || []).length > 0;
+
+      let hi = 0;
+      for (const url of rawUrls) {
+        let domain = 'invalid';
+        try {
+          domain = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+        } catch {}
+
+        if (r.aiPlatform === 'GEMINI' && url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect/')) {
+          const real = hints[hi] || hints[0];
+          if (real) domain = real;
+          hi++;
+        }
+
+        if (!domain || domain === 'invalid') continue;
+        totalUrls++;
+
+        const info = classifyDomain(domain);
+        // 우리 병원 도메인이면 별도 카테고리로 우선 분류 (단, sub category 정보는 유지)
+        const isOwn = isOwnHospital(domain, hospital.name, hospital.websiteUrl, hospital.nameAliases);
+        const effectiveCategory = isOwn ? 'HOSPITAL_OFFICIAL' : info.category;
+        const effectiveAuthority = isOwn ? Math.max(8, info.authority) : info.authority;
+
+        const stat = ensureCat(effectiveCategory);
+        stat.count++;
+        stat.uniqueDomains.add(domain);
+        stat.authoritySum += effectiveAuthority;
+        stat.authorityCount++;
+        stat.platforms.add(r.aiPlatform);
+        stat.topDomains.set(domain, (stat.topDomains.get(domain) || 0) + 1);
+        if (info.subCategory) {
+          stat.subCategories.set(info.subCategory, (stat.subCategories.get(info.subCategory) || 0) + 1);
+        }
+
+        if (r.isMentioned) stat.mentioned++;
+        const sent = r.sentimentLabel?.toUpperCase();
+        if (sent === 'POSITIVE') stat.positive++;
+        else if (sent === 'NEGATIVE') stat.negative++;
+        else stat.neutral++;
+
+        if (hasCompetitor) stat.competitorCount++;
+        if (isOwn) stat.ownCount++;
+
+        // ━━━ Gap 집계 ━━━
+        const gap = ensureGap(effectiveCategory);
+        if (isOwn) gap.ourPresence++;
+        else if (hasCompetitor) gap.competitorPresence++;
+      }
+    }
+
+    // ━━━ 카테고리 결과 변환 ━━━
+    const categories = Array.from(catMap.values()).map(s => {
+      const topDoms = Array.from(s.topDomains.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([domain, count]) => ({ domain, count }));
+      const subs = Array.from(s.subCategories.entries())
+        .sort((a, b) => b[1] - a[1])
+        .map(([name, count]) => ({ name, count }));
+      const total = s.positive + s.negative + s.neutral;
+      return {
+        category: s.category,
+        label: s.label,
+        count: s.count,
+        percentage: totalUrls > 0 ? Math.round((s.count / totalUrls) * 1000) / 10 : 0,
+        uniqueDomains: s.uniqueDomains.size,
+        avgAuthority: s.authorityCount > 0 ? Math.round((s.authoritySum / s.authorityCount) * 10) / 10 : 0,
+        mentionedRate: s.count > 0 ? Math.round((s.mentioned / s.count) * 100) : 0,
+        sentiment: {
+          positive: s.positive,
+          negative: s.negative,
+          neutral: s.neutral,
+          positiveRate: total > 0 ? Math.round((s.positive / total) * 100) : 0,
+          negativeRate: total > 0 ? Math.round((s.negative / total) * 100) : 0,
+        },
+        platforms: Array.from(s.platforms),
+        platformCount: s.platforms.size,
+        topDomains: topDoms,
+        subCategories: subs,
+        ownCount: s.ownCount,
+        competitorCount: s.competitorCount,
+      };
+    }).sort((a, b) => b.count - a.count);
+
+    // ━━━ 권위도 분포 ━━━
+    const authorityBuckets: Record<string, { range: string; count: number; label: string }> = {
+      'tier_s': { range: '9-10', count: 0, label: '🏛 Tier S (공공/대학/대형포털)' },
+      'tier_a': { range: '7-8',  count: 0, label: '🏥 Tier A (병원공식/주요포털)' },
+      'tier_b': { range: '5-6',  count: 0, label: '📰 Tier B (SNS/위키/네이버계열)' },
+      'tier_c': { range: '3-4',  count: 0, label: '✍️ Tier C (블로그/UGC)' },
+      'tier_d': { range: '1-2',  count: 0, label: '⚠️ Tier D (광고/저신뢰)' },
+    };
+    for (const cat of categories) {
+      const a = cat.avgAuthority;
+      const cnt = cat.count;
+      if (a >= 9) authorityBuckets.tier_s.count += cnt;
+      else if (a >= 7) authorityBuckets.tier_a.count += cnt;
+      else if (a >= 5) authorityBuckets.tier_b.count += cnt;
+      else if (a >= 3) authorityBuckets.tier_c.count += cnt;
+      else authorityBuckets.tier_d.count += cnt;
+    }
+    const authorityDistribution = Object.values(authorityBuckets).map(b => ({
+      ...b,
+      percentage: totalUrls > 0 ? Math.round((b.count / totalUrls) * 1000) / 10 : 0,
+    }));
+
+    // 종합 권위도 점수 (가중 평균)
+    let weightedAuth = 0;
+    let weightSum = 0;
+    for (const cat of categories) {
+      weightedAuth += cat.avgAuthority * cat.count;
+      weightSum += cat.count;
+    }
+    const overallAuthority = weightSum > 0 ? Math.round((weightedAuth / weightSum) * 10) / 10 : 0;
+
+    // ━━━ 전체 감성 분포 ━━━
+    let posTotal = 0, negTotal = 0, neuTotal = 0;
+    for (const cat of categories) {
+      posTotal += cat.sentiment.positive;
+      negTotal += cat.sentiment.negative;
+      neuTotal += cat.sentiment.neutral;
+    }
+    const sentTotal = posTotal + negTotal + neuTotal;
+
+    // ━━━ 경쟁사 갭 분석 ━━━
+    // gapMap 기반: 카테고리별 우리 노출 vs 경쟁사 노출 비교
+    const gaps = Array.from(gapMap.values()).map(g => {
+      const total = g.ourPresence + g.competitorPresence;
+      const ourShare = total > 0 ? Math.round((g.ourPresence / total) * 100) : 0;
+      const compShare = total > 0 ? Math.round((g.competitorPresence / total) * 100) : 0;
+      // 갭: 경쟁사가 더 많이 노출되는 카테고리 → 우리 진출 기회
+      const gapScore = g.competitorPresence - g.ourPresence;
+      return {
+        category: g.category,
+        label: g.label,
+        ourPresence: g.ourPresence,
+        competitorPresence: g.competitorPresence,
+        ourShare,
+        compShare,
+        gapScore,
+        opportunity: gapScore > 50 ? '🔥 즉시 진출 필요' : gapScore > 20 ? '⚡ 진출 권장' : gapScore > 0 ? '📌 검토' : '✅ 우위',
+      };
+    });
+
+    const topOpportunities = gaps
+      .filter(g => g.gapScore > 0 && g.competitorPresence >= 10)
+      .sort((a, b) => b.gapScore - a.gapScore)
+      .slice(0, 5);
+
+    const ourStrengths = gaps
+      .filter(g => g.gapScore < 0 && g.ourPresence >= 5)
+      .sort((a, b) => a.gapScore - b.gapScore)
+      .slice(0, 5);
+
+    // ━━━ 카테고리별 액션 제안 ━━━
+    const recommendations: { category: string; label: string; action: string; priority: 'P0' | 'P1' | 'P2' }[] = [];
+
+    // 권위도가 낮은데 카운트가 많은 카테고리 → 위험 (잘못된 출처에 의존)
+    const lowAuthHighCount = categories.find(c => c.avgAuthority < 4 && c.count > totalUrls * 0.05);
+    if (lowAuthHighCount) {
+      recommendations.push({
+        category: lowAuthHighCount.category,
+        label: lowAuthHighCount.label,
+        action: `${lowAuthHighCount.label}에서 ${lowAuthHighCount.count}건 인용되고 있으나 권위도 평균 ${lowAuthHighCount.avgAuthority}/10 — 신뢰 출처로 무게중심 이동 필요`,
+        priority: 'P0',
+      });
+    }
+
+    // 의료 포털 노출이 약한 경우
+    const medicalPortal = categories.find(c => c.category === 'MEDICAL_PORTAL');
+    if (!medicalPortal || medicalPortal.count < 50) {
+      recommendations.push({
+        category: 'MEDICAL_PORTAL',
+        label: '대형 의료 포털',
+        action: '모두닥/굿닥/하이닥 등 메이저 의료 포털 등록 및 콘텐츠 강화 필요 (권위도 9)',
+        priority: 'P0',
+      });
+    }
+
+    // YouTube 노출 부재
+    const youtube = categories.find(c => c.category === 'YOUTUBE');
+    if (!youtube || youtube.count < 20) {
+      recommendations.push({
+        category: 'YOUTUBE',
+        label: '유튜브',
+        action: '진료 과정 영상/원장 인터뷰 영상 콘텐츠 제작 — AI 인용 권위도 7 확보',
+        priority: 'P1',
+      });
+    }
+
+    // 부정 감성 카테고리
+    for (const cat of categories.slice(0, 10)) {
+      if (cat.sentiment.negativeRate > 30 && cat.count > 20) {
+        recommendations.push({
+          category: cat.category,
+          label: cat.label,
+          action: `${cat.label}에서 부정 감성 ${cat.sentiment.negativeRate}% — 평판 관리 및 콘텐츠 대응 필요`,
+          priority: 'P0',
+        });
+      }
+    }
+
+    // 갭 기반 추천
+    for (const opp of topOpportunities.slice(0, 3)) {
+      recommendations.push({
+        category: opp.category,
+        label: opp.label,
+        action: `${opp.label}: 경쟁사 ${opp.competitorPresence}회 vs 우리 ${opp.ourPresence}회 인용 — ${opp.opportunity}`,
+        priority: opp.gapScore > 50 ? 'P0' : 'P1',
+      });
+    }
+
+    return {
+      hospital: { name: hospital.name },
+      period: `최근 ${daysNum}일`,
+      summary: {
+        totalUrls,
+        totalResponses: responses.length,
+        uniqueCategories: categories.length,
+        overallAuthority,
+        overallAuthorityTier:
+          overallAuthority >= 7 ? '🏥 우수 (Tier A)' :
+          overallAuthority >= 5 ? '📰 보통 (Tier B)' :
+          overallAuthority >= 3 ? '✍️ 약함 (Tier C)' :
+          '⚠️ 매우 약함 (Tier D)',
+      },
+      authorityDistribution,
+      overallSentiment: {
+        positive: posTotal,
+        negative: negTotal,
+        neutral: neuTotal,
+        positiveRate: sentTotal > 0 ? Math.round((posTotal / sentTotal) * 100) : 0,
+        negativeRate: sentTotal > 0 ? Math.round((negTotal / sentTotal) * 100) : 0,
+      },
+      categories,
+      competitorGap: {
+        topOpportunities,
+        ourStrengths,
+        allGaps: gaps.sort((a, b) => b.gapScore - a.gapScore),
+      },
+      recommendations: recommendations.slice(0, 10),
     };
   }
 

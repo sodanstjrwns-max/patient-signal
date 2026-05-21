@@ -192,6 +192,18 @@ export function useSourceDiagnostic(lazy = false) {
   });
 }
 
+/** Breadth 인사이트 (25 카테고리 + 권위도 + 갭) */
+export function useBreadthInsight(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.insights.breadth(hospitalId!),
+    queryFn: () => crawlerApi.getBreadthInsights(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
 /** 포지셔닝 맵 */
 export function usePositioningInsight(lazy = false) {
   const hospitalId = useHospitalId();

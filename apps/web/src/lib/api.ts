@@ -225,6 +225,8 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/top-urls/${hospitalId}`, { params: { days, limit }, timeout: 60000 }),
   getUrlMatrix: (hospitalId: string, days?: number, topN?: number) =>
     api.get(`/ai-crawler/insights/url-matrix/${hospitalId}`, { params: { days, topN }, timeout: 60000 }),
+  getBreadthInsights: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/insights/breadth/${hospitalId}`, { params: { days }, timeout: 120000 }),
   // Phase 2: 심화 인사이트
   getPositioningMap: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days }, timeout: 60000 }),

@@ -29,6 +29,7 @@ export const queryKeys = {
     sourcesDiagnostic: (hospitalId: string) => ['insights-sources-diagnostic', hospitalId] as const,
     topUrls: (hospitalId: string) => ['insights-top-urls', hospitalId] as const,
     urlMatrix: (hospitalId: string) => ['insights-url-matrix', hospitalId] as const,
+    breadth: (hospitalId: string) => ['insights-breadth', hospitalId] as const,
     positioning: (hospitalId: string) => ['insights-positioning', hospitalId] as const,
     sourceQuality: (hospitalId: string) => ['insights-source-quality', hospitalId] as const,
     actions: (hospitalId: string) => ['insights-actions', hospitalId] as const,
