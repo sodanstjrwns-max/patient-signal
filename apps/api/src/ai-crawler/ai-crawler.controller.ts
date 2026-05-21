@@ -665,7 +665,7 @@ export class AICrawlerController {
   }
 
   @Get('insights/sources/:hospitalId')
-  @ApiOperation({ summary: 'AI 응답 출처 분석 - 출처별 빈도, 채널 분석' })
+  @ApiOperation({ summary: 'AI 응답 출처 분석 - 출처별 빈도, 채널 분석 (Gemini grounding-redirect 디코딩 포함)' })
   async getSourceAnalysis(
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
@@ -684,22 +684,86 @@ export class AICrawlerController {
         citedUrl: true,
         aiPlatform: true,
         isMentioned: true,
+        sourceHints: true, // ✅ Gemini 실제 도메인은 source_hints.sources[].title 에 있음
       },
     });
 
-    // 모든 출처 URL 수집
-    const allUrls: string[] = [];
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 출처 URL 수집 + Gemini grounding-redirect 디코딩
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    //
+    // Gemini는 인용 URL을 vertexaisearch.cloud.google.com/grounding-api-redirect/...
+    // 형태로 마스킹합니다. 실제 도메인은 source_hints.sources[].title 필드에 있음.
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    type EnrichedUrl = {
+      url: string;          // 표시용 URL (디코딩됐다면 실제 도메인 기반)
+      rawUrl: string;       // 원본 URL
+      platform: string;     // CHATGPT, GEMINI, ...
+      decoded: boolean;     // Gemini grounding 디코딩 여부
+    };
+
+    const enrichedUrls: EnrichedUrl[] = [];
+    let geminiDecodedCount = 0;
+    let geminiUnDecodedCount = 0;
+
     for (const r of responses) {
-      if (r.citedSources?.length > 0) {
-        allUrls.push(...r.citedSources);
+      const platform = r.aiPlatform;
+      const rawUrls = [
+        ...(r.citedSources || []),
+        ...(r.citedUrl ? [r.citedUrl] : []),
+      ];
+
+      // Gemini source_hints 에서 실제 도메인 추출
+      const geminiHintDomains: string[] = [];
+      if (platform === 'GEMINI' && r.sourceHints) {
+        try {
+          const hints: any = r.sourceHints;
+          const sources = Array.isArray(hints?.sources) ? hints.sources : [];
+          for (const s of sources) {
+            // title 또는 domain 필드에서 실제 도메인 추출
+            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
+            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
+              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
+            }
+          }
+        } catch {
+          // ignore malformed sourceHints
+        }
       }
-      if (r.citedUrl) {
-        allUrls.push(r.citedUrl);
+
+      let hintIndex = 0;
+      for (const url of rawUrls) {
+        const isGeminiRedirect = url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect/');
+        if (platform === 'GEMINI' && isGeminiRedirect) {
+          // 1:1 순서 매칭 시도 → 실패하면 첫 hint 재사용
+          const realDomain = geminiHintDomains[hintIndex] || geminiHintDomains[0];
+          if (realDomain) {
+            // 가상 URL 생성 (https://realdomain/) — 도메인 추출과 카테고리 매칭용
+            enrichedUrls.push({
+              url: `https://${realDomain}/`,
+              rawUrl: url,
+              platform,
+              decoded: true,
+            });
+            geminiDecodedCount++;
+          } else {
+            enrichedUrls.push({ url, rawUrl: url, platform, decoded: false });
+            geminiUnDecodedCount++;
+          }
+          hintIndex++;
+        } else {
+          enrichedUrls.push({ url, rawUrl: url, platform, decoded: false });
+        }
       }
     }
 
+    // 모든 URL (원본 비교용)
+    const rawAllUrls: string[] = enrichedUrls.map(e => e.rawUrl);
+    const allUrls: string[] = enrichedUrls.map(e => e.url);
+
     // 도메인별 분류
-    const domainMap: Record<string, { count: number; urls: string[]; category: string }> = {};
+    const domainMap: Record<string, { count: number; urls: string[]; category: string; platforms: Set<string> }> = {};
     const categoryMap: Record<string, number> = {};
 
     const domainCategories: Record<string, string> = {
@@ -723,23 +787,24 @@ export class AICrawlerController {
       'brunch.co.kr': '브런치',
       'modoo.at': '네이버 모두',
       'gangnam.com': '강남닷컴',
+      'vertexaisearch.cloud.google.com': 'Gemini Grounding (미디코딩)',
     };
 
-    for (const url of allUrls) {
+    for (const enriched of enrichedUrls) {
       try {
-        const urlObj = new URL(url);
+        const urlObj = new URL(enriched.url);
         let domain = urlObj.hostname.replace('www.', '');
-        
+
         // 특수 도메인 매칭 (blog.naver.com 등)
         let category = '기타';
         for (const [pattern, cat] of Object.entries(domainCategories)) {
-          if (url.includes(pattern)) {
+          if (enriched.url.includes(pattern)) {
             category = cat;
             domain = pattern;
             break;
           }
         }
-        
+
         // 병원 공식 사이트 판별
         if (category === '기타') {
           if (domain.includes('치과') || domain.includes('dental') || domain.includes('clinic') || domain.includes('hospital')) {
@@ -752,11 +817,12 @@ export class AICrawlerController {
         }
 
         if (!domainMap[domain]) {
-          domainMap[domain] = { count: 0, urls: [], category };
+          domainMap[domain] = { count: 0, urls: [], category, platforms: new Set() };
         }
         domainMap[domain].count++;
-        if (domainMap[domain].urls.length < 3) domainMap[domain].urls.push(url);
-        
+        domainMap[domain].platforms.add(enriched.platform);
+        if (domainMap[domain].urls.length < 3) domainMap[domain].urls.push(enriched.rawUrl);
+
         categoryMap[category] = (categoryMap[category] || 0) + 1;
       } catch {
         // invalid URL
@@ -766,8 +832,15 @@ export class AICrawlerController {
     // 정렬
     const topDomains = Object.entries(domainMap)
       .sort(([, a], [, b]) => b.count - a.count)
-      .slice(0, 15)
-      .map(([domain, data]) => ({ domain, ...data }));
+      .slice(0, 25)
+      .map(([domain, data]) => ({
+        domain,
+        count: data.count,
+        urls: data.urls,
+        category: data.category,
+        platforms: Array.from(data.platforms),
+        platformCount: data.platforms.size,
+      }));
 
     const categories = Object.entries(categoryMap)
       .sort(([, a], [, b]) => b - a)
@@ -804,8 +877,135 @@ export class AICrawlerController {
         channel: c,
         recommendation: this.getChannelRecommendation(c),
       })),
+      // ✅ B-1 디코딩 진단 정보 (UI에서 배지로 표시 가능)
+      decoding: {
+        geminiDecoded: geminiDecodedCount,
+        geminiUnDecoded: geminiUnDecodedCount,
+        geminiDecodeRate: (geminiDecodedCount + geminiUnDecodedCount) > 0
+          ? Math.round((geminiDecodedCount / (geminiDecodedCount + geminiUnDecodedCount)) * 100)
+          : 0,
+        note: 'Gemini는 grounding-redirect URL을 사용하므로 source_hints에서 실제 도메인을 추출했습니다.',
+      },
     };
   }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // B-2: 디코딩 전/후 도메인 분포 비교 진단 엔드포인트
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  @Get('insights/sources-diagnostic/:hospitalId')
+  @ApiOperation({ summary: '출처 디코딩 진단 - Gemini 디코딩 전/후 도메인 분포 비교' })
+  async getSourceDiagnostic(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      select: { citedSources: true, citedUrl: true, aiPlatform: true, sourceHints: true },
+    });
+
+    const extractDomain = (url: string): string => {
+      try {
+        return new URL(url).hostname.replace(/^www\./, '');
+      } catch {
+        return 'invalid';
+      }
+    };
+
+    // BEFORE: 원본 그대로 도메인 추출
+    const beforeMap: Record<string, number> = {};
+    let beforeTotal = 0;
+
+    // AFTER: Gemini grounding-redirect 디코딩 후
+    const afterMap: Record<string, number> = {};
+    let afterTotal = 0;
+    let decodedCount = 0;
+
+    for (const r of responses) {
+      const rawUrls = [
+        ...(r.citedSources || []),
+        ...(r.citedUrl ? [r.citedUrl] : []),
+      ];
+
+      // Gemini hint 도메인 추출
+      const geminiHintDomains: string[] = [];
+      if (r.aiPlatform === 'GEMINI' && r.sourceHints) {
+        try {
+          const hints: any = r.sourceHints;
+          const sources = Array.isArray(hints?.sources) ? hints.sources : [];
+          for (const s of sources) {
+            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
+            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
+              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
+            }
+          }
+        } catch {}
+      }
+
+      let hintIndex = 0;
+      for (const url of rawUrls) {
+        // BEFORE
+        const beforeDomain = extractDomain(url);
+        beforeMap[beforeDomain] = (beforeMap[beforeDomain] || 0) + 1;
+        beforeTotal++;
+
+        // AFTER
+        const isGeminiRedirect = url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect/');
+        let afterDomain = beforeDomain;
+        if (r.aiPlatform === 'GEMINI' && isGeminiRedirect) {
+          const realDomain = geminiHintDomains[hintIndex] || geminiHintDomains[0];
+          if (realDomain) {
+            afterDomain = realDomain;
+            decodedCount++;
+          }
+          hintIndex++;
+        }
+        afterMap[afterDomain] = (afterMap[afterDomain] || 0) + 1;
+        afterTotal++;
+      }
+    }
+
+    const beforeTop = Object.entries(beforeMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 20)
+      .map(([domain, count]) => ({
+        domain,
+        count,
+        percentage: beforeTotal > 0 ? Math.round((count / beforeTotal) * 100 * 10) / 10 : 0,
+      }));
+
+    const afterTop = Object.entries(afterMap)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 20)
+      .map(([domain, count]) => ({
+        domain,
+        count,
+        percentage: afterTotal > 0 ? Math.round((count / afterTotal) * 100 * 10) / 10 : 0,
+      }));
+
+    const beforeUnique = Object.keys(beforeMap).length;
+    const afterUnique = Object.keys(afterMap).length;
+    const newDomainsRevealed = afterUnique - beforeUnique;
+
+    return {
+      period: `최근 ${daysNum}일`,
+      summary: {
+        totalUrls: beforeTotal,
+        decodedCount,
+        beforeUniqueDomains: beforeUnique,
+        afterUniqueDomains: afterUnique,
+        newDomainsRevealed,
+        decodingImpact: `Gemini URL ${decodedCount}개 디코딩 → 신규 도메인 ${newDomainsRevealed}개 노출`,
+      },
+      before: beforeTop,
+      after: afterTop,
+    };
+  }
+
 
   private getChannelRecommendation(channel: string): string {
     const recommendations: Record<string, string> = {
@@ -1159,6 +1359,308 @@ export class AICrawlerController {
   }
 
   // ==================== Phase 2-6: 자동 액션 리포트 ====================
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // A-1: Top URL 페이지 단위 랭킹 (도메인이 아닌 개별 URL 기준)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  @Get('insights/top-urls/:hospitalId')
+  @ApiOperation({ summary: 'Top URL 랭킹 - 페이지(URL) 단위 인용 빈도 + 인용한 AI + 최신성' })
+  async getTopUrls(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const limitNum = Math.min(parseInt(limit || '100'), 200);
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      select: {
+        citedSources: true,
+        citedUrl: true,
+        aiPlatform: true,
+        isMentioned: true,
+        sourceHints: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    type UrlStat = {
+      url: string;
+      displayDomain: string;
+      count: number;
+      platforms: Set<string>;
+      mentionedCount: number; // 우리 병원이 언급된 응답에서 인용된 횟수
+      lastCitedAt: Date;
+      firstCitedAt: Date;
+    };
+
+    const urlMap = new Map<string, UrlStat>();
+    let geminiDecoded = 0;
+
+    const normalizeUrl = (url: string): string => {
+      // 쿼리스트링 제거, 프래그먼트 제거, 마지막 슬래시 정규화
+      try {
+        const u = new URL(url);
+        // utm_* 등 트래킹 파라미터 제거
+        const cleanParams = new URLSearchParams();
+        u.searchParams.forEach((v, k) => {
+          if (!k.startsWith('utm_') && !['ref', 'source', 'fbclid', 'gclid'].includes(k)) {
+            cleanParams.set(k, v);
+          }
+        });
+        const search = cleanParams.toString();
+        return `${u.origin}${u.pathname}${search ? '?' + search : ''}`.replace(/\/$/, '');
+      } catch {
+        return url;
+      }
+    };
+
+    const extractDomain = (url: string): string => {
+      try {
+        return new URL(url).hostname.replace(/^www\./, '');
+      } catch {
+        return 'invalid';
+      }
+    };
+
+    for (const r of responses) {
+      const rawUrls = [
+        ...(r.citedSources || []),
+        ...(r.citedUrl ? [r.citedUrl] : []),
+      ];
+
+      // Gemini hint 추출
+      const geminiHintDomains: string[] = [];
+      if (r.aiPlatform === 'GEMINI' && r.sourceHints) {
+        try {
+          const hints: any = r.sourceHints;
+          const sources = Array.isArray(hints?.sources) ? hints.sources : [];
+          for (const s of sources) {
+            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
+            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
+              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
+            }
+          }
+        } catch {}
+      }
+
+      let hintIndex = 0;
+      for (const url of rawUrls) {
+        let effectiveUrl = url;
+        let displayDomain = extractDomain(url);
+        const isGeminiRedirect = url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect/');
+        if (r.aiPlatform === 'GEMINI' && isGeminiRedirect) {
+          const realDomain = geminiHintDomains[hintIndex] || geminiHintDomains[0];
+          if (realDomain) {
+            // Gemini는 페이지 URL을 모르고 도메인만 알 수 있음 → 도메인을 키로 사용
+            effectiveUrl = `https://${realDomain}/`;
+            displayDomain = realDomain;
+            geminiDecoded++;
+          }
+          hintIndex++;
+        }
+
+        const normalized = normalizeUrl(effectiveUrl);
+        if (!normalized || normalized === 'invalid') continue;
+
+        let stat = urlMap.get(normalized);
+        if (!stat) {
+          stat = {
+            url: normalized,
+            displayDomain,
+            count: 0,
+            platforms: new Set(),
+            mentionedCount: 0,
+            lastCitedAt: r.createdAt,
+            firstCitedAt: r.createdAt,
+          };
+          urlMap.set(normalized, stat);
+        }
+        stat.count++;
+        stat.platforms.add(r.aiPlatform);
+        if (r.isMentioned) stat.mentionedCount++;
+        if (r.createdAt > stat.lastCitedAt) stat.lastCitedAt = r.createdAt;
+        if (r.createdAt < stat.firstCitedAt) stat.firstCitedAt = r.createdAt;
+      }
+    }
+
+    const now = Date.now();
+    const ranked = Array.from(urlMap.values())
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limitNum)
+      .map((s, i) => {
+        const daysSinceLast = Math.floor((now - s.lastCitedAt.getTime()) / (1000 * 60 * 60 * 24));
+        const isGeminiOnly = s.platforms.size === 1 && s.platforms.has('GEMINI');
+        const isCrossAI = s.platforms.size >= 3; // 3개 이상 AI가 인용 = 크로스 검증된 강력한 출처
+        return {
+          rank: i + 1,
+          url: s.url,
+          domain: s.displayDomain,
+          citationCount: s.count,
+          mentionedWithHospital: s.mentionedCount,
+          mentionRate: s.count > 0 ? Math.round((s.mentionedCount / s.count) * 100) : 0,
+          platforms: Array.from(s.platforms),
+          platformCount: s.platforms.size,
+          isCrossAI,
+          isGeminiOnly,
+          lastCitedAt: s.lastCitedAt.toISOString(),
+          firstCitedAt: s.firstCitedAt.toISOString(),
+          daysSinceLast,
+          freshness: daysSinceLast <= 3 ? '🔥 최신' : daysSinceLast <= 7 ? '✨ 최근' : daysSinceLast <= 14 ? '📅 보통' : '🗓 과거',
+        };
+      });
+
+    return {
+      period: `최근 ${daysNum}일`,
+      totalUniqueUrls: urlMap.size,
+      returnedCount: ranked.length,
+      geminiDecoded,
+      crossAICount: ranked.filter(r => r.isCrossAI).length,
+      urls: ranked,
+    };
+  }
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // A-2: URL × AI 매트릭스 (어떤 URL이 어떤 AI에서 인용되는가)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  @Get('insights/url-matrix/:hospitalId')
+  @ApiOperation({ summary: 'URL × AI 매트릭스 - 상위 URL별 6개 AI 플랫폼 인용 분포' })
+  async getUrlMatrix(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+    @Query('topN') topN?: string,
+  ) {
+    const daysNum = parseInt(days || '30');
+    const topNum = Math.min(parseInt(topN || '30'), 100);
+    const since = new Date();
+    since.setDate(since.getDate() - daysNum);
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId, createdAt: { gte: since } },
+      select: {
+        citedSources: true,
+        citedUrl: true,
+        aiPlatform: true,
+        sourceHints: true,
+      },
+    });
+
+    const PLATFORMS = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW', 'GROK', 'CLOVA_X'];
+
+    const normalizeUrl = (url: string): string => {
+      try {
+        const u = new URL(url);
+        const cleanParams = new URLSearchParams();
+        u.searchParams.forEach((v, k) => {
+          if (!k.startsWith('utm_') && !['ref', 'source', 'fbclid', 'gclid'].includes(k)) {
+            cleanParams.set(k, v);
+          }
+        });
+        const search = cleanParams.toString();
+        return `${u.origin}${u.pathname}${search ? '?' + search : ''}`.replace(/\/$/, '');
+      } catch {
+        return url;
+      }
+    };
+
+    const extractDomain = (url: string): string => {
+      try { return new URL(url).hostname.replace(/^www\./, ''); }
+      catch { return 'invalid'; }
+    };
+
+    type Cell = { [platform: string]: number };
+    const matrix = new Map<string, { url: string; domain: string; total: number; cells: Cell }>();
+
+    for (const r of responses) {
+      const rawUrls = [
+        ...(r.citedSources || []),
+        ...(r.citedUrl ? [r.citedUrl] : []),
+      ];
+
+      const geminiHintDomains: string[] = [];
+      if (r.aiPlatform === 'GEMINI' && r.sourceHints) {
+        try {
+          const hints: any = r.sourceHints;
+          const sources = Array.isArray(hints?.sources) ? hints.sources : [];
+          for (const s of sources) {
+            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
+            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
+              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
+            }
+          }
+        } catch {}
+      }
+
+      let hintIndex = 0;
+      for (const url of rawUrls) {
+        let effectiveUrl = url;
+        let displayDomain = extractDomain(url);
+        const isGeminiRedirect = url.includes('vertexaisearch.cloud.google.com/grounding-api-redirect/');
+        if (r.aiPlatform === 'GEMINI' && isGeminiRedirect) {
+          const realDomain = geminiHintDomains[hintIndex] || geminiHintDomains[0];
+          if (realDomain) {
+            effectiveUrl = `https://${realDomain}/`;
+            displayDomain = realDomain;
+          }
+          hintIndex++;
+        }
+
+        const normalized = normalizeUrl(effectiveUrl);
+        if (!normalized || normalized === 'invalid') continue;
+
+        let entry = matrix.get(normalized);
+        if (!entry) {
+          entry = { url: normalized, domain: displayDomain, total: 0, cells: {} };
+          matrix.set(normalized, entry);
+        }
+        entry.cells[r.aiPlatform] = (entry.cells[r.aiPlatform] || 0) + 1;
+        entry.total++;
+      }
+    }
+
+    const ranked = Array.from(matrix.values())
+      .sort((a, b) => b.total - a.total)
+      .slice(0, topNum);
+
+    // 각 플랫폼별 합계 (열 합계)
+    const columnTotals: Cell = {};
+    for (const p of PLATFORMS) columnTotals[p] = 0;
+    for (const row of ranked) {
+      for (const p of PLATFORMS) {
+        columnTotals[p] += row.cells[p] || 0;
+      }
+    }
+
+    return {
+      period: `최근 ${daysNum}일`,
+      platforms: PLATFORMS,
+      totalUrls: matrix.size,
+      returnedCount: ranked.length,
+      rows: ranked.map((row, i) => ({
+        rank: i + 1,
+        url: row.url,
+        domain: row.domain,
+        total: row.total,
+        // 각 플랫폼 셀 (0이면 빈 칸으로 표시)
+        cells: PLATFORMS.map(p => ({
+          platform: p,
+          count: row.cells[p] || 0,
+        })),
+        // 인용한 AI 수 (다양성 지표)
+        coverage: PLATFORMS.filter(p => (row.cells[p] || 0) > 0).length,
+      })),
+      columnTotals: PLATFORMS.map(p => ({
+        platform: p,
+        total: columnTotals[p],
+      })),
+    };
+  }
 
   @Get('insights/action-report/:hospitalId')
   @ApiOperation({ summary: '자동 액션 리포트 - AI 기반 주간 실행 계획 생성' })

@@ -218,6 +218,13 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getSourceAnalysis: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  // ✅ 새로 추가: 상세 출처 분석
+  getSourceDiagnostic: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/insights/sources-diagnostic/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getTopUrls: (hospitalId: string, days?: number, limit?: number) =>
+    api.get(`/ai-crawler/insights/top-urls/${hospitalId}`, { params: { days, limit }, timeout: 60000 }),
+  getUrlMatrix: (hospitalId: string, days?: number, topN?: number) =>
+    api.get(`/ai-crawler/insights/url-matrix/${hospitalId}`, { params: { days, topN }, timeout: 60000 }),
   // Phase 2: 심화 인사이트
   getPositioningMap: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days }, timeout: 60000 }),

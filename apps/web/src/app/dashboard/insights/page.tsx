@@ -12,6 +12,9 @@ import {
   useMentionInsight,
   useTrendInsight,
   useSourceInsight,
+  useTopUrls,
+  useUrlMatrix,
+  useSourceDiagnostic,
   usePositioningInsight,
   useSourceQualityInsight,
   useActionInsight,
@@ -52,6 +55,9 @@ const platformNames: Record<string, string> = {
   CLAUDE: 'Claude',
   PERPLEXITY: 'Perplexity',
   GEMINI: 'Gemini',
+  GOOGLE_AI_OVERVIEW: 'Google AI',
+  GROK: 'Grok',
+  CLOVA_X: 'CLOVA X',
 };
 
 const platformColors: Record<string, string> = {
@@ -59,6 +65,9 @@ const platformColors: Record<string, string> = {
   CLAUDE: 'bg-orange-500',
   PERPLEXITY: 'bg-brand-500',
   GEMINI: 'bg-purple-500',
+  GOOGLE_AI_OVERVIEW: 'bg-yellow-500',
+  GROK: 'bg-slate-900',
+  CLOVA_X: 'bg-emerald-500',
 };
 
 const platformBgColors: Record<string, string> = {
@@ -66,6 +75,9 @@ const platformBgColors: Record<string, string> = {
   CLAUDE: 'bg-orange-50 text-orange-700',
   PERPLEXITY: 'bg-brand-50 text-brand-700',
   GEMINI: 'bg-purple-50 text-purple-700',
+  GOOGLE_AI_OVERVIEW: 'bg-yellow-50 text-yellow-700',
+  GROK: 'bg-slate-900 text-white',
+  CLOVA_X: 'bg-emerald-50 text-emerald-700',
 };
 
 export default function InsightsPage() {
@@ -73,7 +85,7 @@ export default function InsightsPage() {
   const hospitalId = useHospitalId();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const validTabs = ['mention', 'trend', 'sources', 'positioning', 'sourceQuality', 'actions'] as const;
+  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'positioning', 'sourceQuality', 'actions'] as const;
   type TabType = typeof validTabs[number];
   const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -91,6 +103,9 @@ export default function InsightsPage() {
   const { data: mentionData, isLoading: mentionLoading, error: mentionError } = useMentionInsight(activeTab !== 'mention');
   const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend');
   const { data: sourceData, isLoading: sourceLoading, error: sourceError } = useSourceInsight(activeTab !== 'sources');
+  const { data: diagnosticData } = useSourceDiagnostic(activeTab !== 'sources');
+  const { data: topUrlsData, isLoading: topUrlsLoading, error: topUrlsError } = useTopUrls(activeTab !== 'topUrls', 100);
+  const { data: urlMatrixData, isLoading: urlMatrixLoading, error: urlMatrixError } = useUrlMatrix(activeTab !== 'urlMatrix', 30);
   const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
   const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
   const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
@@ -102,6 +117,8 @@ export default function InsightsPage() {
     (activeTab === 'mention' && mentionError) ||
     (activeTab === 'trend' && trendError) ||
     (activeTab === 'sources' && sourceError) ||
+    (activeTab === 'topUrls' && topUrlsError) ||
+    (activeTab === 'urlMatrix' && urlMatrixError) ||
     (activeTab === 'positioning' && positionError) ||
     (activeTab === 'sourceQuality' && sourceQualityError) ||
     (activeTab === 'actions' && actionError)
@@ -112,6 +129,8 @@ export default function InsightsPage() {
     (activeTab === 'mention' && mentionLoading) ||
     (activeTab === 'trend' && trendLoading) ||
     (activeTab === 'sources' && sourceLoading) ||
+    (activeTab === 'topUrls' && topUrlsLoading) ||
+    (activeTab === 'urlMatrix' && urlMatrixLoading) ||
     (activeTab === 'positioning' && positionLoading) ||
     (activeTab === 'sourceQuality' && sourceQualityLoading) ||
     (activeTab === 'actions' && actionLoading)
@@ -139,6 +158,8 @@ export default function InsightsPage() {
             { key: 'positioning', icon: Radar, label: '포지셔닝 맵' },
             { key: 'trend', icon: TrendingUp, label: '트렌드' },
             { key: 'sources', icon: Globe, label: '출처 분석' },
+            { key: 'topUrls', icon: ExternalLink, label: 'Top URL 랭킹' },
+            { key: 'urlMatrix', icon: BarChart3, label: 'AI×URL 매트릭스' },
             { key: 'sourceQuality', icon: Shield, label: '출처 품질' },
           ].map(tab => (
             <Button
@@ -189,7 +210,9 @@ export default function InsightsPage() {
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
             {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
             {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} />}
-            {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} />}
+            {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} diagnostic={diagnosticData} />}
+            {activeTab === 'topUrls' && topUrlsData && <TopUrlsRanking data={topUrlsData} />}
+            {activeTab === 'urlMatrix' && urlMatrixData && <UrlMatrix data={urlMatrixData} />}
             {activeTab === 'sourceQuality' && sourceQualityData && <SourceQuality data={sourceQualityData} />}
           </>
         )}
@@ -588,9 +611,34 @@ function TrendAnalysis({ data }: { data: any }) {
 }
 
 // ==================== 3. 출처 분석 ====================
-function SourceAnalysis({ data }: { data: any }) {
+function SourceAnalysis({ data, diagnostic }: { data: any; diagnostic?: any }) {
   return (
     <div className="space-y-6">
+      {/* Gemini 디코딩 배지 */}
+      {data.decoding && data.decoding.geminiDecoded > 0 && (
+        <Card className="border-purple-200 bg-purple-50/50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
+              <Search className="h-4 w-4 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-purple-900">
+                Gemini grounding-redirect 디코딩 활성화 ({data.decoding.geminiDecodeRate}%)
+              </p>
+              <p className="text-xs text-purple-700 mt-0.5">
+                Gemini가 마스킹한 출처 URL {data.decoding.geminiDecoded}개의 실제 도메인을 추출해 분석에 반영했습니다.
+                {data.decoding.geminiUnDecoded > 0 && ` (미디코딩 ${data.decoding.geminiUnDecoded}개)`}
+              </p>
+              {diagnostic?.summary?.newDomainsRevealed > 0 && (
+                <p className="text-xs text-purple-800 mt-1 font-medium">
+                  🎯 디코딩으로 신규 도메인 {diagnostic.summary.newDomainsRevealed}개 추가 노출
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
@@ -698,29 +746,47 @@ function SourceAnalysis({ data }: { data: any }) {
         </Card>
       )}
 
-      {/* 주요 도메인 */}
+      {/* 주요 도메인 (상위 25개) */}
       {data.topDomains?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-indigo-600" />
-              인용 빈도 상위 도메인
+              인용 빈도 상위 도메인 (Top {Math.min(data.topDomains.length, 25)})
             </h3>
+            <p className="text-xs text-slate-500 mb-4">
+              어떤 AI가 인용했는지까지 표시 — 여러 AI에서 인용되는 도메인이 우선순위
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
+                    <th className="pb-2 font-medium text-slate-500 w-10">#</th>
                     <th className="pb-2 font-medium text-slate-500">도메인</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">카테고리</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">인용 수</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center">인용 AI</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.topDomains.slice(0, 10).map((d: any) => (
+                  {data.topDomains.slice(0, 25).map((d: any, i: number) => (
                     <tr key={d.domain} className="border-b last:border-0 hover:bg-white/60">
-                      <td className="py-2 text-slate-700 font-mono text-xs">{d.domain}</td>
+                      <td className="py-2 text-slate-400 text-xs">{i + 1}</td>
+                      <td className="py-2 text-slate-700 font-mono text-xs break-all">{d.domain}</td>
                       <td className="py-2 text-center text-slate-500 text-xs">{d.category}</td>
                       <td className="py-2 text-center font-medium text-slate-800">{d.count}</td>
+                      <td className="py-2 text-center">
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {(d.platforms || []).map((p: string) => (
+                            <span
+                              key={p}
+                              className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}
+                            >
+                              {platformNames[p] || p}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -729,6 +795,264 @@ function SourceAnalysis({ data }: { data: any }) {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ==================== A-1. Top URL 페이지 단위 랭킹 ====================
+function TopUrlsRanking({ data }: { data: any }) {
+  const urls: any[] = data.urls || [];
+  const [showCount, setShowCount] = useState(30);
+
+  return (
+    <div className="space-y-6">
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-indigo-600 font-medium">고유 URL</p>
+            <p className="text-2xl font-bold text-indigo-800">{data.totalUniqueUrls || 0}개</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-rose-600 font-medium">크로스-AI 인용</p>
+            <p className="text-2xl font-bold text-rose-800">{data.crossAICount || 0}개</p>
+            <p className="text-[10px] text-rose-500 mt-0.5">3개 이상 AI가 인용</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-purple-600 font-medium">Gemini 디코딩</p>
+            <p className="text-2xl font-bold text-purple-800">{data.geminiDecoded || 0}건</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+          <CardContent className="p-4">
+            <p className="text-xs text-emerald-600 font-medium">표시</p>
+            <p className="text-2xl font-bold text-emerald-800">Top {Math.min(showCount, urls.length)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <ExternalLink className="h-5 w-5 text-brand-600" />
+            Top URL 페이지 랭킹 ({data.period})
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            도메인이 아닌 <strong>개별 페이지(URL)</strong> 단위 인용 순위 — 어떤 콘텐츠가 강한지 정확히 파악
+          </p>
+
+          {urls.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">아직 분석된 URL이 없습니다</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 font-medium text-slate-500 w-10">#</th>
+                      <th className="pb-2 font-medium text-slate-500">URL</th>
+                      <th className="pb-2 font-medium text-slate-500 text-center w-16">인용</th>
+                      <th className="pb-2 font-medium text-slate-500 text-center w-20">병원 언급률</th>
+                      <th className="pb-2 font-medium text-slate-500 text-center">AI</th>
+                      <th className="pb-2 font-medium text-slate-500 text-center w-24">최근 인용</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {urls.slice(0, showCount).map((u: any) => (
+                      <tr key={u.url} className="border-b last:border-0 hover:bg-white/60 align-top">
+                        <td className="py-2 text-slate-400 text-xs">{u.rank}</td>
+                        <td className="py-2">
+                          <div className="space-y-0.5">
+                            <a
+                              href={u.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-brand-700 hover:underline font-mono break-all line-clamp-2"
+                            >
+                              {u.url}
+                            </a>
+                            <p className="text-[10px] text-slate-400 font-mono">{u.domain}</p>
+                            {u.isCrossAI && (
+                              <span className="inline-block text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-medium">
+                                ✨ 크로스-AI 검증
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-2 text-center font-bold text-slate-800">{u.citationCount}</td>
+                        <td className="py-2 text-center">
+                          <span className={`text-xs font-medium ${u.mentionRate >= 50 ? 'text-green-700' : u.mentionRate >= 20 ? 'text-amber-700' : 'text-slate-500'}`}>
+                            {u.mentionRate}%
+                          </span>
+                          <p className="text-[10px] text-slate-400">{u.mentionedWithHospital}/{u.citationCount}</p>
+                        </td>
+                        <td className="py-2">
+                          <div className="flex flex-wrap gap-1 justify-center">
+                            {(u.platforms || []).map((p: string) => (
+                              <span
+                                key={p}
+                                className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}
+                              >
+                                {platformNames[p] || p}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="py-2 text-center">
+                          <span className="text-xs text-slate-600">{u.freshness}</span>
+                          <p className="text-[10px] text-slate-400">{u.daysSinceLast}일 전</p>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {showCount < urls.length && (
+                <div className="mt-4 text-center">
+                  <Button variant="outline" size="sm" onClick={() => setShowCount(c => Math.min(c + 30, urls.length))}>
+                    <ChevronDown className="h-4 w-4 mr-1.5" />
+                    더보기 ({urls.length - showCount}개 남음)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ==================== A-2. URL × AI 매트릭스 ====================
+function UrlMatrix({ data }: { data: any }) {
+  const rows: any[] = data.rows || [];
+  const platforms: string[] = data.platforms || ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW', 'GROK', 'CLOVA_X'];
+
+  // 색 강도 계산: 0=white, 1+=brand 농도
+  const getCellBg = (count: number, max: number) => {
+    if (count === 0) return 'bg-white';
+    const ratio = max > 0 ? count / max : 0;
+    if (ratio > 0.75) return 'bg-brand-600 text-white';
+    if (ratio > 0.5) return 'bg-brand-500 text-white';
+    if (ratio > 0.25) return 'bg-brand-300 text-brand-900';
+    return 'bg-brand-100 text-brand-800';
+  };
+
+  // 모든 셀의 최댓값
+  let maxCell = 0;
+  for (const row of rows) {
+    for (const c of row.cells) {
+      if (c.count > maxCell) maxCell = c.count;
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardContent className="p-5">
+          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-indigo-600" />
+            URL × AI 매트릭스 ({data.period})
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            상위 {data.returnedCount}개 URL이 <strong>어떤 AI</strong>에서 얼마나 인용되는지 한눈에 — 진한 셀일수록 빈도 높음
+          </p>
+
+          {rows.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">아직 매트릭스 데이터가 없습니다</div>
+          ) : (
+            <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-xs border-collapse">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left pb-2 pr-2 font-medium text-slate-500 sticky left-0 bg-white z-10 w-8">#</th>
+                    <th className="text-left pb-2 pr-2 font-medium text-slate-500 sticky left-8 bg-white z-10 min-w-[180px]">URL</th>
+                    <th className="pb-2 px-2 font-medium text-slate-500 text-center w-12">총합</th>
+                    {platforms.map(p => (
+                      <th key={p} className="pb-2 px-1 font-medium text-slate-500 text-center min-w-[60px]">
+                        <div className="flex flex-col items-center gap-1">
+                          <span className={`w-2 h-2 rounded-full ${platformColors[p]}`} />
+                          <span className="text-[10px]">{platformNames[p] || p}</span>
+                        </div>
+                      </th>
+                    ))}
+                    <th className="pb-2 px-2 font-medium text-slate-500 text-center w-12">커버</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row: any) => (
+                    <tr key={row.url} className="border-b last:border-0">
+                      <td className="py-2 pr-2 text-slate-400 sticky left-0 bg-white">{row.rank}</td>
+                      <td className="py-2 pr-2 sticky left-8 bg-white">
+                        <a
+                          href={row.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-brand-700 hover:underline font-mono text-[11px] break-all line-clamp-2"
+                        >
+                          {row.url}
+                        </a>
+                        <p className="text-[10px] text-slate-400 font-mono">{row.domain}</p>
+                      </td>
+                      <td className="py-2 px-2 text-center font-bold text-slate-800">{row.total}</td>
+                      {row.cells.map((c: any) => (
+                        <td key={c.platform} className="py-1 px-1">
+                          <div
+                            className={`text-center py-1.5 rounded text-[11px] font-medium ${getCellBg(c.count, maxCell)}`}
+                            title={`${platformNames[c.platform] || c.platform}: ${c.count}건`}
+                          >
+                            {c.count || ''}
+                          </div>
+                        </td>
+                      ))}
+                      <td className="py-2 px-2 text-center">
+                        <span className={`text-xs font-bold ${row.coverage >= 4 ? 'text-rose-700' : row.coverage >= 2 ? 'text-amber-700' : 'text-slate-500'}`}>
+                          {row.coverage}/{platforms.length}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 bg-slate-50">
+                    <td colSpan={2} className="py-2 px-2 text-right font-bold text-slate-700 sticky left-0 bg-slate-50">AI별 합계</td>
+                    <td className="py-2 px-2 text-center font-bold text-slate-800">
+                      {(data.columnTotals || []).reduce((s: number, c: any) => s + c.total, 0)}
+                    </td>
+                    {(data.columnTotals || []).map((c: any) => (
+                      <td key={c.platform} className="py-2 px-1 text-center font-bold text-slate-700">
+                        {c.total}
+                      </td>
+                    ))}
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+            <span>색 농도:</span>
+            <div className="flex items-center gap-1">
+              <span className="w-4 h-4 bg-brand-100 rounded" /> 적음
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-4 h-4 bg-brand-300 rounded" /> 보통
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-4 h-4 bg-brand-500 rounded" /> 많음
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="w-4 h-4 bg-brand-600 rounded" /> 매우 많음
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -156,6 +156,42 @@ export function useSourceInsight(lazy = false) {
   });
 }
 
+/** Top URL 랭킹 (페이지 단위) */
+export function useTopUrls(lazy = false, limit = 50) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: [...queryKeys.insights.topUrls(hospitalId!), limit],
+    queryFn: () => crawlerApi.getTopUrls(hospitalId!, 30, limit).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** URL × AI 매트릭스 */
+export function useUrlMatrix(lazy = false, topN = 30) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: [...queryKeys.insights.urlMatrix(hospitalId!), topN],
+    queryFn: () => crawlerApi.getUrlMatrix(hospitalId!, 30, topN).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
+/** 출처 디코딩 진단 (Gemini 디코딩 전/후 비교) */
+export function useSourceDiagnostic(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.insights.sourcesDiagnostic(hospitalId!),
+    queryFn: () => crawlerApi.getSourceDiagnostic(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
 /** 포지셔닝 맵 */
 export function usePositioningInsight(lazy = false) {
   const hospitalId = useHospitalId();
