@@ -16,6 +16,28 @@ const platformNames: Record<string, string> = {
   GEMINI: 'Gemini',
 };
 
+/**
+ * Gemini source_hints[].sources[item] 에서 실제 도메인을 추출
+ *
+ * ⚠️ 데이터 구조 주의:
+ *   - source.domain: 항상 'vertexaisearch.cloud.google.com' (마스킹 도메인)
+ *   - source.title:  실제 도메인 (예: 'my-doctor.io', 'cheonan-cleardental.com')
+ *
+ * 우선순위: title 이 도메인 형태면 title → 아니면 domain (단 vertexaisearch 는 제외)
+ */
+function extractRealDomain(source: any): string | null {
+  if (!source || typeof source !== 'object') return null;
+  const title = (source.title || '').toString().trim().toLowerCase();
+  const domain = (source.domain || '').toString().trim().toLowerCase();
+
+  const isDomainLike = (s: string) =>
+    s.length > 0 && s.includes('.') && !s.includes(' ') && !s.includes('vertexaisearch');
+
+  if (isDomainLike(title)) return title.replace(/^www\./, '');
+  if (isDomainLike(domain)) return domain.replace(/^www\./, '');
+  return null;
+}
+
 @ApiTags('AI 크롤러')
 @Controller('ai-crawler')
 @UseGuards(JwtAuthGuard, PlanGuard)
@@ -715,17 +737,16 @@ export class AICrawlerController {
       ];
 
       // Gemini source_hints 에서 실제 도메인 추출
+      // ⚠️ 중요: Gemini의 source_hints[].domain 은 항상 'vertexaisearch.cloud.google.com' (마스킹)
+      //          실제 도메인은 source_hints[].title 필드에 들어있음 (예: 'my-doctor.io')
       const geminiHintDomains: string[] = [];
       if (platform === 'GEMINI' && r.sourceHints) {
         try {
           const hints: any = r.sourceHints;
           const sources = Array.isArray(hints?.sources) ? hints.sources : [];
           for (const s of sources) {
-            // title 또는 domain 필드에서 실제 도메인 추출
-            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
-            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
-              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
-            }
+            const real = extractRealDomain(s);
+            if (real) geminiHintDomains.push(real);
           }
         } catch {
           // ignore malformed sourceHints
@@ -938,10 +959,8 @@ export class AICrawlerController {
           const hints: any = r.sourceHints;
           const sources = Array.isArray(hints?.sources) ? hints.sources : [];
           for (const s of sources) {
-            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
-            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
-              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
-            }
+            const real = extractRealDomain(s);
+            if (real) geminiHintDomains.push(real);
           }
         } catch {}
       }
@@ -1441,10 +1460,8 @@ export class AICrawlerController {
           const hints: any = r.sourceHints;
           const sources = Array.isArray(hints?.sources) ? hints.sources : [];
           for (const s of sources) {
-            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
-            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
-              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
-            }
+            const real = extractRealDomain(s);
+            if (real) geminiHintDomains.push(real);
           }
         } catch {}
       }
@@ -1589,10 +1606,8 @@ export class AICrawlerController {
           const hints: any = r.sourceHints;
           const sources = Array.isArray(hints?.sources) ? hints.sources : [];
           for (const s of sources) {
-            const realDomain = (s?.domain || s?.title || '').toString().trim().toLowerCase();
-            if (realDomain && realDomain.includes('.') && !realDomain.includes(' ')) {
-              geminiHintDomains.push(realDomain.replace(/^www\./, ''));
-            }
+            const real = extractRealDomain(s);
+            if (real) geminiHintDomains.push(real);
           }
         } catch {}
       }
