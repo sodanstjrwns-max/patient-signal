@@ -30,6 +30,7 @@ export class PlanGuard implements CanActivate {
       platforms: ['PERPLEXITY'],   // 가장 저렴한 1개만
       crawlsPerMonth: 4,           // 주 1회 (월 4회)
       maxDailyLiveQueries: 1,      // 실시간 질문 1회/일 (맛보기)
+      promptsPerCrawl: 3,          // 【B안】1회 크롤링당 프롬프트 상한 (FREE: 3개)
       exportEnabled: false,
       aiRecommendations: false,
       contentGap: false,
@@ -41,6 +42,7 @@ export class PlanGuard implements CanActivate {
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // STARTER는 기존 4개 유지
       crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
       maxDailyLiveQueries: 5,      // 실시간 질문 5회/일
+      promptsPerCrawl: 5,          // 【B안】1회 크롤링당 프롬프트 상한 (STARTER: 5개)
       exportEnabled: false,
       aiRecommendations: false,
       contentGap: false,
@@ -52,6 +54,7 @@ export class PlanGuard implements CanActivate {
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'], // 6개 AI 전체 (백서 v2.0)
       crawlsPerMonth: 30,          // 매일
       maxDailyLiveQueries: 10,     // 실시간 질문 10회/일
+      promptsPerCrawl: 10,         // 【B안】1회 크롤링당 프롬프트 상한 (STANDARD: 10개)
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: false,
@@ -63,6 +66,7 @@ export class PlanGuard implements CanActivate {
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
       crawlsPerMonth: 30,          // 매일
       maxDailyLiveQueries: 30,     // 실시간 질문 30회/일
+      promptsPerCrawl: -1,         // 【B안】PRO 이상은 무제한 (maxPrompts 그대로)
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: true,
@@ -74,6 +78,7 @@ export class PlanGuard implements CanActivate {
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
       crawlsPerMonth: -1,
       maxDailyLiveQueries: -1,     // 실시간 질문 무제한 (실질 100회)
+      promptsPerCrawl: -1,         // 【B안】ENTERPRISE 무제한
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: true,

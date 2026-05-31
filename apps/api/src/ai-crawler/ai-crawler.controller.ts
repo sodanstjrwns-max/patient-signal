@@ -1997,12 +1997,12 @@ export class AICrawlerController {
       });
     }
 
-    // YouTube 노출 부재
-    const youtube = categories.find(c => c.category === 'YOUTUBE');
+    // YouTube/영상 노출 부재 (B안: VIDEO_SNS, legacy YOUTUBE 둘 다 호환)
+    const youtube = categories.find(c => c.category === 'VIDEO_SNS' || c.category === 'YOUTUBE');
     if (!youtube || youtube.count < 20) {
       recommendations.push({
-        category: 'YOUTUBE',
-        label: '유튜브',
+        category: 'VIDEO_SNS',
+        label: '영상(유튜브)',
         action: '진료 과정 영상/원장 인터뷰 영상 콘텐츠 제작 — AI 인용 권위도 7 확보',
         priority: 'P1',
       });

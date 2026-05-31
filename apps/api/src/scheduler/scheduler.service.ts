@@ -232,11 +232,41 @@ export class SchedulerService {
           }
         }
 
+        // ============================================================
+        // 【B안】플랜별 1회 크롤링당 프롬프트 상한 적용
+        //  - FREE: 3개 / STARTER: 5개 / STANDARD: 10개 / PRO·ENTERPRISE: 무제한
+        //  - hospital.prompts 자체를 잘라 chunk 만들기 전에 슬라이스
+        //  - 정렬 기준: id ASC (안정적, 매일 동일 순서로 동일 프롬프트 처리)
+        //  - 잘린 프롬프트는 다음 크롤링 사이클에서 또 동일하게 잘리므로
+        //    추후 'rotate' 모드를 도입할 여지 있음 (현재는 단순 절단)
+        // ============================================================
+        const promptsPerCrawl = (planLimits as any).promptsPerCrawl;
+        const sortedPrompts = [...hospital.prompts].sort((a, b) => a.id.localeCompare(b.id));
+        const effectivePrompts =
+          promptsPerCrawl && promptsPerCrawl !== -1 && sortedPrompts.length > promptsPerCrawl
+            ? sortedPrompts.slice(0, promptsPerCrawl)
+            : sortedPrompts;
+
+        if (effectivePrompts.length < hospital.prompts.length) {
+          this.logger.log(
+            `[${hospital.name}] 플랜(${hospital.planType}) 프롬프트 상한 적용: ` +
+            `${hospital.prompts.length}개 → ${effectivePrompts.length}개 (cap=${promptsPerCrawl})`,
+          );
+        }
+
+        // crawlJob.totalPrompts를 실제 처리할 개수로 보정 (배치 통계 정확도 ↑)
+        if (effectivePrompts.length !== hospital.prompts.length) {
+          await this.prisma.crawlJob.update({
+            where: { id: crawlJob.id },
+            data: { totalPrompts: effectivePrompts.length },
+          });
+        }
+
         // 【P3-1】크롤링 병렬화 (프롬프트 3개씩 동시 처리, rate-limit 대응)
         const CONCURRENT_PROMPTS = 3;
-        const promptChunks: typeof hospital.prompts[] = [];
-        for (let i = 0; i < hospital.prompts.length; i += CONCURRENT_PROMPTS) {
-          promptChunks.push(hospital.prompts.slice(i, i + CONCURRENT_PROMPTS));
+        const promptChunks: typeof effectivePrompts[] = [];
+        for (let i = 0; i < effectivePrompts.length; i += CONCURRENT_PROMPTS) {
+          promptChunks.push(effectivePrompts.slice(i, i + CONCURRENT_PROMPTS));
         }
 
         for (const chunk of promptChunks) {
@@ -281,11 +311,11 @@ export class SchedulerService {
           data: { completed, failed },
         });
 
-        // 작업 완료 처리
+        // 작업 완료 처리 (【B안】 effectivePrompts.length 기준으로 실패 판정)
         await this.prisma.crawlJob.update({
           where: { id: crawlJob.id },
           data: {
-            status: failed === hospital.prompts.length ? 'FAILED' : 'COMPLETED',
+            status: failed === effectivePrompts.length ? 'FAILED' : 'COMPLETED',
             completedAt: new Date(),
           },
         });
@@ -296,7 +326,8 @@ export class SchedulerService {
         const hospitalResult: any = {
           hospitalId: hospital.id,
           hospitalName: hospital.name,
-          promptCount: hospital.prompts.length,
+          promptCount: effectivePrompts.length,           // 【B안】실제 처리한 개수
+          promptCountTotal: hospital.prompts.length,      // 【B안】병원이 설정한 전체 개수
           completed,
           failed,
           score,
