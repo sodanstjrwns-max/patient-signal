@@ -40,16 +40,24 @@ export class SchedulerController {
       throw new UnauthorizedException('Invalid cron secret');
     }
 
-    const result = await this.schedulerService.runDailyCrawling({
+    // 【B안 응급】fire-and-forget — Render Cron 요청은 즉시 200 OK 반환
+    // 실제 크롤링은 백그라운드에서 계속 진행됨
+    // → Render가 응답 못 받아서 재시도하는 무한 루프 차단
+    const runId = `${session}-${Date.now()}`;
+    this.schedulerService.runDailyCrawling({
       session,
       includeCompetitors: includeCompetitors === 'true',
       includeContentGap: includeContentGap === 'true',
+    }).catch(err => {
+      console.error(`[${runId}] background crawl failed:`, err.message);
     });
-    
+
     return {
       success: true,
+      runId,
+      message: '크롤링을 백그라운드에서 시작했습니다. 결과는 로그/DB에서 확인하세요.',
       timestamp: new Date().toISOString(),
-      ...result,
+      session,
     };
   }
 
