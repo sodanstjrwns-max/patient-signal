@@ -103,10 +103,27 @@ export class SchedulerService {
     const session = options?.session || this.getCurrentSession();
     const includeCompetitors = options?.includeCompetitors ?? (session === 'evening');
     const includeContentGap = options?.includeContentGap ?? (session === 'evening');
-    
+
     this.logger.log(`=== 자동 크롤링 시작 (세션: ${session}) ===`);
     this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}, ContentGap=${includeContentGap}`);
-    
+
+    // ============================================================
+    // 【A안 #1】실행 시작 전 좀비 잡 자동 청소
+    // 30분 이상 RUNNING 상태로 멈춰 있는 잡 = Render Cron 타임아웃으로 죽은 잡
+    // → 다음 실행 시 자동으로 FAILED로 마킹하여 누적 방지
+    // ============================================================
+    const zombieThreshold = new Date(Date.now() - 30 * 60 * 1000);
+    const zombieResult = await this.prisma.crawlJob.updateMany({
+      where: {
+        status: 'RUNNING',
+        startedAt: { lt: zombieThreshold },
+      },
+      data: { status: 'FAILED', completedAt: new Date() },
+    });
+    if (zombieResult.count > 0) {
+      this.logger.warn(`🧟 좀비 잡 자동 정리: ${zombieResult.count}건 RUNNING→FAILED`);
+    }
+
     // 활성 구독 상태인 병원들 조회 (TRIAL 포함)
     const hospitals = await this.prisma.hospital.findMany({
       where: {
@@ -122,13 +139,48 @@ export class SchedulerService {
       },
     });
 
-    this.logger.log(`크롤링 대상 병원: ${hospitals.length}개`);
+    // ============================================================
+    // 【A안 #2】오늘 아직 점수가 안 나온 병원을 먼저 처리 (공정성)
+    // Render Cron이 30분에 강제 종료되더라도 매번 다른 병원이 누락되도록
+    // → "오늘치 DailyScore가 없는 병원" 우선 + 그 안에서는 createdAt 오름차순
+    // ============================================================
+    const todayKST = new Date();
+    todayKST.setUTCHours(0, 0, 0, 0); // UTC 자정 = KST 09:00 직전
+    const scoredToday = await this.prisma.dailyScore.findMany({
+      where: { scoreDate: { gte: todayKST } },
+      select: { hospitalId: true },
+    });
+    const scoredTodaySet = new Set(scoredToday.map(s => s.hospitalId));
+
+    hospitals.sort((a, b) => {
+      const aDone = scoredTodaySet.has(a.id) ? 1 : 0;
+      const bDone = scoredTodaySet.has(b.id) ? 1 : 0;
+      if (aDone !== bDone) return aDone - bDone; // 안 끝난 곳 먼저
+      return a.createdAt.getTime() - b.createdAt.getTime(); // 가입 오래된 순
+    });
+
+    const remaining = hospitals.filter(h => !scoredTodaySet.has(h.id)).length;
+    this.logger.log(`크롤링 대상 병원: ${hospitals.length}개 (오늘 아직 ${remaining}곳 미처리)`);
+
+    // ============================================================
+    // 【A안 #3】Render Cron 타임아웃(약 30분) 보호: 24분 이상 경과 시 잔여 잡 중단
+    // → 좀비를 새로 만들지 않음
+    // ============================================================
+    const RUN_BUDGET_MS = 24 * 60 * 1000;
+    const runStartedAt = Date.now();
 
     const results: any[] = [];
     let successCount = 0;
     let failCount = 0;
+    let skippedByBudget = 0;
 
     for (const hospital of hospitals) {
+      // 예산 초과 체크 — 새 잡을 시작하지 않음
+      if (Date.now() - runStartedAt > RUN_BUDGET_MS) {
+        skippedByBudget++;
+        continue;
+      }
+
       if (hospital.prompts.length === 0) {
         this.logger.log(`[${hospital.name}] 활성 프롬프트 없음 - 스킵`);
         continue;
@@ -306,7 +358,10 @@ export class SchedulerService {
       await new Promise(resolve => setTimeout(resolve, 10000));
     }
 
-    this.logger.log(`=== 크롤링 완료 (${session}): 성공 ${successCount}, 실패 ${failCount} ===`);
+    this.logger.log(
+      `=== 크롤링 완료 (${session}): 성공 ${successCount}, 실패 ${failCount}, ` +
+      `예산초과스킵 ${skippedByBudget} / 좀비정리 ${zombieResult.count} ===`
+    );
 
     return {
       totalHospitals: hospitals.length,
@@ -314,7 +369,9 @@ export class SchedulerService {
       failCount,
       session,
       results,
-    };
+      zombieCleanup: zombieResult.count,
+      skippedByBudget,
+    } as any;
   }
 
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {

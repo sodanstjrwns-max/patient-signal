@@ -176,6 +176,37 @@ export class SchedulerController {
   }
 
   /**
+   * 【A안】좀비 잡 수동 청소 엔드포인트
+   * 30분 이상 RUNNING 상태로 멈춘 잡을 일괄 FAILED로 마킹
+   *
+   * 사용 예:
+   *   curl -X POST https://<api>/scheduler/cleanup-zombies \
+   *        -H "x-cron-secret: $CRON_SECRET"
+   */
+  @Post('cleanup-zombies')
+  @ApiOperation({ summary: '좀비 잡 수동 청소 (30분+ RUNNING → FAILED)' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async cleanupZombies(@Headers('x-cron-secret') cronSecret: string) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const threshold = new Date(Date.now() - 30 * 60 * 1000);
+    const result = await this.prisma.crawlJob.updateMany({
+      where: { status: 'RUNNING', startedAt: { lt: threshold } },
+      data: { status: 'FAILED', completedAt: new Date() },
+    });
+
+    return {
+      success: true,
+      cleanedCount: result.count,
+      thresholdMinutes: 30,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
    * 상태 확인 엔드포인트 (공개)
    */
   @Get('status')
@@ -205,7 +236,10 @@ export class SchedulerController {
       },
       cronSchedule: {
         promptRefresh: '매일 오전 8시 (KST) - 5×5 매트릭스 프롬프트 생성',
-        dailyCrawl: '매일 오전 9시 (KST) - 전체 플랫폼 크롤링',
+        dailyCrawlMorning: '매일 오전 9시 (KST) - morning 세션 ?session=morning',
+        dailyCrawlAfternoon: '매일 오후 2시 (KST) - afternoon 세션 ?session=afternoon',
+        dailyCrawlEvening: '매일 오후 7시 (KST) - evening 세션 ?session=evening (경쟁사 분석 포함)',
+        zombieCleanup: 'POST /scheduler/cleanup-zombies (응급시 수동)',
         weeklyWeightCalibration: '매주 일요일 새벽 3시 (KST) - ABHS 가중치 자동 재캘리브레이션 (save only)',
       },
       supportedSpecialties: [
