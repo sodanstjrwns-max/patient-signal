@@ -28,6 +28,7 @@ import {
   Search,
   CalendarDays,
   Key,
+  Filter,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: true,
     items: [
       { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
+      { name: '환자 퍼널 진단', href: '/dashboard/funnel', icon: Filter, badge: 'NEW' },
       { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
     ],
   },

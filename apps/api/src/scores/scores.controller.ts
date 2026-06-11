@@ -2,6 +2,7 @@ import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScoresService } from './scores.service';
 import { ABHSService } from './abhs.service';
+import { FunnelService } from './funnel.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('점수 및 통계')
@@ -12,7 +13,17 @@ export class ScoresController {
   constructor(
     private scoresService: ScoresService,
     private abhsService: ABHSService,
+    private funnelService: FunnelService,
   ) {}
+
+  @Get(':hospitalId/funnel')
+  @ApiOperation({ summary: 'AI 환자 퍼널 진단 (Patient Funnel × AEO — 단계별 SoV + 누수 감지 + 신환 임팩트)' })
+  async getFunnelDiagnosis(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    return this.funnelService.getFunnelDiagnosis(hospitalId, parseInt(days || '30'));
+  }
 
   @Get(':hospitalId/latest')
   @ApiOperation({ summary: '최신 점수 조회' })
