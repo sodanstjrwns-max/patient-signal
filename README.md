@@ -62,6 +62,7 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 | `/register` | 회원가입 | 공개 |
 | `/onboarding` | 3-Step 병원 등록 | 로그인 |
 | `/dashboard` | 메인 대시보드 (SoV North-Star) | 로그인 |
+| `/dashboard/funnel` | **AI 환자 퍼널 진단** (NEW) | 로그인 |
 | `/dashboard/report` | 주간 리포트 | 로그인 |
 | `/dashboard/prompts` | 질문 관리 | 로그인 |
 | `/dashboard/responses` | AI 응답 원문 | 로그인 |
@@ -106,6 +107,7 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 | GET | `/scores/:hospitalId/abhs/competitive-share` | 경쟁사 점유율 |
 | GET | `/scores/:hospitalId/abhs/actions` | 액션 인텔리전스 |
 | GET | `/scores/:hospitalId/abhs/golden-prompts` | Golden Prompt 분석 |
+| GET | `/scores/:hospitalId/funnel` | **AI 환자 퍼널 진단** (단계별 SoV + 누수 + 신환 임팩트) |
 
 ### Scheduler API
 | Method | Path | 설명 |
@@ -133,6 +135,18 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 3. **Recommendation Depth**: R0(미언급)~R3(단독추천) 깊이
 4. **Platform Weight**: Perplexity 1.4, ChatGPT 1.3, Gemini 1.2, Claude 1.0
 5. **Intent Match**: 예약(x1.5), 후기(x1.3), 공포(x1.2), 비교(x1.1), 정보(x1.0)
+
+### AI 환자 퍼널 진단 (NEW — Patient Funnel × AEO)
+범용 AEO 툴과의 결정적 차별점. 질문 의도(QueryIntent)를 환자 여정 4단계로 매핑:
+1. **인지(AWARENESS)** ← INFORMATION — "이 시술이 뭐지? 가격은?"
+2. **탐색·비교(COMPARISON)** ← COMPARISON — "우리 동네에서 어디가 잘하지?"
+3. **신뢰 검증(TRUST)** ← REVIEW + FEAR — "이 병원 진짜 괜찮을까?"
+4. **결정·예약(DECISION)** ← RESERVATION — "지금 예약 가능한 곳은?"
+
+- 단계별 SoV vs 벤치마크 → 누수(Leak) 단계 자동 감지
+- 13개 진료과별 객단가 × 보수적 전환율(3%) → **월간 신환/매출 기회손실 환산**
+- 단계별 병원 전문 액션 플레이북 (플레이스 리뷰, 모두닥 프로필, 후기 콘텐츠, 예약 연동 처방)
+- 퍼널 건강 점수(0~100) + A~D 등급
 
 ### Golden Prompt
 - ABHS 5축 기여분이 가장 높은 질문 패턴 자동 식별
