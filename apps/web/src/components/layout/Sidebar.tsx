@@ -249,13 +249,13 @@ export function Sidebar() {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group/item relative',
                         isActive
-                          ? 'bg-white/[0.12] text-white shadow-sm'
-                          : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200'
+                          ? 'bg-gradient-to-r from-indigo-500/25 to-violet-500/10 text-white shadow-[0_0_16px_rgba(99,102,241,0.15)] border border-indigo-400/20'
+                          : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200 border border-transparent'
                       )}
                     >
                       {/* Active indicator */}
                       {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-indigo-400 rounded-r-full" />
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-indigo-400 to-violet-400 rounded-r-full shadow-[0_0_8px_rgba(129,140,248,0.8)]" />
                       )}
                       <item.icon
                         className={cn(
@@ -265,7 +265,7 @@ export function Sidebar() {
                       />
                       <span className="flex-1">{item.name}</span>
                       {item.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-indigo-500/80 text-white leading-none animate-pulse-soft">
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white leading-none animate-pulse-soft shadow-[0_0_8px_rgba(99,102,241,0.5)]">
                           {item.badge}
                         </span>
                       )}

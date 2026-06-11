@@ -66,64 +66,134 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative pt-24 pb-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute inset-0 bg-mesh" />
-        <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-brand-400/5 rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-violet-400/5 rounded-full blur-[100px]" />
-        
-        <div className="max-w-5xl mx-auto text-center relative z-10">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 glass rounded-full px-5 py-2 mb-8 shadow-sm">
-            <Bot className="h-4 w-4 text-brand-600" />
-            <span className="text-sm font-bold text-brand-700">병원 AI 가시성 관리 플랫폼</span>
+      {/* Hero Section — Aurora + AI Chat Live Mockup */}
+      <section id="hero-section" className="relative pt-20 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden bg-aurora">
+        <div className="absolute inset-0 grid-pattern opacity-60" />
+
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Copy */}
+            <div className="text-center lg:text-left">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2.5 glass rounded-full px-5 py-2 mb-8 shadow-sm">
+                <span className="glow-dot w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                <span className="text-sm font-bold text-slate-700">지금 이 순간에도 환자들이 AI에게 묻고 있습니다</span>
+              </div>
+
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 mb-6 leading-[1.08] tracking-tight">
+                AI가 우리 병원을<br />
+                <span className="text-gradient-aurora">
+                  추천하고 있나요?
+                </span>
+              </h1>
+
+              <p className="text-lg text-slate-600 mb-4 leading-relaxed">
+                <strong className="text-slate-900">&ldquo;우리 동네 병원 추천해줘&rdquo;</strong> — 6개 AI의 답변에<br className="hidden sm:block" />
+                우리 병원이 나오는지, 매일 자동으로 추적합니다.
+              </p>
+              <p className="text-base text-slate-500 mb-10 font-medium">
+                <strong className="text-slate-700">13개 전체 진료과</strong> 지원 · 환자 여정 퍼널 진단 ·
+                <strong className="text-slate-700"> 병원 전문</strong> AEO 플랫폼
+              </p>
+
+              <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4">
+                <Link href="/register">
+                  <Button size="lg" className="px-10 py-6 text-base bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-xl shadow-brand-500/30 font-bold hover:scale-[1.03] transition-transform">
+                    무료로 시작하기
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link href="/guide">
+                  <Button variant="outline" size="lg" className="px-8 py-6 text-base glass font-bold">
+                    서비스 가이드 보기
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: AI Chat Live Mockup */}
+            <div id="hero-chat-mockup" className="relative">
+              <div className="absolute -inset-4 bg-gradient-to-br from-brand-400/10 via-violet-400/10 to-transparent rounded-[2rem] blur-2xl" />
+              <div className="gradient-border relative shadow-float">
+                <div className="p-5 sm:p-6">
+                  {/* Window chrome */}
+                  <div className="flex items-center gap-2 mb-5">
+                    <span className="w-3 h-3 rounded-full bg-red-400" />
+                    <span className="w-3 h-3 rounded-full bg-amber-400" />
+                    <span className="w-3 h-3 rounded-full bg-emerald-400" />
+                    <span className="ml-3 text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                      <Bot className="w-3.5 h-3.5" /> AI 검색 시뮬레이션
+                    </span>
+                  </div>
+
+                  {/* User question */}
+                  <div className="flex justify-end mb-4 chat-bubble-in" style={{ animationDelay: '0.2s' }}>
+                    <div className="bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-medium px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%] shadow-lg shadow-brand-500/20">
+                      강남에서 임플란트 잘하는 치과 추천해줘
+                    </div>
+                  </div>
+
+                  {/* AI answer */}
+                  <div className="flex gap-2.5 mb-4 chat-bubble-in" style={{ animationDelay: '0.7s' }}>
+                    <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Sparkles className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div className="bg-white/90 border border-slate-100 text-sm text-slate-700 px-4 py-3 rounded-2xl rounded-tl-md max-w-[88%] shadow-sm leading-relaxed">
+                      강남 지역에서 평가가 좋은 치과를 추천드릴게요:<br />
+                      <span className="font-bold">1. <span className="highlight-sweep text-brand-700">OO치과의원</span></span> — 임플란트 전문의, 환자 만족도 높음 ⭐<br />
+                      <span className="text-slate-400">2. △△치과 — 교정 중심</span><br />
+                      <span className="text-slate-400">3. □□치과 — 일반 진료</span>
+                    </div>
+                  </div>
+
+                  {/* Signal detection card */}
+                  <div className="chat-bubble-in ambient-sheen rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 p-4" style={{ animationDelay: '1.4s' }}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/30">
+                          <CheckCircle className="w-4.5 h-4.5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-emerald-800">단독 추천 감지 (R3)</p>
+                          <p className="text-[11px] text-emerald-600 font-medium">1순위 · 긍정 감성 +2 · 예약 의도</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-emerald-500 uppercase">SoV</p>
+                        <p className="text-xl font-black text-emerald-700 tabular-nums">+12%</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live platforms */}
+                  <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
+                    <span className="text-[11px] font-bold text-slate-400">매일 자동 추적 중</span>
+                    <div className="flex items-center gap-1.5">
+                      {['ChatGPT', 'Perplexity', 'Gemini', '+3'].map((p) => (
+                        <span key={p} className="text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-500">{p}</span>
+                      ))}
+                      <span className="glow-dot w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 mb-6 leading-[1.1] tracking-tight">
-            AI가 우리 병원을<br />
-            <span className="text-gradient">
-              추천하고 있나요?
-            </span>
-          </h1>
-          
-          <p className="text-lg sm:text-xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
-            ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X에게 물어보세요.<br />
-            <strong className="text-slate-900">"우리 동네 병원 추천해줘"</strong> — 거기에 우리 병원이 나오나요?
-          </p>
-          <p className="text-base text-slate-500 mb-12 max-w-2xl mx-auto font-medium">
-            Patient Signal은 <strong className="text-slate-700">13개 전체 진료과</strong>의 AI 검색 가시성을<br className="hidden sm:block" />
-            자동으로 추적하고 분석하는 <strong className="text-slate-700">병원 전문</strong> AEO 플랫폼입니다.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/register">
-              <Button size="lg" className="px-10 py-6 text-base bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 shadow-xl shadow-brand-500/25 font-bold">
-                무료로 시작하기
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link href="/guide">
-              <Button variant="outline" size="lg" className="px-8 py-6 text-base glass font-bold">
-                서비스 가이드 보기
-              </Button>
-            </Link>
-          </div>
-
-          {/* 지원 진료과 태그 */}
-          <div className="flex flex-wrap items-center justify-center gap-2 mt-10">
-            {['🦷 치과', '💆 피부과', '✨ 성형외과', '🦴 정형외과', '🌿 한의원', '👁️ 안과', '🩺 내과', '👂 이비인후과', '🧠 정신건강의학과', '+4개'].map((tag, i) => (
-              <span 
-                key={i}
-                className={`text-xs px-3 py-1.5 rounded-full font-semibold ${
-                  i === 9 
-                    ? 'bg-slate-100 text-slate-500' 
-                    : 'bg-brand-50 text-brand-600 border border-brand-100'
-                }`}
-              >
-                {tag}
-              </span>
-            ))}
+          {/* 지원 진료과 마퀴 */}
+          <div className="mt-14 relative overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, black 12%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 12%, black 88%, transparent)' }}>
+            <div className="marquee-track gap-3">
+              {[...Array(2)].flatMap((_, dup) =>
+                ['🦷 치과', '💆 피부과', '✨ 성형외과', '🦴 정형외과', '🌿 한의원', '👁️ 안과', '🩺 내과', '👂 이비인후과', '🧠 정신건강의학과', '🤰 산부인과', '👶 소아청소년과', '💧 비뇨의학과'].map((tag, i) => (
+                  <span
+                    key={`${dup}-${i}`}
+                    className="text-sm px-4 py-2 mr-3 rounded-full font-bold glass text-slate-600 whitespace-nowrap flex-shrink-0"
+                  >
+                    {tag}
+                  </span>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -155,6 +225,83 @@ export default function HomePage() {
               <p className="text-center text-slate-500 mt-8 text-sm font-medium">
                 네이버, 구글 SEO는 이미 하고 계시죠? <strong className="text-white">AI 검색 최적화(AEO)</strong>는 시작하셨나요?
               </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* AI 환자 퍼널 진단 티저 Section (NEW) */}
+      <section id="funnel-teaser-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-aurora">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 glass rounded-full px-5 py-2 mb-5 shadow-sm">
+              <Zap className="h-4 w-4 text-violet-600" />
+              <span className="text-sm font-bold text-violet-700">NEW · AI 환자 퍼널 진단</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
+              점수만 보여주는 툴은 많습니다.<br />
+              <span className="text-gradient-aurora">어디서 새는지</span> 알려주는 건 우리뿐입니다.
+            </h2>
+            <p className="text-slate-500 max-w-2xl mx-auto font-medium">
+              환자 여정 4단계(인지→비교→신뢰→결정)별로 AI 가시성을 진단하고,<br className="hidden sm:block" />
+              놓치고 있는 <strong className="text-slate-700">신환 수와 매출</strong>까지 환산해 드립니다.
+            </p>
+          </div>
+
+          {/* 퍼널 미니 시각화 */}
+          <div className="max-w-2xl mx-auto space-y-2.5 mb-10">
+            {[
+              { label: '1. 인지', voice: '"임플란트 가격이 얼마야?"', sov: 72, status: 'ok' },
+              { label: '2. 탐색·비교', voice: '"강남에서 어디가 잘하지?"', sov: 45, status: 'ok' },
+              { label: '3. 신뢰 검증', voice: '"이 병원 후기 어때?"', sov: 18, status: 'leak' },
+              { label: '4. 결정·예약', voice: '"지금 예약 가능한 곳은?"', sov: 31, status: 'warn' },
+            ].map((s, i) => (
+              <div key={i} className="flex justify-center">
+                <div
+                  className={`glass-bento p-4 w-full transition-all ${s.status === 'leak' ? 'border-2 border-red-300' : ''}`}
+                  style={{ width: `${100 - i * 10}%`, minWidth: '260px' }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2">
+                    <div className="min-w-0">
+                      <span className="font-black text-slate-800 text-sm">{s.label}</span>
+                      <span className="text-xs text-slate-400 ml-2 hidden sm:inline">{s.voice}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {s.status === 'leak' && (
+                        <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">🚨 누수 감지</span>
+                      )}
+                      <span className={`text-lg font-black tabular-nums ${s.status === 'leak' ? 'text-red-600' : s.status === 'warn' ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {s.sov}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full bar-shine ${s.status === 'leak' ? 'bg-red-500' : s.status === 'warn' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${s.sov}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 임팩트 환산 카드 */}
+          <div className="max-w-2xl mx-auto">
+            <div className="gradient-border">
+              <div className="p-6 sm:p-8 text-center">
+                <p className="text-sm font-bold text-slate-500 mb-2">신뢰 단계 누수로 인한 이번 달 추정 기회 손실</p>
+                <p className="text-3xl sm:text-4xl font-black text-slate-900 mb-1">
+                  신환 <span className="text-red-600">8~24명</span> · 매출 <span className="text-red-600">1,000~2,900만원</span>
+                </p>
+                <p className="text-xs text-slate-400 font-medium mb-5">진료과별 객단가 × 보수적 전환율 기반 추정</p>
+                <Link href="/register">
+                  <Button className="bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-lg shadow-brand-500/25 font-bold">
+                    우리 병원 퍼널 진단받기
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -290,7 +437,7 @@ export default function HomePage() {
                   환자 여정의 시작점이 바뀌고 있습니다
                 </h2>
                 <p className="text-slate-600 max-w-2xl mx-auto font-medium">
-                  환자가 병원을 선택하는 10단계 여정, 그 첫 번째 단계인 <strong className="text-slate-900">"인지"</strong>가 
+                  환자가 병원을 선택하는 10단계 여정, 그 첫 번째 단계인 <strong className="text-slate-900">&ldquo;인지&rdquo;</strong>가 
                   이제 AI 추천으로 시작됩니다. Patient Signal은 이 변화를 추적하는 유일한 도구입니다.
                 </p>
               </div>

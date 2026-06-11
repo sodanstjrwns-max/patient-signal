@@ -147,7 +147,7 @@ export default function FunnelPage() {
         onRefresh={() => refetch()}
         refreshing={isRefetching}
       />
-      <main className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
+      <main className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto bg-aurora rounded-3xl">
 
         {/* ─── Hero: 퍼널 건강 점수 + 신환 임팩트 ─── */}
         <section id="funnel-hero" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -156,7 +156,7 @@ export default function FunnelPage() {
             <CardContent className="p-6 text-center">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">퍼널 건강 점수</p>
               <div className="flex items-end justify-center gap-2">
-                <span className={`text-6xl font-black ${healthScore >= 60 ? 'text-emerald-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                <span className={`text-6xl font-black tabular-nums ${healthScore >= 60 ? 'text-emerald-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`} style={{ textShadow: '0 4px 24px rgba(99,102,241,0.15)' }}>
                   {healthScore}
                 </span>
                 <span className="text-2xl font-bold text-slate-400 mb-2">/ 100</span>
@@ -178,7 +178,7 @@ export default function FunnelPage() {
           </Card>
 
           {/* 신환 임팩트 */}
-          <Card className="lg:col-span-2 border-2 border-red-100">
+          <Card className="lg:col-span-2 border-2 border-red-100 ambient-sheen">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div>
@@ -266,7 +266,7 @@ export default function FunnelPage() {
 
                       {/* SoV 게이지 */}
                       <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden relative">
-                        <div className={`h-full ${style.bar} rounded-full transition-all`} style={{ width: `${Math.min(100, stage.sov)}%` }} />
+                        <div className={`h-full ${style.bar} rounded-full transition-all bar-shine`} style={{ width: `${Math.min(100, stage.sov)}%` }} />
                         <div className="absolute top-0 h-full w-0.5 bg-slate-400" style={{ left: `${Math.min(100, stage.benchmark)}%` }} title={`벤치마크 ${stage.benchmark}%`} />
                       </div>
 

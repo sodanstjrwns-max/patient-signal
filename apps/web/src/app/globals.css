@@ -346,3 +346,179 @@ a, button, [role="button"] {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+/* ═══════════════════════════════════════════════
+   2026 Design Upgrade — Aurora · Animated Borders · Glow
+═══════════════════════════════════════════════ */
+
+@layer utilities {
+  /* ── Aurora animated background (hero) ── */
+  .bg-aurora {
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-aurora::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background:
+      radial-gradient(ellipse 50% 40% at 30% 20%, rgba(99, 102, 241, 0.18), transparent 60%),
+      radial-gradient(ellipse 40% 35% at 75% 15%, rgba(139, 92, 246, 0.14), transparent 60%),
+      radial-gradient(ellipse 45% 40% at 60% 80%, rgba(59, 130, 246, 0.12), transparent 60%),
+      radial-gradient(ellipse 35% 30% at 15% 75%, rgba(236, 72, 153, 0.08), transparent 60%);
+    animation: aurora-drift 18s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+  @keyframes aurora-drift {
+    0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+    50%  { transform: translate(3%, -2%) rotate(2deg) scale(1.05); }
+    100% { transform: translate(-3%, 2%) rotate(-2deg) scale(1.02); }
+  }
+
+  /* ── Animated conic gradient border ── */
+  .gradient-border {
+    position: relative;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 24px;
+    z-index: 0;
+  }
+  .gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: conic-gradient(from var(--gb-angle, 0deg),
+      #6366f1, #a855f7, #3b82f6, #6366f1);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: gb-spin 5s linear infinite;
+    z-index: -1;
+  }
+  @property --gb-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+  @keyframes gb-spin {
+    to { --gb-angle: 360deg; }
+  }
+
+  /* ── Glow orb badge ── */
+  .glow-dot {
+    position: relative;
+  }
+  .glow-dot::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 9999px;
+    background: inherit;
+    filter: blur(6px);
+    opacity: 0.6;
+    animation: pulseSoft 2s ease-in-out infinite;
+  }
+  @keyframes pulseSoft {
+    0%, 100% { opacity: 0.5; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.15); }
+  }
+
+  /* ── AI chat mockup bubbles ── */
+  .chat-bubble-in {
+    animation: chatIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes chatIn {
+    0% { opacity: 0; transform: translateY(10px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .typing-dots span {
+    display: inline-block;
+    width: 5px; height: 5px;
+    margin-right: 3px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typingBounce 1.2s infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ── Highlight sweep (hospital name in AI answer) ── */
+  .highlight-sweep {
+    background: linear-gradient(120deg, rgba(99,102,241,0.18), rgba(168,85,247,0.18));
+    background-size: 200% 100%;
+    border-radius: 6px;
+    padding: 0 4px;
+    animation: sweepIn 1s ease-out 1.2s backwards;
+  }
+  @keyframes sweepIn {
+    0% { background-position: 200% 0; opacity: 0.5; }
+    100% { background-position: 0 0; opacity: 1; }
+  }
+
+  /* ── Marquee (platform logos) ── */
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 28s linear infinite;
+  }
+  .marquee-track:hover { animation-play-state: paused; }
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ── Spotlight card (mouse-free ambient sheen) ── */
+  .ambient-sheen {
+    position: relative;
+    overflow: hidden;
+  }
+  .ambient-sheen::after {
+    content: '';
+    position: absolute;
+    top: -120%;
+    left: -60%;
+    width: 60%;
+    height: 300%;
+    background: linear-gradient(75deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: rotate(8deg);
+    animation: sheenSlide 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes sheenSlide {
+    0%, 55%, 100% { left: -60%; }
+    75% { left: 130%; }
+  }
+
+  /* ── Soft elevated hero number ── */
+  .text-gradient-aurora {
+    background: linear-gradient(125deg, #4338ca 10%, #7c3aed 40%, #2563eb 70%, #4f46e5 95%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s ease infinite;
+  }
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ── Funnel stage bar shine ── */
+  .bar-shine {
+    position: relative;
+    overflow: hidden;
+  }
+  .bar-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s infinite linear;
+  }
+}
