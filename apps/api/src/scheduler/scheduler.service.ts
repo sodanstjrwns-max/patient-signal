@@ -152,11 +152,35 @@ export class SchedulerService {
     });
     const scoredTodaySet = new Set(scoredToday.map(s => s.hospitalId));
 
+    // ============================================================
+    // 【STARVATION FIX】각 병원의 "마지막 크롤 시각"을 기준으로 정렬
+    // 기존: createdAt 오름차순 → 항상 같은 ~13개 오래된 병원만 처리되고
+    //       나머지 70여 곳은 영원히 차례가 안 옴 (굶주림/starvation)
+    // 변경: least-recently-crawled (가장 오래 안 돌아간 병원) 우선
+    //       → 매 사이클마다 굶주린 병원이 자동으로 앞으로 와서 공정하게 순환
+    // ============================================================
+    const lastCrawlRows = await this.prisma.crawlJob.groupBy({
+      by: ['hospitalId'],
+      _max: { startedAt: true },
+    });
+    const lastCrawlMap = new Map<string, number>();
+    for (const row of lastCrawlRows) {
+      const t = row._max.startedAt ? row._max.startedAt.getTime() : 0;
+      lastCrawlMap.set(row.hospitalId, t);
+    }
+    // 한 번도 크롤된 적 없는 병원 = 0 (epoch) → 최우선
+
     hospitals.sort((a, b) => {
+      // 1순위: 오늘 아직 점수 안 난 병원 먼저 (당일 공정성)
       const aDone = scoredTodaySet.has(a.id) ? 1 : 0;
       const bDone = scoredTodaySet.has(b.id) ? 1 : 0;
-      if (aDone !== bDone) return aDone - bDone; // 안 끝난 곳 먼저
-      return a.createdAt.getTime() - b.createdAt.getTime(); // 가입 오래된 순
+      if (aDone !== bDone) return aDone - bDone;
+      // 2순위: 가장 오래 크롤 안 된 병원 먼저 (least-recently-crawled)
+      const aLast = lastCrawlMap.get(a.id) ?? 0;
+      const bLast = lastCrawlMap.get(b.id) ?? 0;
+      if (aLast !== bLast) return aLast - bLast;
+      // 3순위: 동률이면 가입 오래된 순 (안정적 tie-break)
+      return a.createdAt.getTime() - b.createdAt.getTime();
     });
 
     const remaining = hospitals.filter(h => !scoredTodaySet.has(h.id)).length;
@@ -1088,5 +1112,109 @@ export class SchedulerService {
     }
 
     return { measured: results.length, results };
+  }
+
+  // ==================== SoV 자기치유 (재발 방지) ====================
+
+  /**
+   * SoV self-heal — "isMentioned=false 인데 사실은 응답에 병원명이 등장하는"
+   * false-negative를 탐지하고, dryRun=false면 자동 복구한다.
+   *
+   * 매칭 누락(예: 정원한의원 한방 패턴, 바른얼굴 별칭 어순)으로 SoV가
+   * 실제보다 낮게/0%로 표시되는 사고의 재발을 막기 위한 안전망.
+   *
+   * Cron 권장: 매일 daily-crawl 직후 1회 (dryRun=false)
+   * - 현행 매칭 로직(checkMentionForBackfill)을 그대로 재사용 → 로직 일관성 보장
+   * - true→false 강등은 하지 않음. false→true 복구만 수행 (보수적)
+   */
+  async runSovSelfHeal(options?: { dryRun?: boolean }): Promise<{
+    scannedHospitals: number;
+    flaggedHospitals: number;
+    fixedResponses: number;
+    recalculatedScores: number;
+    details: Array<{ hospital: string; falseNegatives: number; example: string | null }>;
+  }> {
+    const dryRun = options?.dryRun ?? true;
+    this.logger.log(`=== [SoV Self-Heal] 시작 (${dryRun ? 'DRY-RUN' : 'APPLY'}) ===`);
+
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] } },
+      select: { id: true, name: true, nameAliases: true },
+    });
+
+    let flaggedHospitals = 0;
+    let fixedResponses = 0;
+    let recalculatedScores = 0;
+    const details: Array<{ hospital: string; falseNegatives: number; example: string | null }> = [];
+
+    for (const h of hospitals) {
+      const aliases = ((h as any).nameAliases as string[]) || [];
+      const responses = await this.prisma.aIResponse.findMany({
+        where: { hospitalId: h.id, isMentioned: false },
+        select: { id: true, responseText: true, responseDate: true },
+      });
+      if (responses.length === 0) continue;
+
+      const falseNegatives: Array<{ id: string; matched: string | null; responseDate: Date }> = [];
+      for (const r of responses) {
+        const res = this.aiCrawlerService.checkMentionForBackfill(r.responseText, h.name, aliases);
+        if (res.isMentioned) {
+          falseNegatives.push({ id: r.id, matched: res.matchedVariant, responseDate: r.responseDate });
+        }
+      }
+      if (falseNegatives.length === 0) continue;
+
+      flaggedHospitals++;
+      const example = falseNegatives[0].matched;
+      details.push({ hospital: h.name, falseNegatives: falseNegatives.length, example });
+      this.logger.warn(`[SoV Self-Heal] ${h.name}: 매칭누락 ${falseNegatives.length}건 (예: "${example}")`);
+
+      if (!dryRun) {
+        // 1) AIResponse 복구
+        const ids = falseNegatives.map(f => f.id);
+        const upd = await this.prisma.aIResponse.updateMany({
+          where: { id: { in: ids } },
+          data: { isMentioned: true },
+        });
+        fixedResponses += upd.count;
+
+        // 2) 영향 날짜의 DailyScore 재계산 (sovPercent / mentionCount)
+        const days = new Set(falseNegatives.map(f => f.responseDate.toISOString().slice(0, 10)));
+        for (const day of days) {
+          const dayStart = new Date(day + 'T00:00:00.000Z');
+          const dayEnd = new Date(day + 'T23:59:59.999Z');
+          const dayResponses = await this.prisma.aIResponse.findMany({
+            where: { hospitalId: h.id, responseDate: { gte: dayStart, lte: dayEnd } },
+            select: { isMentioned: true },
+          });
+          const total = dayResponses.length;
+          const mentioned = dayResponses.filter(x => x.isMentioned).length;
+          const sov = total > 0 ? (mentioned / total) * 100 : 0;
+          const ds = await this.prisma.dailyScore.findFirst({
+            where: { hospitalId: h.id, scoreDate: { gte: dayStart, lte: dayEnd } },
+          });
+          if (ds) {
+            await this.prisma.dailyScore.update({
+              where: { id: ds.id },
+              data: { sovPercent: sov, mentionCount: mentioned },
+            });
+            recalculatedScores++;
+          }
+        }
+      }
+    }
+
+    this.logger.log(
+      `=== [SoV Self-Heal] 완료: 병원 ${hospitals.length}곳 스캔, ` +
+      `매칭누락 ${flaggedHospitals}곳, 복구 응답 ${fixedResponses}건, DailyScore ${recalculatedScores}건 ===`,
+    );
+
+    return {
+      scannedHospitals: hospitals.length,
+      flaggedHospitals,
+      fixedResponses,
+      recalculatedScores,
+      details,
+    };
   }
 }

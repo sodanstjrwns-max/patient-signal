@@ -1902,6 +1902,10 @@ JSON 형식으로만 답변:
       /([가-힣a-zA-Z]+치과의원)/g,
       /([가-힣a-zA-Z]+치과병원)/g,
       /([가-힣a-zA-Z]+치과)/g,
+      // 한방(한의원/한방병원) — 더 긴 접미사를 먼저 매칭해야 정확함
+      /([가-힣a-zA-Z]+한방병원)/g,
+      /([가-힣a-zA-Z]+한의원)/g,
+      /([가-힣a-zA-Z]+한방)/g,
       /([가-힣a-zA-Z]+병원)/g,
       /([가-힣a-zA-Z]+의원)/g,
       /([가-힣a-zA-Z]+클리닉)/g,
@@ -1919,7 +1923,7 @@ JSON 형식으로만 답변:
       }
     }
     
-    const suffixes = ['치과', '치과의원', '치과병원', '병원', '의원', '클리닉', '메디컬', '덴탈'];
+    const suffixes = ['치과', '치과의원', '치과병원', '한방병원', '한의원', '한방', '병원', '의원', '클리닉', '메디컬', '덴탈'];
     const regionPrefixes = ['서울', '강남', '분당', '판교', '일산', '천안', '수원', '부산', '대구', '인천', '불당', '역삼', '논현', '잠실', '송파', '마포', '영등포', '광주', '대전', '울산', '제주'];
     // 브랜드명 단독 매칭에서 제외할 일반 단어 (오탐 방지)
     const commonWords = new Set(['대학교', '대학', '종합', '연합', '센터', '메디', '종합병원']);
@@ -1930,7 +1934,7 @@ JSON 형식으로만 답변:
       .replace(/[()（）\[\]【】]/g, '')
       .replace(/(본점|지점|본원|분원)$/, '')   // 뒤쪽 지점 접미사 제거
       .replace(/^[가-힣]+(본점|지점)\s*/g, '') // 앞쪽 "불당본점" 제거
-      .replace(/(치과의원|치과병원|치과|병원|의원|클리닉|메디컬|덴탈)([가-힣]{2,3}점)?$/, ''); // 의료기관 접미사 + 지역점 동시 제거
+      .replace(/(치과의원|치과병원|치과|한방병원|한의원|한방|병원|의원|클리닉|메디컬|덴탈)([가-힣]{2,3}점)?$/, ''); // 의료기관 접미사 + 지역점 동시 제거
     
     // "이편한치과 역삼점" → corePatterns에서 "이편한치과"를 잡으므로 
     // coreName 앞에 지점prefix가 남았으면 한번 더 제거
@@ -2079,6 +2083,24 @@ JSON 형식으로만 답변:
 
   private escapeRegex(str: string): string {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  /**
+   * 【재발방지/self-heal 공개 API】
+   * 저장된 응답 텍스트를 현행 매칭 로직으로 재판정한다.
+   * - 별칭(aliases)을 먼저 세팅한 뒤 호출하면 별칭 변형까지 반영됨
+   * - SoV 자기치유 스캐너(self-heal-sov)에서 "isMentioned=false인데
+   *   사실은 병원명이 등장하는" false-negative를 탐지/복구할 때 사용
+   */
+  checkMentionForBackfill(
+    response: string,
+    hospitalName: string,
+    aliases?: string[],
+  ): { isMentioned: boolean; matchedVariant: string | null; mentionCount: number } {
+    if (aliases && aliases.length > 0) {
+      this.setHospitalAliases(hospitalName, aliases);
+    }
+    return this.checkMentionWithVariants(response, hospitalName);
   }
 
   private analyzeResponse(

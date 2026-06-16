@@ -215,6 +215,39 @@ export class SchedulerController {
   }
 
   /**
+   * SoV 자기치유 — 매칭 누락(false-negative) 자동 탐지/복구
+   * Cron 권장: 매일 daily-crawl 직후 1회 (dryRun=false)
+   * 응급/점검 시 dryRun=true 로 탐지만 가능
+   */
+  @Post('self-heal-sov')
+  @ApiOperation({
+    summary: 'SoV 자기치유 (매칭 누락 자동 복구)',
+    description: 'isMentioned=false인데 응답에 병원명이 등장하는 케이스를 탐지/복구. dryRun=true면 탐지만.',
+  })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  @ApiQuery({ name: 'dryRun', required: false, type: Boolean })
+  async selfHealSov(
+    @Headers('x-cron-secret') cronSecret: string,
+    @Query('dryRun') dryRun?: string,
+  ) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const result = await this.schedulerService.runSovSelfHeal({
+      dryRun: dryRun === 'true',
+    });
+
+    return {
+      success: true,
+      dryRun: dryRun === 'true',
+      ...result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
    * 상태 확인 엔드포인트 (공개)
    */
   @Get('status')
