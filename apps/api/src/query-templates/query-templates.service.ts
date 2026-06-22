@@ -275,14 +275,48 @@ export class QueryTemplatesService {
       return { created: 0, queries: [] };
     }
 
-    // 기존 PRESET/AUTO_GENERATED 쿼리 삭제 (비활성화 대신 삭제하여 슬롯 확보)
-    const deleted = await this.prisma.prompt.deleteMany({
+    // 기존 PRESET/AUTO_GENERATED 쿼리 정리
+    // ⚠️ 중요: AIResponse는 prompt에 onDelete:Cascade로 묶여 있으므로,
+    //         프롬프트를 그냥 삭제하면 과거 수집 응답이 전부 연쇄 삭제된다.
+    //         → 응답(이력)이 있는 프롬프트는 '비활성화'만, 응답이 전혀 없는
+    //           프롬프트만 실제 삭제하여 슬롯을 확보한다. (데이터 보존)
+    const targetPrompts = await this.prisma.prompt.findMany({
       where: {
         hospitalId,
         promptType: { in: ['PRESET', 'AUTO_GENERATED'] },
       },
+      select: { id: true, _count: { select: { aiResponses: true } } },
     });
-    this.logger.log(`기존 자동 질문 ${deleted.count}개 삭제`);
+
+    const emptyPromptIds = targetPrompts
+      .filter((p) => p._count.aiResponses === 0)
+      .map((p) => p.id);
+    const usedPromptIds = targetPrompts
+      .filter((p) => p._count.aiResponses > 0)
+      .map((p) => p.id);
+
+    // 응답 이력이 있는 프롬프트: 비활성화만 (데이터 보존)
+    let deactivatedCount = 0;
+    if (usedPromptIds.length > 0) {
+      const deact = await this.prisma.prompt.updateMany({
+        where: { id: { in: usedPromptIds } },
+        data: { isActive: false },
+      });
+      deactivatedCount = deact.count;
+    }
+
+    // 응답 이력이 없는 프롬프트만 실제 삭제 (Cascade로 지울 응답이 없으므로 안전)
+    let deletedCount = 0;
+    if (emptyPromptIds.length > 0) {
+      const del = await this.prisma.prompt.deleteMany({
+        where: { id: { in: emptyPromptIds } },
+      });
+      deletedCount = del.count;
+    }
+    const deleted = { count: deletedCount };
+    this.logger.log(
+      `기존 자동 질문 정리: ${deletedCount}개 삭제(응답없음) / ${deactivatedCount}개 비활성화(응답보존)`,
+    );
 
     // 플랜별 한도 체크
     const planType = hospital.planType || 'FREE';

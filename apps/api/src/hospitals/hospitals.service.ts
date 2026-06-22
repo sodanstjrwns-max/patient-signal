@@ -959,10 +959,29 @@ export class HospitalsService {
     const hospital = await this.prisma.hospital.findUnique({ where: { id: hospitalId } });
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
 
-    // 기존 AUTO_GENERATED 프롬프트 삭제
-    const deleted = await this.prisma.prompt.deleteMany({
+    // 기존 AUTO_GENERATED 프롬프트 정리
+    // ⚠️ AIResponse는 prompt에 onDelete:Cascade로 묶여 있어, 프롬프트를 그냥
+    //    삭제하면 과거 수집 응답이 전부 연쇄 삭제된다. → 응답 이력이 있는
+    //    프롬프트는 비활성화만, 응답 없는 프롬프트만 삭제한다. (데이터 보존)
+    const targetPrompts = await this.prisma.prompt.findMany({
       where: { hospitalId, promptType: 'AUTO_GENERATED' },
+      select: { id: true, _count: { select: { aiResponses: true } } },
     });
+    const emptyIds = targetPrompts.filter((p) => p._count.aiResponses === 0).map((p) => p.id);
+    const usedIds = targetPrompts.filter((p) => p._count.aiResponses > 0).map((p) => p.id);
+
+    if (usedIds.length > 0) {
+      await this.prisma.prompt.updateMany({
+        where: { id: { in: usedIds } },
+        data: { isActive: false },
+      });
+    }
+    let deletedCount = 0;
+    if (emptyIds.length > 0) {
+      const del = await this.prisma.prompt.deleteMany({ where: { id: { in: emptyIds } } });
+      deletedCount = del.count;
+    }
+    const deleted = { count: deletedCount };
 
     // 강화된 프롬프트 재생성 (현재 플랜 기준)
     const dto: CreateHospitalDto = {
