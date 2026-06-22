@@ -279,6 +279,8 @@ export class AICrawlerService {
           await this.prisma.aIResponse.create({
             data: {
               promptId,
+              // 질문 원문을 응답에 영구 스냅샷으로 보존 — prompt가 삭제돼도 어떤 질문이었는지 유지
+              archivedPromptText: promptText,
               hospitalId,
               aiPlatform: platform,
               aiModelVersion: result.model,
@@ -1485,6 +1487,7 @@ JSON만 답변:
       select: {
         id: true,
         promptId: true,
+        archivedPromptText: true,
         aiPlatform: true,
         responseText: true,
         responseDate: true,
@@ -1509,14 +1512,16 @@ JSON만 답변:
     }> = new Map();
 
     for (const resp of missedResponses) {
+      // prompt 연결이 끊긴(삭제된) 응답은 gap 분석에서 스킵 — 원문은 보존되지만 그룹핑 키가 없음
+      if (!resp.promptId) continue;
       const key = resp.promptId;
       if (!promptGaps.has(key)) {
         promptGaps.set(key, {
-          promptText: resp.prompt.promptText,
+          promptText: resp.prompt?.promptText ?? resp.archivedPromptText ?? '(삭제된 질문)',
           promptId: resp.promptId,
           competitors: [],
           platforms: [],
-          category: resp.prompt.specialtyCategory || '기타',
+          category: resp.prompt?.specialtyCategory || '기타',
         });
       }
       const gap = promptGaps.get(key)!;
@@ -2824,6 +2829,7 @@ JSON 형식으로만 답변:
         },
       },
       select: {
+        id: true,
         promptId: true,
         aiPlatform: true,
         isMentioned: true,
@@ -2957,8 +2963,10 @@ JSON 형식으로만 답변:
         // 프롬프트별 다수결
         const promptGroups = new Map<string, boolean[]>();
         platformResponses.forEach(r => {
-          if (!promptGroups.has(r.promptId)) promptGroups.set(r.promptId, []);
-          promptGroups.get(r.promptId)!.push(r.isMentioned);
+          // promptId가 끊긴 응답은 자기 id를 키로 단독 그룹 처리
+          const gk = r.promptId ?? `orphan:${r.id}`;
+          if (!promptGroups.has(gk)) promptGroups.set(gk, []);
+          promptGroups.get(gk)!.push(r.isMentioned);
         });
         
         let mentioned = 0;
@@ -3275,6 +3283,7 @@ JSON 형식으로만 답변:
       },
       select: {
         promptId: true,
+        archivedPromptText: true,
         aiPlatform: true,
         competitorsMentioned: true,
         prompt: { select: { promptText: true, specialtyCategory: true } },
@@ -3295,10 +3304,11 @@ JSON 형식으로만 답변:
     }>();
 
     for (const r of missedResponses) {
+      if (!r.promptId) continue; // 연결 끊긴 응답은 파이프라인 생성에서 스킵
       const key = r.promptId;
       if (!gapMap.has(key)) {
         gapMap.set(key, {
-          promptText: r.prompt?.promptText || '',
+          promptText: r.prompt?.promptText || r.archivedPromptText || '',
           platforms: new Set(),
           competitors: new Set(),
           category: r.prompt?.specialtyCategory || '',

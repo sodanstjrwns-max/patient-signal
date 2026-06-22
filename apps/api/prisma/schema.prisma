@@ -256,7 +256,11 @@ model Prompt {
 // AI 응답 테이블
 model AIResponse {
   id                   String               @id @default(uuid())
-  promptId             String               @map("prompt_id")
+  // ⚠️ 응답 원문 영구 보존 정책: prompt가 삭제돼도 응답은 절대 사라지면 안 됨
+  // promptId를 nullable로 두고 onDelete: SetNull → prompt 삭제 시 응답은 살아남고 연결만 끊김
+  promptId             String?              @map("prompt_id")
+  // prompt가 삭제될 경우를 대비해 질문 원문을 응답 row에 영구 스냅샷으로 보존
+  archivedPromptText   String?              @map("archived_prompt_text")
   hospitalId           String               @map("hospital_id")
   aiPlatform           AIPlatform           @map("ai_platform")
   aiModelVersion       String?              @map("ai_model_version")
@@ -296,7 +300,8 @@ model AIResponse {
   crawlSession         String?              @map("crawl_session") // morning, afternoon, evening
   createdAt            DateTime             @default(now()) @map("created_at")
 
-  prompt   Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  // onDelete: SetNull — prompt 삭제 시 응답 원문은 보존하고 연결만 해제 (cascade 삭제 금지)
+  prompt   Prompt?  @relation(fields: [promptId], references: [id], onDelete: SetNull)
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@index([hospitalId, responseDate])

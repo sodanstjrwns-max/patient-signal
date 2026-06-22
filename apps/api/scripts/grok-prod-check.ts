@@ -40,11 +40,13 @@ async function main() {
 
     console.log(`\n🟢 GROK 최근 응답 ${recent.length}건:`);
     for (const r of recent) {
-      // 별도 조회로 prompt + hospital 가져오기
-      const p = await prisma.prompt.findUnique({
-        where: { id: r.promptId },
-        select: { promptText: true, hospitalId: true },
-      });
+      // 별도 조회로 prompt + hospital 가져오기 (promptId가 끊긴 응답은 스킵)
+      const p = r.promptId
+        ? await prisma.prompt.findUnique({
+            where: { id: r.promptId },
+            select: { promptText: true, hospitalId: true },
+          })
+        : null;
       const h = p?.hospitalId
         ? await prisma.hospital.findUnique({ where: { id: p.hospitalId }, select: { name: true } })
         : null;

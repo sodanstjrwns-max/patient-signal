@@ -2076,7 +2076,9 @@ export class AICrawlerController {
       this.prisma.aIResponse.findMany({
         where: { hospitalId, createdAt: { gte: since } },
         select: {
+          id: true,
           promptId: true,
+          archivedPromptText: true,
           aiPlatform: true,
           isMentioned: true,
           sentimentLabel: true,
@@ -2116,9 +2118,9 @@ export class AICrawlerController {
       }
 
       // 프롬프트 갭
-      const pId = r.promptId;
+      const pId = r.promptId ?? `orphan:${r.id}`;
       if (!promptMap.has(pId)) {
-        promptMap.set(pId, { text: r.prompt?.promptText || '', mentioned: [], notMentioned: [] });
+        promptMap.set(pId, { text: r.prompt?.promptText || r.archivedPromptText || '', mentioned: [], notMentioned: [] });
       }
       if (r.isMentioned) {
         promptMap.get(pId)!.mentioned.push(r.aiPlatform);
@@ -2890,6 +2892,7 @@ export class AICrawlerController {
         responseDate: { gte: since },
       },
       select: {
+        id: true,
         promptId: true,
         isMentioned: true,
         aiPlatform: true,
@@ -2907,10 +2910,11 @@ export class AICrawlerController {
     // 프롬프트별 크롤링 결과 집계
     const promptResultMap = new Map<string, { total: number; mentioned: number; dates: string[] }>();
     for (const r of crawlResponses) {
-      if (!promptResultMap.has(r.promptId)) {
-        promptResultMap.set(r.promptId, { total: 0, mentioned: 0, dates: [] });
+      const prKey = r.promptId ?? `orphan:${r.id}`;
+      if (!promptResultMap.has(prKey)) {
+        promptResultMap.set(prKey, { total: 0, mentioned: 0, dates: [] });
       }
-      const data = promptResultMap.get(r.promptId)!;
+      const data = promptResultMap.get(prKey)!;
       data.total++;
       if (r.isMentioned) data.mentioned++;
       const dateStr = r.responseDate.toISOString().split('T')[0];

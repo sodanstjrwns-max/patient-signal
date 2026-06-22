@@ -627,6 +627,7 @@ export class CompetitorsService {
       take: 20,
       select: {
         promptId: true,
+        archivedPromptText: true,
         competitorsMentioned: true,
         aiPlatform: true,
         prompt: { select: { promptText: true } },
@@ -683,7 +684,7 @@ export class CompetitorsService {
       .sort((a, b) => b.score - a.score),
       gaps: gaps.map((g) => ({
         promptId: g.promptId,
-        promptText: g.prompt.promptText,
+        promptText: g.prompt?.promptText ?? g.archivedPromptText ?? '(삭제된 질문)',
         competitorsMentioned: g.competitorsMentioned,
         platform: g.aiPlatform,
       })),

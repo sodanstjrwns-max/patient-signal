@@ -782,7 +782,7 @@ export class ScoresService {
     }>();
 
     for (const r of missedResponses) {
-      const key = r.prompt?.promptText || r.promptId;
+      const key = r.prompt?.promptText || r.archivedPromptText || r.promptId || r.id;
       const existing = opportunityMap.get(key);
       
       if (existing) {
