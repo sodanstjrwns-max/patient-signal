@@ -170,17 +170,41 @@ export class SchedulerService {
     }
     // 한 번도 크롤된 적 없는 병원 = 0 (epoch) → 최우선
 
+    // ============================================================
+    // 【STARVATION FIX v2】동률(같은 날 마지막 크롤) 병원들 사이에서
+    // 매 사이클마다 무작위로 순서를 섞어 "항상 같은 앞쪽 병원만 처리되고
+    // 뒤쪽은 영원히 굶는" 문제를 해소. lastCrawl이 같은 날짜로 묶인
+    // 38곳+가 createdAt 고정 정렬이라 매번 동일 순서 → 뒤쪽 starvation 발생.
+    // 날짜 단위로 버킷팅 후 버킷 내부는 매 실행마다 셔플.
+    // ============================================================
+    const jitter = new Map<string, number>();
+    for (const h of hospitals) jitter.set(h.id, Math.random());
+    const dayBucket = (t: number) => Math.floor(t / (24 * 60 * 60 * 1000)); // 일 단위
+
+    // 【긴급 구제】3일 이상 크롤이 안 된 "굶주린" 병원은 무조건 최우선으로 끌어올림
+    // (5/31 이후 스케줄러 starvation으로 23일째 방치된 으뜸치과 등 즉시 구제)
+    const STARVED_MS = 3 * 24 * 60 * 60 * 1000;
+    const nowMs = Date.now();
+    const isStarved = (id: string) => {
+      const last = lastCrawlMap.get(id);
+      return last === undefined || nowMs - last > STARVED_MS;
+    };
+
     hospitals.sort((a, b) => {
+      // 0순위: 굶주린 병원(3일+ 미크롤) 최우선 구제
+      const aStarved = isStarved(a.id) ? 0 : 1;
+      const bStarved = isStarved(b.id) ? 0 : 1;
+      if (aStarved !== bStarved) return aStarved - bStarved;
       // 1순위: 오늘 아직 점수 안 난 병원 먼저 (당일 공정성)
       const aDone = scoredTodaySet.has(a.id) ? 1 : 0;
       const bDone = scoredTodaySet.has(b.id) ? 1 : 0;
       if (aDone !== bDone) return aDone - bDone;
-      // 2순위: 가장 오래 크롤 안 된 병원 먼저 (least-recently-crawled)
-      const aLast = lastCrawlMap.get(a.id) ?? 0;
-      const bLast = lastCrawlMap.get(b.id) ?? 0;
-      if (aLast !== bLast) return aLast - bLast;
-      // 3순위: 동률이면 가입 오래된 순 (안정적 tie-break)
-      return a.createdAt.getTime() - b.createdAt.getTime();
+      // 2순위: 가장 오래 크롤 안 된 병원 먼저 (least-recently-crawled, 일 단위)
+      const aLastDay = dayBucket(lastCrawlMap.get(a.id) ?? 0);
+      const bLastDay = dayBucket(lastCrawlMap.get(b.id) ?? 0);
+      if (aLastDay !== bLastDay) return aLastDay - bLastDay;
+      // 3순위: 같은 날 묶인 병원들은 매 사이클 무작위로 섞기 (starvation 방지)
+      return (jitter.get(a.id) ?? 0) - (jitter.get(b.id) ?? 0);
     });
 
     const remaining = hospitals.filter(h => !scoredTodaySet.has(h.id)).length;
