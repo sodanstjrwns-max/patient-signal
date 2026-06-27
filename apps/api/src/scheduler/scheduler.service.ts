@@ -226,18 +226,18 @@ export class SchedulerService {
     let failCount = 0;
     let skippedByBudget = 0;
 
-    for (const hospital of hospitals) {
-      // 예산 초과 체크 — 새 잡을 시작하지 않음
-      if (Date.now() - runStartedAt > RUN_BUDGET_MS) {
-        skippedByBudget++;
-        continue;
-      }
+    // ============================================================
+    // 【확장성 FIX — 병원 단위 병렬화】
+    // 기존: 병원을 1곳씩 순차 처리 + 병원마다 10초 딜레이
+    //   → 93곳×10초=15분이 순수 대기로 낭비, 200곳+에선 감당 불가
+    // 변경: 병원을 HOSPITAL_CONCURRENCY개씩 동시 처리 + 불필요 딜레이 제거
+    //   aliasCache가 병원명 키 기반이라 병렬 충돌 없음(검증 완료)
+    //   프롬프트 레벨은 이미 3개 병렬이므로, 병원 4개 동시 = 실효 처리량 약 3~4배
+    //   → 200곳+도 세션 예산 내 매일 1회 커버 가능
+    // ============================================================
+    const HOSPITAL_CONCURRENCY = 4;
 
-      if (hospital.prompts.length === 0) {
-        this.logger.log(`[${hospital.name}] 활성 프롬프트 없음 - 스킵`);
-        continue;
-      }
-
+    const processOneHospital = async (hospital: typeof hospitals[number]) => {
       try {
         this.logger.log(`[${hospital.name}] 크롤링 시작 (프롬프트 ${hospital.prompts.length}개)`);
         
@@ -280,7 +280,7 @@ export class SchedulerService {
           });
           if (crawlCount >= planLimits.crawlsPerMonth) {
             this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
-            continue;
+            return;
           }
         }
 
@@ -437,8 +437,30 @@ export class SchedulerService {
           error: error.message,
         });
       }
+    };
 
-      await new Promise(resolve => setTimeout(resolve, 10000));
+    // 활성 프롬프트 없는 병원은 미리 제외
+    const crawlTargets = hospitals.filter((h) => {
+      if (h.prompts.length === 0) {
+        this.logger.log(`[${h.name}] 활성 프롬프트 없음 - 스킵`);
+        return false;
+      }
+      return true;
+    });
+
+    // 병원을 HOSPITAL_CONCURRENCY개씩 묶어 배치 병렬 처리
+    for (let i = 0; i < crawlTargets.length; i += HOSPITAL_CONCURRENCY) {
+      // 예산 초과 체크 — 남은 병원은 다음 세션으로 (좀비 생성 방지)
+      if (Date.now() - runStartedAt > RUN_BUDGET_MS) {
+        skippedByBudget += crawlTargets.length - i;
+        break;
+      }
+      const batch = crawlTargets.slice(i, i + HOSPITAL_CONCURRENCY);
+      await Promise.allSettled(batch.map((h) => processOneHospital(h)));
+      // 배치 간 짧은 rate-limit 완충 (AI API 보호)
+      if (i + HOSPITAL_CONCURRENCY < crawlTargets.length) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      }
     }
 
     this.logger.log(
