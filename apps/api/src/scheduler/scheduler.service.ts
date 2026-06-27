@@ -177,9 +177,6 @@ export class SchedulerService {
     // 38곳+가 createdAt 고정 정렬이라 매번 동일 순서 → 뒤쪽 starvation 발생.
     // 날짜 단위로 버킷팅 후 버킷 내부는 매 실행마다 셔플.
     // ============================================================
-    const jitter = new Map<string, number>();
-    for (const h of hospitals) jitter.set(h.id, Math.random());
-    const dayBucket = (t: number) => Math.floor(t / (24 * 60 * 60 * 1000)); // 일 단위
 
     // 【긴급 구제】3일 이상 크롤이 안 된 "굶주린" 병원은 무조건 최우선으로 끌어올림
     // (5/31 이후 스케줄러 starvation으로 23일째 방치된 으뜸치과 등 즉시 구제)
@@ -196,25 +193,32 @@ export class SchedulerService {
       const bStarved = isStarved(b.id) ? 0 : 1;
       if (aStarved !== bStarved) return aStarved - bStarved;
       // 1순위: 오늘 아직 점수 안 난 병원 먼저 (당일 공정성)
+      // → 3세션(9/14/19시)이 누적되며 '오늘 안 돈 병원'을 계속 우선 처리
+      //   하루 안에 전 병원 1회 커버를 목표
       const aDone = scoredTodaySet.has(a.id) ? 1 : 0;
       const bDone = scoredTodaySet.has(b.id) ? 1 : 0;
       if (aDone !== bDone) return aDone - bDone;
-      // 2순위: 가장 오래 크롤 안 된 병원 먼저 (least-recently-crawled, 일 단위)
-      const aLastDay = dayBucket(lastCrawlMap.get(a.id) ?? 0);
-      const bLastDay = dayBucket(lastCrawlMap.get(b.id) ?? 0);
-      if (aLastDay !== bLastDay) return aLastDay - bLastDay;
-      // 3순위: 같은 날 묶인 병원들은 매 사이클 무작위로 섞기 (starvation 방지)
-      return (jitter.get(a.id) ?? 0) - (jitter.get(b.id) ?? 0);
+      // 2순위: 가장 오래 크롤 안 된 병원 먼저 (least-recently-crawled, 정밀 시각)
+      // ⚠️ 일(day) 버킷팅 + 셔플은 동률 병원을 무작위로 섞어 일부만 처리되는
+      //    'starvation 재발' 부작용이 있었음 → 가장 오래 굶은 순서를 '정확히' 지킴
+      const aLast = lastCrawlMap.get(a.id) ?? 0;
+      const bLast = lastCrawlMap.get(b.id) ?? 0;
+      if (aLast !== bLast) return aLast - bLast;
+      // 3순위: 완전 동률(둘 다 한 번도 안 됨)일 때만 가입 순서로 안정 정렬
+      return a.createdAt.getTime() - b.createdAt.getTime();
     });
 
     const remaining = hospitals.filter(h => !scoredTodaySet.has(h.id)).length;
     this.logger.log(`크롤링 대상 병원: ${hospitals.length}개 (오늘 아직 ${remaining}곳 미처리)`);
 
     // ============================================================
-    // 【A안 #3】Render Cron 타임아웃(약 30분) 보호: 24분 이상 경과 시 잔여 잡 중단
-    // → 좀비를 새로 만들지 않음
+    // 【용량 FIX】daily-crawl은 fire-and-forget(HTTP는 즉시 200, 크롤은 백그라운드)
+    // 이라 Render의 30분 HTTP 타임아웃과 무관하게 백그라운드는 계속 돈다.
+    // 기존 24분 예산은 세션당 ~10곳만 처리 → 93곳 중 60곳이 매일 누락되던 주범.
+    // 예산을 50분으로 확대해 세션당 처리량을 대폭 늘림(3세션이면 하루 전 병원 커버).
+    // 다음 세션(5시간 뒤)과 겹치지 않도록 50분으로 안전 설정.
     // ============================================================
-    const RUN_BUDGET_MS = 24 * 60 * 1000;
+    const RUN_BUDGET_MS = 50 * 60 * 1000;
     const runStartedAt = Date.now();
 
     const results: any[] = [];
