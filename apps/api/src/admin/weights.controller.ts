@@ -263,8 +263,9 @@ export class WeightsController {
   // ============ Helpers ============
 
   private validateSecret(secret: string) {
-    const validSecret = process.env.ADMIN_SECRET || 'pf-admin-2026';
-    if (secret !== validSecret) {
+    // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
+    const validSecret = process.env.ADMIN_SECRET;
+    if (!validSecret || secret !== validSecret) {
       throw new UnauthorizedException('Unauthorized');
     }
   }

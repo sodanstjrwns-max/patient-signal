@@ -15,6 +15,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrismaClient } from '@prisma/client';
 import { SourcePipelineService } from './source-pipeline.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 
 const prisma = new PrismaClient();
 
@@ -34,7 +35,7 @@ const ENRICH_STATUS = new Map<string, {
 
 @ApiTags('source-intel')
 @Controller('source-intel')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 export class SourceIntelController {
   constructor(private pipeline: SourcePipelineService) {}
 

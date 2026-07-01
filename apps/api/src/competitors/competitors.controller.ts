@@ -3,11 +3,12 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CompetitorsService } from './competitors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
 @ApiTags('경쟁사 분석')
 @Controller('competitors')
-@UseGuards(JwtAuthGuard, PlanGuard)
+@UseGuards(JwtAuthGuard, HospitalOwnershipGuard, PlanGuard)
 @ApiBearerAuth()
 export class CompetitorsController {
   constructor(private competitorsService: CompetitorsService) {}

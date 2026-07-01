@@ -4,10 +4,11 @@ import { ScoresService } from './scores.service';
 import { ABHSService } from './abhs.service';
 import { FunnelService } from './funnel.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 
 @ApiTags('점수 및 통계')
 @Controller('scores')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 @ApiBearerAuth()
 export class ScoresController {
   constructor(

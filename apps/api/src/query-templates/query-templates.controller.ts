@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/co
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { QueryTemplatesService } from './query-templates.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 
 @ApiTags('쿼리 템플릿 & 진료과 프리셋')
 @Controller('query-templates')
@@ -43,7 +44,7 @@ export class QueryTemplatesController {
   // ==================== 인증 필요 API ====================
 
   @Post('generate/:hospitalId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: '병원 맞춤 쿼리 자동 생성',
@@ -60,7 +61,7 @@ export class QueryTemplatesController {
   }
 
   @Get('suggest/:hospitalId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: '병원 맞춤 질문 제안',

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard as AuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { CitationAnalyzerService } from './citation-analyzer.service';
 import { Throttle } from '@nestjs/throttler';
 
@@ -33,7 +34,7 @@ import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('인용 역분석 & 콘텐츠 캘린더')
 @Controller('citation-analysis')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, HospitalOwnershipGuard)
 @ApiBearerAuth()
 export class CitationAnalyzerController {
   constructor(private citationAnalyzerService: CitationAnalyzerService) {}

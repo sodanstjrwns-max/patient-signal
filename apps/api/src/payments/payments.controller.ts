@@ -18,6 +18,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { SkipThrottle } from '@nestjs/throttler';
 import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { Request } from 'express';
 import * as crypto from 'crypto';
@@ -189,7 +190,7 @@ export class PaymentsController {
    * 구독 상태 조회
    */
   @Get('subscription/:hospitalId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '구독 상태 조회', description: '병원의 구독 상태를 조회합니다' })
   async getSubscriptionStatus(@Param('hospitalId') hospitalId: string) {
@@ -283,8 +284,9 @@ export class PaymentsController {
     @Headers('x-cron-secret') cronSecret: string,
   ) {
     // Cron 인증
-    const expectedSecret = process.env.CRON_SECRET || 'patient-signal-cron-secret-2024';
-    if (cronSecret !== expectedSecret) {
+    // 보안: 하드코딩 fallback 제거 — CRON_SECRET 미설정 시 무조건 차단
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
       throw new UnauthorizedException('Invalid cron secret');
     }
 
@@ -295,7 +297,7 @@ export class PaymentsController {
    * 결제 수단 정보 조회
    */
   @Get('billing/:hospitalId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '결제 수단 조회', description: '등록된 결제 수단 정보를 조회합니다' })
   async getBillingInfo(@Param('hospitalId') hospitalId: string) {

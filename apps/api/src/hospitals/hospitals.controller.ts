@@ -6,6 +6,7 @@ import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { HospitalOwnershipGuard, HospitalParam } from '../common/guards/hospital-ownership.guard';
 
 @ApiTags('병원')
 @Controller('hospitals')
@@ -18,8 +19,9 @@ export class HospitalsController {
   @ApiOperation({ summary: '활성 병원 목록 (Cron용)', description: '자동 크롤링을 위한 활성 병원 목록' })
   async getActiveHospitals(@Headers('x-cron-secret') cronSecret: string) {
     // Cron Secret 검증
-    const validSecret = process.env.CRON_SECRET || 'patient-signal-cron-secret-2024';
-    if (cronSecret !== validSecret) {
+    // 보안: 하드코딩 fallback 제거 — CRON_SECRET 미설정 시 무조건 차단
+    const validSecret = process.env.CRON_SECRET;
+    if (!validSecret || cronSecret !== validSecret) {
       return [];
     }
     return this.hospitalsService.getActiveHospitals();
@@ -45,7 +47,8 @@ export class HospitalsController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @HospitalParam('id')
   @ApiBearerAuth()
   @Get(':id')
   @ApiOperation({ summary: '병원 상세 조회', description: '병원 정보를 조회합니다' })
@@ -54,7 +57,8 @@ export class HospitalsController {
     return this.hospitalsService.findOne(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @HospitalParam('id')
   @ApiBearerAuth()
   @Put(':id')
   @ApiOperation({ summary: '병원 정보 수정', description: '병원 정보를 수정합니다' })
@@ -67,7 +71,8 @@ export class HospitalsController {
     return this.hospitalsService.update(id, userId, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @HospitalParam('id')
   @ApiBearerAuth()
   @Get(':id/dashboard')
   @ApiOperation({ summary: '대시보드 데이터', description: '병원 대시보드 데이터를 조회합니다' })
@@ -76,7 +81,8 @@ export class HospitalsController {
     return this.hospitalsService.getDashboard(id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @HospitalParam('id')
   @ApiBearerAuth()
   @Post(':id/regenerate-prompts')
   @ApiOperation({ 

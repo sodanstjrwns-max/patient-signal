@@ -6,8 +6,11 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "prisma generate && (prisma db push --accept-data-loss || echo 'DB push skipped') && nest build",
-    "db:push": "prisma db push --accept-data-loss",
+    "build": "prisma generate && (prisma db push || echo 'DB push skipped (non-destructive check failed — review schema change manually)') && nest build",
+    "db:push": "prisma db push",
+    "db:push:force": "prisma db push --accept-data-loss",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
     "postinstall": "prisma generate",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

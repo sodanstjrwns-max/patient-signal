@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PlanType } from '@prisma/client';
 
@@ -46,6 +47,8 @@ export class SubscriptionsController {
    * 병원 구독 상태 조회
    */
   @Get('hospital/:hospitalId')
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '병원 구독 상태', description: '특정 병원의 구독 상태를 조회합니다' })
   async getHospitalSubscription(@Param('hospitalId') hospitalId: string) {
     return this.subscriptionsService.getSubscription(hospitalId);

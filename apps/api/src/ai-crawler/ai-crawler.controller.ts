@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 import { LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
@@ -41,7 +42,7 @@ function extractRealDomain(source: any): string | null {
 
 @ApiTags('AI 크롤러')
 @Controller('ai-crawler')
-@UseGuards(JwtAuthGuard, PlanGuard)
+@UseGuards(JwtAuthGuard, HospitalOwnershipGuard, PlanGuard)
 @ApiBearerAuth()
 export class AICrawlerController {
   private readonly logger = new Logger(AICrawlerController.name);

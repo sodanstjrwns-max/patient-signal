@@ -54,3 +54,19 @@ logs/
 
 # OS
 Thumbs.db
+
+# ── 마케팅/강의 자산 (저장소 외부 보관 — AI Drive/별도 저장소 권장) ──
+*.pdf
+aeo_preview_*.png
+pdf_preview*.png
+pdf_final_preview*.png
+check_cover*.png
+check_last*.png
+generate_*.py
+instagram_cards/
+lecture/
+강의자료_*.md
+
+# 로컬 진단 산출물
+apps/api/scripts/*.json
+apps/api/audit-reports/

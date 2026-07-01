@@ -1,4 +1,6 @@
-import { Controller, Post, Get, Headers, UnauthorizedException, Query, Param } from '@nestjs/common';
+import { Controller, Post, Get, Headers, UnauthorizedException, Query, Param, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { ApiTags, ApiOperation, ApiHeader, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SchedulerService } from './scheduler.service';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -90,6 +92,7 @@ export class SchedulerController {
    * 프론트엔드에서 어떤 후보가 생성되는지 확인용
    */
   @Get('matrix-preview/:hospitalId')
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiOperation({ summary: '매트릭스 프롬프트 후보 미리보기 (저장 없이)' })
   @ApiParam({ name: 'hospitalId', description: '병원 ID' })
   async matrixPreview(@Param('hospitalId') hospitalId: string) {

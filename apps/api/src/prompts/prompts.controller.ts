@@ -5,11 +5,12 @@ import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 
 @ApiTags('질문 관리')
 @Controller('prompts')
-@UseGuards(JwtAuthGuard, PlanGuard)
+@UseGuards(JwtAuthGuard, HospitalOwnershipGuard, PlanGuard)
 @ApiBearerAuth()
 export class PromptsController {
   constructor(private promptsService: PromptsService) {}

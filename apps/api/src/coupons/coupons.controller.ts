@@ -64,7 +64,8 @@ export class CouponsController {
   @Post('seed')
   @ApiOperation({ summary: '기본 쿠폰 생성', description: '기본 쿠폰 데이터를 시드합니다' })
   async seedCoupons(@Query('secret') secret: string) {
-    if (secret !== process.env.CRON_SECRET && secret !== 'pf-admin-2026') {
+    // 보안: 하드코딩 시크릿 제거 — CRON_SECRET 미설정 시 무조건 차단
+    if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
       return { error: 'Unauthorized' };
     }
     return this.couponsService.seedCoupons();
