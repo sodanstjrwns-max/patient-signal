@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScoresService } from './scores.service';
 import { ABHSService } from './abhs.service';
@@ -9,6 +10,8 @@ import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guar
 @ApiTags('점수 및 통계')
 @Controller('scores')
 @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+@UseInterceptors(HttpCacheInterceptor)
+@CacheTTL(600) // 【P1-7】모든 GET 응답 10분 캐시 (하루 1회 크롤 후 갱신되는 데이터)
 @ApiBearerAuth()
 export class ScoresController {
   constructor(

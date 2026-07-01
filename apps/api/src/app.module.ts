@@ -6,6 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './common/prisma/prisma.module';
+import { AppCacheModule } from './common/cache/cache.module';
 import { AuthModule } from './auth/auth.module';
 import { HospitalsModule } from './hospitals/hospitals.module';
 import { PromptsModule } from './prompts/prompts.module';
@@ -49,6 +50,7 @@ import { SourceIntelModule } from './source-intel/source-intel.module';
     ]),
     ScheduleModule.forRoot(),
     PrismaModule,
+    AppCacheModule,
     AuthModule,
     HospitalsModule,
     PromptsModule,
