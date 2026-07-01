@@ -344,6 +344,98 @@ export class AdminService {
   }
 
   /**
+   * 【P1-6】LLM 비용 대시보드 — 병원별/플랫폼별/모델별 크롤링 원가 집계
+   * 주의: estimatedCostUsd는 벤더 단가표 기반 "추정치" (근사 토큰 포함)
+   */
+  async getLlmCosts(days: number = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const [byPlatform, byModel, byHospital, totals] = await Promise.all([
+      // 플랫폼별 집계
+      this.prisma.aIResponse.groupBy({
+        by: ['aiPlatform'],
+        where: { createdAt: { gte: since } },
+        _sum: { estimatedCostUsd: true, inputTokens: true, outputTokens: true },
+        _count: { id: true },
+      }),
+      // 모델별 집계
+      this.prisma.aIResponse.groupBy({
+        by: ['aiModelVersion'],
+        where: { createdAt: { gte: since } },
+        _sum: { estimatedCostUsd: true },
+        _count: { id: true },
+      }),
+      // 병원별 집계 (상위 100)
+      this.prisma.aIResponse.groupBy({
+        by: ['hospitalId'],
+        where: { createdAt: { gte: since } },
+        _sum: { estimatedCostUsd: true },
+        _count: { id: true },
+      }),
+      // 전체 합계
+      this.prisma.aIResponse.aggregate({
+        where: { createdAt: { gte: since } },
+        _sum: { estimatedCostUsd: true, inputTokens: true, outputTokens: true },
+        _count: { id: true },
+      }),
+    ]);
+
+    // 병원 이름/플랜 매핑
+    const hospitalIds = byHospital.map((h) => h.hospitalId);
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { id: { in: hospitalIds } },
+      select: { id: true, name: true, planType: true },
+    });
+    const hospitalMap = new Map(hospitals.map((h) => [h.id, h]));
+
+    const hospitalCosts = byHospital
+      .map((h) => ({
+        hospitalId: h.hospitalId,
+        name: hospitalMap.get(h.hospitalId)?.name || '(삭제된 병원)',
+        planType: hospitalMap.get(h.hospitalId)?.planType || 'UNKNOWN',
+        responses: h._count.id,
+        estimatedCostUsd: Math.round((h._sum.estimatedCostUsd || 0) * 10000) / 10000,
+      }))
+      .sort((a, b) => b.estimatedCostUsd - a.estimatedCostUsd)
+      .slice(0, 100);
+
+    const totalCost = totals._sum.estimatedCostUsd || 0;
+    const activeHospitalCount = byHospital.length;
+
+    return {
+      periodDays: days,
+      note: '추정치 — 벤더 단가표 기반, usage 미제공 응답은 문자수 근사',
+      summary: {
+        totalResponses: totals._count.id,
+        totalEstimatedCostUsd: Math.round(totalCost * 100) / 100,
+        totalInputTokens: totals._sum.inputTokens || 0,
+        totalOutputTokens: totals._sum.outputTokens || 0,
+        activeHospitals: activeHospitalCount,
+        avgCostPerHospitalUsd:
+          activeHospitalCount > 0 ? Math.round((totalCost / activeHospitalCount) * 100) / 100 : 0,
+        avgCostPerResponseUsd:
+          totals._count.id > 0 ? Math.round((totalCost / totals._count.id) * 10000) / 10000 : 0,
+      },
+      byPlatform: byPlatform.map((p) => ({
+        platform: p.aiPlatform,
+        responses: p._count.id,
+        estimatedCostUsd: Math.round((p._sum.estimatedCostUsd || 0) * 100) / 100,
+        inputTokens: p._sum.inputTokens || 0,
+        outputTokens: p._sum.outputTokens || 0,
+      })),
+      byModel: byModel
+        .map((m) => ({
+          model: m.aiModelVersion || '(unknown)',
+          responses: m._count.id,
+          estimatedCostUsd: Math.round((m._sum.estimatedCostUsd || 0) * 100) / 100,
+        }))
+        .sort((a, b) => b.estimatedCostUsd - a.estimatedCostUsd),
+      byHospital: hospitalCosts,
+    };
+  }
+
+  /**
    * 대시보드 통계
    */
   async getDashboard() {

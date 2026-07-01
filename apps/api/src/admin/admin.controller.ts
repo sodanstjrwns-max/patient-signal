@@ -24,6 +24,17 @@ export class AdminController {
   }
 
   /**
+   * 【P1-6】LLM 비용 대시보드 — 병원별/플랫폼별 크롤링 원가
+   * GET /api/admin/llm-costs?secret=xxx&days=30
+   */
+  @Public()
+  @Get('llm-costs')
+  async getLlmCosts(@Query('secret') secret: string, @Query('days') days?: string) {
+    this.validateSecret(secret);
+    return this.adminService.getLlmCosts(parseInt(days || '30'));
+  }
+
+  /**
    * 전체 유저 목록
    * GET /api/admin/users?secret=xxx
    */

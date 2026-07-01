@@ -13,6 +13,7 @@ import {
   PLATFORM_WEIGHTS,
   AnswerPositionType,
 } from './types';
+import { buildUsage } from './llm-pricing';
 
 @Injectable()
 export class AICrawlerService {
@@ -317,6 +318,10 @@ export class AICrawlerService {
               answerQualityFactors: result.answerQualityFactors ? (result.answerQualityFactors as any) : undefined,
               // 【Area 2】시간대 세션
               crawlSession: result.crawlSession ?? undefined,
+              // 【P1-6】LLM 비용 추적
+              inputTokens: result.inputTokens ?? null,
+              outputTokens: result.outputTokens ?? null,
+              estimatedCostUsd: result.estimatedCostUsd ?? null,
             },
           });
 
@@ -503,6 +508,23 @@ export class AICrawlerService {
   /**
    * 개별 플랫폼 질의
    */
+  /**
+   * 【P1-6】LLM 비용 추적 — usage 데이터를 결과에 기록
+   * 벤더 usage 미제공 시 프롬프트/응답 문자수 기반 근사치 사용
+   */
+  private applyUsage(
+    result: AIQueryResult,
+    model: string,
+    rawUsage: { inputTokens?: number | null; outputTokens?: number | null } | null,
+    promptText: string,
+    responseText: string,
+  ): void {
+    const usage = buildUsage(model, rawUsage, { prompt: promptText, response: responseText });
+    result.inputTokens = usage.inputTokens;
+    result.outputTokens = usage.outputTokens;
+    result.estimatedCostUsd = usage.estimatedCostUsd;
+  }
+
   private async queryPlatform(
     platform: AIPlatform,
     promptText: string,
@@ -539,6 +561,7 @@ export class AICrawlerService {
     let response = '';
     let model = 'gpt-4o-search-preview';
     let isWebSearch = false;
+    let rawUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
 
     try {
       // 1순위: gpt-4o-search-preview (실제 웹검색, 할루시네이션 최소)
@@ -558,6 +581,10 @@ export class AICrawlerService {
 
       response = completion.choices[0]?.message?.content || '';
       isWebSearch = true;
+      rawUsage = {
+        inputTokens: completion.usage?.prompt_tokens ?? null,
+        outputTokens: completion.usage?.completion_tokens ?? null,
+      };
       this.logger.log(`[ChatGPT] gpt-4o-search-preview 웹 검색 응답 받음`);
     } catch (searchError) {
       this.logger.warn(`[ChatGPT] gpt-4o-search-preview 실패: ${searchError.message}`);
@@ -581,6 +608,10 @@ export class AICrawlerService {
         response = completion.choices[0]?.message?.content || '';
         model = 'gpt-4o-mini-search-preview';
         isWebSearch = true;
+        rawUsage = {
+          inputTokens: completion.usage?.prompt_tokens ?? null,
+          outputTokens: completion.usage?.completion_tokens ?? null,
+        };
         this.logger.log(`[ChatGPT] gpt-4o-mini-search-preview 폴백 응답 받음`);
       } catch (fallbackError) {
         // 최종 폴백: gpt-4o-mini (웹검색 없음 → 할루시네이션 주의)
@@ -600,11 +631,16 @@ export class AICrawlerService {
 
         response = completion.choices[0]?.message?.content || '';
         model = 'gpt-4o-mini';
+        rawUsage = {
+          inputTokens: completion.usage?.prompt_tokens ?? null,
+          outputTokens: completion.usage?.completion_tokens ?? null,
+        };
       }
     }
 
     const result = this.analyzeResponse(response, hospitalName, 'CHATGPT', model);
     result.isWebSearch = isWebSearch;
+    this.applyUsage(result, model, rawUsage, promptText, response);
     
     // 【소스 트래킹】ChatGPT 텍스트에서 소스 힌트 추출
     const textHints = this.extractSourceHintsFromText(response);
@@ -629,6 +665,7 @@ export class AICrawlerService {
     let responseText = '';
     let model = 'claude-haiku-4-5';
     let isWebSearch = false;
+    let claudeUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
 
     try {
       // 1순위: Claude Haiku 4.5 + 웹 검색 도구 (웹검색 지원하는 최저가 모델)
@@ -660,6 +697,10 @@ export class AICrawlerService {
       isWebSearch = message.content.some((block: any) => 
         block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
       );
+      claudeUsage = {
+        inputTokens: message.usage?.input_tokens ?? null,
+        outputTokens: message.usage?.output_tokens ?? null,
+      };
       
       this.logger.log(`[Claude] Haiku 4.5 웹 검색 응답 받음 (검색 사용: ${isWebSearch})`);
     } catch (webSearchError) {
@@ -693,6 +734,10 @@ export class AICrawlerService {
           block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
         );
         model = 'claude-sonnet-4';
+        claudeUsage = {
+          inputTokens: message.usage?.input_tokens ?? null,
+          outputTokens: message.usage?.output_tokens ?? null,
+        };
         this.logger.log(`[Claude] Sonnet 4 폴백 웹검색 응답 받음`);
       } catch (sonnetError) {
         this.logger.warn(`[Claude] Sonnet 4도 실패, 일반 모드 폴백: ${sonnetError.message}`);
@@ -713,6 +758,10 @@ export class AICrawlerService {
 
           responseText = message.content[0].type === 'text' ? message.content[0].text : '';
           model = 'claude-haiku-4-5-no-search';
+          claudeUsage = {
+            inputTokens: message.usage?.input_tokens ?? null,
+            outputTokens: message.usage?.output_tokens ?? null,
+          };
         } catch (fallbackError) {
           this.logger.error(`[Claude] 모든 모드 실패: ${fallbackError.message}`);
           throw fallbackError;
@@ -722,6 +771,7 @@ export class AICrawlerService {
     
     const result = this.analyzeResponse(responseText, hospitalName, 'CLAUDE', model);
     result.isWebSearch = isWebSearch;
+    this.applyUsage(result, model.replace('-no-search', ''), claudeUsage, promptText, responseText);
     
     // 【소스 트래킹】Claude 텍스트에서 소스 힌트 추출
     const textHints = this.extractSourceHintsFromText(responseText);
@@ -778,6 +828,16 @@ export class AICrawlerService {
     
     const result = this.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar');
     result.isWebSearch = true; // Perplexity는 항상 웹 검색 기반
+    this.applyUsage(
+      result,
+      'sonar',
+      {
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+      },
+      promptText,
+      text,
+    );
     
     // citations가 있으면 citedSources에 추가
     if (citations.length > 0) {
@@ -819,6 +879,8 @@ export class AICrawlerService {
     let text = '';
     let isWebSearch = false;
     let geminiSources: SourceItem[] = [];
+    let geminiUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
+    let geminiModel = 'gemini-2.5-flash';
 
     try {
       // STEP 1: Google Search grounding 활성화
@@ -855,6 +917,10 @@ export class AICrawlerService {
       const parts = data.candidates?.[0]?.content?.parts || [];
       text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
       isWebSearch = true;
+      geminiUsage = {
+        inputTokens: data.usageMetadata?.promptTokenCount ?? null,
+        outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
+      };
       
       // 【소스 트래킹】grounding metadata에서 인용 소스 추출
       const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
@@ -905,6 +971,10 @@ export class AICrawlerService {
         if (data.error) throw new Error(`[${data.error.code}] ${data.error.message}`);
         const parts = data.candidates?.[0]?.content?.parts || [];
         text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
+        geminiUsage = {
+          inputTokens: data.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
+        };
       } catch (fallbackError) {
         // STEP 3: 2.5-flash 자체 실패 → 2.5-flash-lite로 최종 폴백
         this.logger.warn(`[Gemini] 2.5-flash 실패: ${fallbackError.message}, 2.5-flash-lite 시도`);
@@ -931,11 +1001,17 @@ export class AICrawlerService {
         if (data.error) throw new Error(`Gemini 전체 실패: [${data.error.code}] ${data.error.message}`);
         const parts = data.candidates?.[0]?.content?.parts || [];
         text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
+        geminiModel = 'gemini-2.5-flash-lite';
+        geminiUsage = {
+          inputTokens: data.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
+        };
       }
     }
 
-    const result = this.analyzeResponse(text, hospitalName, 'GEMINI', 'gemini-2.5-flash');
+    const result = this.analyzeResponse(text, hospitalName, 'GEMINI', geminiModel);
     result.isWebSearch = isWebSearch;
+    this.applyUsage(result, geminiModel, geminiUsage, promptText, text);
     
     // 【소스 트래킹】Gemini 소스 구조화
     if (geminiSources.length > 0) {
@@ -996,6 +1072,16 @@ export class AICrawlerService {
     const result = this.analyzeResponse(text, hospitalName, 'GROK', modelName);
     // Grok은 X 실시간 데이터 + 웹검색 가능. 명시적으로 표시.
     result.isWebSearch = true;
+    this.applyUsage(
+      result,
+      modelName,
+      {
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+      },
+      promptText,
+      text,
+    );
 
     // 텍스트 내 소스 힌트 추출 (Grok citation 미지원 시 텍스트에서 URL 패턴 검출)
     const inlineUrls = this.extractInlineUrls(text, 'GROK');
@@ -1079,6 +1165,16 @@ export class AICrawlerService {
     const result = this.analyzeResponse(text, hospitalName, 'CLOVA_X', 'HCX-005');
     // CLOVA X는 기본 학습 데이터 기반 (네이버 플레이스 통합은 별도 옵션)
     result.isWebSearch = false;
+    this.applyUsage(
+      result,
+      'HCX-005',
+      {
+        inputTokens: data.result?.usage?.promptTokens ?? null,
+        outputTokens: data.result?.usage?.completionTokens ?? null,
+      },
+      promptText,
+      text,
+    );
 
     const inlineUrls = this.extractInlineUrls(text, 'CLOVA_X');
     const textHints = this.extractSourceHintsFromText(text);

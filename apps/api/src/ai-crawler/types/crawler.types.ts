@@ -52,6 +52,10 @@ export interface AIQueryResult {
   answerQualityFactors?: Record<string, number>;
   // 【Area 2】시간대 세션
   crawlSession?: string;
+  // 【P1-6】LLM 비용 추적
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  estimatedCostUsd?: number | null;
 }
 
 // 측정 결과 집계
