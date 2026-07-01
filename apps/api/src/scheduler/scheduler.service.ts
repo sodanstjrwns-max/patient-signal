@@ -1,8 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
 import { WeightCalibrationService } from '../scores/weight-calibration.service';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { CrawlQueueService, CrawlJobData } from './crawl-queue.service';
+import { CacheService } from '../common/cache/cache.service';
 import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES } from '../query-templates/query-templates.service';
 import {
   generateMatrixCandidates,
@@ -15,14 +17,30 @@ import {
 } from './daily-prompt-matrix';
 
 @Injectable()
-export class SchedulerService {
+export class SchedulerService implements OnModuleInit {
   private readonly logger = new Logger(SchedulerService.name);
 
   constructor(
     private prisma: PrismaService,
     private aiCrawlerService: AICrawlerService,
     private weightCalibrationService: WeightCalibrationService,
+    private crawlQueue: CrawlQueueService,
+    private cacheService: CacheService,
   ) {}
+
+  /**
+   * 【P1-4】Bull 큐 워커 등록
+   * REDIS_URL이 있으면 이 프로세스가 큐 잡을 concurrency만큼 병렬 처리
+   */
+  onModuleInit(): void {
+    this.crawlQueue.setProcessor((data: CrawlJobData) =>
+      this.crawlSingleHospital(data.hospitalId, {
+        session: data.session,
+        includeCompetitors: data.includeCompetitors,
+        includeContentGap: data.includeContentGap,
+      }),
+    );
+  }
 
   // ==================== Weekly ABHS Weight Auto-Recalibration ====================
 
@@ -239,195 +257,16 @@ export class SchedulerService {
 
     const processOneHospital = async (hospital: typeof hospitals[number]) => {
       try {
-        this.logger.log(`[${hospital.name}] 크롤링 시작 (프롬프트 ${hospital.prompts.length}개)`);
-        
-        // 크롤링 작업 생성
-        const crawlJob = await this.prisma.crawlJob.create({
-          data: {
-            hospitalId: hospital.id,
-            status: 'RUNNING',
-            totalPrompts: hospital.prompts.length,
-            startedAt: new Date(),
-          },
-        });
-
-        let completed = 0;
-        let failed = 0;
-
-        // 플랜별 플랫폼 제한 적용
-        const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
-        const sessionPlatforms = this.getPlatformsForSession(session);
-        // 플랜 허용 플랫폼과 세션 플랫폼의 교집합
-        const platforms = sessionPlatforms.filter((p: string) => planLimits.platforms.includes(p));
-        
-        this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
-
-        // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
-        if ((hospital as any).nameAliases && (hospital as any).nameAliases.length > 0) {
-          this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
-        }
-
-        // 월간 크롤링 횟수 체크
-        if (planLimits.crawlsPerMonth !== -1) {
-          const now = new Date();
-          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-          const crawlCount = await this.prisma.crawlJob.count({
-            where: {
-              hospitalId: hospital.id,
-              startedAt: { gte: monthStart },
-              status: { in: ['COMPLETED', 'RUNNING'] },
-            },
-          });
-          if (crawlCount >= planLimits.crawlsPerMonth) {
-            this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
-            return;
-          }
-        }
-
-        // ============================================================
-        // 【B안】플랜별 1회 크롤링당 프롬프트 상한 적용
-        //  - FREE: 3개 / STARTER: 5개 / STANDARD: 10개 / PRO·ENTERPRISE: 무제한
-        //  - hospital.prompts 자체를 잘라 chunk 만들기 전에 슬라이스
-        //  - 정렬 기준: id ASC (안정적, 매일 동일 순서로 동일 프롬프트 처리)
-        //  - 잘린 프롬프트는 다음 크롤링 사이클에서 또 동일하게 잘리므로
-        //    추후 'rotate' 모드를 도입할 여지 있음 (현재는 단순 절단)
-        // ============================================================
-        const promptsPerCrawl = (planLimits as any).promptsPerCrawl;
-        const sortedPrompts = [...hospital.prompts].sort((a, b) => a.id.localeCompare(b.id));
-        const effectivePrompts =
-          promptsPerCrawl && promptsPerCrawl !== -1 && sortedPrompts.length > promptsPerCrawl
-            ? sortedPrompts.slice(0, promptsPerCrawl)
-            : sortedPrompts;
-
-        if (effectivePrompts.length < hospital.prompts.length) {
-          this.logger.log(
-            `[${hospital.name}] 플랜(${hospital.planType}) 프롬프트 상한 적용: ` +
-            `${hospital.prompts.length}개 → ${effectivePrompts.length}개 (cap=${promptsPerCrawl})`,
-          );
-        }
-
-        // crawlJob.totalPrompts를 실제 처리할 개수로 보정 (배치 통계 정확도 ↑)
-        if (effectivePrompts.length !== hospital.prompts.length) {
-          await this.prisma.crawlJob.update({
-            where: { id: crawlJob.id },
-            data: { totalPrompts: effectivePrompts.length },
-          });
-        }
-
-        // 【P3-1】크롤링 병렬화 (프롬프트 3개씩 동시 처리, rate-limit 대응)
-        const CONCURRENT_PROMPTS = 3;
-        const promptChunks: typeof effectivePrompts[] = [];
-        for (let i = 0; i < effectivePrompts.length; i += CONCURRENT_PROMPTS) {
-          promptChunks.push(effectivePrompts.slice(i, i + CONCURRENT_PROMPTS));
-        }
-
-        for (const chunk of promptChunks) {
-          const chunkResults = await Promise.allSettled(
-            chunk.map(async (prompt) => {
-              // 【Area 2】플랫폼별 맞춤 프롬프트 적용 (platformSpecific 필드 확인)
-              const effectivePlatforms = (prompt as any).platformSpecific
-                ? platforms.filter((p: string) => p === (prompt as any).platformSpecific)
-                : platforms;
-
-              const crawlResults = await this.aiCrawlerService.queryAllPlatforms(
-                prompt.id,
-                hospital.id,
-                hospital.name,
-                prompt.promptText,
-                effectivePlatforms,
-              );
-              return crawlResults;
-            }),
-          );
-
-          for (const settled of chunkResults) {
-            if (settled.status === 'fulfilled' && settled.value.length > 0) {
-              completed++;
-            } else {
-              failed++;
-              if (settled.status === 'rejected') {
-                this.logger.error(`[${hospital.name}] 프롬프트 실패: ${settled.reason?.message || 'unknown'}`);
-              }
-            }
-          }
-          
-          // 청크 간 rate-limit 방지 딜레이
-          if (promptChunks.indexOf(chunk) < promptChunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        }
-
-        // crawlJob 업데이트
-        await this.prisma.crawlJob.update({
-          where: { id: crawlJob.id },
-          data: { completed, failed },
-        });
-
-        // 작업 완료 처리 (【B안】 effectivePrompts.length 기준으로 실패 판정)
-        await this.prisma.crawlJob.update({
-          where: { id: crawlJob.id },
-          data: {
-            status: failed === effectivePrompts.length ? 'FAILED' : 'COMPLETED',
-            completedAt: new Date(),
-          },
-        });
-
-        // 점수 계산
-        const score = await this.aiCrawlerService.calculateDailyScore(hospital.id);
-
-        const hospitalResult: any = {
-          hospitalId: hospital.id,
-          hospitalName: hospital.name,
-          promptCount: effectivePrompts.length,           // 【B안】실제 처리한 개수
-          promptCountTotal: hospital.prompts.length,      // 【B안】병원이 설정한 전체 개수
-          completed,
-          failed,
-          score,
+        const hospitalResult = await this.crawlSingleHospital(hospital, {
           session,
-        };
-
-        // 저녁 세션에서 경쟁사 AEO 측정 (플랜 체크)
-        if (includeCompetitors && hospital.competitors.length > 0 && planLimits.competitorAEO) {
-          const maxCompetitors = planLimits.maxCompetitors === -1 ? 5 : Math.min(planLimits.maxCompetitors, 5);
-          this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개)`);
-          const competitorResults = [];
-          
-          for (const competitor of hospital.competitors.slice(0, maxCompetitors)) {
-            try {
-              const competitorScore = await this.aiCrawlerService.measureCompetitorAEO(
-                hospital.id,
-                competitor.id,
-                competitor.competitorName,
-              );
-              competitorResults.push({
-                name: competitor.competitorName,
-                ...competitorScore,
-              });
-            } catch (error) {
-              this.logger.error(`[경쟁사] ${competitor.competitorName} 측정 실패: ${error.message}`);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-          
-          hospitalResult.competitorScores = competitorResults;
+          includeCompetitors,
+          includeContentGap,
+        });
+        if (hospitalResult?.skipped) {
+          return; // 월간 한도 등으로 스킵된 병원은 성공/실패 집계 제외
         }
-
-        // 저녁 세션에서 Content Gap 분석 (플랜 체크)
-        if (includeContentGap && planLimits.contentGap) {
-          try {
-            const gaps = await this.aiCrawlerService.generateContentGapGuide(hospital.id);
-            hospitalResult.contentGaps = gaps.length;
-            this.logger.log(`[${hospital.name}] Content Gap ${gaps.length}개 발견`);
-          } catch (error) {
-            this.logger.error(`[Content Gap] 분석 실패: ${error.message}`);
-          }
-        }
-
         results.push(hospitalResult);
         successCount++;
-        this.logger.log(`[${hospital.name}] 크롤링 완료 - 점수: ${score}`);
-
       } catch (error) {
         failCount++;
         this.logger.error(`[${hospital.name}] 크롤링 실패: ${error.message}`);
@@ -447,6 +286,37 @@ export class SchedulerService {
       }
       return true;
     });
+
+    // ============================================================
+    // 【P1-4】Bull 큐 모드 — REDIS_URL이 설정되어 있으면
+    // 병원별 잡을 큐에 등록하고 즉시 반환. 워커가 백그라운드에서 처리.
+    //  - 재시작/배포 중에도 잡 유실 없음 (Redis 영속)
+    //  - jobId 고정으로 같은 세션 중복 실행 방지
+    //  - REDIS_URL 없으면 아래 인라인 배치 루프로 fallback (기존 동작 100% 유지)
+    // ============================================================
+    if (this.crawlQueue.isEnabled()) {
+      const jobs: CrawlJobData[] = crawlTargets.map((h) => ({
+        hospitalId: h.id,
+        hospitalName: h.name,
+        session,
+        includeCompetitors,
+        includeContentGap,
+      }));
+      const queued = await this.crawlQueue.enqueueHospitalCrawls(jobs);
+      this.logger.log(
+        `=== [큐 모드] 크롤 잡 ${queued}/${crawlTargets.length}건 등록 (세션: ${session}) — 워커가 백그라운드 처리 ===`,
+      );
+      return {
+        totalHospitals: hospitals.length,
+        successCount: 0,
+        failCount: 0,
+        session,
+        results: [],
+        mode: 'queue',
+        queuedJobs: queued,
+        zombieCleanup: zombieResult.count,
+      } as any;
+    }
 
     // 병원을 HOSPITAL_CONCURRENCY개씩 묶어 배치 병렬 처리
     for (let i = 0; i < crawlTargets.length; i += HOSPITAL_CONCURRENCY) {
@@ -477,6 +347,237 @@ export class SchedulerService {
       zombieCleanup: zombieResult.count,
       skippedByBudget,
     } as any;
+  }
+
+  /**
+   * 【P1-4】병원 1곳 크롤링 — 재사용 가능한 단위 메서드
+   *
+   * 호출 경로 2가지:
+   *  1) 인라인 모드: runDailyCrawling의 배치 루프에서 hospital 객체째 전달
+   *  2) 큐 모드: Bull 워커가 hospitalId(string)로 호출 → DB에서 재조회
+   *
+   * 기존 processOneHospital 클로저의 전체 로직 (crawlJob 라이프사이클,
+   * 플랜 한도, 세션 플랫폼 교집합, alias, 프롬프트 청크, 점수 계산,
+   * 저녁 경쟁사 AEO + Content Gap) 을 그대로 유지.
+   */
+  async crawlSingleHospital(
+    hospitalOrId: string | any,
+    options: {
+      session: 'morning' | 'afternoon' | 'evening';
+      includeCompetitors: boolean;
+      includeContentGap: boolean;
+    },
+  ): Promise<any> {
+    const { session, includeCompetitors, includeContentGap } = options;
+
+    // 큐 모드에서는 hospitalId만 넘어오므로 관계 포함 재조회
+    const hospital =
+      typeof hospitalOrId === 'string'
+        ? await this.prisma.hospital.findUnique({
+            where: { id: hospitalOrId },
+            include: {
+              prompts: { where: { isActive: true } },
+              competitors: { where: { isActive: true } },
+            },
+          })
+        : hospitalOrId;
+
+    if (!hospital) {
+      throw new Error(`병원을 찾을 수 없습니다: ${hospitalOrId}`);
+    }
+    if (!hospital.prompts || hospital.prompts.length === 0) {
+      this.logger.log(`[${hospital.name}] 활성 프롬프트 없음 - 스킵`);
+      return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'no-prompts' };
+    }
+
+    this.logger.log(`[${hospital.name}] 크롤링 시작 (프롬프트 ${hospital.prompts.length}개)`);
+
+    // 크롤링 작업 생성
+    const crawlJob = await this.prisma.crawlJob.create({
+      data: {
+        hospitalId: hospital.id,
+        status: 'RUNNING',
+        totalPrompts: hospital.prompts.length,
+        startedAt: new Date(),
+      },
+    });
+
+    let completed = 0;
+    let failed = 0;
+
+    // 플랜별 플랫폼 제한 적용
+    const planLimits =
+      (PlanGuard.PLAN_LIMITS as any)[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
+    const sessionPlatforms = this.getPlatformsForSession(session);
+    // 플랜 허용 플랫폼과 세션 플랫폼의 교집합
+    const platforms = sessionPlatforms.filter((p: string) => planLimits.platforms.includes(p));
+
+    this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
+
+    // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
+    if ((hospital as any).nameAliases && (hospital as any).nameAliases.length > 0) {
+      this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
+    }
+
+    // 월간 크롤링 횟수 체크
+    if (planLimits.crawlsPerMonth !== -1) {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const crawlCount = await this.prisma.crawlJob.count({
+        where: {
+          hospitalId: hospital.id,
+          startedAt: { gte: monthStart },
+          status: { in: ['COMPLETED', 'RUNNING'] },
+        },
+      });
+      // 방금 만든 crawlJob도 RUNNING으로 집계되므로 > 비교
+      if (crawlCount > planLimits.crawlsPerMonth) {
+        this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
+        await this.prisma.crawlJob.update({
+          where: { id: crawlJob.id },
+          data: { status: 'FAILED', completedAt: new Date() },
+        });
+        return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'monthly-limit' };
+      }
+    }
+
+    // ============================================================
+    // 【B안】플랜별 1회 크롤링당 프롬프트 상한 적용
+    //  - FREE: 3개 / STARTER: 5개 / STANDARD: 10개 / PRO·ENTERPRISE: 무제한
+    // ============================================================
+    const promptsPerCrawl = (planLimits as any).promptsPerCrawl;
+    const sortedPrompts = [...hospital.prompts].sort((a: any, b: any) => a.id.localeCompare(b.id));
+    const effectivePrompts =
+      promptsPerCrawl && promptsPerCrawl !== -1 && sortedPrompts.length > promptsPerCrawl
+        ? sortedPrompts.slice(0, promptsPerCrawl)
+        : sortedPrompts;
+
+    if (effectivePrompts.length < hospital.prompts.length) {
+      this.logger.log(
+        `[${hospital.name}] 플랜(${hospital.planType}) 프롬프트 상한 적용: ` +
+        `${hospital.prompts.length}개 → ${effectivePrompts.length}개 (cap=${promptsPerCrawl})`,
+      );
+    }
+
+    // crawlJob.totalPrompts를 실제 처리할 개수로 보정 (배치 통계 정확도 ↑)
+    if (effectivePrompts.length !== hospital.prompts.length) {
+      await this.prisma.crawlJob.update({
+        where: { id: crawlJob.id },
+        data: { totalPrompts: effectivePrompts.length },
+      });
+    }
+
+    // 【P3-1】크롤링 병렬화 (프롬프트 3개씩 동시 처리, rate-limit 대응)
+    const CONCURRENT_PROMPTS = 3;
+    const promptChunks: typeof effectivePrompts[] = [];
+    for (let i = 0; i < effectivePrompts.length; i += CONCURRENT_PROMPTS) {
+      promptChunks.push(effectivePrompts.slice(i, i + CONCURRENT_PROMPTS));
+    }
+
+    for (const chunk of promptChunks) {
+      const chunkResults = await Promise.allSettled(
+        chunk.map(async (prompt: any) => {
+          // 【Area 2】플랫폼별 맞춤 프롬프트 적용 (platformSpecific 필드 확인)
+          const effectivePlatforms = (prompt as any).platformSpecific
+            ? platforms.filter((p: string) => p === (prompt as any).platformSpecific)
+            : platforms;
+
+          const crawlResults = await this.aiCrawlerService.queryAllPlatforms(
+            prompt.id,
+            hospital.id,
+            hospital.name,
+            prompt.promptText,
+            effectivePlatforms,
+          );
+          return crawlResults;
+        }),
+      );
+
+      for (const settled of chunkResults) {
+        if (settled.status === 'fulfilled' && settled.value.length > 0) {
+          completed++;
+        } else {
+          failed++;
+          if (settled.status === 'rejected') {
+            this.logger.error(`[${hospital.name}] 프롬프트 실패: ${settled.reason?.message || 'unknown'}`);
+          }
+        }
+      }
+
+      // 청크 간 rate-limit 방지 딜레이
+      if (promptChunks.indexOf(chunk) < promptChunks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+
+    // crawlJob 업데이트 + 완료 처리 (【B안】 effectivePrompts.length 기준으로 실패 판정)
+    await this.prisma.crawlJob.update({
+      where: { id: crawlJob.id },
+      data: {
+        completed,
+        failed,
+        status: failed === effectivePrompts.length ? 'FAILED' : 'COMPLETED',
+        completedAt: new Date(),
+      },
+    });
+
+    // 점수 계산
+    const score = await this.aiCrawlerService.calculateDailyScore(hospital.id);
+
+    const hospitalResult: any = {
+      hospitalId: hospital.id,
+      hospitalName: hospital.name,
+      promptCount: effectivePrompts.length,           // 【B안】실제 처리한 개수
+      promptCountTotal: hospital.prompts.length,      // 【B안】병원이 설정한 전체 개수
+      completed,
+      failed,
+      score,
+      session,
+    };
+
+    // 저녁 세션에서 경쟁사 AEO 측정 (플랜 체크)
+    if (includeCompetitors && hospital.competitors?.length > 0 && planLimits.competitorAEO) {
+      const maxCompetitors = planLimits.maxCompetitors === -1 ? 5 : Math.min(planLimits.maxCompetitors, 5);
+      this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개)`);
+      const competitorResults = [];
+
+      for (const competitor of hospital.competitors.slice(0, maxCompetitors)) {
+        try {
+          const competitorScore = await this.aiCrawlerService.measureCompetitorAEO(
+            hospital.id,
+            competitor.id,
+            competitor.competitorName,
+          );
+          competitorResults.push({
+            name: competitor.competitorName,
+            ...competitorScore,
+          });
+        } catch (error) {
+          this.logger.error(`[경쟁사] ${competitor.competitorName} 측정 실패: ${error.message}`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      hospitalResult.competitorScores = competitorResults;
+    }
+
+    // 저녁 세션에서 Content Gap 분석 (플랜 체크)
+    if (includeContentGap && planLimits.contentGap) {
+      try {
+        const gaps = await this.aiCrawlerService.generateContentGapGuide(hospital.id);
+        hospitalResult.contentGaps = gaps.length;
+        this.logger.log(`[${hospital.name}] Content Gap ${gaps.length}개 발견`);
+      } catch (error) {
+        this.logger.error(`[Content Gap] 분석 실패: ${error.message}`);
+      }
+    }
+
+    // 【P1-7】크롤 완료 → 해당 병원의 캐시된 점수/응답 무효화 (신선 데이터 즉시 반영)
+    await this.cacheService.invalidateHospital(hospital.id).catch(() => undefined);
+
+    this.logger.log(`[${hospital.name}] 크롤링 완료 - 점수: ${score}`);
+    return hospitalResult;
   }
 
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {

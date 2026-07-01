@@ -8,6 +8,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
+import { CacheService } from '../common/cache/cache.service';
 import { LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
@@ -50,6 +51,7 @@ export class AICrawlerController {
   constructor(
     private aiCrawlerService: AICrawlerService,
     private prisma: PrismaService,
+    private cacheService: CacheService,
   ) {}
 
   @Get('status')
@@ -3305,5 +3307,8 @@ export class AICrawlerController {
     if (completed > 0) {
       await this.aiCrawlerService.calculateDailyScore(hospital.id);
     }
+
+    // 【P1-7】수동 크롤 완료 → 해당 병원 캐시 무효화 (신선 데이터 즉시 반영)
+    await this.cacheService.invalidateHospital(hospital.id).catch(() => undefined);
   }
 }

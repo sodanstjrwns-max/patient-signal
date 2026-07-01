@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { ApiTags, ApiOperation, ApiHeader, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SchedulerService } from './scheduler.service';
+import { CrawlQueueService } from './crawl-queue.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import {
   generateMatrixCandidates,
@@ -15,6 +16,7 @@ import {
 export class SchedulerController {
   constructor(
     private schedulerService: SchedulerService,
+    private crawlQueue: CrawlQueueService,
     private prisma: PrismaService,
   ) {}
 
@@ -246,6 +248,25 @@ export class SchedulerController {
       success: true,
       dryRun: dryRun === 'true',
       ...result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * 【P1-4】크롤 큐 상태 조회 (운영 모니터링용)
+   */
+  @Get('queue-status')
+  @ApiOperation({ summary: '크롤 큐 상태 (Bull/Redis) — 큐 모드일 때만 카운트 반환' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async queueStatus(@Headers('x-cron-secret') cronSecret: string) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+    const stats = await this.crawlQueue.getStats();
+    return {
+      mode: stats.enabled ? 'queue (Redis)' : 'inline (fallback)',
+      ...stats,
       timestamp: new Date().toISOString(),
     };
   }
