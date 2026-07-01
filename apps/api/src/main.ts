@@ -3,6 +3,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { StripInternalFieldsInterceptor } from './common/interceptors/strip-internal-fields.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -12,6 +13,9 @@ async function bootstrap() {
 
   // C2: 글로벌 에러 필터 등록
   app.useGlobalFilters(new AllExceptionsFilter());
+
+  // 【보안】LLM 원가 등 운영자 전용 필드를 유저 응답에서 전역 제거 (/api/admin/* 제외)
+  app.useGlobalInterceptors(new StripInternalFieldsInterceptor());
 
   // CORS 설정 - 여러 도메인 허용
   app.enableCors({

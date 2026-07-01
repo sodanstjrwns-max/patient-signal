@@ -299,6 +299,10 @@ model AIResponse {
   // 【Area 4】시간대 세션 (morning/afternoon/evening)
   crawlSession         String?              @map("crawl_session") // morning, afternoon, evening
   // 【P1-6】LLM 비용 추적 — 병원당/플랫폼당 원가 파악용
+  // ⚠️⚠️ 운영자 전용 내부 데이터 — 절대 유저 대면 API 응답에 포함 금지! ⚠️⚠️
+  // 이 필드들은 /api/admin/llm-costs (ADMIN_SECRET 필요)에서만 노출한다.
+  // AIResponse를 반환하는 새 엔드포인트를 만들 때 반드시 select로 필드를 명시할 것.
+  // (select 없이 findMany 결과를 그대로 return하면 원가가 고객에게 노출됨)
   inputTokens          Int?                 @map("input_tokens") // 입력 토큰 수 (usage 미제공 시 근사치)
   outputTokens         Int?                 @map("output_tokens") // 출력 토큰 수
   estimatedCostUsd     Float?               @map("estimated_cost_usd") // 추정 비용 (USD)
