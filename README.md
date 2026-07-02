@@ -188,11 +188,58 @@ cd apps/api && npm run db:migrate:deploy
 
 ---
 
+## 2026.07 본질 강화 — 측정→처방→실행→재측정 루프 (NEW)
+
+> "잘 재는 툴"에서 "재서 키워주는 시스템"으로 — 제품의 본질을 완성하는 두 개의 축.
+
+### 1. 액션 임팩트 트래커 (`ActionTrackerService`)
+플레이북 처방이 실제로 SoV를 올렸는지 제품 안에서 인과를 증명하는 루프.
+
+| 단계 | 동작 |
+|------|------|
+| **실행 시작** | 퍼널 페이지 플레이북의 "실행 시작 — 효과 측정하기" 버튼 → 해당 퍼널 단계의 최근 14일 SoV/감성/R3을 **베이스라인 스냅샷으로 동결** |
+| **자동 재측정** | 매일 크롤링 후 Cron이 진행중 액션의 최근 14일 지표를 재측정 (시작 시점 이후 데이터만) |
+| **판정** | 14일 경과 + 표본 10개 이상 시: ΔSoV ≥ +3%p → `IMPROVED`, ≤ -3%p → `DECLINED`, 그 사이 `FLAT` |
+| **증명** | "실행한 액션 N개에서 총 SoV +X%p 상승 검증됨" 카드를 대시보드에 노출 → 해지 방어 |
+
+### 2. 실측 퍼널 벤치마크 (`BenchmarkService`) — 데이터 해자
+하드코딩 벤치마크(15/30/25/40%)를 전체 고객 병원 실측 분포로 대체.
+
+- 진료과 × 퍼널 단계별 최근 30일 SoV 분포에서 **p25/p50/p75 percentile** 집계
+- 벤치마크 = **p75 (상위 25% 병원 수준)** — "동일 진료과 상위 25%가 목표"
+- 표본 조건: 진료과별 병원 5곳+ (병원당 단계별 응답 10개+) — 미달 시 기본값 자동 fallback
+- 병원별 "동료 중 상위 25%" 포지션 문구 + 프론트 "실측" 배지
+- **병원이 쌓일수록 저절로 정교해지는, 경쟁사가 못 베끼는 자산**
+
+### 신규 API
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/scores/:hospitalId/action-impacts` | 액션 임팩트 목록 + 성과 요약 |
+| POST | `/scores/:hospitalId/action-impacts` | 액션 추적 시작 (베이스라인 스냅샷) |
+| PATCH | `/scores/:hospitalId/action-impacts/:actionId` | 완료/중단 (완료 시 최종 성과 동결) |
+| GET | `/scores/:hospitalId/benchmarks` | 진료과 실측 벤치마크 (p25/p50/p75) |
+| POST | `/scheduler/daily-impact-loop` | (Cron) 액션 재측정 + 벤치마크 재집계 |
+
+### 배포 체크리스트
+```bash
+# 1. 마이그레이션 (improvement_actions 컴럼 15개 + funnel_benchmarks 테이블)
+cd apps/api && npm run db:migrate:deploy
+
+# 2. Render Cron 추가 — 매일 evening 크롤 직후 (예: KST 21:00)
+curl -X POST https://<api>/scheduler/daily-impact-loop -H "x-cron-secret: $CRON_SECRET"
+```
+
+---
+
 ## 다음 단계
 
 - [x] ~~대시보드 SoV 중심 리디자인 (Single North-Star Metric)~~ Phase 3-C 완료
 - [x] ~~BullMQ 백그라운드 크롤링~~ 2026.07 P1-4 완료 (REDIS_URL 설정 시 활성)
 - [x] ~~LLM 비용 추적 + 관리자 대시보드 API~~ 2026.07 P1-6 완료
+- [x] ~~액션 효과 재측정 루프 (측정→처방→실행→재측정)~~ 2026.07 본질 강화 1 완료
+- [x] ~~실측 퍼널 벤치마크 (진료과×단계 percentile)~~ 2026.07 본질 강화 2 완료
+- [ ] 신환 실측 연동 (온보딩 월 신환 수 입력 → 기회손실 캨리브레이션)
+- [ ] 지역(시군구) 차원 벤치마크 세분화 (표본 충분 시)
 - [ ] 네이버 Cue 스크래핑 추가
 - [ ] 카카오톡 알림톡 연동
 - [ ] 월간 PDF 리포트 자동 생성/발송
@@ -202,4 +249,4 @@ cd apps/api && npm run db:migrate:deploy
 
 ---
 
-*Patient Signal by 페이션트퍼널 | 2026.07.02 P0/P1 보안·인프라 대개편*
+*Patient Signal by 페이션트퍼널 | 2026.07.02 본질 강화: 액션 임팩트 루프 + 실측 벤치마크*
