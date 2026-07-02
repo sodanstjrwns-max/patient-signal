@@ -2406,17 +2406,28 @@ JSON 형식으로만 답변:
       ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length 
       : 0;
 
-    // 3. 감성 점수 (0~100)
+    // 【공짜점수 FIX】감성·인용 점수는 "언급된 응답"에만 게이팅
+    // 기존: 언급 0회여도 감성 기본값 50 × 15% ≈ 7.5점 + 인용점수까지 공짜 지급
+    //       → "언급 0회인데 10점" 이라는 직관에 어긋나는 점수 발생
+    // 변경: 미언급 병원은 감성/인용 축 자체가 0 → 점수가 0에 수렴 (정직한 점수)
+    const anyMention = responses.some(r => r.isMentioned);
+
+    // 3. 감성 점수 (0~100) — 언급된 응답의 감성만 반영
     const sentimentScores = responses
-      .filter(r => r.sentimentScore !== null)
+      .filter(r => r.isMentioned && r.sentimentScore !== null)
       .map(r => ((r.sentimentScore! + 1) / 2) * 100);
     const avgSentimentScore = sentimentScores.length > 0
       ? sentimentScores.reduce((a, b) => a + b, 0) / sentimentScores.length
-      : 50;
+      : (anyMention ? 50 : 0); // 언급은 있는데 감성분석 누락 시에만 중립 50
 
-    // 4. 인용 점수 (0~100)
-    const citationScores = responses.map(r => Math.min(100, (r.citedSources?.length || 0) * 20));
-    const avgCitationScore = citationScores.reduce((a, b) => a + b, 0) / citationScores.length;
+    // 4. 인용 점수 (0~100) — 언급된 응답의 인용만 가치 있음
+    //    (미언급 응답의 인용 = 경쟁사/일반 정보 소스일 뿐, 우리 병원 가시성과 무관)
+    const mentionedForCitation = responses.filter(r => r.isMentioned);
+    const avgCitationScore = mentionedForCitation.length > 0
+      ? mentionedForCitation
+          .map(r => Math.min(100, (r.citedSources?.length || 0) * 20))
+          .reduce((a, b) => a + b, 0) / mentionedForCitation.length
+      : 0;
 
     // 【고도화 #2】가시성 점수 리밸런싱
     // 인용(citation)은 Perplexity만 유리하므로 가중치 축소

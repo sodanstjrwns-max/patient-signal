@@ -38,6 +38,16 @@ export class GrokStrategy implements PlatformStrategy {
         ],
         temperature: 0,
         stream: false,
+        // 【측정 정확도 FIX】Live Search 활성화 — 실제 유저의 Grok과 동일 조건
+        // 이게 없으면 훈련 데이터만으로 답변 → 언급률 3%로 왜곡되던 원인
+        // mode:'auto' = 모델이 필요 시 웹/X 검색 (실제 사용자 기본값과 동일)
+        // 비용 주의: Live Search는 소스당 과금($0.025/source) — max 10개로 상한
+        //    (GROK_SEARCH_MAX_RESULTS env로 조정 가능)
+        search_parameters: {
+          mode: 'auto',
+          return_citations: true,
+          max_search_results: parseInt(process.env.GROK_SEARCH_MAX_RESULTS || '10', 10),
+        },
       }),
     });
 
@@ -50,8 +60,16 @@ export class GrokStrategy implements PlatformStrategy {
     const text = data.choices?.[0]?.message?.content || '';
 
     const result = this.ctx.analyzeResponse(text, hospitalName, 'GROK', modelName);
-    // Grok은 X 실시간 데이터 + 웹검색 가능. 명시적으로 표시.
+    // Live Search 활성화 상태로 질의함 (search_parameters.mode=auto)
     result.isWebSearch = true;
+
+    // Live Search 인용(citations) 수집 — 응답 최상위 citations 배열로 반환됨
+    const apiCitations: string[] = Array.isArray(data.citations)
+      ? data.citations.filter((u: any) => typeof u === 'string')
+      : [];
+    if (apiCitations.length > 0) {
+      result.citedSources = [...new Set([...result.citedSources, ...apiCitations])].slice(0, 15);
+    }
     this.ctx.applyUsage(
       result,
       modelName,
@@ -75,7 +93,9 @@ export class GrokStrategy implements PlatformStrategy {
       estimatedSources: this.ctx.classifySources(inlineUrls, textHints.hintKeywords),
     };
 
-    this.ctx.logger.log(`[Grok] 응답 ${text.length}자, URL ${inlineUrls.length}개 추출`);
+    this.ctx.logger.log(
+      `[Grok] 응답 ${text.length}자, citations ${apiCitations.length}개 + 인라인 URL ${inlineUrls.length}개 추출`,
+    );
     return result;
   }
 }
