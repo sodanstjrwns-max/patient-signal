@@ -14,6 +14,16 @@ import {
   AnswerPositionType,
 } from './types';
 import { buildUsage } from './llm-pricing';
+import {
+  PlatformStrategy,
+  PlatformQueryContext,
+  ChatGPTStrategy,
+  ClaudeStrategy,
+  PerplexityStrategy,
+  GeminiStrategy,
+  GrokStrategy,
+  ClovaXStrategy,
+} from './strategies';
 
 @Injectable()
 export class AICrawlerService {
@@ -29,11 +39,47 @@ export class AICrawlerService {
   private readonly CB_FAILURE_THRESHOLD = 5;  // 5번 연속 실패 시 회로 개방
   private readonly CB_RECOVERY_TIME = 60000;  // 60초 후 반개방으로 전환
 
+  // 【P1-5】플랫폼별 질의 전략 (벤더 API 호출/파싱은 전략이, 분석은 공용 메서드가 담당)
+  private strategies = new Map<AIPlatform, PlatformStrategy>();
+
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
   ) {
     this.initializeApis();
+    this.initializeStrategies();
+  }
+
+  /**
+   * 【P1-5】전략 초기화 — 공유 분석기를 컨텍스트로 주입
+   * 새 플랫폼 추가 시: 전략 클래스  1개 생성 + 아래 등록 1줄만 추가하면 끝
+   */
+  private initializeStrategies(): void {
+    const ctx: PlatformQueryContext = {
+      logger: this.logger,
+      getOpenAI: () => this.getOpenAI(),
+      getAnthropic: () => this.getAnthropic(),
+      analyzeResponse: (text, hospitalName, platform, modelVersion) =>
+        this.analyzeResponse(text, hospitalName, platform, modelVersion),
+      extractSourceHintsFromText: (text) => this.extractSourceHintsFromText(text),
+      extractInlineUrls: (text, platform) => this.extractInlineUrls(text, platform),
+      classifySources: (sources, hintKeywords) => this.classifySources(sources, hintKeywords),
+      extractDomain: (url) => this.extractDomain(url),
+      applyUsage: (result, model, rawUsage, promptText, responseText) =>
+        this.applyUsage(result, model, rawUsage, promptText, responseText),
+    };
+
+    const strategyList: PlatformStrategy[] = [
+      new ChatGPTStrategy(ctx),
+      new ClaudeStrategy(ctx),
+      new PerplexityStrategy(ctx),
+      new GeminiStrategy(ctx),
+      new GrokStrategy(ctx),
+      new ClovaXStrategy(ctx),
+    ];
+    for (const s of strategyList) {
+      this.strategies.set(s.platform, s);
+    }
   }
 
   private initializeApis() {
@@ -530,666 +576,14 @@ export class AICrawlerService {
     promptText: string,
     hospitalName: string,
   ): Promise<AIQueryResult> {
-    switch (platform) {
-      case 'CHATGPT':
-        return this.withRetry(() => this.queryChatGPT(promptText, hospitalName), 'ChatGPT');
-      case 'CLAUDE':
-        return this.withRetry(() => this.queryClaude(promptText, hospitalName), 'Claude');
-      case 'PERPLEXITY':
-        return this.withRetry(() => this.queryPerplexity(promptText, hospitalName), 'Perplexity');
-      case 'GEMINI':
-        return this.withRetry(() => this.queryGemini(promptText, hospitalName), 'Gemini');
-      case 'GROK':
-        return this.withRetry(() => this.queryGrok(promptText, hospitalName), 'Grok');
-      case 'CLOVA_X':
-        return this.withRetry(() => this.queryClovaX(promptText, hospitalName), 'CLOVA X');
-      default:
-        throw new Error(`지원하지 않는 플랫폼: ${platform}`);
+    // 【P1-5】전략 패턴 — 플랫폼별 API 호출/파싱은 strategies/ 폴더의 클래스가 담당
+    const strategy = this.strategies.get(platform);
+    if (!strategy) {
+      throw new Error(`지원하지 않는 플랫폼: ${platform}`);
     }
+    return this.withRetry(() => strategy.query(promptText, hospitalName), strategy.displayName);
   }
 
-  // ==================== 개선2: 시스템 프롬프트 제거 + 개선1: temperature 0 ====================
-
-  /**
-   * ChatGPT 질의 - gpt-4o-search-preview 메인 (실제 웹검색으로 할루시네이션 최소화)
-   */
-  private async queryChatGPT(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    if (!this.openai) throw new Error('OpenAI API가 초기화되지 않았습니다');
-    
-    this.logger.log(`[ChatGPT] API 호출 시작 (gpt-4o-search-preview)`);
-    
-    let response = '';
-    let model = 'gpt-4o-search-preview';
-    let isWebSearch = false;
-    let rawUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
-
-    try {
-      // 1순위: gpt-4o-search-preview (실제 웹검색, 할루시네이션 최소)
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4o-search-preview',
-        messages: [
-          {
-            role: 'user',
-            content: promptText,
-          },
-        ],
-        max_tokens: 2000,
-        web_search_options: {
-          search_context_size: 'medium',
-        },
-      } as any);
-
-      response = completion.choices[0]?.message?.content || '';
-      isWebSearch = true;
-      rawUsage = {
-        inputTokens: completion.usage?.prompt_tokens ?? null,
-        outputTokens: completion.usage?.completion_tokens ?? null,
-      };
-      this.logger.log(`[ChatGPT] gpt-4o-search-preview 웹 검색 응답 받음`);
-    } catch (searchError) {
-      this.logger.warn(`[ChatGPT] gpt-4o-search-preview 실패: ${searchError.message}`);
-      
-      try {
-        // 2순위 폴백: gpt-4o-mini-search-preview (비용 절감 웹검색)
-        const completion = await this.openai.chat.completions.create({
-          model: 'gpt-4o-mini-search-preview',
-          messages: [
-            {
-              role: 'user',
-              content: promptText,
-            },
-          ],
-          max_tokens: 2000,
-          web_search_options: {
-            search_context_size: 'medium',
-          },
-        } as any);
-
-        response = completion.choices[0]?.message?.content || '';
-        model = 'gpt-4o-mini-search-preview';
-        isWebSearch = true;
-        rawUsage = {
-          inputTokens: completion.usage?.prompt_tokens ?? null,
-          outputTokens: completion.usage?.completion_tokens ?? null,
-        };
-        this.logger.log(`[ChatGPT] gpt-4o-mini-search-preview 폴백 응답 받음`);
-      } catch (fallbackError) {
-        // 최종 폴백: gpt-4o-mini (웹검색 없음 → 할루시네이션 주의)
-        this.logger.warn(`[ChatGPT] 검색 모델 전부 실패, gpt-4o-mini 폴백: ${fallbackError.message}`);
-        
-        const completion = await this.openai.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'user',
-              content: promptText,
-            },
-          ],
-          temperature: 0,
-          max_tokens: 2000,
-        });
-
-        response = completion.choices[0]?.message?.content || '';
-        model = 'gpt-4o-mini';
-        rawUsage = {
-          inputTokens: completion.usage?.prompt_tokens ?? null,
-          outputTokens: completion.usage?.completion_tokens ?? null,
-        };
-      }
-    }
-
-    const result = this.analyzeResponse(response, hospitalName, 'CHATGPT', model);
-    result.isWebSearch = isWebSearch;
-    this.applyUsage(result, model, rawUsage, promptText, response);
-    
-    // 【소스 트래킹】ChatGPT 텍스트에서 소스 힌트 추출
-    const textHints = this.extractSourceHintsFromText(response);
-    const inlineUrls = this.extractInlineUrls(response, 'CHATGPT');
-    result.sourceHints = {
-      sources: inlineUrls,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
-    };
-    
-    return result;
-  }
-
-  /**
-   * Claude 질의 - Claude Haiku 4.5 + 웹 검색 도구 (web_search_20250305)
-   */
-  private async queryClaude(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    if (!this.anthropic) throw new Error('Anthropic API가 초기화되지 않았습니다');
-    
-    this.logger.log(`[Claude] API 호출 시작 (claude-haiku-4-5 + 웹검색)`);
-    
-    let responseText = '';
-    let model = 'claude-haiku-4-5';
-    let isWebSearch = false;
-    let claudeUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
-
-    try {
-      // 1순위: Claude Haiku 4.5 + 웹 검색 도구 (웹검색 지원하는 최저가 모델)
-      const message = await this.anthropic.messages.create({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2000,
-        tools: [
-          {
-            type: 'web_search_20250305' as any,
-            name: 'web_search',
-          } as any,
-        ],
-        messages: [
-          {
-            role: 'user',
-            content: promptText,
-          },
-        ],
-      });
-
-      // 응답에서 텍스트 블록 추출 (웹 검색 결과 포함)
-      for (const block of message.content) {
-        if (block.type === 'text') {
-          responseText += block.text;
-        }
-      }
-      
-      // 웹 검색이 사용되었는지 확인
-      isWebSearch = message.content.some((block: any) => 
-        block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
-      );
-      claudeUsage = {
-        inputTokens: message.usage?.input_tokens ?? null,
-        outputTokens: message.usage?.output_tokens ?? null,
-      };
-      
-      this.logger.log(`[Claude] Haiku 4.5 웹 검색 응답 받음 (검색 사용: ${isWebSearch})`);
-    } catch (webSearchError) {
-      this.logger.warn(`[Claude] Haiku 4.5 웹검색 실패: ${webSearchError.message}`);
-      
-      try {
-        // 2순위 폴백: Claude Sonnet 4 + 웹검색
-        const message = await this.anthropic.messages.create({
-          model: 'claude-sonnet-4',
-          max_tokens: 2000,
-          tools: [
-            {
-              type: 'web_search_20250305' as any,
-              name: 'web_search',
-            } as any,
-          ],
-          messages: [
-            {
-              role: 'user',
-              content: promptText,
-            },
-          ],
-        });
-
-        for (const block of message.content) {
-          if (block.type === 'text') {
-            responseText += block.text;
-          }
-        }
-        isWebSearch = message.content.some((block: any) => 
-          block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
-        );
-        model = 'claude-sonnet-4';
-        claudeUsage = {
-          inputTokens: message.usage?.input_tokens ?? null,
-          outputTokens: message.usage?.output_tokens ?? null,
-        };
-        this.logger.log(`[Claude] Sonnet 4 폴백 웹검색 응답 받음`);
-      } catch (sonnetError) {
-        this.logger.warn(`[Claude] Sonnet 4도 실패, 일반 모드 폴백: ${sonnetError.message}`);
-        
-        // 최종 폴백: Claude Haiku 4.5 웹검색 없이
-        try {
-          const message = await this.anthropic.messages.create({
-            model: 'claude-haiku-4-5',
-            max_tokens: 2000,
-            temperature: 0,
-            messages: [
-              {
-                role: 'user',
-                content: promptText,
-              },
-            ],
-          });
-
-          responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-          model = 'claude-haiku-4-5-no-search';
-          claudeUsage = {
-            inputTokens: message.usage?.input_tokens ?? null,
-            outputTokens: message.usage?.output_tokens ?? null,
-          };
-        } catch (fallbackError) {
-          this.logger.error(`[Claude] 모든 모드 실패: ${fallbackError.message}`);
-          throw fallbackError;
-        }
-      }
-    }
-    
-    const result = this.analyzeResponse(responseText, hospitalName, 'CLAUDE', model);
-    result.isWebSearch = isWebSearch;
-    this.applyUsage(result, model.replace('-no-search', ''), claudeUsage, promptText, responseText);
-    
-    // 【소스 트래킹】Claude 텍스트에서 소스 힌트 추출
-    const textHints = this.extractSourceHintsFromText(responseText);
-    const inlineUrls = this.extractInlineUrls(responseText, 'CLAUDE');
-    result.sourceHints = {
-      sources: inlineUrls,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
-    };
-    
-    return result;
-  }
-
-  /**
-   * 【개선1+2+8】Perplexity 질의 - 시스템 프롬프트 제거, 웹 검색은 기본 탑재
-   */
-  private async queryPerplexity(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const perplexityApiKey = process.env.PERPLEXITY_API_KEY?.trim();
-    
-    this.logger.log(`[Perplexity] API 호출 시작 (temp=0, search_domain_filter)`);
-    
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'sonar',
-        messages: [
-          {
-            role: 'user',
-            content: promptText,  // 【개선2】시스템 프롬프트 없음
-          },
-        ],
-        temperature: 0,  // 【개선1】temperature 0
-        // 【개선8】Perplexity 웹 검색 관련 파라미터
-        search_domain_filter: [],   // 모든 도메인 허용
-        return_citations: true,      // 인용 소스 반환
-        search_recency_filter: 'month', // 최근 1개월 내 데이터 우선
-      }),
-    });
-
-    const data = await response.json();
-    
-    if (data.error) {
-      throw new Error(`Perplexity 에러: ${JSON.stringify(data.error)}`);
-    }
-    
-    const text = data.choices?.[0]?.message?.content || '';
-    
-    // Perplexity citations 추출
-    const citations: string[] = data.citations || [];
-    
-    const result = this.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar');
-    result.isWebSearch = true; // Perplexity는 항상 웹 검색 기반
-    this.applyUsage(
-      result,
-      'sonar',
-      {
-        inputTokens: data.usage?.prompt_tokens ?? null,
-        outputTokens: data.usage?.completion_tokens ?? null,
-      },
-      promptText,
-      text,
-    );
-    
-    // citations가 있으면 citedSources에 추가
-    if (citations.length > 0) {
-      result.citedSources = [...new Set([...result.citedSources, ...citations])].slice(0, 15);
-    }
-    
-    // 【소스 트래킹】Perplexity citations 구조화
-    const sourceItems: SourceItem[] = citations.map(url => ({
-      url,
-      type: 'citation' as const,
-      platform: 'PERPLEXITY',
-      domain: this.extractDomain(url),
-    }));
-    
-    // 텍스트 내 소스 힌트도 추출
-    const textHints = this.extractSourceHintsFromText(text);
-    
-    result.sourceHints = {
-      sources: sourceItems,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(sourceItems, textHints.hintKeywords),
-    };
-    
-    this.logger.log(`[Perplexity] 소스 ${sourceItems.length}개 추출, 힌트 키워드: ${textHints.hintKeywords.join(', ')}`);
-    
-    return result;
-  }
-
-  /**
-   * 【개선1+2+8】Gemini 질의 - gemini-2.5-flash + Google Search grounding
-   * 2.5-flash는 thinking model이므로 temperature 미설정 (기본값 사용)
-   * 3단계 폴백: grounding → 일반 2.5-flash → 2.5-flash-lite
-   */
-  private async queryGemini(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
-    
-    this.logger.log(`[Gemini] API 호출 시작 (gemini-2.5-flash, Google Search grounding)`);
-    
-    let text = '';
-    let isWebSearch = false;
-    let geminiSources: SourceItem[] = [];
-    let geminiUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
-    let geminiModel = 'gemini-2.5-flash';
-
-    try {
-      // STEP 1: Google Search grounding 활성화
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: promptText }],
-              },
-            ],
-            generationConfig: {
-              maxOutputTokens: 2000,
-            },
-            tools: [
-              {
-                google_search: {},
-              },
-            ],
-          }),
-        },
-      );
-
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(`[${data.error.code}] ${data.error.message}`);
-      }
-      
-      // 2.5-flash는 parts가 여러개일 수 있음 (thinking + response)
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
-      isWebSearch = true;
-      geminiUsage = {
-        inputTokens: data.usageMetadata?.promptTokenCount ?? null,
-        outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
-      };
-      
-      // 【소스 트래킹】grounding metadata에서 인용 소스 추출
-      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-      
-      if (groundingMetadata?.groundingChunks) {
-        for (const chunk of groundingMetadata.groundingChunks) {
-          if (chunk.web?.uri) {
-            geminiSources.push({
-              url: chunk.web.uri,
-              title: chunk.web.title || undefined,
-              type: 'grounding',
-              platform: 'GEMINI',
-              domain: this.extractDomain(chunk.web.uri),
-            });
-          }
-        }
-        this.logger.log(`[Gemini] grounding 소스 ${geminiSources.length}개 추출`);
-      }
-      
-      if (groundingMetadata?.searchEntryPoint?.renderedContent) {
-        this.logger.log(`[Gemini] Google Search grounding 활성 확인`);
-      }
-      
-    } catch (groundingError) {
-      // STEP 2: grounding 실패 → 일반 모드 폴백
-      this.logger.warn(`[Gemini] grounding 실패: ${groundingError.message}, 일반 모드 시도`);
-      
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [{ text: promptText }],
-                },
-              ],
-              generationConfig: {
-                maxOutputTokens: 2000,
-              },
-            }),
-          },
-        );
-
-        const data = await response.json();
-        if (data.error) throw new Error(`[${data.error.code}] ${data.error.message}`);
-        const parts = data.candidates?.[0]?.content?.parts || [];
-        text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
-        geminiUsage = {
-          inputTokens: data.usageMetadata?.promptTokenCount ?? null,
-          outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
-        };
-      } catch (fallbackError) {
-        // STEP 3: 2.5-flash 자체 실패 → 2.5-flash-lite로 최종 폴백
-        this.logger.warn(`[Gemini] 2.5-flash 실패: ${fallbackError.message}, 2.5-flash-lite 시도`);
-        
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiApiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [{ text: promptText }],
-                },
-              ],
-              generationConfig: {
-                maxOutputTokens: 2000,
-              },
-            }),
-          },
-        );
-
-        const data = await response.json();
-        if (data.error) throw new Error(`Gemini 전체 실패: [${data.error.code}] ${data.error.message}`);
-        const parts = data.candidates?.[0]?.content?.parts || [];
-        text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
-        geminiModel = 'gemini-2.5-flash-lite';
-        geminiUsage = {
-          inputTokens: data.usageMetadata?.promptTokenCount ?? null,
-          outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
-        };
-      }
-    }
-
-    const result = this.analyzeResponse(text, hospitalName, 'GEMINI', geminiModel);
-    result.isWebSearch = isWebSearch;
-    this.applyUsage(result, geminiModel, geminiUsage, promptText, text);
-    
-    // 【소스 트래킹】Gemini 소스 구조화
-    if (geminiSources.length > 0) {
-      result.citedSources = [...new Set([...result.citedSources, ...geminiSources.map(s => s.url)])].slice(0, 15);
-    }
-    const textHints = this.extractSourceHintsFromText(text);
-    result.sourceHints = {
-      sources: geminiSources,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(geminiSources, textHints.hintKeywords),
-    };
-    
-    return result;
-  }
-
-  /**
-   * 【NEW】Grok (xAI) 질의 — 실시간 X(Twitter) 통합 + 웹검색 강점
-   * 모델: grok-4 (2026.05 기준 플래그십, 256K 컨텍스트, $3/$15 per M tokens)
-   *   - 폴백 후보: grok-4-0709, grok-3-fast
-   *   - 환경변수 GROK_MODEL 로 오버라이드 가능
-   * 엔드포인트: https://api.x.ai/v1/chat/completions (OpenAI 호환)
-   */
-  private async queryGrok(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const xaiApiKey = process.env.XAI_API_KEY?.trim();
-    if (!xaiApiKey) throw new Error('XAI_API_KEY가 설정되지 않았습니다');
-
-    const modelName = process.env.GROK_MODEL?.trim() || 'grok-4';
-
-    this.logger.log(`[Grok] API 호출 시작 (${modelName}, temp=0)`);
-
-    const response = await fetch('https://api.x.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${xaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelName,
-        messages: [
-          {
-            role: 'user',
-            content: promptText, // 시스템 프롬프트 없음 — 다른 플랫폼과 일관성
-          },
-        ],
-        temperature: 0,
-        stream: false,
-      }),
-    });
-
-    const data: any = await response.json();
-
-    if (data.error) {
-      throw new Error(`Grok 에러: ${JSON.stringify(data.error)}`);
-    }
-
-    const text = data.choices?.[0]?.message?.content || '';
-
-    const result = this.analyzeResponse(text, hospitalName, 'GROK', modelName);
-    // Grok은 X 실시간 데이터 + 웹검색 가능. 명시적으로 표시.
-    result.isWebSearch = true;
-    this.applyUsage(
-      result,
-      modelName,
-      {
-        inputTokens: data.usage?.prompt_tokens ?? null,
-        outputTokens: data.usage?.completion_tokens ?? null,
-      },
-      promptText,
-      text,
-    );
-
-    // 텍스트 내 소스 힌트 추출 (Grok citation 미지원 시 텍스트에서 URL 패턴 검출)
-    const inlineUrls = this.extractInlineUrls(text, 'GROK');
-    const textHints = this.extractSourceHintsFromText(text);
-    if (inlineUrls.length > 0) {
-      result.citedSources = [...new Set([...result.citedSources, ...inlineUrls.map((s) => s.url)])].slice(0, 15);
-    }
-    result.sourceHints = {
-      sources: inlineUrls,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
-    };
-
-    this.logger.log(`[Grok] 응답 ${text.length}자, URL ${inlineUrls.length}개 추출`);
-    return result;
-  }
-
-  /**
-   * 【NEW】Naver HyperCLOVA X 질의 — 한국 시장 토종 LLM
-   * 모델: HCX-005 (최신 chat completion 모델)
-   * 엔드포인트: https://clovastudio.stream.ntruss.com/testapp/v3/chat-completions/HCX-005
-   * 인증: Authorization: Bearer {CLOVA_X_API_KEY}
-   */
-  private async queryClovaX(promptText: string, hospitalName: string): Promise<AIQueryResult> {
-    const clovaKey = process.env.CLOVA_X_API_KEY?.trim();
-    if (!clovaKey) throw new Error('CLOVA_X_API_KEY가 설정되지 않았습니다');
-
-    this.logger.log(`[CLOVA X] API 호출 시작 (HCX-005, 한국어 최적화)`);
-
-    const endpoint =
-      process.env.CLOVA_X_ENDPOINT?.trim() ||
-      'https://clovastudio.stream.ntruss.com/testapp/v3/chat-completions/HCX-005';
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${clovaKey}`,
-        'Content-Type': 'application/json',
-        'X-NCP-CLOVASTUDIO-REQUEST-ID': `psv2-${Date.now()}`,
-      },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: 'user',
-            content: promptText,
-          },
-        ],
-        topP: 0.8,
-        topK: 0,
-        maxTokens: 1024,
-        temperature: 0.1, // CLOVA X는 0 비허용, 최저값 사용
-        repeatPenalty: 5.0,
-        stopBefore: [],
-        includeAiFilters: false,
-      }),
-    });
-
-    const rawText = await response.text();
-    let data: any;
-    try {
-      data = JSON.parse(rawText);
-    } catch {
-      throw new Error(`CLOVA X 응답 JSON 파싱 실패: ${rawText.slice(0, 200)}`);
-    }
-
-    if (data.status?.code && data.status.code !== '20000') {
-      throw new Error(`CLOVA X 에러: ${data.status.code} - ${data.status.message || rawText.slice(0, 200)}`);
-    }
-
-    // CLOVA X 응답 구조: data.result.message.content
-    const text =
-      data.result?.message?.content ||
-      data.message?.content ||
-      data.choices?.[0]?.message?.content ||
-      '';
-
-    if (!text) {
-      throw new Error(`CLOVA X 빈 응답: ${rawText.slice(0, 200)}`);
-    }
-
-    const result = this.analyzeResponse(text, hospitalName, 'CLOVA_X', 'HCX-005');
-    // CLOVA X는 기본 학습 데이터 기반 (네이버 플레이스 통합은 별도 옵션)
-    result.isWebSearch = false;
-    this.applyUsage(
-      result,
-      'HCX-005',
-      {
-        inputTokens: data.result?.usage?.promptTokens ?? null,
-        outputTokens: data.result?.usage?.completionTokens ?? null,
-      },
-      promptText,
-      text,
-    );
-
-    const inlineUrls = this.extractInlineUrls(text, 'CLOVA_X');
-    const textHints = this.extractSourceHintsFromText(text);
-    if (inlineUrls.length > 0) {
-      result.citedSources = [...new Set([...result.citedSources, ...inlineUrls.map((s) => s.url)])].slice(0, 15);
-    }
-    result.sourceHints = {
-      sources: inlineUrls,
-      hintKeywords: textHints.hintKeywords,
-      estimatedSources: this.classifySources(inlineUrls, textHints.hintKeywords),
-    };
-
-    this.logger.log(`[CLOVA X] 응답 ${text.length}자, URL ${inlineUrls.length}개 추출`);
-    return result;
-  }
 
   // ==================== 초고도화: ABHS 통합 AI 분석 ====================
 
