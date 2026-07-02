@@ -154,11 +154,46 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
+## 2026.07 P0/P1 대개편 (보안 + 인프라)
+
+### P0 — 보안 (전 항목 완료)
+| 항목 | 내용 |
+|------|------|
+| **IDOR 차단** | `HospitalOwnershipGuard` 신설 — `:hospitalId` 파라미터가 로그인 유저 소유 병원과 일치하는지 전 컨트롤러(11개)에서 검증. 완전 개방돼 있던 2개 라우트(subscriptions, matrix-preview)도 잠금 |
+| **DB 안전 배포** | build 스크립트에서 `--accept-data-loss` 제거. Prisma migrations 체계 도입 (`db:migrate:deploy`, `db:migrate:status`) |
+| **시크릿 하드닝** | 하드코딩 폴백 시크릿 전부 제거 (`ADMIN_SECRET`/`CRON_SECRET` 미설정 시 요청 차단, `JWT_SECRET` 미설정 시 프로덕션 부팅 실패) |
+| **레포 정리** | 마케팅 자산 37개 파일 untrack + .gitignore 확장 |
+
+### P1 — 인프라 (전 항목 완료)
+| 항목 | 내용 |
+|------|------|
+| **P1-4 크롤 큐** | Bull(Redis) 기반 크롤 잡 큐 — `REDIS_URL` 설정 시 병원별 잡을 큐로 처리(잡당 15분 타임아웃, 2회 재시도, 세션 중복 방지 jobId). 미설정 시 기존 인라인 방식 자동 fallback. 모니터링: `GET /scheduler/queue-status` |
+| **P1-5 크롤러 분해** | `ai-crawler/strategies/`에 6개 플랫폼 전략 클래스 (ChatGPT/Claude/Perplexity/Gemini/Grok/CLOVA X). 서비스 3,690줄 → 3,084줄. 새 플랫폼 추가 = 클래스 1개 + 등록 1줄 |
+| **P1-6 LLM 비용 추적** | 6개 플랫폼 전부 벤더 usage(토큰) 캡처 → `ai_responses`에 input/output 토큰 + 예상 원가(USD) 저장. 운영자 전용 `GET /admin/llm-costs?secret=...&days=30` (플랫폼별/병원별/모델별 집계) |
+| **P1-7 캐싱** | `CacheService` (Redis 또는 인메모리) + `@CacheTTL` HTTP 캐시 인터셉터. scores API 10분 캐시. 크롤 완료 시 해당 병원 캐시 자동 무효화 |
+| **비용 정보 보호** | 전역 `StripInternalFieldsInterceptor` — 원가 필드(`inputTokens`/`outputTokens`/`estimatedCostUsd`)는 `/api/admin` 외 모든 응답에서 강제 제거 (고객 병원에게 절대 노출 안 됨) |
+
+### 배포 전 필수 체크리스트 (Render)
+```bash
+# 1. 환경변수 설정 (필수 — 없으면 해당 기능 차단됨)
+ADMIN_SECRET=<강력한 랜덤 문자열>       # admin API 보호
+CRON_SECRET=<강력한 랜덤 문자열>        # Render Cron 인증
+ADMIN_EMAILS=admin@example.com          # IDOR 가드 우회 허용 운영자 이메일 (쉼표 구분)
+JWT_SECRET=<강력한 랜덤 문자열>         # 미설정 시 프로덕션 부팅 실패
+REDIS_URL=redis://...                   # (선택) 설정 시 크롤 큐 + Redis 캐시 활성
+
+# 2. 비용 추적 컬럼 마이그레이션 (1회)
+cd apps/api && npm run db:migrate:deploy
+```
+
+---
+
 ## 다음 단계
 
 - [x] ~~대시보드 SoV 중심 리디자인 (Single North-Star Metric)~~ Phase 3-C 완료
+- [x] ~~BullMQ 백그라운드 크롤링~~ 2026.07 P1-4 완료 (REDIS_URL 설정 시 활성)
+- [x] ~~LLM 비용 추적 + 관리자 대시보드 API~~ 2026.07 P1-6 완료
 - [ ] 네이버 Cue 스크래핑 추가
-- [ ] BullMQ 백그라운드 크롤링
 - [ ] 카카오톡 알림톡 연동
 - [ ] 월간 PDF 리포트 자동 생성/발송
 - [ ] GEO 콘텐츠 생성 (반말 스타일)
@@ -167,4 +202,4 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
-*Patient Signal by 페이션트퍼널 | 2026.04.17 V2 Phase 3-C Update*
+*Patient Signal by 페이션트퍼널 | 2026.07.02 P0/P1 보안·인프라 대개편*
