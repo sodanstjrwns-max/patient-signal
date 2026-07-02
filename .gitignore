@@ -70,3 +70,9 @@ lecture/
 # 로컬 진단 산출물
 apps/api/scripts/*.json
 apps/api/audit-reports/
+
+# Large raw data exports (never commit — GitHub 100MB limit)
+apps/api/scripts/raw-responses*
+apps/api/scripts/*.jsonl
+apps/api/scripts/*.csv
+apps/api/scripts/*.gz
