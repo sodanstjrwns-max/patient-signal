@@ -148,7 +148,7 @@ export default function DashboardPage() {
   // ─── SoV 계산 ───
   const sovPercent = abhs?.sovPercent ?? 0;
   const sovChange = weekly?.scoreChange ?? 0;
-  const abhsScore = abhs?.abhsScore ?? dashboard?.overallScore ?? 0;
+  const abhsScore = abhs?.abhsScore ?? 0;
   const avgSentiment = abhs?.avgSentimentV2 ?? 0;
 
   // 플랫폼별 SoV 데이터 추출
@@ -316,7 +316,14 @@ export default function DashboardPage() {
               </div>
 
               {/* 하단 서브 메트릭 */}
-              <div className="grid grid-cols-3 gap-3 pt-5 border-t border-white/[0.06]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-5 border-t border-white/[0.06]">
+                <div className="p-3.5 rounded-2xl bg-brand-500/[0.08] border border-brand-400/[0.12]">
+                  <p className="text-[10px] text-brand-300/70 mb-1 font-bold uppercase tracking-widest">종합점수</p>
+                  <p className="text-2xl font-black tabular-nums text-brand-300">{ranking?.score ?? dashboard?.overallScore ?? 0}<span className="text-sm text-slate-600 ml-0.5 font-medium">/100</span></p>
+                  {ranking?.rank && ranking?.totalHospitals ? (
+                    <p className="text-[10px] text-white/40 font-semibold mt-0.5">전체 {ranking.rank}위 / {ranking.totalHospitals}곳</p>
+                  ) : null}
+                </div>
                 <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.04]">
                   <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">ABHS</p>
                   <p className="text-2xl font-black tabular-nums">{abhsScore}<span className="text-sm text-slate-600 ml-0.5 font-medium">/100</span></p>
