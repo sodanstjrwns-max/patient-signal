@@ -482,9 +482,48 @@ model ImprovementAction {
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
+  // 【액션 임팩트 트래킹】"측정 → 처방 → 실행 → 재측정" 루프의 핵심
+  // 액션 실행 시작 시점의 퍼널 단계 지표를 스냅샷으로 동결 → 이후 실측과 비교해 인과 증명
+  funnelStage       String?   @map("funnel_stage") // AWARENESS/COMPARISON/TRUST/DECISION
+  expectedEffect    String?   @map("expected_effect") // "비교 질문 SoV +15~20%p"
+  priority          String?   // critical/high/medium
+  effort            String?   // 낮음/중간/높음
+  source            String    @default("MANUAL") // PLAYBOOK / MANUAL
+  baselineSov       Float?    @map("baseline_sov") // 시작 시점 단계 SoV (%)
+  baselineSentiment Float?    @map("baseline_sentiment") // 시작 시점 평균 감성 (-2~+2)
+  baselineR3Rate    Float?    @map("baseline_r3_rate") // 시작 시점 단독추천 비율 (%)
+  baselineResponses Int?      @map("baseline_responses") // 베이스라인 표본 수
+  baselineWindowDays Int?     @map("baseline_window_days") // 베이스라인 측정 윈도우 (기본 14일)
+  startedAt         DateTime? @map("started_at") // 실행(추적) 시작 시각
+  outcomeSov        Float?    @map("outcome_sov") // 최근 측정 SoV
+  outcomeDeltaSov   Float?    @map("outcome_delta_sov") // SoV 변화량 (%p)
+  outcomeStatus     String?   @map("outcome_status") // MEASURING/IMPROVED/FLAT/DECLINED
+  lastMeasuredAt    DateTime? @map("last_measured_at")
+
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
+  @@index([hospitalId, status])
   @@map("improvement_actions")
+}
+
+// 【실측 퍼널 벤치마크】진료과 × 퍼널 단계별 전체 고객 병원 SoV 분포 집계
+// 하드코딩 벤치마크를 대체하는 데이터 해자 — 병원이 쌓일수록 정확해짐
+model FunnelBenchmark {
+  id              String        @id @default(uuid())
+  specialtyType   SpecialtyType @map("specialty_type")
+  stage           String // AWARENESS/COMPARISON/TRUST/DECISION
+  windowDays      Int           @default(30) @map("window_days") // 집계 윈도우
+  sampleHospitals Int           @map("sample_hospitals") // 표본 병원 수
+  sampleResponses Int           @map("sample_responses") // 표본 응답 수
+  avgSov          Float         @map("avg_sov") // 평균 SoV (%)
+  p25Sov          Float         @map("p25_sov") // 하위 25%
+  p50Sov          Float         @map("p50_sov") // 중앙값
+  p75Sov          Float         @map("p75_sov") // 상위 25% 경계
+  benchmarkSov    Float         @map("benchmark_sov") // 채택 벤치마크 (p75 기반)
+  computedAt      DateTime      @default(now()) @map("computed_at")
+
+  @@unique([specialtyType, stage])
+  @@map("funnel_benchmarks")
 }
 
 // 구독 테이블

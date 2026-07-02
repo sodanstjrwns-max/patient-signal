@@ -5,10 +5,28 @@ import { ABHSService } from './abhs.service';
 import { WeightService } from './weight.service';
 import { WeightCalibrationService } from './weight-calibration.service';
 import { FunnelService } from './funnel.service';
+import { BenchmarkService } from './benchmark.service';
+import { ActionTrackerService } from './action-tracker.service';
 
 @Module({
   controllers: [ScoresController],
-  providers: [ScoresService, ABHSService, WeightService, WeightCalibrationService, FunnelService],
-  exports: [ScoresService, ABHSService, WeightService, WeightCalibrationService, FunnelService],
+  providers: [
+    ScoresService,
+    ABHSService,
+    WeightService,
+    WeightCalibrationService,
+    FunnelService,
+    BenchmarkService,
+    ActionTrackerService,
+  ],
+  exports: [
+    ScoresService,
+    ABHSService,
+    WeightService,
+    WeightCalibrationService,
+    FunnelService,
+    BenchmarkService,
+    ActionTrackerService,
+  ],
 })
 export class ScoresModule {}

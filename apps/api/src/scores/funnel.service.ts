@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { BenchmarkService, ResolvedBenchmark } from './benchmark.service';
 
 /**
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -32,11 +33,13 @@ const INTENT_TO_STAGE: Record<string, FunnelStage> = {
   RESERVATION: 'DECISION',
 };
 
+// benchmark 필드는 기본값(fallback)일 뿐, 실제 진단은 BenchmarkService의
+// 실측 벤치마크(진료과별 전체 고객 병원 SoV 분포 p75)를 우선 사용한다.
 const STAGE_META: Record<FunnelStage, {
   label: string;
   patientVoice: string;       // 이 단계 환자의 속마음
   weight: number;             // 신환 전환 기여 가중치 (결정 단계로 갈수록 ↑)
-  benchmark: number;          // 단계별 권장 SoV 벤치마크 (%)
+  benchmark: number;          // 단계별 권장 SoV 벤치마크 기본값 (%) — 실측 부족 시 fallback
 }> = {
   AWARENESS:  { label: '인지',      patientVoice: '"이 시술이 뭐지? 가격은?"',          weight: 0.10, benchmark: 15 },
   COMPARISON: { label: '탐색·비교', patientVoice: '"우리 동네에서 어디가 잘하지?"',      weight: 0.30, benchmark: 30 },
@@ -75,6 +78,9 @@ export interface StageDiagnosis {
   prevSov: number | null;       // 직전 7일 대비
   trend: 'up' | 'down' | 'flat';
   benchmark: number;
+  benchmarkSource: 'MEASURED' | 'DEFAULT'; // 실측 벤치마크 vs 기본값
+  peerPosition: string | null;             // "상위 25%" 등 동료 그룹 내 위치
+  peerSampleHospitals: number | null;      // 동료 그룹 표본 병원 수
   status: 'healthy' | 'warning' | 'critical';
   totalQueries: number;
   mentionedQueries: number;
@@ -89,7 +95,10 @@ export interface StageDiagnosis {
 export class FunnelService {
   private readonly logger = new Logger(FunnelService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private benchmarkService: BenchmarkService,
+  ) {}
 
   /**
    * AI 환자 퍼널 종합 진단
@@ -126,6 +135,11 @@ export class FunnelService {
     if (!hospital) {
       return { error: 'HOSPITAL_NOT_FOUND' };
     }
+
+    // 【본질 강화 2】실측 벤치마크 해석: 진료과별 전체 고객 병원 분포(p75) 우선, 표본 부족 시 기본값
+    const resolvedBenchmarks = await this.benchmarkService.resolveBenchmarks(
+      hospital.specialtyType as string,
+    );
 
     if (responses.length === 0) {
       return {
@@ -210,9 +224,11 @@ export class FunnelService {
       }
 
       const meta = STAGE_META[stage];
+      const bm: ResolvedBenchmark = resolvedBenchmarks[stage];
+      const benchmark = bm.benchmark;
       const status: 'healthy' | 'warning' | 'critical' =
-        sov >= meta.benchmark ? 'healthy'
-        : sov >= meta.benchmark * 0.5 ? 'warning'
+        sov >= benchmark ? 'healthy'
+        : sov >= benchmark * 0.5 ? 'warning'
         : 'critical';
 
       return {
@@ -222,7 +238,10 @@ export class FunnelService {
         sov,
         prevSov: prevSov !== null ? Math.round(prevSov * 10) / 10 : null,
         trend,
-        benchmark: meta.benchmark,
+        benchmark,
+        benchmarkSource: bm.source,
+        peerPosition: this.benchmarkService.positionInPeers(sov, bm),
+        peerSampleHospitals: bm.sampleHospitals ?? null,
         status,
         totalQueries: total,
         mentionedQueries: mentioned,
@@ -293,6 +312,19 @@ export class FunnelService {
     // ─── 5. 단계별 액션 플레이북 ───
     const playbook = this.buildPlaybook(stages, hospital.specialtyType as string, hospital.regionSigungu);
 
+    // 벤치마크 메타정보 (프론트 "실측 기준" 배지용)
+    const measuredStages = Object.values(resolvedBenchmarks).filter((b) => b.source === 'MEASURED');
+    const benchmarkInfo = {
+      mode: measuredStages.length > 0 ? ('MEASURED' as const) : ('DEFAULT' as const),
+      measuredStageCount: measuredStages.length,
+      sampleHospitals: measuredStages.length > 0
+        ? Math.max(...measuredStages.map((b) => b.sampleHospitals || 0))
+        : 0,
+      description: measuredStages.length > 0
+        ? `동일 진료과 고객 병원 실측 분포 기반 (상위 25% 수준 = 목표)`
+        : '업계 권장 기본값 (표본 누적 중 — 동료 병원 5곳 이상 시 실측 전환)',
+    };
+
     return {
       hospital: { name: hospital.name, specialtyType: hospital.specialtyType, region: hospital.regionSigungu },
       hasData: true,
@@ -305,6 +337,7 @@ export class FunnelService {
       leaks,
       impactEstimate,
       playbook,
+      benchmarkInfo,
       generatedAt: new Date().toISOString(),
     };
   }

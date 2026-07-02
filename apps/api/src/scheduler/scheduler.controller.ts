@@ -5,6 +5,8 @@ import { ApiTags, ApiOperation, ApiHeader, ApiQuery, ApiParam } from '@nestjs/sw
 import { SchedulerService } from './scheduler.service';
 import { CrawlQueueService } from './crawl-queue.service';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { ActionTrackerService } from '../scores/action-tracker.service';
+import { BenchmarkService } from '../scores/benchmark.service';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -18,6 +20,8 @@ export class SchedulerController {
     private schedulerService: SchedulerService,
     private crawlQueue: CrawlQueueService,
     private prisma: PrismaService,
+    private actionTracker: ActionTrackerService,
+    private benchmarkService: BenchmarkService,
   ) {}
 
   /**
@@ -248,6 +252,43 @@ export class SchedulerController {
       success: true,
       dryRun: dryRun === 'true',
       ...result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * 【본질 강화 1+2】일일 임팩트 루프 집계
+   * - 진행중 액션 성과 재측정 (베이스라인 대비 SoV 변화 → IMPROVED/FLAT/DECLINED)
+   * - 진료과×단계별 실측 벤치마크 재집계 (p25/p50/p75)
+   * Cron 권장: 매일 daily-crawl(evening) 직후 1회
+   */
+  @Post('daily-impact-loop')
+  @ApiOperation({
+    summary: '【임팩트 루프】액션 성과 재측정 + 실측 벤치마크 재집계',
+    description: '매일 크롤링 완료 후 실행. 추적중인 개선 액션의 SoV 변화 측정 + 전체 병원 분포 기반 벤치마크 갱신',
+  })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async dailyImpactLoop(@Headers('x-cron-secret') cronSecret: string) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const [outcomes, benchmarks] = await Promise.all([
+      this.actionTracker.measureOutcomes(),
+      this.benchmarkService.recomputeAll(),
+    ]);
+
+    return {
+      success: true,
+      actionOutcomes: {
+        totalActions: outcomes.totalActions,
+        measured: outcomes.measured,
+      },
+      benchmarks: {
+        upserted: benchmarks.upserted,
+        totalHospitals: benchmarks.totalHospitals,
+      },
       timestamp: new Date().toISOString(),
     };
   }

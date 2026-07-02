@@ -1,11 +1,15 @@
-import { Controller, Get, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ScoresService } from './scores.service';
 import { ABHSService } from './abhs.service';
 import { FunnelService } from './funnel.service';
+import { ActionTrackerService } from './action-tracker.service';
+import type { StartActionDto } from './action-tracker.service';
+import { BenchmarkService } from './benchmark.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
+import { PrismaService } from '../common/prisma/prisma.service';
 
 @ApiTags('점수 및 통계')
 @Controller('scores')
@@ -18,6 +22,9 @@ export class ScoresController {
     private scoresService: ScoresService,
     private abhsService: ABHSService,
     private funnelService: FunnelService,
+    private actionTracker: ActionTrackerService,
+    private benchmarkService: BenchmarkService,
+    private prisma: PrismaService,
   ) {}
 
   @Get(':hospitalId/funnel')
@@ -136,6 +143,59 @@ export class ScoresController {
   })
   async getActionIntelligence(@Param('hospitalId') hospitalId: string) {
     return this.abhsService.generateActionIntelligence(hospitalId);
+  }
+
+  // ==================== 【본질 강화 1】액션 임팩트 트래커 ====================
+
+  @Get(':hospitalId/action-impacts')
+  @ApiOperation({
+    summary: '【임팩트 루프】액션 임팩트 목록',
+    description: '추적 중/완료된 개선 액션들의 베이스라인 대비 SoV 변화 (측정→처방→실행→재측정 루프)',
+  })
+  async getActionImpacts(@Param('hospitalId') hospitalId: string) {
+    return this.actionTracker.getActionImpacts(hospitalId);
+  }
+
+  @Post(':hospitalId/action-impacts')
+  @ApiOperation({
+    summary: '【임팩트 루프】액션 추적 시작',
+    description: '플레이북 처방을 실행 시작 — 현재 퍼널 단계 지표를 베이스라인 스냅샷으로 동결',
+  })
+  async startActionTracking(
+    @Param('hospitalId') hospitalId: string,
+    @Body() dto: StartActionDto,
+  ) {
+    return this.actionTracker.startAction(hospitalId, dto);
+  }
+
+  @Patch(':hospitalId/action-impacts/:actionId')
+  @ApiOperation({
+    summary: '【임팩트 루프】액션 완료/중단',
+    description: '완료 시 최종 성과를 재측정하여 동결',
+  })
+  async updateActionStatus(
+    @Param('hospitalId') hospitalId: string,
+    @Param('actionId') actionId: string,
+    @Body() body: { status: 'COMPLETED' | 'DISMISSED' },
+  ) {
+    return this.actionTracker.updateActionStatus(hospitalId, actionId, body.status);
+  }
+
+  // ==================== 【본질 강화 2】실측 벤치마크 ====================
+
+  @Get(':hospitalId/benchmarks')
+  @ApiOperation({
+    summary: '【데이터 해자】진료과 실측 벤치마크',
+    description: '동일 진료과 전체 고객 병원의 퍼널 단계별 SoV 분포 (p25/p50/p75). 표본 부족 시 기본값 fallback',
+  })
+  async getBenchmarks(@Param('hospitalId') hospitalId: string) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { specialtyType: true },
+    });
+    if (!hospital) return { error: 'HOSPITAL_NOT_FOUND' };
+    const benchmarks = await this.benchmarkService.resolveBenchmarks(hospital.specialtyType as string);
+    return { specialtyType: hospital.specialtyType, benchmarks };
   }
 
   @Get(':hospitalId/abhs/golden-prompts')

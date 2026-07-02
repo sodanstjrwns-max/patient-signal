@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuthStore } from '@/stores/auth';
-import { api } from '@/lib/api';
+import { api, scoresApi } from '@/lib/api';
 import {
   TrendingUp, TrendingDown, Minus, AlertTriangle, CheckCircle2,
   Users, Banknote, ArrowRight, ChevronDown, ChevronUp,
   Filter, Eye, Search, ShieldCheck, CalendarCheck, Loader2,
+  Play, Target, FlaskConical, Award, XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -22,6 +23,9 @@ interface StageData {
   prevSov: number | null;
   trend: 'up' | 'down' | 'flat';
   benchmark: number;
+  benchmarkSource?: 'MEASURED' | 'DEFAULT';
+  peerPosition?: string | null;
+  peerSampleHospitals?: number | null;
   status: 'healthy' | 'warning' | 'critical';
   totalQueries: number;
   mentionedQueries: number;
@@ -61,7 +65,43 @@ interface FunnelData {
     disclaimer: string;
   };
   playbook: PlaybookAction[];
+  benchmarkInfo?: {
+    mode: 'MEASURED' | 'DEFAULT';
+    measuredStageCount: number;
+    sampleHospitals: number;
+    description: string;
+  };
 }
+
+interface ActionImpact {
+  id: string;
+  title: string;
+  funnelStage: string | null;
+  expectedEffect: string | null;
+  priority: string | null;
+  effort: string | null;
+  status: string;
+  startedAt: string | null;
+  daysSinceStart: number | null;
+  baseline: { sov: number | null; responses: number | null; windowDays: number | null };
+  outcome: { sov: number | null; deltaSov: number | null; status: string | null; lastMeasuredAt: string | null };
+}
+
+interface ActionImpactData {
+  summary: { activeCount: number; completedCount: number; improvedCount: number; totalSovGain: number };
+  actions: ActionImpact[];
+}
+
+const OUTCOME_STYLE: Record<string, { label: string; bg: string; icon: any }> = {
+  MEASURING: { label: '측정 중', bg: 'bg-slate-100 text-slate-600', icon: FlaskConical },
+  IMPROVED: { label: '개선됨 ↑', bg: 'bg-emerald-100 text-emerald-700', icon: TrendingUp },
+  FLAT: { label: '변화 없음', bg: 'bg-amber-100 text-amber-700', icon: Minus },
+  DECLINED: { label: '하락 ↓', bg: 'bg-red-100 text-red-700', icon: TrendingDown },
+};
+
+const STAGE_LABELS: Record<string, string> = {
+  AWARENESS: '인지', COMPARISON: '탐색·비교', TRUST: '신뢰 검증', DECISION: '결정·예약',
+};
 
 const STAGE_ICONS: Record<string, any> = {
   AWARENESS: Eye,
@@ -98,6 +138,7 @@ export default function FunnelPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
   const [expandedStage, setExpandedStage] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { data, isLoading, refetch, isRefetching } = useQuery<FunnelData>({
     queryKey: ['funnel', hospitalId],
@@ -105,6 +146,44 @@ export default function FunnelPage() {
     enabled: !!hospitalId,
     staleTime: 5 * 60 * 1000,
   });
+
+  // 【본질 강화 1】액션 임팩트 트래커
+  const { data: impactData } = useQuery<ActionImpactData>({
+    queryKey: ['action-impacts', hospitalId],
+    queryFn: async () => (await scoresApi.getActionImpacts(hospitalId!)).data,
+    enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const startTracking = useMutation({
+    mutationFn: (action: PlaybookAction) =>
+      scoresApi.startActionTracking(hospitalId!, {
+        funnelStage: action.stage,
+        title: action.title,
+        description: action.description,
+        expectedEffect: action.expectedEffect,
+        priority: action.priority,
+        effort: action.effort,
+        source: 'PLAYBOOK',
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['action-impacts', hospitalId] });
+    },
+  });
+
+  const updateStatus = useMutation({
+    mutationFn: ({ actionId, status }: { actionId: string; status: 'COMPLETED' | 'DISMISSED' }) =>
+      scoresApi.updateActionStatus(hospitalId!, actionId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['action-impacts', hospitalId] });
+    },
+  });
+
+  const trackedTitles = new Set(
+    (impactData?.actions || [])
+      .filter((a) => a.status === 'IN_PROGRESS' || a.status === 'COMPLETED')
+      .map((a) => a.title),
+  );
 
   if (isLoading) {
     return (
@@ -216,10 +295,26 @@ export default function FunnelPage() {
 
         {/* ─── 퍼널 시각화 ─── */}
         <section id="funnel-stages">
-          <h2 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
-            <Filter className="w-5 h-5 text-brand-500" />
-            환자 여정 4단계 × AI 가시성
-          </h2>
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            <h2 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <Filter className="w-5 h-5 text-brand-500" />
+              환자 여정 4단계 × AI 가시성
+            </h2>
+            {data.benchmarkInfo && (
+              <span
+                className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                  data.benchmarkInfo.mode === 'MEASURED'
+                    ? 'bg-brand-50 text-brand-600'
+                    : 'bg-slate-100 text-slate-500'
+                }`}
+                title={data.benchmarkInfo.description}
+              >
+                {data.benchmarkInfo.mode === 'MEASURED'
+                  ? `📊 실측 벤치마크 (동일 진료과 ${data.benchmarkInfo.sampleHospitals}개 병원 분포)`
+                  : '벤치마크: 업계 권장 기본값 (표본 누적 중)'}
+              </span>
+            )}
+          </div>
           <div className="space-y-3">
             {stages.map((stage, idx) => {
               const Icon = STAGE_ICONS[stage.stage] || Eye;
@@ -258,7 +353,16 @@ export default function FunnelPage() {
                               {stage.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
                               {stage.trend === 'flat' && <Minus className="w-4 h-4 text-slate-300" />}
                             </div>
-                            <p className="text-[10px] text-slate-400">목표 {stage.benchmark}% · {stage.totalQueries}개 질문</p>
+                            <p className="text-[10px] text-slate-400">
+                              목표 {stage.benchmark}%
+                              {stage.benchmarkSource === 'MEASURED' && (
+                                <span className="ml-1 px-1 py-px bg-brand-50 text-brand-600 rounded font-bold" title={`동일 진료과 ${stage.peerSampleHospitals}개 병원 실측 분포 기반`}>실측</span>
+                              )}
+                              {stage.peerPosition && (
+                                <span className="ml-1 font-semibold text-slate-500">· 동료 중 {stage.peerPosition}</span>
+                              )}
+                              {' '}· {stage.totalQueries}개 질문
+                            </p>
                           </div>
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                         </div>
@@ -324,6 +428,108 @@ export default function FunnelPage() {
           </div>
         </section>
 
+        {/* ─── 【본질 강화 1】액션 임팩트 트래커 ─── */}
+        {impactData && impactData.actions.length > 0 && (
+          <section id="action-impact-tracker">
+            <h2 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
+              <Target className="w-5 h-5 text-brand-500" />
+              액션 임팩트 트래커 — 처방이 실제로 효과가 있었나?
+            </h2>
+
+            {/* 성과 요약 */}
+            {impactData.summary.improvedCount > 0 && (
+              <Card className="mb-3 border-2 border-emerald-200 bg-emerald-50/50">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <Award className="w-8 h-8 text-emerald-500 flex-shrink-0" />
+                  <div>
+                    <p className="font-black text-emerald-800">
+                      실행한 액션 {impactData.summary.improvedCount}개에서 총 SoV +{impactData.summary.totalSovGain}%p 상승 검증됨
+                    </p>
+                    <p className="text-xs text-emerald-600">베이스라인 대비 실측 — 처방→실행→재측정 루프가 작동 중입니다 🔁</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="space-y-2">
+              {impactData.actions.filter((a) => a.status !== 'DISMISSED').map((a) => {
+                const os = OUTCOME_STYLE[a.outcome.status || 'MEASURING'] || OUTCOME_STYLE.MEASURING;
+                const OIcon = os.icon;
+                return (
+                  <Card key={a.id} className="hover:shadow-sm transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${os.bg} inline-flex items-center gap-1`}>
+                              <OIcon className="w-3 h-3" />{os.label}
+                            </span>
+                            {a.funnelStage && (
+                              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                {STAGE_LABELS[a.funnelStage] || a.funnelStage} 단계
+                              </span>
+                            )}
+                            {a.daysSinceStart !== null && a.status === 'IN_PROGRESS' && (
+                              <span className="text-[10px] text-slate-400">{a.daysSinceStart}일째 추적 중</span>
+                            )}
+                            {a.status === 'COMPLETED' && (
+                              <span className="text-[10px] text-emerald-600 font-bold">완료</span>
+                            )}
+                          </div>
+                          <p className="font-bold text-slate-800 text-sm truncate">{a.title}</p>
+                        </div>
+                        <div className="flex items-center gap-4 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400">시작 시점</p>
+                            <p className="font-black text-slate-600 tabular-nums">{a.baseline.sov ?? '—'}%</p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-slate-300" />
+                          <div className="text-right">
+                            <p className="text-[10px] text-slate-400">현재</p>
+                            <p className="font-black text-slate-800 tabular-nums">{a.outcome.sov ?? '—'}%</p>
+                          </div>
+                          {a.outcome.deltaSov !== null && (
+                            <span className={`px-2 py-1 rounded-lg text-sm font-black tabular-nums ${
+                              a.outcome.deltaSov >= 3 ? 'bg-emerald-100 text-emerald-700'
+                              : a.outcome.deltaSov <= -3 ? 'bg-red-100 text-red-700'
+                              : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {a.outcome.deltaSov > 0 ? '+' : ''}{a.outcome.deltaSov}%p
+                            </span>
+                          )}
+                          {a.status === 'IN_PROGRESS' && (
+                            <div className="flex gap-1">
+                              <button
+                                onClick={() => updateStatus.mutate({ actionId: a.id, status: 'COMPLETED' })}
+                                className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-500"
+                                title="완료 처리 (최종 성과 동결)"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => updateStatus.mutate({ actionId: a.id, status: 'DISMISSED' })}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"
+                                title="추적 중단"
+                              >
+                                <XCircle className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {a.outcome.status === 'MEASURING' && a.status === 'IN_PROGRESS' && (
+                        <p className="mt-2 text-[11px] text-slate-400">
+                          ⏳ 효과 판정까지 최소 14일 + 표본 10개 필요 — 매일 크롤링 후 자동 재측정됩니다
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ─── 액션 플레이북 ─── */}
         <section id="funnel-playbook">
           <h2 className="text-lg font-black text-slate-800 mb-3 flex items-center gap-2">
@@ -353,10 +559,26 @@ export default function FunnelPage() {
                           </div>
                           <h3 className="font-bold text-slate-800 mb-1.5">{action.title}</h3>
                           <p className="text-sm text-slate-600 leading-relaxed mb-2">{action.description}</p>
-                          <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                            <TrendingUp className="w-3.5 h-3.5" />
-                            기대 효과: {action.expectedEffect}
-                          </p>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                              <TrendingUp className="w-3.5 h-3.5" />
+                              기대 효과: {action.expectedEffect}
+                            </p>
+                            {trackedTitles.has(action.title) ? (
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-500 bg-brand-50 px-3 py-1.5 rounded-lg">
+                                <FlaskConical className="w-3.5 h-3.5" /> 효과 추적 중
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => startTracking.mutate(action)}
+                                disabled={startTracking.isPending}
+                                className="inline-flex items-center gap-1 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                title="현재 단계 SoV를 베이스라인으로 동결하고 효과 측정을 시작합니다"
+                              >
+                                <Play className="w-3.5 h-3.5" /> 실행 시작 — 효과 측정하기
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>

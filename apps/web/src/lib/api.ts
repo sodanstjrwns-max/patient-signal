@@ -340,6 +340,23 @@ export const scoresApi = {
     api.get(`/scores/${hospitalId}/abhs/competitive-share`),
   getActionIntelligence: (hospitalId: string) =>
     api.get(`/scores/${hospitalId}/abhs/actions`),
+  // 【본질 강화 1】액션 임팩트 트래커 — 측정→처방→실행→재측정 루프
+  getActionImpacts: (hospitalId: string) =>
+    api.get(`/scores/${hospitalId}/action-impacts`),
+  startActionTracking: (hospitalId: string, data: {
+    funnelStage: string;
+    title: string;
+    description?: string;
+    expectedEffect?: string;
+    priority?: string;
+    effort?: string;
+    source?: string;
+  }) => api.post(`/scores/${hospitalId}/action-impacts`, data),
+  updateActionStatus: (hospitalId: string, actionId: string, status: 'COMPLETED' | 'DISMISSED') =>
+    api.patch(`/scores/${hospitalId}/action-impacts/${actionId}`, { status }),
+  // 【본질 강화 2】실측 벤치마크
+  getBenchmarks: (hospitalId: string) =>
+    api.get(`/scores/${hospitalId}/benchmarks`),
 };
 
 // Competitors API
