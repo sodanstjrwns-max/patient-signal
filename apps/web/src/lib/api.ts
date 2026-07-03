@@ -200,6 +200,9 @@ export const crawlerApi = {
     api.post(`/ai-crawler/crawl/${hospitalId}`),
   getJobStatus: (jobId: string) =>
     api.get(`/ai-crawler/job/${jobId}`),
+  // 【Day-0 아하모먼트】온보딩 직후 첫 크롤 진행/결과
+  getFirstCrawlStatus: (hospitalId: string) =>
+    api.get(`/ai-crawler/first-crawl-status/${hospitalId}`),
   getResponses: (hospitalId: string, params?: { platform?: string; limit?: number; offset?: number; mentioned?: string }) => {
     // undefined/null 파라미터 제거
     const cleanParams: Record<string, any> = { limit: 50 };

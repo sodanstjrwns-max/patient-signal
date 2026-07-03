@@ -3,12 +3,16 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { SchedulerService } from '../scheduler/scheduler.service';
 
 @Injectable()
 export class HospitalsService {
   private readonly logger = new Logger(HospitalsService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private schedulerService: SchedulerService,
+  ) {}
 
   async create(userId: string, dto: CreateHospitalDto) {
     // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)
@@ -119,6 +123,25 @@ export class HospitalsService {
     } catch (err) {
       this.logger.warn(`자동 프롬프트 생성 실패 (무시됨): ${err?.message}`);
     }
+
+    // 【Day 0 아하모먼트】온보딩 직후 첫 즉시 크롤 (fire-and-forget)
+    // 가입 후 몇 분 내 "첫 AI 응답에서 우리 병원이 언급됐는지" 보여주기 위해
+    // 다음날 아침 Cron을 기다리지 않고 지금 바로 크롤링 시작.
+    // 온보딩 응답은 즉시 반환하고 크롤은 백그라운드에서 진행 (실패해도 무시)
+    this.schedulerService
+      .crawlSingleHospital(hospital.id, {
+        session: 'morning',
+        includeCompetitors: false,
+        includeContentGap: false,
+      })
+      .then((result: any) => {
+        this.logger.log(
+          `[첫 즉시 크롤] 완료: ${hospital.name} (${hospital.id}) — ${JSON.stringify({ completed: result?.completed, failed: result?.failed, skipped: result?.skipped })}`,
+        );
+      })
+      .catch((err: any) => {
+        this.logger.warn(`[첫 즉시 크롤] 실패 (무시됨): ${hospital.name} — ${err?.message}`);
+      });
 
     return hospital;
   }

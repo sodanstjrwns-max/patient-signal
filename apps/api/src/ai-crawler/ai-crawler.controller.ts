@@ -110,6 +110,89 @@ export class AICrawlerController {
     };
   }
 
+  /**
+   * 【Day-0 아하모먼트】온보딩 직후 첫 크롤 진행/결과 조회
+   * 대시보드 첫 분석 배너용 — 병원 생성 후 24시간 이내에만 의미 있음
+   */
+  @Get('first-crawl-status/:hospitalId')
+  @ApiOperation({ summary: '첫 크롤 진행/결과 조회', description: '온보딩 직후 첫 AI 분석 배너용 (Day-0 아하모먼트)' })
+  async getFirstCrawlStatus(@Param('hospitalId') hospitalId: string) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true, createdAt: true },
+    });
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+
+    const hoursSinceCreation =
+      (Date.now() - hospital.createdAt.getTime()) / (1000 * 60 * 60);
+    const isNewHospital = hoursSinceCreation < 24;
+
+    // 첫 크롤 잡 (가장 오래된 것 = 온보딩 직후 발사된 것)
+    const firstJob = await this.prisma.crawlJob.findFirst({
+      where: { hospitalId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        status: true,
+        totalPrompts: true,
+        completed: true,
+        failed: true,
+        startedAt: true,
+        completedAt: true,
+      },
+    });
+
+    // 첫 응답들 — 플랫폼별 언급 여부 집계
+    const responses = await this.prisma.aIResponse.findMany({
+      where: { hospitalId },
+      orderBy: { createdAt: 'asc' },
+      take: 100,
+      select: {
+        aiPlatform: true,
+        isMentioned: true,
+        mentionPosition: true,
+        createdAt: true,
+      },
+    });
+
+    const platformMap = new Map<
+      string,
+      { platform: string; total: number; mentioned: number; bestPosition: number | null }
+    >();
+    for (const r of responses) {
+      const key = r.aiPlatform as string;
+      const entry =
+        platformMap.get(key) ??
+        { platform: key, total: 0, mentioned: 0, bestPosition: null };
+      entry.total += 1;
+      if (r.isMentioned) {
+        entry.mentioned += 1;
+        if (
+          r.mentionPosition != null &&
+          (entry.bestPosition === null || r.mentionPosition < entry.bestPosition)
+        ) {
+          entry.bestPosition = r.mentionPosition;
+        }
+      }
+      platformMap.set(key, entry);
+    }
+
+    const mentionedTotal = responses.filter((r) => r.isMentioned).length;
+
+    return {
+      hospitalName: hospital.name,
+      isNewHospital,
+      hoursSinceCreation: Math.round(hoursSinceCreation * 10) / 10,
+      firstJob,
+      results: {
+        totalResponses: responses.length,
+        mentionedTotal,
+        anyMention: mentionedTotal > 0,
+        platforms: Array.from(platformMap.values()),
+      },
+    };
+  }
+
   @Get('test-openai')
   @ApiOperation({ summary: 'OpenAI 테스트' })
   async testOpenAI() {

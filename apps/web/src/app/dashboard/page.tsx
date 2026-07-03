@@ -8,6 +8,7 @@ import { PlatformStats } from '@/components/dashboard/PlatformStats';
 import { InsightCard } from '@/components/dashboard/InsightCard';
 import { CompetitorComparison } from '@/components/dashboard/CompetitorComparison';
 import OnboardingTutorial from '@/components/onboarding/OnboardingTutorial';
+import { FirstCrawlBanner } from '@/components/dashboard/FirstCrawlBanner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { crawlerApi } from '@/lib/api';
@@ -187,6 +188,9 @@ export default function DashboardPage() {
         description={`${dashboard?.hospital?.name || '병원'}의 AI 가시성 현황`}
         onRefresh={handleRefresh}
       />
+
+      {/* 【Day-0 아하모먼트】온보딩 직후 첫 크롤 진행/결과 배너 */}
+      <FirstCrawlBanner hospitalId={hospitalId} />
 
       {/* 마지막 분석 시간 */}
       {lastAnalysis?.lastCrawl && (
