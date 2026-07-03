@@ -8,6 +8,11 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
+## 2026.07.03 개선 (Day-0 온보딩 + 테스트 + 대청소)
+- **온보딩 직후 첫 즉시 크롤**: 병원 생성 시 fire-and-forget으로 즉시 크롤 발사 → 대시보드 `FirstCrawlBanner`가 15초 폴링으로 진행률 표시, 첫 결과 도착 시 "AI가 우리 병원을 N회 언급" 아하모먼트 노출 (플랫폼별 칩 + CTA)
+- **핵심 유닛 테스트 49개**: 결제 금액/상태 매핑, 구독 7일 트라이얼·자동갱신(12만/29만/59만)·다운그레이드 차단, SoV/ABHS 계산, R0~R3 추론, percentile 벤치마크 — `cd apps/api && jest` 로 실행
+- **레포 대청소**: 마케팅 PDF/PNG/생성 스크립트/강의자료 전량 제거(외부 tar.gz 보관), 죽은 모듈(users/notifications) 삭제, 빈 packages/ 제거
+
 ## V2 업그레이드 요약 (2026.04.17)
 
 ### 핵심 변경사항
@@ -108,6 +113,12 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 | GET | `/scores/:hospitalId/abhs/actions` | 액션 인텔리전스 |
 | GET | `/scores/:hospitalId/abhs/golden-prompts` | Golden Prompt 분석 |
 | GET | `/scores/:hospitalId/funnel` | **AI 환자 퍼널 진단** (단계별 SoV + 누수 + 신환 임팩트) |
+
+### AI Crawler API (Day-0 온보딩)
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/ai-crawler/first-crawl-status/:hospitalId` | **첫 크롤 진행/결과** (온보딩 직후 아하모먼트 배너용) |
+| GET | `/ai-crawler/last-analysis/:hospitalId` | 마지막 분석 시간 |
 
 ### Scheduler API
 | Method | Path | 설명 |
