@@ -402,6 +402,10 @@ export class SchedulerService implements OnModuleInit {
       },
     });
 
+    // 【안정성】이하 전 과정에서 예외 발생 시 crawlJob이 RUNNING 고아로 남지 않도록 보호
+    // (좀비 청소가 30분 후 잡아주긴 하지만, 그동안 월간 크롤 한도를 잘못 소모함)
+    try {
+
     let completed = 0;
     let failed = 0;
 
@@ -521,8 +525,11 @@ export class SchedulerService implements OnModuleInit {
       },
     });
 
-    // 점수 계산
-    const score = await this.aiCrawlerService.calculateDailyScore(hospital.id);
+    // 점수 계산 — 실패해도 크롤 결과는 이미 저장됨 (다음 크롤/수동 재계산 가능)
+    const score = await this.aiCrawlerService.calculateDailyScore(hospital.id).catch((err) => {
+      this.logger.error(`[${hospital.name}] 점수 계산 실패 (크롤 결과는 저장됨): ${err.message}`);
+      return null;
+    });
 
     const hospitalResult: any = {
       hospitalId: hospital.id,
@@ -578,6 +585,15 @@ export class SchedulerService implements OnModuleInit {
 
     this.logger.log(`[${hospital.name}] 크롤링 완료 - 점수: ${score}`);
     return hospitalResult;
+
+    } catch (error) {
+      // 예상치 못한 예외 → 아직 RUNNING이면 FAILED 마킹 (이미 COMPLETED면 건드리지 않음)
+      await this.prisma.crawlJob.updateMany({
+        where: { id: crawlJob.id, status: 'RUNNING' },
+        data: { status: 'FAILED', completedAt: new Date() },
+      }).catch(() => undefined);
+      throw error;
+    }
   }
 
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {

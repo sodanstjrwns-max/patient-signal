@@ -88,7 +88,8 @@ export class AICrawlerService {
     const openaiKey = process.env.OPENAI_API_KEY?.trim();
     if (openaiKey && openaiKey.length > 20) {
       try {
-        this.openai = new OpenAI({ apiKey: openaiKey });
+        // 【크롤 안정성】SDK 기본 타임아웃이 10분 — 무응답 시 크롤 루프가 10분씩 멈추는 것 방지
+        this.openai = new OpenAI({ apiKey: openaiKey, timeout: 60_000, maxRetries: 1 });
         this.logger.log('✅ OpenAI 초기화 완료');
       } catch (e) {
         this.logger.error(`❌ OpenAI 초기화 실패: ${e.message}`);
@@ -98,7 +99,7 @@ export class AICrawlerService {
     const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
     if (anthropicKey && anthropicKey.length > 20) {
       try {
-        this.anthropic = new Anthropic({ apiKey: anthropicKey });
+        this.anthropic = new Anthropic({ apiKey: anthropicKey, timeout: 60_000, maxRetries: 1 });
         this.logger.log('✅ Anthropic 초기화 완료');
       } catch (e) {
         this.logger.error(`❌ Anthropic 초기화 실패: ${e.message}`);

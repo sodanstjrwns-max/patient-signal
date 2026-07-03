@@ -5,6 +5,18 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { StripInternalFieldsInterceptor } from './common/interceptors/strip-internal-fields.interceptor';
 
+// 【안정성】fire-and-forget Promise에서 놓친 rejection이 프로세스를 죽이지 않도록 세이프티넷
+// (Node 15+ 기본 동작은 crash → 크롤링 진행 중 서버가 통째로 내려갈 수 있음)
+process.on('unhandledRejection', (reason) => {
+  console.error('[UnhandledRejection] 처리되지 않은 Promise 거부:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[UncaughtException] 처리되지 않은 예외:', error);
+  // uncaughtException은 프로세스 상태가 불안정할 수 있으므로 로그만 남기고
+  // Render가 헬스체크 실패 시 재시작하도록 프로세스는 유지
+});
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     // 웹훅 서명 검증을 위해 rawBody 활성화

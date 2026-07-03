@@ -275,7 +275,10 @@ export class AICrawlerController {
     const allowedPlatforms = req.planLimits?.platforms || ['CHATGPT', 'PERPLEXITY'];
 
     // 비동기로 개선된 크롤링 실행
-    this.executeCrawling(crawlJob.id, hospital, prompts, allowedPlatforms);
+    // 【안정성】미첩당 rejection → 프로세스 크래시 방지 (fire-and-forget은 반드시 catch)
+    this.executeCrawling(crawlJob.id, hospital, prompts, allowedPlatforms).catch((err) => {
+      this.logger.error(`[Crawl] 치명적 오류 (백그라운드): ${err.message}`);
+    });
 
     return {
       jobId: crawlJob.id,
@@ -3340,55 +3343,73 @@ export class AICrawlerController {
     const platforms: any[] = allowedPlatforms || ['CHATGPT', 'PERPLEXITY'];
     this.logger.log(`[Crawl] 시작: ${hospital.name}, 프롬프트 ${prompts.length}개, 플랫폼: ${platforms.join(', ')}`);
 
-    // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
-    if (hospital.nameAliases && hospital.nameAliases.length > 0) {
-      this.aiCrawlerService.setHospitalAliases(hospital.name, hospital.nameAliases);
-    }
-
-    for (const prompt of prompts) {
-      try {
-        this.logger.log(`[Crawl] 프롬프트: ${prompt.promptText.substring(0, 30)}...`);
-        const results = await this.aiCrawlerService.queryAllPlatforms(
-          prompt.id,
-          hospital.id,
-          hospital.name,
-          prompt.promptText,
-          platforms,
-        );
-        this.logger.log(`[Crawl] 결과: ${results.length}개 응답`);
-        
-        if (results.length > 0) {
-          completed++;
-        } else {
-          failed++;
-          errors.push(`${prompt.promptText.substring(0, 20)}: 응답 없음`);
-        }
-      } catch (error) {
-        failed++;
-        errors.push(`${prompt.promptText.substring(0, 20)}: ${error.message}`);
-        this.logger.error(`[Crawl] 에러: ${error.message}`);
+    try {
+      // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
+      if (hospital.nameAliases && hospital.nameAliases.length > 0) {
+        this.aiCrawlerService.setHospitalAliases(hospital.name, hospital.nameAliases);
       }
 
+      for (const prompt of prompts) {
+        try {
+          this.logger.log(`[Crawl] 프롬프트: ${prompt.promptText.substring(0, 30)}...`);
+          const results = await this.aiCrawlerService.queryAllPlatforms(
+            prompt.id,
+            hospital.id,
+            hospital.name,
+            prompt.promptText,
+            platforms,
+          );
+          this.logger.log(`[Crawl] 결과: ${results.length}개 응답`);
+          
+          if (results.length > 0) {
+            completed++;
+          } else {
+            failed++;
+            errors.push(`${prompt.promptText.substring(0, 20)}: 응답 없음`);
+          }
+        } catch (error) {
+          failed++;
+          errors.push(`${prompt.promptText.substring(0, 20)}: ${error.message}`);
+          this.logger.error(`[Crawl] 에러: ${error.message}`);
+        }
+
+        // 【안정성】진행률 업데이트 실패(DB 순단 등)가 크롤 전체를 죽이지 않도록 격리
+        await this.prisma.crawlJob.update({
+          where: { id: jobId },
+          data: { completed, failed },
+        }).catch((err) => this.logger.warn(`[Crawl] 진행률 업데이트 실패 (계속 진행): ${err.message}`));
+      }
+
+      const errorMessage = errors.length > 0 ? errors.join('; ') : null;
       await this.prisma.crawlJob.update({
         where: { id: jobId },
-        data: { completed, failed },
+        data: {
+          status: failed === prompts.length ? 'FAILED' : 'COMPLETED',
+          completedAt: new Date(),
+          errorMessage,
+        },
       });
-    }
+      
+      this.logger.log(`[Crawl] 완료: completed=${completed}, failed=${failed}`);
 
-    const errorMessage = errors.length > 0 ? errors.join('; ') : null;
-    await this.prisma.crawlJob.update({
-      where: { id: jobId },
-      data: {
-        status: failed === prompts.length ? 'FAILED' : 'COMPLETED',
-        completedAt: new Date(),
-        errorMessage,
-      },
-    });
-    
-    this.logger.log(`[Crawl] 완료: completed=${completed}, failed=${failed}`);
-
-    if (completed > 0) {
-      await this.aiCrawlerService.calculateDailyScore(hospital.id);
+      if (completed > 0) {
+        await this.aiCrawlerService.calculateDailyScore(hospital.id).catch((err) =>
+          this.logger.error(`[Crawl] 점수 계산 실패 (크롤 결과는 저장됨): ${err.message}`),
+        );
+      }
+    } catch (fatalError) {
+      // 【안정성】치명적 오류 시에도 crawlJob이 RUNNING 고아로 남지 않도록 FAILED 마킹
+      this.logger.error(`[Crawl] 치명적 오류: ${fatalError.message}`);
+      await this.prisma.crawlJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date(),
+          errorMessage: `치명적 오류: ${fatalError.message}`,
+          completed,
+          failed,
+        },
+      }).catch(() => undefined);
     }
 
     // 【P1-7】수동 크롤 완료 → 해당 병원 캐시 무효화 (신선 데이터 즉시 반영)
