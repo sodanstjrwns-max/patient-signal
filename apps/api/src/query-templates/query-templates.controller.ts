@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { QueryTemplatesService } from './query-templates.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
+import { AdminEmailGuard } from '../common/guards/admin-email.guard';
 
 @ApiTags('쿼리 템플릿 & 진료과 프리셋')
 @Controller('query-templates')
@@ -74,7 +75,7 @@ export class QueryTemplatesController {
   // ==================== 시스템 관리 API ====================
 
   @Post('seed/presets')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminEmailGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '프리셋 시술 DB 시드', description: '7개 진료과 시술 데이터 초기화' })
   async seedPresets() {
@@ -82,7 +83,7 @@ export class QueryTemplatesController {
   }
 
   @Post('seed/templates')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminEmailGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '쿼리 템플릿 DB 시드', description: '14+20 쿼리 템플릿 초기화' })
   async seedTemplates() {

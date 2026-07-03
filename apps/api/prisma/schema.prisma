@@ -769,6 +769,7 @@ model CrawlJob {
 
   @@index([hospitalId, status])
   @@index([hospitalId, completedAt])
+  @@index([status, startedAt]) // 좀비 클리너(RUNNING 30분 초과 스캔) + 월 한도 카운트 최적화
   @@map("crawl_jobs")
 }
 

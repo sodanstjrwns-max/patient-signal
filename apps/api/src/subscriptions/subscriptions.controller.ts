@@ -13,6 +13,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { SubscriptionsService } from './subscriptions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
+import { AdminEmailGuard } from '../common/guards/admin-email.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PlanType } from '@prisma/client';
 
@@ -143,14 +144,14 @@ export class SubscriptionsController {
    * 전체 구독 목록 (관리자용)
    */
   @Get('admin/all')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminEmailGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '전체 구독 목록', description: '모든 구독 목록을 조회합니다 (관리자용)' })
   async getAllSubscriptions(
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    // TODO: 관리자 권한 체크 추가
+    // 【멀티테넌트】ADMIN_EMAILS 화이트리스트 유저만 전체 구독 열람 가능
     return this.subscriptionsService.getAllSubscriptions(+page, +limit);
   }
 }

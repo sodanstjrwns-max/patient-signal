@@ -47,8 +47,11 @@ export class PromptsController {
 
   @Get('detail/:id')
   @ApiOperation({ summary: '질문 상세 조회' })
-  async findOne(@Param('id') id: string) {
-    return this.promptsService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser('hospitalId') hospitalId: string,
+  ) {
+    return this.promptsService.findOne(id, hospitalId);
   }
 
   @Put(':id')
@@ -95,7 +98,10 @@ export class PromptsController {
   @Post(':id/fanouts')
   @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '질문 변형 생성 (Query Fanouts)' })
-  async generateFanouts(@Param('id') id: string) {
-    return this.promptsService.generateFanouts(id);
+  async generateFanouts(
+    @Param('id') id: string,
+    @CurrentUser('hospitalId') hospitalId: string,
+  ) {
+    return this.promptsService.generateFanouts(id, hospitalId);
   }
 }

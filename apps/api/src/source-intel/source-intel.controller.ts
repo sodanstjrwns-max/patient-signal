@@ -16,6 +16,7 @@ import { PrismaClient } from '@prisma/client';
 import { SourcePipelineService } from './source-pipeline.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 const prisma = new PrismaClient();
 
@@ -448,7 +449,11 @@ export class SourceIntelController {
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   @Get('source-detail/:snapshotId')
   @ApiOperation({ summary: '단일 소스 상세 (본문 + 분석)' })
-  async sourceDetail(@Param('snapshotId') snapshotId: string, @Query('hospitalId') hospitalId?: string) {
+  async sourceDetail(
+    @Param('snapshotId') snapshotId: string,
+    @CurrentUser('hospitalId') hospitalId?: string,
+  ) {
+    // 【멀티테넌트】쿼리 파라미터 대신 JWT의 hospitalId 사용 — 타 병원 분석값(hospitalAnalysis) 열람 차단
     const snap = await prisma.citedSourceSnapshot.findUnique({ where: { id: snapshotId } });
     if (!snap) throw new NotFoundException('Snapshot not found');
     return this.serializeSnapshot(snap, hospitalId, true);

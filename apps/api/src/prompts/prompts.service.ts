@@ -97,7 +97,7 @@ export class PromptsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, hospitalId?: string) {
     const prompt = await this.prisma.prompt.findUnique({
       where: { id },
       include: {
@@ -110,6 +110,11 @@ export class PromptsService {
 
     if (!prompt) {
       throw new NotFoundException('질문을 찾을 수 없습니다');
+    }
+
+    // 【멀티테넌트】타 병원 질문 열람 차단 (IDOR 방어)
+    if (hospitalId && prompt.hospitalId !== hospitalId) {
+      throw new ForbiddenException('해당 질문에 대한 접근 권한이 없습니다');
     }
 
     return prompt;
@@ -224,13 +229,18 @@ export class PromptsService {
   /**
    * Query Fanouts - 질문 변형 생성
    */
-  async generateFanouts(promptId: string) {
+  async generateFanouts(promptId: string, hospitalId?: string) {
     const prompt = await this.prisma.prompt.findUnique({
       where: { id: promptId },
     });
 
     if (!prompt) {
       throw new NotFoundException('질문을 찾을 수 없습니다');
+    }
+
+    // 【멀티테넌트】타 병원 질문으로 변형 생성 차단 (비용 도용 + IDOR 방어)
+    if (hospitalId && prompt.hospitalId !== hospitalId) {
+      throw new ForbiddenException('해당 질문에 대한 접근 권한이 없습니다');
     }
 
     const baseText = prompt.promptText;

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Query, Req, Logger, NotFoundException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, Query, Req, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AICrawlerService } from './ai-crawler.service';
@@ -258,9 +258,35 @@ export class AICrawlerController {
       throw new NotFoundException('병원을 찾을 수 없습니다');
     }
 
+    // 【동시성】이미 진행 중인 크롤이 있으면 중복 실행 차단 (AI 비용 이중 지출 + 점수 오염 방지)
+    // 30분 이내 시작된 RUNNING 잡만 카운트 — 좋비 잡은 무시 (좋비 클리너와 동일 기준)
+    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const runningJob = await this.prisma.crawlJob.findFirst({
+      where: {
+        hospitalId,
+        status: 'RUNNING',
+        startedAt: { gte: thirtyMinAgo },
+      },
+      select: { id: true, startedAt: true, completed: true, totalPrompts: true },
+    });
+
+    if (runningJob) {
+      throw new ConflictException({
+        statusCode: 409,
+        error: 'CRAWL_ALREADY_RUNNING',
+        message: '이미 크롤링이 진행 중입니다. 완료 후 다시 시도해주세요.',
+        jobId: runningJob.id,
+        progress: `${runningJob.completed}/${runningJob.totalPrompts}`,
+      });
+    }
+
     const prompts = await this.prisma.prompt.findMany({
       where: { hospitalId, isActive: true },
     });
+
+    if (prompts.length === 0) {
+      throw new BadRequestException('활성 질문이 없습니다. 질문을 먼저 등록해주세요.');
+    }
 
     const crawlJob = await this.prisma.crawlJob.create({
       data: {
@@ -299,11 +325,18 @@ export class AICrawlerController {
 
   @Get('job/:jobId')
   @ApiOperation({ summary: '크롤링 작업 상태 조회' })
-  async getJobStatus(@Param('jobId') jobId: string) {
+  async getJobStatus(
+    @Param('jobId') jobId: string,
+    @CurrentUser('hospitalId') hospitalId: string,
+  ) {
     const job = await this.prisma.crawlJob.findUnique({
       where: { id: jobId },
     });
     if (!job) throw new NotFoundException('작업을 찾을 수 없습니다');
+    // 【멀티테넌트】타 병원 크롤 작업 열람 차단 (IDOR 방어)
+    if (hospitalId && job.hospitalId !== hospitalId) {
+      throw new NotFoundException('작업을 찾을 수 없습니다');
+    }
     return job;
   }
 
