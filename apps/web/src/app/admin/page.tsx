@@ -113,7 +113,10 @@ export default function AdminPage() {
   const fetchData = async (tab: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/admin/${tab}?secret=${secret}`);
+      // 보안: 시크릿은 헤더로 전송 (URL 쿼리는 액세스 로그에 남음)
+      const res = await fetch(`${API_URL}/admin/${tab}`, {
+        headers: { 'x-admin-secret': secret },
+      });
       if (!res.ok) throw new Error('Failed');
       const data = await res.json();
       
@@ -132,7 +135,9 @@ export default function AdminPage() {
 
   const handleLogin = async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/dashboard?secret=${secretInput}`);
+      const res = await fetch(`${API_URL}/admin/dashboard`, {
+        headers: { 'x-admin-secret': secretInput },
+      });
       if (res.ok) {
         const data = await res.json();
         setDashboard(data);

@@ -19,8 +19,9 @@ function createService(prismaOverrides: any = {}) {
   };
   const configService: any = { get: jest.fn() };
   const emailService: any = { sendEmail: jest.fn() };
-  const service = new PaymentsService(prisma, configService, emailService);
-  return { service, prisma };
+  const couponsService: any = { validateCoupon: jest.fn() };
+  const service = new PaymentsService(prisma, configService, emailService, couponsService);
+  return { service, prisma, couponsService };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -198,6 +199,89 @@ describe('PaymentsService — 돈 계산/매핑 핵심 로직', () => {
       prisma.subscription.findMany.mockResolvedValue([]);
       const result = await service.processAutoRenewals();
       expect(result.processed).toBe(0);
+    });
+  });
+
+  // ─────────────────────────────────────────────
+  // assertValidPaymentAmount — 【보안】 금액 ↔ 플랜 가격 검증
+  // ─────────────────────────────────────────────
+  describe('assertValidPaymentAmount (결제 금액 위조 방지)', () => {
+    const call = (service: any, data: any) => (service as any).assertValidPaymentAmount(data);
+
+    it('정가 결제는 통과 (STARTER 120,000원)', async () => {
+      const { service } = createService();
+      const result = await call(service, {
+        orderId: 'PS_STARTER_123_abc',
+        amount: 120000,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('정가 결제는 통과 (PRO 590,000원)', async () => {
+      const { service } = createService();
+      const result = await call(service, {
+        orderId: 'PS_PRO_123_abc',
+        amount: 590000,
+      });
+      expect(result).toBeNull();
+    });
+
+    it('🔴 금액 조작 거부: 100원 내고 PRO 시도', async () => {
+      const { service } = createService();
+      await expect(
+        call(service, { orderId: 'PS_PRO_123_abc', amount: 100 }),
+      ).rejects.toThrow('결제 금액이 플랜 가격과 일치하지 않습니다');
+    });
+
+    it('🔴 쿠폰 없이 할인가 결제 거부', async () => {
+      const { service } = createService();
+      await expect(
+        call(service, { orderId: 'PS_STANDARD_123_abc', amount: 200000 }),
+      ).rejects.toThrow('결제 금액이 플랜 가격과 일치하지 않습니다');
+    });
+
+    it('유효한 쿠폰 할인가와 일치하면 통과', async () => {
+      const { service, couponsService } = createService();
+      couponsService.validateCoupon.mockResolvedValue({
+        valid: true,
+        coupon: { id: 'c1', code: 'LAUNCH50' },
+        pricing: { finalPrice: 145000, discountAmount: 145000 },
+      });
+
+      const result = await call(service, {
+        orderId: 'PS_STANDARD_123_abc',
+        amount: 145000,
+        couponCode: 'LAUNCH50',
+        hospitalId: 'h1',
+      });
+      expect(result).not.toBeNull();
+      expect(result.coupon.code).toBe('LAUNCH50');
+      expect(couponsService.validateCoupon).toHaveBeenCalledWith('LAUNCH50', 'STANDARD', 'h1');
+    });
+
+    it('🔴 쿠폰 할인가와 불일치하면 거부', async () => {
+      const { service, couponsService } = createService();
+      couponsService.validateCoupon.mockResolvedValue({
+        valid: true,
+        coupon: { id: 'c1', code: 'LAUNCH50' },
+        pricing: { finalPrice: 145000, discountAmount: 145000 },
+      });
+
+      await expect(
+        call(service, {
+          orderId: 'PS_STANDARD_123_abc',
+          amount: 1000,
+          couponCode: 'LAUNCH50',
+          hospitalId: 'h1',
+        }),
+      ).rejects.toThrow('결제 금액이 쿠폰 할인가와 일치하지 않습니다');
+    });
+
+    it('🔴 FREE 플랜 orderId는 결제 자체 거부', async () => {
+      const { service } = createService();
+      await expect(
+        call(service, { orderId: 'PS_FREE_123_abc', amount: 0 }),
+      ).rejects.toThrow('결제할 수 없는 플랜');
     });
   });
 });

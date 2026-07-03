@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { CouponsService, PLAN_PRICES } from '../coupons/coupons.service';
 import { PaymentStatus, PlanType } from '@prisma/client';
 
 interface TossPaymentConfirmRequest {
@@ -10,6 +11,8 @@ interface TossPaymentConfirmRequest {
   amount: number;
   hospitalId?: string;
   userId?: string;
+  /** 할인 결제 시 적용된 쿠폰 코드 (서버에서 재검증용) */
+  couponCode?: string;
 }
 
 interface TossPaymentResponse {
@@ -64,6 +67,7 @@ export class PaymentsService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private emailService: EmailService,
+    private couponsService: CouponsService,
   ) {
     this.secretKey = process.env.TOSS_SECRET_KEY || '';
   }
@@ -82,6 +86,12 @@ export class PaymentsService {
     if (existingPayment && existingPayment.status === 'DONE') {
       throw new BadRequestException('이미 처리된 결제입니다.');
     }
+
+    // 1.5 보안: 서버측 금액 ↔ 플랜 가격 검증
+    //  - 클라이언트가 보낸 amount를 그대로 믿지 않고 PLAN_PRICES와 대조
+    //  - 쿠폰 할인 결제는 couponCode를 재검증해 할인가 일치 확인
+    //  - 불일치 시 토스 승인 전에 거부 (100원 내고 PRO 활성화 방지)
+    const appliedCoupon = await this.assertValidPaymentAmount(data);
 
     // 2. 토스페이먼츠 결제 승인 API 호출
     const authHeader = Buffer.from(`${this.secretKey}:`).toString('base64');
@@ -122,6 +132,13 @@ export class PaymentsService {
       // 4. 구독 정보 업데이트 (결제 완료 시)
       if (result.status === 'DONE') {
         await this.activateSubscription(payment);
+
+        // 쿠폰 할인 결제였다면 사용 이력 기록 (재사용 방지)
+        if (appliedCoupon && data.hospitalId) {
+          await this.recordCouponRedemption(appliedCoupon, data).catch((err) =>
+            this.logger.error(`쿠폰 사용 이력 기록 실패(결제는 정상): ${err.message}`),
+          );
+        }
       }
 
       return {
@@ -133,6 +150,80 @@ export class PaymentsService {
       this.logger.error(`결제 승인 에러: ${error.message}`);
       throw error;
     }
+  }
+
+  /**
+   * 【보안】결제 금액이 플랜 정가 또는 유효한 쿠폰 할인가와 일치하는지 검증
+   * @returns 쿠폰 할인 결제인 경우 검증된 쿠폰 정보, 정가 결제면 null
+   * @throws BadRequestException 금액 불일치 시
+   */
+  private async assertValidPaymentAmount(data: TossPaymentConfirmRequest): Promise<any | null> {
+    const planType = this.extractPlanFromOrderId(data.orderId);
+    const expectedAmount = PLAN_PRICES[planType];
+
+    if (expectedAmount === undefined || expectedAmount <= 0) {
+      throw new BadRequestException(`결제할 수 없는 플랜입니다: ${planType}`);
+    }
+
+    // 정가 결제 — 통과
+    if (data.amount === expectedAmount) {
+      return null;
+    }
+
+    // 금액이 다르면 반드시 유효한 쿠폰 할인이어야 함
+    if (!data.couponCode || !data.hospitalId) {
+      this.logger.warn(
+        `결제 금액 불일치 거부: orderId=${data.orderId}, 요청=${data.amount}, 정가=${expectedAmount}`,
+      );
+      throw new BadRequestException('결제 금액이 플랜 가격과 일치하지 않습니다.');
+    }
+
+    // 쿠폰 재검증 (유효성 + 할인가 계산은 전부 서버에서)
+    const validation = await this.couponsService.validateCoupon(
+      data.couponCode,
+      planType,
+      data.hospitalId,
+    );
+
+    if (!validation?.valid || validation.pricing.finalPrice !== data.amount) {
+      this.logger.warn(
+        `쿠폰 할인가 불일치 거부: orderId=${data.orderId}, 요청=${data.amount}, 할인가=${validation?.pricing?.finalPrice}`,
+      );
+      throw new BadRequestException('결제 금액이 쿠폰 할인가와 일치하지 않습니다.');
+    }
+
+    this.logger.log(
+      `쿠폰 할인 결제 검증 통과: coupon=${validation.coupon.code}, 할인가=${data.amount}`,
+    );
+    return validation;
+  }
+
+  /**
+   * 쿠폰 할인 결제 성공 후 사용 이력 기록 (재사용·횟수제한 관리)
+   */
+  private async recordCouponRedemption(validation: any, data: TossPaymentConfirmRequest) {
+    if (!data.userId) {
+      this.logger.warn('userId 없이 쿠폰 사용 기록 시도 — 건너뜀');
+      return;
+    }
+    const planType = this.extractPlanFromOrderId(data.orderId);
+    await this.prisma.$transaction([
+      this.prisma.couponRedemption.create({
+        data: {
+          couponId: validation.coupon.id,
+          userId: data.userId,
+          hospitalId: data.hospitalId!,
+          appliedPlan: planType,
+          discountAmount: validation.pricing.discountAmount,
+          freeMonths: 0,
+        },
+      }),
+      this.prisma.coupon.update({
+        where: { id: validation.coupon.id },
+        data: { currentUses: { increment: 1 } },
+      }),
+    ]);
+    this.logger.log(`쿠폰 사용 기록 완료: ${validation.coupon.code} (hospital=${data.hospitalId})`);
   }
 
   /**

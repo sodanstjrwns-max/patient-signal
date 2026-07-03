@@ -94,8 +94,8 @@ const PLAN_INFO: Record<string, {
   },
 };
 
-// Toss Payments 클라이언트 키 (환경변수 우선, 폴백으로 라이브 키)
-const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || 'live_ck_LkKEypNArWgym1QbWvEQrlmeaxYG';
+// Toss Payments 클라이언트 키 (환경변수 필수 — 하드코딩 금지)
+const TOSS_CLIENT_KEY = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || '';
 
 function BillingContent() {
   const searchParams = useSearchParams();
@@ -185,6 +185,10 @@ function BillingContent() {
 
   // ============== Toss 결제 ==============
   const handleTossPayment = async () => {
+    if (!TOSS_CLIENT_KEY) {
+      toast.error('결제 설정 오류입니다. 고객센터로 문의해주세요. (NEXT_PUBLIC_TOSS_CLIENT_KEY 미설정)');
+      return;
+    }
     setIsLoadingPayment(true);
 
     try {
@@ -213,7 +217,8 @@ function BillingContent() {
         orderName,
         customerEmail: user?.email || '',
         customerName: user?.name || '',
-        successUrl: `${window.location.origin}/dashboard/billing/success`,
+        // 쿠폰 할인 결제라면 성공 페이지에 쿠폰 코드 전달 (서버 금액 재검증용)
+        successUrl: `${window.location.origin}/dashboard/billing/success${couponResult?.valid && couponResult.coupon?.code ? `?coupon=${encodeURIComponent(couponResult.coupon.code)}` : ''}`,
         failUrl: `${window.location.origin}/dashboard/billing/fail`,
         card: {
           useEscrow: false,
@@ -235,6 +240,10 @@ function BillingContent() {
 
   // ============== 빌링키 등록 (자동결제) ==============
   const handleBillingSetup = async () => {
+    if (!TOSS_CLIENT_KEY) {
+      toast.error('결제 설정 오류입니다. 고객센터로 문의해주세요. (NEXT_PUBLIC_TOSS_CLIENT_KEY 미설정)');
+      return;
+    }
     setIsLoadingPayment(true);
 
     try {

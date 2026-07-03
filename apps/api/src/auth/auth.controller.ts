@@ -101,7 +101,7 @@ export class AuthController {
       hasClientSecret: !!clientSecret,
       clientSecretPreview: clientSecret ? clientSecret.substring(0, 8) + '...' : 'NOT SET',
       clientSecretLength: clientSecret?.length || 0,
-      frontendUrl: frontendUrl || 'NOT SET (using fallback: patient-signal-web-2bbe.vercel.app)',
+      frontendUrl: frontendUrl || 'NOT SET (using fallback: patientsignal.kr)',
       redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
       tokenEndpointTest,
       tokenEndpointTestNote: 'invalid_grant = credentials OK (expected with fake code), invalid_client = credentials WRONG',
@@ -118,7 +118,7 @@ export class AuthController {
     @Query('error') error: string,
     @Res() res: Response,
   ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://patient-signal-web-2bbe.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://patientsignal.kr';
     
     if (error) {
       return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);

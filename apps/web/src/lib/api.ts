@@ -1,8 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from '@/hooks/useToast';
 
-// Production API URL
-const API_BASE_URL = 'https://patient-signal.onrender.com/api';
+// API URL — 환경변수 우선, 미설정 시 프로덕션 기본값
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -456,7 +456,7 @@ export const apiKeyApi = {
 
 // Payments API
 export const paymentsApi = {
-  confirm: (data: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string }) =>
+  confirm: (data: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string; couponCode?: string }) =>
     api.post('/payments/confirm', data),
   save: (data: any) =>
     api.post('/payments/save', data),

@@ -78,13 +78,16 @@ export class PaymentsController {
    * 결제 승인 (토스페이먼츠 결제 완료 후 호출)
    */
   @Post('confirm')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '결제 승인', description: '토스페이먼츠 결제 승인을 처리합니다' })
   @ApiResponse({ status: 200, description: '결제 승인 성공' })
   @ApiResponse({ status: 400, description: '결제 승인 실패' })
   async confirmPayment(
-    @Body() body: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string },
+    @Body() body: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string; couponCode?: string },
+    @CurrentUser() user: any,
   ) {
-    this.logger.log(`결제 승인 요청: orderId=${body.orderId}, hospitalId=${body.hospitalId}`);
+    this.logger.log(`결제 승인 요청: orderId=${body.orderId}, hospitalId=${body.hospitalId}, userId=${user.id}`);
 
     if (!body.paymentKey || !body.orderId || !body.amount) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
@@ -95,7 +98,9 @@ export class PaymentsController {
       orderId: body.orderId,
       amount: body.amount,
       hospitalId: body.hospitalId,
-      userId: body.userId,
+      // 보안: 클라이언트가 보낸 userId 대신 JWT에서 추출한 실제 사용자 ID 사용
+      userId: user.id,
+      couponCode: body.couponCode,
     });
   }
 
@@ -103,6 +108,8 @@ export class PaymentsController {
    * 결제 정보 저장 (프론트엔드에서 결제 승인 후 호출)
    */
   @Post('save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @HttpCode(200)
   @ApiOperation({ summary: '결제 정보 저장', description: '결제 승인 완료된 정보를 DB에 저장합니다' })
   @ApiResponse({ status: 200, description: '저장 성공' })
@@ -130,16 +137,26 @@ export class PaymentsController {
   ) {
     this.logger.log(`웹훅 수신: ${body.eventType || 'unknown'}`);
 
-    // 토스페이먼츠 직접 웹훅인 경우 서명 검증
-    if (signature && this.webhookSecretKey) {
+    // 보안: 시크릿이 설정돼 있으면 서명 검증 필수 (서명 헤더 누락 = 거부)
+    // 이전 코드는 `if (signature && ...)` 조건이라 헤더를 빼면 검증을 통째로 우회할 수 있었음
+    if (this.webhookSecretKey) {
+      if (!signature) {
+        this.logger.error('웹훅 서명 헤더 누락 — 요청 거부');
+        throw new UnauthorizedException('Missing webhook signature');
+      }
+
       const rawBody = req.rawBody?.toString() || JSON.stringify(body);
       const isValid = this.verifyWebhookSignature(rawBody, signature);
-      
+
       if (!isValid) {
         this.logger.error('웹훅 서명 검증 실패');
         throw new UnauthorizedException('Invalid webhook signature');
       }
       this.logger.log('✅ 웹훅 서명 검증 성공');
+    } else if (process.env.NODE_ENV === 'production') {
+      // 프로덕션에서 시크릿 미설정 = 설정 오류. 웹훅을 열어두지 않는다.
+      this.logger.error('TOSS_WEBHOOK_SECRET 미설정 상태로 프로덕션 웹훅 수신 — 거부');
+      throw new UnauthorizedException('Webhook secret not configured');
     }
 
     // 프론트엔드에서 전달받은 이벤트 처리
@@ -175,6 +192,8 @@ export class PaymentsController {
    * 결제 상태 조회
    */
   @Get(':orderId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: '결제 조회', description: '결제 정보를 조회합니다' })
   async getPayment(@Param('orderId') orderId: string) {
     const payment = await this.paymentsService.getPayment(orderId);

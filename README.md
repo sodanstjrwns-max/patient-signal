@@ -8,6 +8,22 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
+## 2026.07.03 런칭 전야 보안 하드닝 (Launch-Ready)
+- **🔴 결제 보안 3중 수정** (돈 사고 방지):
+  - `/payments/confirm` · `/payments/save` · `GET /payments/:orderId`에 `JwtAuthGuard` 추가 (비로그인 호출 차단)
+  - **서버측 금액↔플랜 가격 검증**: `assertValidPaymentAmount()` — 클라이언트 amount를 `PLAN_PRICES`와 대조, 쿠폰 할인 결제는 `couponCode` 재검증으로 할인가 일치 확인. "100원 내고 PRO 활성화" 공격 차단. 쿠폰 결제 성공 시 사용 이력(`CouponRedemption`) 자동 기록
+  - **웹훅 서명 필수화**: `TOSS_WEBHOOK_SECRET` 설정 시 서명 헤더 누락 = 거부 (기존엔 헤더 생략으로 우회 가능). 프로덕션에서 시크릿 미설정 시 웹훅 자체 거부
+- **어드민 인증 헤더 전환**: `?secret=` 쿼리 → `x-admin-secret` 헤더 (액세스 로그 유출 방지, 쿼리 방식 하위호환 유지)
+- **Swagger 프로덕션 비공개**: `NODE_ENV=production`이면 `/api/docs` 미노출
+- **프론트 정비**: `api.ts` API URL `NEXT_PUBLIC_API_URL` 환경변수 우선, Toss 라이브 클라이언트 키 하드코딩 제거(미설정 시 결제 버튼 안내), `error.tsx`/`not-found.tsx` 추가, sentry-example-page 삭제
+- **운영 정비**: 구 Vercel 도메인 fallback → `patientsignal.kr`, `.env.example` 전체 환경변수 문서화 (RESEND/ADMIN/CRON/GOOGLE/DIRECT_URL 등)
+- **테스트 57개** (+8: 금액 위조 방지 시나리오 — 100원 PRO 시도, 쿠폰 없는 할인가, 쿠폰 할인가 불일치, FREE 플랜 결제 거부 등)
+
+### ⚠️ 런칭 배포 체크리스트 (Render/Vercel 대시보드)
+- Render: `TOSS_SECRET_KEY`, `TOSS_WEBHOOK_SECRET`, 6개 AI 키(OPENAI/ANTHROPIC/PERPLEXITY/GEMINI/XAI/CLOVA_X), `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_SECRET`, `ADMIN_EMAILS`, `CRON_SECRET`, `FRONTEND_URL`
+- Vercel: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_TOSS_CLIENT_KEY`, `NEXT_PUBLIC_GA_ID`
+- AI 키가 없는 플랫폼은 **조용히 스킵**되므로 6개 키 전부 확인 필수
+
 ## 2026.07.03 개선 (Day-0 온보딩 + 테스트 + 대청소)
 - **온보딩 직후 첫 즉시 크롤**: 병원 생성 시 fire-and-forget으로 즉시 크롤 발사 → 대시보드 `FirstCrawlBanner`가 15초 폴링으로 진행률 표시, 첫 결과 도착 시 "AI가 우리 병원을 N회 언급" 아하모먼트 노출 (플랫폼별 칩 + CTA)
 - **핵심 유닛 테스트 49개**: 결제 금액/상태 매핑, 구독 7일 트라이얼·자동갱신(12만/29만/59만)·다운그레이드 차단, SoV/ABHS 계산, R0~R3 추론, percentile 벤치마크 — `cd apps/api && jest` 로 실행

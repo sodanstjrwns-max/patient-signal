@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Query, Headers, Logger, UnauthorizedException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
@@ -18,8 +18,11 @@ export class AdminController {
    */
   @Public()
   @Get('dashboard')
-  async getDashboard(@Query('secret') secret: string) {
-    this.validateSecret(secret);
+  async getDashboard(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getDashboard();
   }
 
@@ -29,8 +32,12 @@ export class AdminController {
    */
   @Public()
   @Get('llm-costs')
-  async getLlmCosts(@Query('secret') secret: string, @Query('days') days?: string) {
-    this.validateSecret(secret);
+  async getLlmCosts(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getLlmCosts(parseInt(days || '30'));
   }
 
@@ -40,8 +47,11 @@ export class AdminController {
    */
   @Public()
   @Get('users')
-  async getUsers(@Query('secret') secret: string) {
-    this.validateSecret(secret);
+  async getUsers(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getUsers();
   }
 
@@ -51,8 +61,11 @@ export class AdminController {
    */
   @Public()
   @Get('hospitals')
-  async getHospitals(@Query('secret') secret: string) {
-    this.validateSecret(secret);
+  async getHospitals(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getHospitals();
   }
 
@@ -62,8 +75,11 @@ export class AdminController {
    */
   @Public()
   @Get('coupons')
-  async getCoupons(@Query('secret') secret: string) {
-    this.validateSecret(secret);
+  async getCoupons(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getCoupons();
   }
 
@@ -74,10 +90,11 @@ export class AdminController {
   @Public()
   @Get('activity')
   async getActivity(
-    @Query('secret') secret: string,
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
     @Query('sort') sort: string = 'lastLogin',
   ) {
-    this.validateSecret(secret);
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.getUserActivity(sort);
   }
 
@@ -87,8 +104,11 @@ export class AdminController {
    */
   @Public()
   @Post('grant-trials')
-  async grantTrialsToFreeUsers(@Query('secret') secret: string) {
-    this.validateSecret(secret);
+  async grantTrialsToFreeUsers(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
     return this.adminService.grantStarterTrialToFreeUsers();
   }
 
@@ -104,10 +124,11 @@ export class AdminController {
   @Public()
   @Get('live-query/insights')
   async getLiveQueryInsights(
-    @Query('secret') secret: string,
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(secret);
+    this.validateSecret(headerSecret || querySecret);
     const daysNum = parseInt(days || '30', 10);
     this.logger.log(`[Admin] 실시간 질문 인사이트 조회 (최근 ${daysNum}일)`);
     return this.adminService.getLiveQueryInsights(daysNum);
@@ -120,7 +141,8 @@ export class AdminController {
   @Public()
   @Get('live-query/logs')
   async getLiveQueryLogs(
-    @Query('secret') secret: string,
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('hospitalId') hospitalId?: string,
@@ -128,7 +150,7 @@ export class AdminController {
     @Query('days') days?: string,
     @Query('search') search?: string,
   ) {
-    this.validateSecret(secret);
+    this.validateSecret(headerSecret || querySecret);
     this.logger.log(`[Admin] 실시간 질문 로그 조회`);
     return this.adminService.getLiveQueryLogs({
       page: parseInt(page || '1', 10),
@@ -150,10 +172,11 @@ export class AdminController {
   @Public()
   @Post('migrate-to-trial')
   async migrateUnpaidToTrial(
-    @Query('secret') secret: string,
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(secret);
+    this.validateSecret(headerSecret || querySecret);
     const trialDays = parseInt(days || '7', 10);
     this.logger.log(`[Admin] 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작`);
     return this.adminService.migrateUnpaidSubscriptionsToTrial(trialDays);
@@ -161,9 +184,10 @@ export class AdminController {
 
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
+    // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)
     const validSecret = process.env.ADMIN_SECRET;
-    if (!validSecret || secret !== validSecret) {
-      throw new Error('Unauthorized');
+    if (!validSecret || !secret || secret !== validSecret) {
+      throw new UnauthorizedException('Unauthorized');
     }
   }
 }

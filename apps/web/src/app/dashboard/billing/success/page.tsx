@@ -19,6 +19,7 @@ function SuccessContent() {
       const paymentKey = searchParams.get('paymentKey');
       const orderId = searchParams.get('orderId');
       const amount = searchParams.get('amount');
+      const couponCode = searchParams.get('coupon');
 
       if (!paymentKey || !orderId || !amount) {
         setStatus('error');
@@ -34,6 +35,7 @@ function SuccessContent() {
           amount: Number(amount),
           hospitalId: hospitalId || undefined,
           userId: user?.id || undefined,
+          couponCode: couponCode || undefined,
         });
 
         setPaymentInfo(data);
