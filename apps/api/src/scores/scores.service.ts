@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { CacheService } from '../common/cache/cache.service';
 
 @Injectable()
 export class ScoresService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+  ) {}
 
   /**
    * 최신 점수 조회
@@ -487,52 +491,18 @@ export class ScoresService {
    * - 상위 %와 등급 뱃지(Diamond/Platinum/Gold/Silver/Bronze) 반환
    */
   async getRanking(hospitalId: string) {
-    // 1. 모든 병원의 최신 점수를 가져오기 (각 병원별 가장 최근 DailyScore)
-    const allHospitals = await this.prisma.hospital.findMany({
-      where: { subscriptionStatus: 'ACTIVE' },
-      select: {
-        id: true,
-        name: true,
-        specialtyType: true,
-        regionSido: true,
-        regionSigungu: true,
-        planType: true,
-      },
-    });
+    // 【스케일】전체 랭킹 원본은 병원과 무관한 공유 데이터 → 전역 키로 10분 캐시.
+    // 기존엔 병원마다 전체 병원 스캔 + raw 집계(실측 60~130ms)를 반복 —
+    // 수천 병원이 아침에 동시 접속하면 DB가 같은 계산을 수천 번 하는 구조였음.
+    const rankedList = await this.cache.getOrSet(
+      'ps:global:ranking-base',
+      600,
+      () => this.computeRankingBase(),
+    );
 
-    if (allHospitals.length === 0) {
+    if (rankedList.length === 0) {
       return this.buildRankingResponse(hospitalId, null, 0, 0, []);
     }
-
-    // 2. 각 병원의 최신 점수를 한 번에 가져오기
-    //    서브쿼리로 각 병원별 최신 날짜를 찾고, 그 점수를 조회
-    const latestScores = await this.prisma.$queryRaw<
-      Array<{ hospital_id: string; overall_score: number; score_date: Date }>
-    >`
-      SELECT ds.hospital_id, ds.overall_score, ds.score_date
-      FROM daily_scores ds
-      INNER JOIN (
-        SELECT hospital_id, MAX(score_date) as max_date
-        FROM daily_scores
-        GROUP BY hospital_id
-      ) latest ON ds.hospital_id = latest.hospital_id AND ds.score_date = latest.max_date
-      ORDER BY ds.overall_score DESC
-    `;
-
-    // 3. 병원 ID → 점수 매핑
-    const scoreMap = new Map<string, number>();
-    for (const row of latestScores) {
-      scoreMap.set(row.hospital_id, row.overall_score);
-    }
-
-    // 4. 전체 병원 리스트에 점수를 붙여서 정렬 (점수 없는 병원은 0점 처리)
-    const rankedList = allHospitals
-      .map(h => ({
-        hospitalId: h.id,
-        name: h.name,
-        score: scoreMap.get(h.id) ?? 0,
-      }))
-      .sort((a, b) => b.score - a.score);
 
     // 5. 순위 계산 (동점 처리: 같은 점수면 같은 순위)
     const rankings: Array<{ hospitalId: string; name: string; score: number; rank: number }> = [];
@@ -585,6 +555,44 @@ export class ScoresService {
     }
 
     return this.buildRankingResponse(hospitalId, myRanking, totalHospitals, totalHospitals, rankings, previousRank);
+  }
+
+  /**
+   * 전체 병원 랭킹 원본 계산 (병원 무관 공유 데이터 — getRanking에서 전역 캐시로 재사용)
+   */
+  private async computeRankingBase(): Promise<
+    Array<{ hospitalId: string; name: string; score: number }>
+  > {
+    // 1. 모든 활성 병원
+    const allHospitals = await this.prisma.hospital.findMany({
+      where: { subscriptionStatus: 'ACTIVE' },
+      select: { id: true, name: true },
+    });
+    if (allHospitals.length === 0) return [];
+
+    // 2. 각 병원의 최신 점수 (서브쿼리 집계)
+    const latestScores = await this.prisma.$queryRaw<
+      Array<{ hospital_id: string; overall_score: number; score_date: Date }>
+    >`
+      SELECT ds.hospital_id, ds.overall_score, ds.score_date
+      FROM daily_scores ds
+      INNER JOIN (
+        SELECT hospital_id, MAX(score_date) as max_date
+        FROM daily_scores
+        GROUP BY hospital_id
+      ) latest ON ds.hospital_id = latest.hospital_id AND ds.score_date = latest.max_date
+      ORDER BY ds.overall_score DESC
+    `;
+
+    const scoreMap = new Map<string, number>();
+    for (const row of latestScores) {
+      scoreMap.set(row.hospital_id, row.overall_score);
+    }
+
+    // 3. 점수 붙여서 정렬 (점수 없는 병원은 0점)
+    return allHospitals
+      .map(h => ({ hospitalId: h.id, name: h.name, score: scoreMap.get(h.id) ?? 0 }))
+      .sort((a, b) => b.score - a.score);
   }
 
   /**

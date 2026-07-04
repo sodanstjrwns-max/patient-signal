@@ -101,6 +101,31 @@ export class CacheService implements OnModuleDestroy {
   }
 
   /**
+   * 【스케일】분산 크론 락 — 다중 인스턴스에서 크론 중복 실행 방지
+   *
+   * 수평 확장(인스턴스 2대+) 시 @Cron이 모든 인스턴스에서 동시에 발화
+   * → 트라이얼 이메일 중복 발송, 구독 이중 다운그레이드, 크롤 이중 트리거 위험.
+   *
+   * Redis SET NX(원자적)로 첫 도착 인스턴스만 true. TTL로 데드락 자동 해제.
+   * Redis 미설정(단일 인스턴스) 시 인메모리 — 프로세스 내 중복만 방지하면 충분.
+   */
+  async acquireLock(lockName: string, ttlSeconds: number): Promise<boolean> {
+    const key = `ps:lock:${lockName}`;
+    try {
+      if (this.redis && this.redis.status === 'ready') {
+        const result = await this.redis.set(key, '1', 'EX', ttlSeconds, 'NX');
+        return result === 'OK';
+      }
+    } catch {
+      /* Redis 실패 시 인메모리로 — 단일 인스턴스 가정 */
+    }
+    const existing = this.memory.get(key);
+    if (existing && Date.now() < existing.expiresAt) return false;
+    this.memory.set(key, { value: '1', expiresAt: Date.now() + ttlSeconds * 1000 });
+    return true;
+  }
+
+  /**
    * 특정 병원의 모든 캐시 무효화 (크롤링 완료 후 호출)
    *
    * 【스케일 수정】

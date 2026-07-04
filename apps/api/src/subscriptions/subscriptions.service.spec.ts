@@ -23,7 +23,8 @@ function createService(prismaOverrides: any = {}) {
   };
   const hospitalsService: any = { handlePlanUpgrade: jest.fn().mockResolvedValue({ addedPrompts: 0, newFeatures: [] }) };
   const emailService: any = { sendEmail: jest.fn() };
-  const service = new SubscriptionsService(prisma, hospitalsService, emailService);
+  const cacheService: any = { acquireLock: jest.fn().mockResolvedValue(true), getOrSet: jest.fn(), invalidateHospital: jest.fn() };
+  const service = new SubscriptionsService(prisma, hospitalsService, emailService, cacheService);
   return { service, prisma, hospitalsService };
 }
 

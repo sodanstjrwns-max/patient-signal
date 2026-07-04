@@ -4,6 +4,7 @@ import { EmailService } from '../email/email.service';
 import { PlanType, SubscriptionStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HospitalsService } from '../hospitals/hospitals.service';
+import { CacheService } from '../common/cache/cache.service';
 
 @Injectable()
 export class SubscriptionsService {
@@ -13,7 +14,21 @@ export class SubscriptionsService {
     private prisma: PrismaService,
     private hospitalsService: HospitalsService,
     private emailService: EmailService,
+    private cacheService: CacheService,
   ) {}
+
+  /**
+   * 【스케일】다중 인스턴스 크론 중복 실행 방지 가드
+   * 수평 확장 시 모든 인스턴스에서 @Cron이 동시 발화하므로
+   * Redis SET NX 락으로 첫 인스턴스만 실행 (이메일 중복 발송 등 방지)
+   */
+  private async shouldRunCron(name: string): Promise<boolean> {
+    const acquired = await this.cacheService.acquireLock(`cron:${name}`, 3600);
+    if (!acquired) {
+      this.logger.log(`[크론 스킵] ${name} — 다른 인스턴스가 이미 실행 중`);
+    }
+    return acquired;
+  }
 
   /**
    * 구독 생성/활성화
@@ -263,6 +278,7 @@ export class SubscriptionsService {
    */
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async checkTrialExpirations() {
+    if (!(await this.shouldRunCron('checkTrialExpirations'))) return;
     this.logger.log('체험 기간 종료 체크 시작...');
 
     const now = new Date();
@@ -337,6 +353,7 @@ export class SubscriptionsService {
    */
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async checkSubscriptionExpirations() {
+    if (!(await this.shouldRunCron('checkSubscriptionExpirations'))) return;
     this.logger.log('구독 만료 체크 시작...');
 
     const now = new Date();
@@ -528,6 +545,7 @@ export class SubscriptionsService {
    */
   @Cron('0 0 * * *') // 매일 00:00 UTC = 09:00 KST
   async sendTrialConversionReminders() {
+    if (!(await this.shouldRunCron('sendTrialConversionReminders'))) return;
     this.logger.log('[A1] 트라이얼 전환 유도 알림 크론 시작...');
     const now = new Date();
 
@@ -599,6 +617,7 @@ export class SubscriptionsService {
    */
   @Cron('0 1 * * *') // 매일 01:00 UTC = 10:00 KST (이탈 리마인드 전에 실행)
   async sendCouponExpirationReminders() {
+    if (!(await this.shouldRunCron('sendCouponExpirationReminders'))) return;
     this.logger.log('[쿠폰 만료] 쿠폰 만료 안내 크론 시작...');
     const now = new Date();
 
@@ -683,6 +702,7 @@ export class SubscriptionsService {
    */
   @Cron('0 2 * * *') // 매일 02:00 UTC = 11:00 KST (쿠폰 만료 안내 이후 실행)
   async sendInactivityReminders() {
+    if (!(await this.shouldRunCron('sendInactivityReminders'))) return;
     this.logger.log('[A3] 이탈 위험 리마인드 크론 시작...');
 
     const now = new Date();
@@ -756,6 +776,7 @@ export class SubscriptionsService {
    */
   @Cron('0 0 * * 1') // 매주 월요일 00:00 UTC = 09:00 KST
   async sendWeeklyReportEmails() {
+    if (!(await this.shouldRunCron('sendWeeklyReportEmails'))) return;
     this.logger.log('[B1] 주간 리포트 이메일 발송 크론 시작...');
 
     const now = new Date();
@@ -864,6 +885,7 @@ export class SubscriptionsService {
    */
   @Cron('0 9 * * *') // 매일 09:00 UTC = 18:00 KST
   async checkCompetitorChanges() {
+    if (!(await this.shouldRunCron('checkCompetitorChanges'))) return;
     this.logger.log('[B2] 경쟁사 변동 감지 크론 시작...');
 
     const now = new Date();

@@ -147,11 +147,23 @@ export class CouponsService {
         },
       });
 
-      // 2. 쿠폰 사용 횟수 증가
-      await tx.coupon.update({
-        where: { id: coupon.id },
+      // 2. 쿠폰 사용 횟수 증가 — 【동시성 안전】조건부 원자 업데이트
+      // validateCoupon의 사전 체크는 read-then-write라 동시 요청 시 한도 초과 발급 가능.
+      // WHERE에 한도 조건을 포함시켜 DB 레벨에서 초과를 원천 차단 (count=0이면 소진).
+      const incremented = await tx.coupon.updateMany({
+        where: {
+          id: coupon.id,
+          OR: [
+            { maxUses: { lte: 0 } }, // 무제한 쿠폰
+            { currentUses: { lt: coupon.maxUses } },
+          ],
+        },
         data: { currentUses: { increment: 1 } },
       });
+      if (incremented.count === 0) {
+        // 트랜잭션 롤백 → redemption 기록도 함께 취소됨
+        throw new BadRequestException('모든 쿠폰이 소진되었습니다.');
+      }
 
       // 3. 구독 생성/업데이트
       const subscription = await tx.subscription.upsert({

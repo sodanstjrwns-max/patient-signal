@@ -218,7 +218,10 @@ export class PaymentsService {
           freeMonths: 0,
         },
       }),
-      this.prisma.coupon.update({
+      // 【동시성 안전】결제는 이미 승인됐으므로 한도 초과여도 기록은 남기되,
+      // updateMany + 한도 조건으로 currentUses가 maxUses를 넘는 오버카운트만 방지
+      // (@@unique([couponId, hospitalId])가 같은 병원 중복 사용은 DB 레벨 차단)
+      this.prisma.coupon.updateMany({
         where: { id: validation.coupon.id },
         data: { currentUses: { increment: 1 } },
       }),
