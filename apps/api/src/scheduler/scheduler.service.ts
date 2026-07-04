@@ -253,7 +253,12 @@ export class SchedulerService implements OnModuleInit {
     //   프롬프트 레벨은 이미 3개 병렬이므로, 병원 4개 동시 = 실효 처리량 약 3~4배
     //   → 200곳+도 세션 예산 내 매일 1회 커버 가능
     // ============================================================
-    const HOSPITAL_CONCURRENCY = 4;
+    // 【스케일】env로 동시성 제어 — 수백 병원 규모에선 워커 인스턴스를 늘리거나
+    // HOSPITAL_CONCURRENCY 상향 (AI API rate limit 여유 확인 후)
+    const HOSPITAL_CONCURRENCY = Math.max(
+      1,
+      parseInt(process.env.HOSPITAL_CONCURRENCY || '4', 10) || 4,
+    );
 
     const processOneHospital = async (hospital: typeof hospitals[number]) => {
       try {

@@ -8,6 +8,18 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
+## 2026.07.04 스케일 최적화 (수백~수천 클라이언트 대비)
+- **DB 커넥션 풀 명시 제어**: `DATABASE_URL`에 `connection_limit`(기본 15)·`pool_timeout`(기본 20s) 자동 부여 — Prisma 기본값(CPU×2+1≈3~5)으로는 동시 대시보드 조회 + 크롤 워커 겹칠 때 "Timed out fetching connection" 발생. `DB_CONNECTION_LIMIT`/`DB_POOL_TIMEOUT` env로 조정
+- **gzip 응답 압축**: 대시보드 JSON(수백 KB) 70~85% 축소 → 대역폭·체감속도 개선 (`compression`, 1KB 미만 스킵)
+- **trust proxy 설정**: Render 프록시 뒤에서 실제 클라이언트 IP 인식 — 없으면 수백 명이 프록시 IP 1개로 묶여 전원이 429 rate limit 맞는 대참사 방지
+- **graceful shutdown**: `enableShutdownHooks()` — 배포/재시작 시 진행 중 요청 완료 + Prisma/Bull 정상 종료 (잡 유실 방지)
+- **AI 크롤러 분석 API 15개 캐시 적용**: `insights/*`·`category-analysis`·`prompt-performance` 등 무거운 분석 GET에 `@CacheTTL(300~600s)` — 기존엔 scores만 캐시. 크롤 완료 시 `invalidateHospital`로 즉시 무효화되어 stale 위험 없음
+- **캐시 무효화 2중 버그 수정**: ① 패턴 `ps:*:{id}*` → `ps:*{id}*` (HTTP 캐시 키가 `/api/...`라 콜론 패턴에 미매칭 → Redis 모드에서 무효화 누락되던 버그) ② `KEYS` → `SCAN` (KEYS는 O(전체키) 블로킹 — 수천 병원 캐시에서 Redis 수백 ms 정지 유발)
+- **findMany 전역 안전망**: AIResponse(2만행)·LiveQueryResponse 등 대용량 테이블에 take 미지정 시 자동 상한 — 데이터 폭주 병원 1곳이 수십만 행을 메모리로 끌어와 서버 OOM시키는 사고 차단 (Prisma 미들웨어)
+- **크롤 동시성 env화**: 인라인 모드 `HOSPITAL_CONCURRENCY`(기본 4) 환경변수 제어 — AI API rate limit 여유에 맞춰 무배포 상향 가능
+- **수평 확장 경로**: `REDIS_URL` 설정 → Bull 큐 모드 → 워커 인스턴스 추가만으로 수천 병원 크롤 커버 (기존 P1-4 구조 그대로 활용)
+- 테스트 57개 전부 통과, 타입체크 클린
+
 ## 2026.07.03 런칭 전야 보안 하드닝 (Launch-Ready)
 - **🔴 결제 보안 3중 수정** (돈 사고 방지):
   - `/payments/confirm` · `/payments/save` · `GET /payments/:orderId`에 `JwtAuthGuard` 추가 (비로그인 호출 차단)

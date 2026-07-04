@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Param, Body, UseGuards, Query, Req, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, UseInterceptors, Query, Req, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AICrawlerService } from './ai-crawler.service';
@@ -9,6 +9,7 @@ import { PlanGuard } from '../common/guards/plan.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 import { CacheService } from '../common/cache/cache.service';
+import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
@@ -63,6 +64,8 @@ export class AICrawlerController {
   /**
    * B4: 마지막 크롤링/분석 시간 조회 (대시보드 인디케이터용)
    */
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(300) // 【스케일】크롤 완료 시 invalidateHospital로 즉시 무효화되므로 안전
   @Get('last-analysis/:hospitalId')
   @ApiOperation({ summary: '마지막 분석 시간 조회', description: '대시보드 새로고침 인디케이터용' })
   async getLastAnalysisTime(@Param('hospitalId') hospitalId: string) {
@@ -470,6 +473,8 @@ export class AICrawlerController {
 
   // ==================== Phase 1: 인사이트 분석 API ====================
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/mention-analysis/:hospitalId')
   @ApiOperation({ summary: 'AI 추천 멘트 원문 분석 - 추천 키워드, 문맥 분류, 차별화 포인트' })
   async getMentionAnalysis(
@@ -662,6 +667,8 @@ export class AICrawlerController {
     }
   }
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/trend/:hospitalId')
   @ApiOperation({ summary: 'AI 응답 트렌드 추적 - 주간/월간 변화' })
   async getResponseTrend(
@@ -809,6 +816,8 @@ export class AICrawlerController {
     }
   }
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/sources/:hospitalId')
   @ApiOperation({ summary: 'AI 응답 출처 분석 - 출처별 빈도, 채널 분석 (Gemini grounding-redirect 디코딩 포함)' })
   async getSourceAnalysis(
@@ -1037,6 +1046,8 @@ export class AICrawlerController {
   // B-2: 디코딩 전/후 도메인 분포 비교 진단 엔드포인트
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/sources-diagnostic/:hospitalId')
   @ApiOperation({ summary: '출처 디코딩 진단 - Gemini 디코딩 전/후 도메인 분포 비교' })
   async getSourceDiagnostic(
@@ -1165,6 +1176,8 @@ export class AICrawlerController {
 
   // ==================== Phase 2-4: 경쟁사 포지셔닝 맵 ====================
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/positioning/:hospitalId')
   @ApiOperation({ summary: '경쟁사 포지셔닝 맵 - 레이더차트 5축 분석' })
   async getPositioningMap(
@@ -1302,6 +1315,8 @@ export class AICrawlerController {
 
   // ==================== Phase 2-5: 출처 품질 분석 (강화) ====================
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/source-quality/:hospitalId')
   @ApiOperation({ summary: '출처 품질 분석 - 채널별 영향력 및 품질 점수' })
   async getSourceQuality(
@@ -1506,6 +1521,8 @@ export class AICrawlerController {
   // A-1: Top URL 페이지 단위 랭킹 (도메인이 아닌 개별 URL 기준)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/top-urls/:hospitalId')
   @ApiOperation({ summary: 'Top URL 랭킹 - 페이지(URL) 단위 인용 빈도 + 인용한 AI + 최신성' })
   async getTopUrls(
@@ -1669,6 +1686,8 @@ export class AICrawlerController {
   // A-2: URL × AI 매트릭스 (어떤 URL이 어떤 AI에서 인용되는가)
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/url-matrix/:hospitalId')
   @ApiOperation({ summary: 'URL × AI 매트릭스 - 상위 URL별 6개 AI 플랫폼 인용 분포' })
   async getUrlMatrix(
@@ -1804,6 +1823,8 @@ export class AICrawlerController {
   // Breadth-B: 25 카테고리 + 권위도 + 감성 + 경쟁사 갭 분석
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/breadth/:hospitalId')
   @ApiOperation({
     summary: 'Breadth 분석 - 25 카테고리 출처 분포 + 권위도 점수 + 감성 매핑 + 경쟁사 갭',
@@ -2184,6 +2205,8 @@ export class AICrawlerController {
     };
   }
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/action-report/:hospitalId')
   @ApiOperation({ summary: '자동 액션 리포트 - AI 기반 주간 실행 계획 생성' })
   async getActionReport(
@@ -2800,6 +2823,8 @@ export class AICrawlerController {
   /**
    * 카테고리별 성과 분석 API
    */
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(300)
   @Get('live-query/category-stats/:hospitalId')
   @ApiOperation({
     summary: '실시간 질문 카테고리별 성과 분석',
@@ -2961,6 +2986,8 @@ export class AICrawlerController {
    * 통합 카테고리 분석 API (실시간 질문 + 정기 크롤링 데이터)
    * → /dashboard/category-analysis 페이지에서 사용
    */
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('category-analysis/:hospitalId')
   @ApiOperation({
     summary: '통합 카테고리 성과 분석 (실시간 + 크롤링)',
@@ -3298,6 +3325,8 @@ export class AICrawlerController {
 
   // ==================== 개선4: 프롬프트별 성과 분석 ====================
 
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('prompt-performance/:hospitalId')
   @ApiOperation({ 
     summary: '【개선4】프롬프트별 성과 분석',

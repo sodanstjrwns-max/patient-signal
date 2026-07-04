@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import compression from 'compression';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { StripInternalFieldsInterceptor } from './common/interceptors/strip-internal-fields.interceptor';
@@ -18,10 +20,23 @@ process.on('uncaughtException', (error) => {
 });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // 웹훅 서명 검증을 위해 rawBody 활성화
     rawBody: true,
   });
+
+  // 【스케일】Render/Vercel 등 프록시 뒤에서 실제 클라이언트 IP 인식
+  // → ThrottlerGuard가 프록시 IP가 아닌 사용자별 IP로 rate limit 적용
+  //   (이거 없으면 수백 명이 프록시 1개 IP로 묶여 전원이 429를 맞는 대참사)
+  app.set('trust proxy', 1);
+
+  // 【스케일】gzip 응답 압축 — 대시보드 JSON(수백 KB)이 70~85% 작아져
+  // 대역폭·응답시간 감소. 1KB 미만은 압축 스킵.
+  app.use(compression({ threshold: 1024 }));
+
+  // 【스케일】graceful shutdown — 배포/재시작 시 진행 중인 요청을 마치고 종료
+  // (Prisma $disconnect, Bull queue close 등 OnModuleDestroy 훅 정상 실행)
+  app.enableShutdownHooks();
 
   // C2: 글로벌 에러 필터 등록
   app.useGlobalFilters(new AllExceptionsFilter());

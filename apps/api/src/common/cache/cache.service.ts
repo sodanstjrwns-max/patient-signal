@@ -100,13 +100,31 @@ export class CacheService implements OnModuleDestroy {
     return value;
   }
 
-  /** 특정 병원의 모든 캐시 무효화 (크롤링 완료 후 호출) */
+  /**
+   * 특정 병원의 모든 캐시 무효화 (크롤링 완료 후 호출)
+   *
+   * 【스케일 수정】
+   *  1. 패턴 `ps:*:${id}*` → `ps:*${id}*` — HTTP 캐시 키(ps:http:/api/scores/<id>/latest)는
+   *     id 앞이 콜론이 아니라 슬래시라서 기존 패턴에 매칭 안 됨 (Redis 모드 무효화 누락 버그)
+   *  2. KEYS → SCAN — KEYS는 O(전체키) 블로킹 명령. 수천 병원 × 수십 엔드포인트 캐시가 쌓이면
+   *     Redis가 수백 ms 멈춰 크롤 워커/큐까지 지연됨. SCAN은 논블로킹 순회.
+   */
   async invalidateHospital(hospitalId: string): Promise<void> {
-    const pattern = `ps:*:${hospitalId}*`;
+    const pattern = `ps:*${hospitalId}*`;
     try {
       if (this.redis && this.redis.status === 'ready') {
-        const keys = await this.redis.keys(pattern);
-        if (keys.length > 0) await this.redis.del(...keys);
+        let cursor = '0';
+        do {
+          const [nextCursor, keys] = await this.redis.scan(
+            cursor,
+            'MATCH',
+            pattern,
+            'COUNT',
+            500,
+          );
+          cursor = nextCursor;
+          if (keys.length > 0) await this.redis.del(...keys);
+        } while (cursor !== '0');
         return;
       }
     } catch {
