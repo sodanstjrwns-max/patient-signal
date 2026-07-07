@@ -15,6 +15,7 @@ async function main() {
     hospital = await prisma.hospital.create({
       data: {
         name: '서울비디치과 (데모)',
+        nameAliases: ['서울비디', '서울BD치과', 'Seoul BD Dental', 'Seoul BD Dental Clinic', 'BD Dental Clinic', '首尔BD牙科', 'ソウルBD歯科'],
         businessNumber: '123-45-67890',
         specialtyType: 'DENTAL',
         subSpecialties: ['임플란트', '교정', '미백', '심미치료', '충치치료'],
@@ -32,7 +33,12 @@ async function main() {
   } else {
     await prisma.hospital.update({
       where: { id: hospital.id },
-      data: { keyProcedures: ['임플란트', '교정', '미백'], planType: 'PRO', subscriptionStatus: 'ACTIVE' },
+      data: {
+        keyProcedures: ['임플란트', '교정', '미백'],
+        nameAliases: ['서울비디', '서울BD치과', 'Seoul BD Dental', 'Seoul BD Dental Clinic', 'BD Dental Clinic', '首尔BD牙科', 'ソウルBD歯科'],
+        planType: 'PRO',
+        subscriptionStatus: 'ACTIVE',
+      },
     });
   }
   console.log('✅ Hospital:', hospital.id);
@@ -75,6 +81,9 @@ async function main() {
       { text: '강남구 임플란트 가격 비교해줘', type: 'CUSTOM' as const, cat: '임플란트', kw: ['강남구'] },
       { text: '강남 치과 후기 좋은 곳', type: 'AUTO_GENERATED' as const, cat: '일반', kw: ['강남'] },
       { text: '임플란트 아프지 않은 치과 강남', type: 'AUTO_GENERATED' as const, cat: '임플란트', kw: ['강남'] },
+      // 외국인 환자 관점
+      { text: 'Best dental clinic in Gangnam, Seoul for dental implants', type: 'AUTO_GENERATED' as const, cat: '외국인-임플란트', kw: ['Gangnam', 'Seoul'] },
+      { text: 'English speaking dentist in Gangnam, Seoul', type: 'AUTO_GENERATED' as const, cat: '외국인-일반', kw: ['Gangnam', 'Seoul'] },
     ];
     await prisma.prompt.createMany({
       data: promptData.map(p => ({
@@ -149,9 +158,13 @@ async function main() {
             hospitalId: hospital!.id,
             aiPlatform: plat,
             aiModelVersion: versions[plat],
-            responseText: isMentioned 
-              ? `서울비디치과는 해당 지역에서 높은 평가를 받는 치과입니다. 전문의가 상주하며 체계적인 진료를 제공합니다.`
-              : `해당 지역에 여러 치과가 있습니다. 방문 전 후기를 확인해보세요.`,
+            responseText: /^[A-Za-z]/.test(prompt.promptText)
+              ? (isMentioned
+                ? `Seoul BD Dental Clinic is highly rated in the Gangnam area. SNU-trained specialists provide systematic care, and English-language consultations are available for international patients.`
+                : `There are several dental clinics in that area of Seoul. I recommend checking reviews and English support before visiting.`)
+              : (isMentioned
+                ? `서울비디치과는 해당 지역에서 높은 평가를 받는 치과입니다. 전문의가 상주하며 체계적인 진료를 제공합니다.`
+                : `해당 지역에 여러 치과가 있습니다. 방문 전 후기를 확인해보세요.`),
             responseDate: date,
             isMentioned,
             mentionPosition: mp,

@@ -17,6 +17,7 @@
  */
 
 import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES } from '../query-templates/query-templates.service';
+import { buildGlobalPatientQuestions } from '../common/utils/global-patient';
 
 // ==================== 축1: 의도별 템플릿 ====================
 
@@ -390,7 +391,7 @@ export const SYMPTOM_TEMPLATES: Record<string, string[]> = {
 export interface MatrixCandidate {
   text: string;
   intent: IntentType;
-  tone: ToneType | 'seasonal' | 'symptom' | 'strength' | 'competitor';
+  tone: ToneType | 'seasonal' | 'symptom' | 'strength' | 'competitor' | 'global';
   season?: string;
   weight: number;        // 최종 가중치 (의도×톤×시즌 종합)
   procedure?: string;
@@ -566,6 +567,25 @@ export function generateMatrixCandidates(hospital: {
     });
   }
 
+  // ── 외국인 환자 관점 (의료관광 + 거주 외국인, 영어/중국어/일본어) ──
+  const globalQuestions = buildGlobalPatientQuestions({
+    specialtyType: hospital.specialtyType,
+    regionSido: hospital.regionSido,
+    regionSigungu: hospital.regionSigungu,
+    treatments: procedures,
+    maxQuestions: 6,
+  });
+  for (const text of globalQuestions) {
+    candidates.push({
+      text,
+      intent: 'RESERVATION',
+      tone: 'global',
+      weight: 0.9, // 국내 질문보다 약간 낮지만 톤 다양성 보장으로 하루 1개는 선택됨
+      procedure: procedures[0],
+      region: regions[0] || hospital.regionSigungu,
+    });
+  }
+
   return candidates;
 }
 
@@ -620,9 +640,27 @@ export function applyPerformanceBoost(
 // ==================== 중복 제거 + 최종 선택 ====================
 
 /**
- * 텍스트 유사도 (Jaccard, 문자 단위)
+ * 텍스트 유사도 (Jaccard)
+ * - 한글 텍스트: 문자 단위 (기존 동작 유지)
+ * - 라틴 문자 위주(영어 등) 텍스트: 단어 단위
+ *   (영어는 알파벳 26자를 공유해 문자 단위로는 모두 중복 처리되는 오탐 방지)
  */
+function isMostlyLatin(s: string): boolean {
+  const letters = s.replace(/[^a-zA-Z가-힣]/g, '');
+  if (letters.length === 0) return false;
+  const latin = (s.match(/[a-zA-Z]/g) || []).length;
+  return latin / letters.length > 0.7;
+}
+
 function textSimilarity(a: string, b: string): number {
+  // 한쪽이라도 라틴 위주면 단어 단위 Jaccard
+  if (isMostlyLatin(a) || isMostlyLatin(b)) {
+    const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+    const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+    const inter = new Set([...wordsA].filter(x => wordsB.has(x)));
+    const uni = new Set([...wordsA, ...wordsB]);
+    return uni.size > 0 ? inter.size / uni.size : 0;
+  }
   const setA = new Set(a.replace(/\s+/g, '').split(''));
   const setB = new Set(b.replace(/\s+/g, '').split(''));
   const intersection = new Set([...setA].filter(x => setB.has(x)));

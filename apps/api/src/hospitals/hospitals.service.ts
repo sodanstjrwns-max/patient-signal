@@ -4,6 +4,7 @@ import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { SchedulerService } from '../scheduler/scheduler.service';
+import { buildGlobalPatientQuestions } from '../common/utils/global-patient';
 
 @Injectable()
 export class HospitalsService {
@@ -454,12 +455,35 @@ export class HospitalsService {
       }
     }
 
+    // ═══════════════════════════════════════════
+    // ⑩ 외국인 환자 관점 (의료관광 + 거주 외국인 시장)
+    //    - "Best dentist in Gangnam, Seoul for implants" 같은
+    //      외국어 AI 검색 가시성도 추적 (STANDARD 이상 플랜에서 포함)
+    // ═══════════════════════════════════════════
+    const includeGlobal = ['STANDARD', 'PRO', 'ENTERPRISE'].includes(planType);
+    const globalQuestions = includeGlobal
+      ? buildGlobalPatientQuestions({
+          specialtyType: dto.specialtyType,
+          regionSido: dto.regionSido,
+          regionSigungu: dto.regionSigungu,
+          treatments,
+          // 플랜별 외국어 질문 수: STANDARD 2개, PRO 4개, ENTERPRISE 6개
+          maxQuestions: planType === 'STANDARD' ? 2 : planType === 'PRO' ? 4 : 6,
+        })
+      : [];
+
     // 중복 제거 후 플랜 한도에 맞게 자르기
     const uniqueTemplates = [...new Set(templates)];
 
-    // 플랜별 우선순위: ① 추천 → ② 비교 → ③ 가격 → ④ 증상 → ⑤ 공포 → ⑥ 후기 → ⑦ 조건 → ⑧ 강점 → ⑨ 지역
+    // 플랜별 우선순위: ① 추천 → ② 비교 → ③ 가격 → ④ 증상 → ⑤ 공포 → ⑥ 후기 → ⑦ 조건 → ⑧ 강점 → ⑨ 지역 → ⑩ 외국인
     // (templates에 순서대로 push했으므로 앞에서부터 자르면 자연스럽게 우선순위 적용)
-    const limitedTemplates = uniqueTemplates.slice(0, availableSlots);
+    // ⑩ 외국어 질문은 국내 질문에 밀려 잘리지 않도록 슬롯을 예약해서 항상 포함
+    const globalSlots = Math.min(globalQuestions.length, Math.floor(availableSlots * 0.2));
+    const domesticSlots = availableSlots - globalSlots;
+    const limitedTemplates = [
+      ...uniqueTemplates.slice(0, domesticSlots),
+      ...globalQuestions.slice(0, globalSlots),
+    ].slice(0, availableSlots);
 
     this.logger.log(`[${planType}] 질문 생성: ${limitedTemplates.length}개 (후보 ${uniqueTemplates.length}개 중)`);
 

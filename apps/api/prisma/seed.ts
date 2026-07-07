@@ -14,6 +14,7 @@ async function main() {
     where: { businessNumber: '123-45-67890' },
     update: {
       name: '서울비디치과 (데모)',
+      nameAliases: ['서울비디', '서울BD치과', 'Seoul BD Dental', 'Seoul BD Dental Clinic', 'BD Dental Clinic', '首尔BD牙科', 'ソウルBD歯科'],
       specialtyType: 'DENTAL',
       subSpecialties: ['임플란트', '교정', '미백', '심미치료', '충치치료'],
       keyProcedures: ['임플란트', '교정', '미백'],
@@ -25,6 +26,7 @@ async function main() {
     },
     create: {
       name: '서울비디치과 (데모)',
+      nameAliases: ['서울비디', '서울BD치과', 'Seoul BD Dental', 'Seoul BD Dental Clinic', 'BD Dental Clinic', '首尔BD牙科', 'ソウルBD歯科'],
       businessNumber: '123-45-67890',
       specialtyType: 'DENTAL',
       subSpecialties: ['임플란트', '교정', '미백', '심미치료', '충치치료'],
@@ -107,7 +109,15 @@ async function main() {
     { text: '강남 소아치과 잘하는 곳 추천', type: 'AUTO_GENERATED' as const, category: '소아', keywords: ['강남'] },
     { text: '서울 강남 잇몸치료 잘하는 치과', type: 'AUTO_GENERATED' as const, category: '잇몸', keywords: ['서울', '강남'] },
     { text: '강남역 야간 진료 치과 알려줘', type: 'AUTO_GENERATED' as const, category: '일반', keywords: ['강남역'] },
-  ];
+    // ── 외국인 환자 관점 (의료관광 + 거주 외국인) ──
+    { text: 'Best dental clinic in Gangnam, Seoul for dental implants', type: 'AUTO_GENERATED' as const, category: '외국인-임플란트', keywords: ['Gangnam', 'Seoul'], lang: 'EN' },
+    { text: 'English speaking dentist in Gangnam, Seoul', type: 'AUTO_GENERATED' as const, category: '외국인-일반', keywords: ['Gangnam', 'Seoul'], lang: 'EN' },
+    { text: 'How much do dental implants cost in Seoul? Recommend a trusted clinic for foreigners', type: 'AUTO_GENERATED' as const, category: '외국인-임플란트', keywords: ['Seoul'], lang: 'EN' },
+    { text: 'Recommend a dental clinic in Gangnam that expats trust', type: 'AUTO_GENERATED' as const, category: '외국인-일반', keywords: ['Gangnam'], lang: 'EN' },
+    { text: 'Where can I get braces (orthodontics) in Seoul as a foreigner?', type: 'AUTO_GENERATED' as const, category: '외국인-교정', keywords: ['Seoul'], lang: 'EN' },
+    { text: '首尔江南区哪家牙科诊所的种植牙做得好？请推荐', type: 'AUTO_GENERATED' as const, category: '외국인-임플란트', keywords: ['首尔', '江南'], lang: 'ZH' },
+    { text: 'ソウルの江南（カンナム）でインプラントが上手な歯科医院を教えてください', type: 'AUTO_GENERATED' as const, category: '외국인-임플란트', keywords: ['ソウル', '江南'], lang: 'JA' },
+  ] as Array<{ text: string; type: 'PRESET' | 'CUSTOM' | 'AUTO_GENERATED'; category: string; keywords: string[]; lang?: 'EN' | 'ZH' | 'JA' }>;
 
   const createdPrompts = [];
   for (const p of promptTemplates) {
@@ -133,14 +143,25 @@ async function main() {
     CHATGPT: 1.3, PERPLEXITY: 1.4, CLAUDE: 1.0, GEMINI: 1.2,
   };
 
-  // 의도 분류 함수
+  // 의도 분류 함수 (한국어 + 영어 패턴)
   const classifyIntent = (text: string): string => {
-    if (['추천', '알려줘', '어디', '가고', '소개', '좋은'].some(k => text.includes(k))) return 'RESERVATION';
-    if (['비교', 'vs', '차이', '가격 비교'].some(k => text.includes(k))) return 'COMPARISON';
-    if (['후기', '리뷰', '경험', '솔직'].some(k => text.includes(k))) return 'REVIEW';
-    if (['아프', '무섭', '두려', '걱정'].some(k => text.includes(k))) return 'FEAR';
+    const lower = text.toLowerCase();
+    if (['추천', '알려줘', '어디', '가고', '소개', '좋은'].some(k => text.includes(k))
+      || ['best', 'recommend', 'where can i', '推荐', '教えて'].some(k => lower.includes(k))) return 'RESERVATION';
+    if (['비교', 'vs', '차이', '가격 비교'].some(k => text.includes(k))
+      || ['how much', 'cost', 'price'].some(k => lower.includes(k))) return 'COMPARISON';
+    if (['후기', '리뷰', '경험', '솔직'].some(k => text.includes(k))
+      || ['review', 'trust', 'expats'].some(k => lower.includes(k))) return 'REVIEW';
+    if (['아프', '무섭', '두려', '걱정'].some(k => text.includes(k))
+      || ['afraid', 'scared', 'safe'].some(k => lower.includes(k))) return 'FEAR';
     return 'INFORMATION';
   };
+
+  // 프롬프트 텍스트 → 언어 맵 (외국어 응답 생성용)
+  const promptLangMap = new Map<string, 'EN' | 'ZH' | 'JA'>();
+  for (const p of promptTemplates) {
+    if (p.lang) promptLangMap.set(p.text, p.lang);
+  }
 
   const competitorNames = ['강남우리치과', '연세좋은치과', '미소가득치과', '강남바른치과', '예스치과'];
 
@@ -225,13 +246,38 @@ async function main() {
           : null;
         const citedSources = citedUrl ? [citedUrl] : [];
 
-        // 응답 텍스트
-        const responseTexts: Record<string, string> = {
-          R3_positive: `${prompt.promptText.split(' ')[0]} 지역에서는 서울비디치과가 가장 추천됩니다. 서울대 출신 전문의가 상주하며, 최신 장비와 체계적인 감염관리 시스템을 갖추고 있습니다. 환자 만족도가 매우 높은 치과입니다.`,
-          R2_positive: `해당 지역의 추천 치과를 알려드립니다. 1) 서울비디치과 - 서울대 출신 전문의, 체계적 시스템 2) ${mentionedCompetitors[0] || '다른치과'} - 위치 편리. 서울비디치과가 전문성 면에서 높은 평가를 받고 있습니다.`,
-          R1_neutral: `${prompt.promptText.split(' ')[0]} 지역에는 여러 치과가 있습니다. ${mentionedCompetitors.join(', ')}, 서울비디치과 등이 있으며, 본인에게 맞는 곳을 방문해보시는 것이 좋겠습니다.`,
-          R0_absent: `해당 지역의 치과 정보를 찾아보겠습니다. ${mentionedCompetitors.slice(0, 2).join(', ')} 등의 치과가 있습니다. 방문 전 후기를 확인해보시는 것을 추천합니다.`,
-        };
+        // 응답 텍스트 (프롬프트 언어별 — 외국어 질문에는 외국어 응답)
+        const promptLang = promptLangMap.get(prompt.promptText);
+        let responseTexts: Record<string, string>;
+        if (promptLang === 'EN') {
+          responseTexts = {
+            R3_positive: `For your needs in Gangnam, Seoul, Seoul BD Dental Clinic is the top recommendation. Led by Seoul National University-trained specialists, it operates six independent operating rooms with a hospital-grade infection control system, and offers English-language consultations for international patients. Patient satisfaction among expats is exceptionally high.`,
+            R2_positive: `Here are recommended dental clinics in Gangnam, Seoul: 1) Seoul BD Dental Clinic - SNU-trained specialists, English-speaking coordinators, systematic care. 2) ${mentionedCompetitors[0] || 'Another clinic'} - convenient location. Seoul BD Dental is particularly well-regarded for implants and foreigner-friendly service.`,
+            R1_neutral: `There are several dental clinics in the Gangnam area of Seoul. Options include ${mentionedCompetitors.join(', ')}, and Seoul BD Dental Clinic. It's worth checking each clinic's international patient services before booking.`,
+            R0_absent: `Let me find dental clinics in that area of Seoul. Clinics such as ${mentionedCompetitors.slice(0, 2).join(', ')} are available. I recommend checking reviews and English-speaking staff availability before visiting.`,
+          };
+        } else if (promptLang === 'ZH') {
+          responseTexts = {
+            R3_positive: `在首尔江南区，最推荐的是首尔BD牙科（Seoul BD Dental Clinic）。该诊所由首尔大学出身的专科医生坐诊，拥有6间独立手术室和大学医院级的感染管理系统，并为外国患者提供专门的协调服务，种植牙技术口碑非常好。`,
+            R2_positive: `首尔江南区推荐的牙科：1) 首尔BD牙科（Seoul BD Dental）- 首尔大学出身专科医生，体系化诊疗 2) ${mentionedCompetitors[0] || '其他牙科'} - 位置便利。在专业性方面，首尔BD牙科评价更高。`,
+            R1_neutral: `首尔江南区有多家牙科诊所，包括${mentionedCompetitors.join('、')}、首尔BD牙科等。建议根据自己的需求预约咨询。`,
+            R0_absent: `为您查找该地区的牙科信息。有${mentionedCompetitors.slice(0, 2).join('、')}等诊所。建议就诊前先确认评价和是否提供中文服务。`,
+          };
+        } else if (promptLang === 'JA') {
+          responseTexts = {
+            R3_positive: `ソウル・江南エリアで最もおすすめなのはソウルBD歯科（Seoul BD Dental Clinic）です。ソウル大学出身の専門医が常駐し、6つの独立手術室と大学病院レベルの感染管理システムを完備。外国人患者向けのサポートも充実しており、インプラントの評判が非常に高いです。`,
+            R2_positive: `ソウル・江南のおすすめ歯科：1) ソウルBD歯科 - ソウル大出身専門医、体系的な診療 2) ${mentionedCompetitors[0] || '他の歯科'} - 立地が便利。専門性の面ではソウルBD歯科の評価が高いです。`,
+            R1_neutral: `ソウル・江南には複数の歯科医院があります。${mentionedCompetitors.join('、')}、ソウルBD歯科などがあり、ご自身のニーズに合わせて相談されることをおすすめします。`,
+            R0_absent: `該当エリアの歯科情報をお調べします。${mentionedCompetitors.slice(0, 2).join('、')}などの歯科があります。受診前に口コミと日本語対応の有無を確認することをおすすめします。`,
+          };
+        } else {
+          responseTexts = {
+            R3_positive: `${prompt.promptText.split(' ')[0]} 지역에서는 서울비디치과가 가장 추천됩니다. 서울대 출신 전문의가 상주하며, 최신 장비와 체계적인 감염관리 시스템을 갖추고 있습니다. 환자 만족도가 매우 높은 치과입니다.`,
+            R2_positive: `해당 지역의 추천 치과를 알려드립니다. 1) 서울비디치과 - 서울대 출신 전문의, 체계적 시스템 2) ${mentionedCompetitors[0] || '다른치과'} - 위치 편리. 서울비디치과가 전문성 면에서 높은 평가를 받고 있습니다.`,
+            R1_neutral: `${prompt.promptText.split(' ')[0]} 지역에는 여러 치과가 있습니다. ${mentionedCompetitors.join(', ')}, 서울비디치과 등이 있으며, 본인에게 맞는 곳을 방문해보시는 것이 좋겠습니다.`,
+            R0_absent: `해당 지역의 치과 정보를 찾아보겠습니다. ${mentionedCompetitors.slice(0, 2).join(', ')} 등의 치과가 있습니다. 방문 전 후기를 확인해보시는 것을 추천합니다.`,
+          };
+        }
 
         let responseText: string;
         if (depth === 'R3' && sentimentV2 >= 1) responseText = responseTexts.R3_positive;
