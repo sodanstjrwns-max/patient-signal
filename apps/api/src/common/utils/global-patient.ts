@@ -46,30 +46,47 @@ export const SIGUNGU_EN: Record<string, string> = {
   // 경기 주요 시
   '성남시': 'Seongnam', '수원시': 'Suwon', '고양시': 'Goyang', '용인시': 'Yongin',
   '분당구': 'Bundang', '일산동구': 'Ilsan', '일산서구': 'Ilsan',
+  // 충청/지방 주요 시 (외국인 근로자·유학생 밀집 지역)
+  '천안시': 'Cheonan', '천안시 서북구': 'Cheonan', '천안시 동남구': 'Cheonan',
+  '서북구': 'Seobuk-gu, Cheonan', '아산시': 'Asan', '청주시': 'Cheongju',
+  '전주시': 'Jeonju', '포항시': 'Pohang', '창원시': 'Changwon', '구미시': 'Gumi',
+  '평택시': 'Pyeongtaek', '화성시': 'Hwaseong', '안산시': 'Ansan',
 };
 
 // 의료관광 주요 지역 중국어/일본어 (매핑 없으면 해당 언어 질문 생략)
 export const REGION_ZH: Record<string, string> = {
   '서울특별시': '首尔', '부산광역시': '釜山', '대구광역시': '大邱', '인천광역시': '仁川', '제주특별자치도': '济州',
   '강남구': '江南区', '서초구': '瑞草区', '중구': '中区', '마포구': '麻浦区', '송파구': '松坡区', '해운대구': '海云台区',
+  '천안시': '天安市', '천안시 서북구': '天安市', '아산시': '牙山市', '평택시': '平泽市', '안산시': '安山市',
 };
 
 export const REGION_JA: Record<string, string> = {
   '서울특별시': 'ソウル', '부산광역시': '釜山', '대구광역시': '大邱', '인천광역시': '仁川', '제주특별자치도': '済州',
   '강남구': '江南（カンナム）', '서초구': '瑞草（ソチョ）', '중구': '中区', '마포구': '麻浦（マポ）', '송파구': '松坡（ソンパ）', '해운대구': '海雲台',
+  '천안시': '天安（チョナン）', '천안시 서북구': '天安（チョナン）', '아산시': '牙山（アサン）',
 };
 
+/** 광역시/특별시 여부 (구 단위가 도시 하위 지역인 경우) */
+const METRO_SIDO = new Set(['서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시', '대전광역시', '울산광역시', '세종특별자치시']);
+
 /**
- * 영문 지역 표기 생성 (예: "Gangnam, Seoul")
+ * 영문 지역 표기 생성
+ * - 광역시: "Gangnam, Seoul" (구가 도시 하위)
+ * - 도(道): "Cheonan, South Korea" (시가 독립 도시 — 외국인은 도(province)명을 거의 안 씀)
  */
 export function getEnglishRegion(regionSido: string, regionSigungu: string): string {
   const sido = SIDO_EN[regionSido] || '';
   const sigungu = SIGUNGU_EN[regionSigungu] || '';
-  if (sido && sigungu) return `${sigungu}, ${sido}`;
-  return sido || sigungu || 'Korea';
+  if (METRO_SIDO.has(regionSido) && sido && sigungu) return `${sigungu}, ${sido}`;
+  if (sigungu) return `${sigungu}, South Korea`;
+  return sido ? `${sido}, South Korea` : 'Korea';
 }
 
-export function getEnglishCity(regionSido: string): string {
+/** 비용 질문 등에 쓰는 대표 도시명 */
+export function getEnglishCity(regionSido: string, regionSigungu?: string): string {
+  if (METRO_SIDO.has(regionSido)) return SIDO_EN[regionSido] || 'Korea';
+  // 도(道) 지역은 시(city)가 대표 도시
+  if (regionSigungu && SIGUNGU_EN[regionSigungu]) return SIGUNGU_EN[regionSigungu];
   return SIDO_EN[regionSido] || 'Korea';
 }
 
@@ -113,6 +130,7 @@ export const PROCEDURE_I18N: Record<string, ProcedureI18n> = {
   '라미네이트': { en: 'veneers (laminates)', zh: '牙贴面', ja: 'ラミネート' },
   '충치치료': { en: 'cavity treatment', zh: '蛀牙治疗', ja: '虫歯治療' },
   '심미치료': { en: 'cosmetic dentistry', zh: '美容牙科', ja: '審美歯科' },
+  '심미보철': { en: 'cosmetic dental prosthetics (veneers & crowns)', zh: '美容修复', ja: '審美補綴' },
   '사랑니발치': { en: 'wisdom tooth extraction', zh: '拔智齿', ja: '親知らずの抜歯' },
   '신경치료': { en: 'root canal treatment', zh: '根管治疗', ja: '根管治療' },
   '잇몸치료': { en: 'gum treatment', zh: '牙龈治疗', ja: '歯周治療' },
@@ -170,7 +188,7 @@ export interface GlobalPatientOptions {
 export function buildGlobalPatientQuestions(opts: GlobalPatientOptions): string[] {
   const spec = SPECIALTY_I18N[opts.specialtyType] || SPECIALTY_I18N.OTHER;
   const regionEn = getEnglishRegion(opts.regionSido, opts.regionSigungu);
-  const cityEn = getEnglishCity(opts.regionSido);
+  const cityEn = getEnglishCity(opts.regionSido, opts.regionSigungu);
 
   const article = /^[aeiou]/i.test(spec.clinicEn) ? 'an' : 'a';
 
