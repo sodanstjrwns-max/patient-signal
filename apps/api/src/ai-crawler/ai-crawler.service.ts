@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -26,7 +26,7 @@ import {
 } from './strategies';
 
 @Injectable()
-export class AICrawlerService {
+export class AICrawlerService implements OnModuleInit {
   private readonly logger = new Logger(AICrawlerService.name);
   private openai: OpenAI;
   private anthropic: Anthropic;
@@ -48,6 +48,58 @@ export class AICrawlerService {
   ) {
     this.initializeApis();
     this.initializeStrategies();
+  }
+
+  /**
+   * 【키 실종 방지】부팅 시 6대 플랫폼 키 상태를 명시적으로 로깅
+   * 배경: 2026-07-02 배포 때 XAI_API_KEY가 환경변수에서 누락됐는데,
+   * isPlatformAvailable()이 조용히 false만 반환해 Grok 크롤이 6일간
+   * 아무 경고 없이 중단된 사고 재발 방지.
+   */
+  onModuleInit(): void {
+    const ALL_PLATFORMS: AIPlatform[] = [
+      'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X',
+    ];
+    const available: string[] = [];
+    const missing: string[] = [];
+    for (const p of ALL_PLATFORMS) {
+      if (this.isPlatformAvailable(p)) {
+        available.push(p);
+      } else {
+        missing.push(`${p}(${this.getPlatformKeyName(p)} 미설정)`);
+      }
+    }
+    this.logger.log(`🔑 AI 플랫폼 키 점검 — 사용 가능: [${available.join(', ')}]`);
+    if (missing.length > 0) {
+      this.logger.warn(
+        `⚠️ 키 누락 플랫폼: [${missing.join(', ')}] — ` +
+        `해당 플랫폼은 모든 크롤링에서 자동 제외됩니다. ` +
+        `의도한 것이 아니라면 환경변수를 확인하세요 (Render → Environment).`,
+      );
+    }
+  }
+
+  /** 플랫폼별 필요한 환경변수 이름 (진단 메시지용) */
+  private getPlatformKeyName(platform: AIPlatform): string {
+    switch (platform) {
+      case 'CHATGPT': return 'OPENAI_API_KEY';
+      case 'CLAUDE': return 'ANTHROPIC_API_KEY';
+      case 'PERPLEXITY': return 'PERPLEXITY_API_KEY';
+      case 'GEMINI': return 'GEMINI_API_KEY';
+      case 'GROK': return 'XAI_API_KEY';
+      case 'CLOVA_X': return 'CLOVA_X_API_KEY';
+      default: return 'UNKNOWN';
+    }
+  }
+
+  /**
+   * 【키 실종 방지】요청된 플랫폼 중 키 부재로 스킵되는 것들을 반환
+   * 스케줄러가 크롤 시작 시 호출해 crawlJob에 경고를 남긴다.
+   */
+  getUnavailablePlatforms(platforms: AIPlatform[]): { platform: AIPlatform; reason: string }[] {
+    return platforms
+      .filter(p => !this.isPlatformAvailable(p))
+      .map(p => ({ platform: p, reason: `${this.getPlatformKeyName(p)} 미설정` }));
   }
 
   /**
@@ -245,7 +297,16 @@ export class AICrawlerService {
 
     const availablePlatforms = platforms.filter(p => this.isPlatformAvailable(p));
     this.logger.log(`사용 가능한 플랫폼: ${availablePlatforms.join(', ') || '없음'}`);
-    
+
+    // 【키 실종 방지】요청된 플랫폼이 키 부재로 빠지면 조용히 넘기지 않고 경고
+    const dropped = this.getUnavailablePlatforms(platforms);
+    if (dropped.length > 0) {
+      this.logger.warn(
+        `⚠️ 키 누락으로 제외된 플랫폼: ${dropped.map(d => `${d.platform}(${d.reason})`).join(', ')} — ` +
+        `이 응답 배치에는 해당 플랫폼 데이터가 저장되지 않습니다.`,
+      );
+    }
+
     if (availablePlatforms.length === 0) {
       this.logger.warn('사용 가능한 AI 플랫폼이 없습니다.');
     }

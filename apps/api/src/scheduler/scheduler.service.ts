@@ -423,6 +423,22 @@ export class SchedulerService implements OnModuleInit {
 
     this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
 
+    // 【키 실종 방지】플랜에 포함된 플랫폼이 API 키 부재로 스킵되면
+    // 조용히 넘기지 않고 crawlJob.errorMessage에 기록 + 경고 로그
+    // (2026-07-02 XAI_API_KEY 누락 → Grok 6일 무경고 중단 사고 재발 방지)
+    const unavailable = this.aiCrawlerService.getUnavailablePlatforms(platforms as any[]);
+    let platformWarning: string | null = null;
+    if (unavailable.length > 0) {
+      platformWarning =
+        `키 누락으로 제외된 플랫폼: ` +
+        unavailable.map(u => `${u.platform}(${u.reason})`).join(', ');
+      this.logger.warn(`⚠️ [${hospital.name}] ${platformWarning} — 플랜(${hospital.planType})에 포함된 플랫폼인데 크롤에서 빠집니다!`);
+      await this.prisma.crawlJob.update({
+        where: { id: crawlJob.id },
+        data: { errorMessage: `[WARN] ${platformWarning}` },
+      });
+    }
+
     // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
     if ((hospital as any).nameAliases && (hospital as any).nameAliases.length > 0) {
       this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
