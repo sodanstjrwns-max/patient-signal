@@ -528,6 +528,7 @@ export class AICrawlerService implements OnModuleInit {
     label: string,
     maxRetries: number = 2,
     baseDelay: number = 3000,
+    timeoutMs: number = 30000,
   ): Promise<T> {
     // C2: 서킷브레이커 체크
     const cb = this.circuitBreakers.get(label) || { failures: 0, lastFailure: 0, state: 'closed' as const };
@@ -545,11 +546,11 @@ export class AICrawlerService implements OnModuleInit {
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        // 타임아웃 30초
+        // 타임아웃 (기본 30초, reasoning 모델은 확장)
         const result = await Promise.race([
           fn(),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error(`${label} 타임아웃 (30초)`)), 30000)
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} 타임아웃 (${Math.round(timeoutMs / 1000)}초)`)), timeoutMs)
           ),
         ]);
         
@@ -643,7 +644,9 @@ export class AICrawlerService implements OnModuleInit {
     if (!strategy) {
       throw new Error(`지원하지 않는 플랫폼: ${platform}`);
     }
-    return this.withRetry(() => strategy.query(promptText, hospitalName), strategy.displayName);
+    // 【2026.07】Grok(grok-4)은 reasoning + web_search tool 실행으로 응답이 느림 → 90초 타임아웃
+    const timeoutMs = platform === 'GROK' ? 90000 : 30000;
+    return this.withRetry(() => strategy.query(promptText, hospitalName), strategy.displayName, 2, 3000, timeoutMs);
   }
 
 
