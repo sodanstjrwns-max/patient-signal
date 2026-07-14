@@ -182,9 +182,34 @@ export function TrialBanner() {
     );
   }
 
+  // ─── 만료(EXPIRED) 지속 배너: 모달을 닫아도 계속 표시 ───
+  // "데이터 수집 중..."으로 오해하지 않도록 만료 사실 + 재개 경로를 명시
+  if (subInfo.isExpired) {
+    return (
+      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
+          <span className="font-medium truncate">
+            ⏸️ <strong>{subInfo.isCouponUser ? '쿠폰 혜택' : '체험'}이 종료되어 AI 데이터 수집이 중단되었습니다</strong>
+            {' '}— 현재 FREE 플랜(Perplexity 1개, 질문 1개, 주 1회)으로 운영 중입니다. 쿠폰이 있다면 등록해 주세요!
+          </span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Link
+            href="/dashboard/billing"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white/90 text-slate-800 hover:bg-white transition-all"
+          >
+            <Ticket className="h-3 w-3" />
+            쿠폰 등록 / 재구독 <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // ─── 일반 체험 / 무결제 ACTIVE 배너 (기존 로직) ───
   // 체험/무결제 ACTIVE가 아니면 배너 불필요
-  if (!subInfo.isInTrial && !subInfo.isUnpaidActive && !subInfo.isExpired) return null;
+  if (!subInfo.isInTrial && !subInfo.isUnpaidActive) return null;
 
   const daysLeft = subInfo.isInTrial ? subInfo.trialDaysRemaining : subInfo.daysRemaining;
   const isUrgent = daysLeft <= 2;

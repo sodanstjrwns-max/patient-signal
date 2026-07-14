@@ -58,11 +58,13 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
   const planType = propPlanType || (user as any)?.hospital?.planType || 'FREE';
   const planLimits = getPlanLimits(planType);
   const allowedPlatforms = planLimits.platforms;
+  // 【티저】STARTER: GROK/CLOVA_X는 첫 질문 1개만 수집 → 잠금 대신 미리보기 표시
+  const teaserPlatforms: string[] = (planLimits as any).teaserPlatforms || [];
 
   const isDetailedData = Array.isArray(data);
   
   if (isDetailedData) {
-    return <DetailedPlatformStats data={data as PlatformDetail[]} allowedPlatforms={allowedPlatforms} />;
+    return <DetailedPlatformStats data={data as PlatformDetail[]} allowedPlatforms={allowedPlatforms} teaserPlatforms={teaserPlatforms} />;
   }
   
   const allPlatforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'];
@@ -72,7 +74,8 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
     name: platformNames[platform] || platform,
     score: scoreData[platform.toLowerCase()] ?? scoreData[platform] ?? 0,
     color: platformColors[platform] || '#6B7280',
-    isLocked: !allowedPlatforms.includes(platform),
+    isLocked: !allowedPlatforms.includes(platform) && !teaserPlatforms.includes(platform),
+    isTeaser: !allowedPlatforms.includes(platform) && teaserPlatforms.includes(platform),
   }));
 
   return (
@@ -107,6 +110,11 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
                     }}
                   />
                   <span className="text-sm font-medium text-slate-700">{platform.name}</span>
+                  {platform.isTeaser && (
+                    <Link href="/dashboard/billing?plan=STANDARD" className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors whitespace-nowrap">
+                      미리보기 · 질문 1개
+                    </Link>
+                  )}
                 </div>
                 <span className="text-sm font-semibold">{platform.isLocked ? '—' : `${platform.score}점`}</span>
               </div>
@@ -135,7 +143,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
   );
 }
 
-function DetailedPlatformStats({ data, allowedPlatforms }: { data: PlatformDetail[]; allowedPlatforms: string[] }) {
+function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }: { data: PlatformDetail[]; allowedPlatforms: string[]; teaserPlatforms?: string[] }) {
   const TrendIcon = ({ direction }: { direction: 'UP' | 'DOWN' | 'STABLE' }) => {
     if (direction === 'UP') return <TrendingUp className="w-4 h-4 text-emerald-500" />;
     if (direction === 'DOWN') return <TrendingDown className="w-4 h-4 text-red-500" />;
@@ -167,7 +175,8 @@ function DetailedPlatformStats({ data, allowedPlatforms }: { data: PlatformDetai
             {data.map((platform) => {
               const color = platformColors[platform.platform] || '#6B7280';
               const hasData = (platform as any).hasData !== false && platform.totalQueries > 0;
-              const isLocked = !allowedPlatforms.includes(platform.platform);
+              const isTeaser = !allowedPlatforms.includes(platform.platform) && teaserPlatforms.includes(platform.platform);
+              const isLocked = !allowedPlatforms.includes(platform.platform) && !isTeaser;
               
               return (
                 <div key={platform.platform} className={`space-y-3 relative ${!hasData ? 'opacity-60' : ''}`}>
@@ -186,6 +195,11 @@ function DetailedPlatformStats({ data, allowedPlatforms }: { data: PlatformDetai
                         style={{ backgroundColor: color }}
                       />
                       <span className="font-semibold text-slate-800">{platform.platformName}</span>
+                      {isTeaser && (
+                        <Link href="/dashboard/billing?plan=STANDARD" className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors whitespace-nowrap">
+                          미리보기 · 첫 질문 1개만
+                        </Link>
+                      )}
                       {hasData && <TrendIcon direction={platform.trend.direction} />}
                       {hasData && platform.trend.change !== 0 && (
                         <span className={`text-xs font-medium ${

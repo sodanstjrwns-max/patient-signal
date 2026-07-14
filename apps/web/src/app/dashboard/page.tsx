@@ -411,7 +411,10 @@ export default function DashboardPage() {
             trendChange: 0,
             color: PLATFORM_META[key]?.color || '#6B7280',
             ringClass: PLATFORM_META[key]?.ringClass || 'ring-slate-200',
-          }))).map((p) => (
+          }))).map((p) => {
+            // 【티저】STARTER 플랜은 GROK/CLOVA_X를 첫 질문 1개만 미리보기로 수집
+            const isTeaser = planType === 'STARTER' && (p.key === 'GROK' || p.key === 'CLOVA_X');
+            return (
             <div key={p.key} className="glass-bento p-5 group relative overflow-hidden">
               {/* Accent top bar */}
               <div className="absolute top-0 left-0 right-0 h-1 rounded-t-full" style={{ backgroundColor: p.color }} />
@@ -420,6 +423,11 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ring-2 ring-offset-2 ring-offset-white/60 ${p.ringClass}`} style={{ backgroundColor: p.color }} />
                   <span className="text-sm font-black text-slate-800">{p.name}</span>
+                  {isTeaser && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 whitespace-nowrap">
+                      미리보기
+                    </span>
+                  )}
                 </div>
                 {p.trend === 'UP' && <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />}
                 {p.trend === 'DOWN' && <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
@@ -436,8 +444,13 @@ export default function DashboardPage() {
                   {p.trendChange > 0 ? '+' : ''}{p.trendChange}%p vs 이전
                 </p>
               )}
+              {isTeaser && (
+                <Link href="/dashboard/billing" className="block text-[11px] mt-2.5 font-bold text-violet-600 hover:text-violet-800 transition-colors">
+                  첫 질문 1개만 분석 중 — 전체 분석은 STANDARD부터 →
+                </Link>
+              )}
             </div>
-          ))}
+          );})}
         </div>
 
         {/* 최초 데이터 없을 때 안내 */}

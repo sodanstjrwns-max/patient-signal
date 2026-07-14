@@ -22,6 +22,8 @@ export const PLAN_LIMITS = {
     maxPrompts: 5,
     maxCompetitors: 1,
     platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
+    // 【티저】첫 질문 1개에 한해 GROK/CLOVA_X 미리보기 수집 (백엔드 teaserPlatforms와 동기화)
+    teaserPlatforms: ['GROK', 'CLOVA_X'],
     crawlsPerMonth: 4,
     exportEnabled: false,
     aiRecommendations: false,
