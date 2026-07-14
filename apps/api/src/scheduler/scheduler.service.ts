@@ -421,12 +421,20 @@ export class SchedulerService implements OnModuleInit {
     // 플랜 허용 플랫폼과 세션 플랫폼의 교집합
     const platforms = sessionPlatforms.filter((p: string) => planLimits.platforms.includes(p));
 
-    this.logger.log(`[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}`);
+    // 【티저】플랜에 teaserPlatforms가 있으면 첫 번째 프롬프트 1개에 한해서만 추가 크롤
+    //  (STARTER → GROK/CLOVA_X 맛보기, STANDARD 업셀 유도)
+    const teaserPlatforms: string[] = ((planLimits as any).teaserPlatforms || [])
+      .filter((p: string) => sessionPlatforms.includes(p) && !platforms.includes(p));
+
+    this.logger.log(
+      `[${hospital.name}] 플랜: ${hospital.planType}, 플랫폼: ${platforms.join(', ')}` +
+      (teaserPlatforms.length > 0 ? ` (+티저 1프롬프트: ${teaserPlatforms.join(', ')})` : ''),
+    );
 
     // 【키 실종 방지】플랜에 포함된 플랫폼이 API 키 부재로 스킵되면
     // 조용히 넘기지 않고 crawlJob.errorMessage에 기록 + 경고 로그
     // (2026-07-02 XAI_API_KEY 누락 → Grok 6일 무경고 중단 사고 재발 방지)
-    const unavailable = this.aiCrawlerService.getUnavailablePlatforms(platforms as any[]);
+    const unavailable = this.aiCrawlerService.getUnavailablePlatforms([...platforms, ...teaserPlatforms] as any[]);
     let platformWarning: string | null = null;
     if (unavailable.length > 0) {
       platformWarning =
@@ -499,13 +507,22 @@ export class SchedulerService implements OnModuleInit {
       promptChunks.push(effectivePrompts.slice(i, i + CONCURRENT_PROMPTS));
     }
 
+    // 【티저】티저 플랫폼을 받는 프롬프트 = 정렬 순서상 첫 번째 1개 (결정적, 매일 동일)
+    const teaserPromptId = teaserPlatforms.length > 0 && effectivePrompts.length > 0
+      ? effectivePrompts[0].id
+      : null;
+
     for (const chunk of promptChunks) {
       const chunkResults = await Promise.allSettled(
         chunk.map(async (prompt: any) => {
           // 【Area 2】플랫폼별 맞춤 프롬프트 적용 (platformSpecific 필드 확인)
-          const effectivePlatforms = (prompt as any).platformSpecific
-            ? platforms.filter((p: string) => p === (prompt as any).platformSpecific)
+          // 【티저】첫 프롬프트에 한해 teaserPlatforms 추가
+          const basePlatforms = prompt.id === teaserPromptId
+            ? [...platforms, ...teaserPlatforms]
             : platforms;
+          const effectivePlatforms = (prompt as any).platformSpecific
+            ? basePlatforms.filter((p: string) => p === (prompt as any).platformSpecific)
+            : basePlatforms;
 
           const crawlResults = await this.aiCrawlerService.queryAllPlatforms(
             prompt.id,

@@ -40,6 +40,9 @@ export class PlanGuard implements CanActivate {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // STARTER는 기존 4개 유지
+      // 【티저】STARTER는 프롬프트 1개(첫 번째)에 한해 GROK + CLOVA_X 맛보기 제공
+      //  → "네이버 AI에서 우리 병원이 어떻게 나오는지"를 보여줘 STANDARD 업셀 유도
+      teaserPlatforms: ['GROK', 'CLOVA_X'],
       crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
       maxDailyLiveQueries: 5,      // 실시간 질문 5회/일
       promptsPerCrawl: 5,          // 【B안】1회 크롤링당 프롬프트 상한 (STARTER: 5개)
