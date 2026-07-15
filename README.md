@@ -238,6 +238,16 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 | **P1-7 캐싱** | `CacheService` (Redis 또는 인메모리) + `@CacheTTL` HTTP 캐시 인터셉터. scores API 10분 캐시. 크롤 완료 시 해당 병원 캐시 자동 무효화 |
 | **비용 정보 보호** | 전역 `StripInternalFieldsInterceptor` — 원가 필드(`inputTokens`/`outputTokens`/`estimatedCostUsd`)는 `/api/admin` 외 모든 응답에서 강제 제거 (고객 병원에게 절대 노출 안 됨) |
 
+### 네이버 AI 브리핑 정기 수집 (2026-07 신규)
+| 항목 | 내용 |
+|------|------|
+| **수집 방식** | `NaverAiBriefingStrategy` — m.search.naver.com 모바일 SERP를 plain fetch (iPhone UA + ko-KR). 원본 HTML의 `aibAnswer` JSON을 balanced-brace 파싱 (브라우저/Playwright 불필요). 파일럿(200쿼리) 검증: 노출률 8%, 차단 0 |
+| **저장** | 기존 `ai_responses`에 `ai_platform='NAVER_AI_BRIEFING'`으로 저장. 미노출도 유효 관측치로 기록 — `verification_source`: `naver_serp_shown` / `naver_serp_not_shown`. 노출 시 그라운딩 출처 8개 → `cited_sources` |
+| **스케줄** | `@Cron('30 2 * * *')` = 매일 11:30 KST (기존 크롤 세션과 분리). Redis 락(`cron:naver-briefing-crawl`)으로 다중 인스턴스 중복 방지 |
+| **대상** | ENTERPRISE 병원 × 한국어 프롬프트만 (platformSpecific 없는 것). 쿼리당 3~7초 랜덤 딜레이, 연속 5회 실패 시 차단 의심 → 전체 중단 |
+| **활성화** | `NAVER_BRIEFING_ENABLED=true` env 플래그 (메인 서비스만 true, patient-signal-1은 false — 크론 중복 방지) |
+| **수동 트리거** | `POST /api/scheduler/naver-briefing-crawl?hospitalId=&maxPrompts=` + `x-cron-secret` 헤더. fire-and-forget (200쿼리 ≈ 35분) |
+
 ### 배포 전 필수 체크리스트 (Render)
 ```bash
 # 1. 환경변수 설정 (필수 — 없으면 해당 기능 차단됨)
