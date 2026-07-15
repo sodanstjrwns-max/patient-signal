@@ -338,7 +338,8 @@ export class AICrawlerService implements OnModuleInit {
           );
           result.competitorsMentioned = verifiedCompetitors.verified;
           result.isVerified = true;
-          result.verificationSource = 'keyword_pattern';
+          // 전략이 이미 세팅한 verificationSource는 보존 (예: NAVER_AI_BRIEFING의 naver_serp_shown/not_shown)
+          result.verificationSource = result.verificationSource || 'keyword_pattern';
 
           // 【할루시네이션 감소】응답 신뢰도 점수 계산
           const confidence = this.calculateConfidenceScore(result, promptText);
