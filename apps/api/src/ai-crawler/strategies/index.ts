@@ -5,3 +5,4 @@ export * from './perplexity.strategy';
 export * from './gemini.strategy';
 export * from './grok.strategy';
 export * from './clova-x.strategy';
+export * from './naver-ai-briefing.strategy';

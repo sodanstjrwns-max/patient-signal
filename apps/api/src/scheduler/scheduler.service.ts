@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
 import { WeightCalibrationService } from '../scores/weight-calibration.service';
@@ -632,6 +633,150 @@ export class SchedulerService implements OnModuleInit {
       }).catch(() => undefined);
       throw error;
     }
+  }
+
+  // ==================== 네이버 AI 브리핑 정기 수집 ====================
+
+  /**
+   * 【스케일】다중 인스턴스 크론 중복 실행 방지 가드 (subscriptions.service 패턴)
+   */
+  private async shouldRunCron(name: string): Promise<boolean> {
+    const acquired = await this.cacheService.acquireLock(`cron:${name}`, 3600);
+    if (!acquired) {
+      this.logger.log(`[크론 스킵] ${name} — 다른 인스턴스가 이미 실행 중`);
+    }
+    return acquired;
+  }
+
+  /**
+   * 네이버 AI 브리핑 정기 수집 크론
+   * 매일 11:30 KST (= 02:30 UTC) — 기존 크롤 세션(9시/14시/19시 KST)과 시간 분리
+   *
+   * NAVER_BRIEFING_ENABLED=true 일 때만 동작 (Render IP 차단 검증 전 기본 비활성)
+   */
+  @Cron('30 2 * * *', { name: 'naver-briefing-crawl' })
+  async naverBriefingCrawlCron(): Promise<void> {
+    if (process.env.NAVER_BRIEFING_ENABLED?.trim().toLowerCase() !== 'true') return;
+    if (!(await this.shouldRunCron('naver-briefing-crawl'))) return;
+    await this.runNaverBriefingCrawl().catch(err =>
+      this.logger.error(`[Naver 브리핑 크론] 실패: ${err.message}`),
+    );
+  }
+
+  /**
+   * 네이버 AI 브리핑 수집 본체 — 기존 6-AI 크롤과 완전 분리된 별도 파이프라인
+   *
+   * 설계 원칙 (2026-07-14 파일럿 검증 기반):
+   *  - 대상: ENTERPRISE 병원만 (트래픽 최소화, 초기 파일럿)
+   *  - 프롬프트: 한국어 포함 프롬프트만 (AI 브리핑은 한국어 검색 전용)
+   *  - 순차 실행 + 쿼리당 3~7초 랜덤 딜레이 (병렬 금지 — 차단 방지 핵심)
+   *  - 미노출도 저장 (노출률 자체가 핵심 지표 — 파일럿 노출률 8%)
+   *  - 차단 의심 시 즉시 중단 (연속 실패 임계치)
+   */
+  async runNaverBriefingCrawl(options?: {
+    hospitalId?: string;
+    maxPrompts?: number;
+  }): Promise<{
+    success: boolean;
+    hospitals: number;
+    totalQueries: number;
+    shown: number;
+    mentioned: number;
+    failed: number;
+    aborted: boolean;
+    durationSec: number;
+    error?: string;
+  }> {
+    const startedAt = Date.now();
+    this.logger.log('=== [Naver AI 브리핑] 정기 수집 시작 ===');
+
+    const unavailable = this.aiCrawlerService.getUnavailablePlatforms(['NAVER_AI_BRIEFING'] as any[]);
+    if (unavailable.length > 0) {
+      const msg = 'NAVER_BRIEFING_ENABLED 미설정 — 수집 비활성 상태';
+      this.logger.warn(`[Naver AI 브리핑] ${msg}`);
+      return { success: false, hospitals: 0, totalQueries: 0, shown: 0, mentioned: 0, failed: 0, aborted: false, durationSec: 0, error: msg };
+    }
+
+    // 대상 병원: ENTERPRISE만 (또는 수동 지정  1개)
+    const hospitals = await this.prisma.hospital.findMany({
+      where: options?.hospitalId
+        ? { id: options.hospitalId }
+        : { planType: 'ENTERPRISE' },
+      include: { prompts: { where: { isActive: true } } },
+    });
+
+    const maxPrompts = options?.maxPrompts
+      ?? parseInt(process.env.NAVER_BRIEFING_MAX_PROMPTS || '200', 10);
+
+    let totalQueries = 0;
+    let shown = 0;
+    let mentioned = 0;
+    let failed = 0;
+    let consecutiveFailures = 0;
+    let aborted = false;
+    const ABORT_THRESHOLD = 5; // 연속 5회 실패 시 차단 의심 → 전체 중단
+
+    outer: for (const hospital of hospitals) {
+      // 한국어 프롬프트만 (AI 브리핑은 한국어 검색 SERP 전용)
+      const koreanPrompts = (hospital.prompts || [])
+        .filter((p: any) => /[가-힐]/.test(p.promptText) && !p.platformSpecific)
+        .sort((a: any, b: any) => a.id.localeCompare(b.id))
+        .slice(0, maxPrompts);
+
+      if (koreanPrompts.length === 0) {
+        this.logger.log(`[Naver AI 브리핑] ${hospital.name} — 한국어 프롬프트 없음, 스킵`);
+        continue;
+      }
+
+      this.logger.log(`[Naver AI 브리핑] ${hospital.name} — ${koreanPrompts.length}개 쿼리 순차 실행 (3~7s 랜덤 간격)`);
+
+      // 별칭 세팅 (매칭 정확도)
+      if ((hospital as any).nameAliases?.length > 0) {
+        this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
+      }
+
+      for (const prompt of koreanPrompts) {
+        try {
+          const results = await this.aiCrawlerService.queryAllPlatforms(
+            prompt.id,
+            hospital.id,
+            hospital.name,
+            prompt.promptText,
+            ['NAVER_AI_BRIEFING'] as any[],
+          );
+          totalQueries++;
+          consecutiveFailures = 0;
+          const r = results[0];
+          if (r) {
+            if (r.verificationSource === 'naver_serp_shown') shown++;
+            if (r.isMentioned) mentioned++;
+          }
+        } catch (err: any) {
+          totalQueries++;
+          failed++;
+          consecutiveFailures++;
+          this.logger.error(`[Naver AI 브리핑] 쿼리 실패 (연속 ${consecutiveFailures}): ${err.message}`);
+          if (consecutiveFailures >= ABORT_THRESHOLD) {
+            this.logger.error(`[Naver AI 브리핑] 연속 ${ABORT_THRESHOLD}회 실패 — 차단 의심, 전체 중단`);
+            aborted = true;
+            break outer;
+          }
+        }
+
+        // 쿼리당 3~7초 랜덤 딜레이 (파일럿 검증 파라미터 — 차단 0건)
+        const delay = 3000 + Math.floor(Math.random() * 4000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+
+    const durationSec = Math.round((Date.now() - startedAt) / 1000);
+    this.logger.log(
+      `=== [Naver AI 브리핑] 완료 — 병원 ${hospitals.length}, 쿼리 ${totalQueries}, ` +
+      `노출 ${shown} (${totalQueries > 0 ? ((shown / totalQueries) * 100).toFixed(1) : 0}%), ` +
+      `언급 ${mentioned}, 실패 ${failed}, 소요 ${durationSec}s${aborted ? ' [중단됨]' : ''} ===`,
+    );
+
+    return { success: !aborted, hospitals: hospitals.length, totalQueries, shown, mentioned, failed, aborted, durationSec };
   }
 
   private getCurrentSession(): 'morning' | 'afternoon' | 'evening' {

@@ -70,6 +70,52 @@ export class SchedulerController {
   }
 
   /**
+   * 네이버 AI 브리핑 수동 수집 트리거
+   * 정기 실행은 @Cron('30 2 * * *') = 11:30 KST — 이 엔드포인트는 수동/검증용
+   *
+   * 사용 예:
+   *   curl -X POST "https://<api>/scheduler/naver-briefing-crawl?maxPrompts=10" \
+   *        -H "x-cron-secret: $CRON_SECRET"
+   */
+  @Post('naver-briefing-crawl')
+  @ApiOperation({
+    summary: '네이버 AI 브리핑 수집 (ENTERPRISE 병원, 한국어 프롬프트)',
+    description: 'NAVER_BRIEFING_ENABLED=true 필요. fire-and-forget — 백그라운드 실행 (쿼리당 3~7초 딜레이로 장시간 소요).',
+  })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  @ApiQuery({ name: 'hospitalId', required: false, description: '특정 병원만 수집 (미지정 시 ENTERPRISE 전체)' })
+  @ApiQuery({ name: 'maxPrompts', required: false, type: Number, description: '병원당 최대 쿼리 수 (기본 200)' })
+  async naverBriefingCrawl(
+    @Headers('x-cron-secret') cronSecret: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('maxPrompts') maxPrompts?: string,
+  ) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) {
+      throw new UnauthorizedException('Invalid cron secret');
+    }
+
+    const runId = `naver-briefing-${Date.now()}`;
+    // fire-and-forget — 200쿼리 기준 약 35분 소요, Render 타임아웃/재시도 루프 방지
+    this.schedulerService.runNaverBriefingCrawl({
+      hospitalId: hospitalId || undefined,
+      maxPrompts: maxPrompts ? parseInt(maxPrompts, 10) : undefined,
+    }).then(result => {
+      console.log(`[${runId}] 완료:`, JSON.stringify(result));
+    }).catch(err => {
+      console.error(`[${runId}] background naver briefing crawl failed:`, err.message);
+    });
+
+    return {
+      success: true,
+      runId,
+      message: '네이버 AI 브리핑 수집을 백그라운드에서 시작했습니다. 결과는 로그/DB에서 확인하세요.',
+      note: '쿼리당 3~7초 랜덤 딜레이 — 200쿼리 기준 약 35분 소요',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
    * Daily Prompt Refresh V3 - 5×5 매트릭스 엔진
    * Cron: 매일 오전 8시 (KST) - 크롤링 전에 실행
    */

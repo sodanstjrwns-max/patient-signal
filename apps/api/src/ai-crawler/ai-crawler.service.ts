@@ -23,6 +23,7 @@ import {
   GeminiStrategy,
   GrokStrategy,
   ClovaXStrategy,
+  NaverAiBriefingStrategy,
 } from './strategies';
 
 @Injectable()
@@ -58,7 +59,7 @@ export class AICrawlerService implements OnModuleInit {
    */
   onModuleInit(): void {
     const ALL_PLATFORMS: AIPlatform[] = [
-      'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X',
+      'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING',
     ];
     const available: string[] = [];
     const missing: string[] = [];
@@ -88,6 +89,7 @@ export class AICrawlerService implements OnModuleInit {
       case 'GEMINI': return 'GEMINI_API_KEY';
       case 'GROK': return 'XAI_API_KEY';
       case 'CLOVA_X': return 'CLOVA_X_API_KEY';
+      case 'NAVER_AI_BRIEFING': return 'NAVER_BRIEFING_ENABLED'; // API 키 아님 — 활성화 플래그 (true로 설정 시 수집)
       default: return 'UNKNOWN';
     }
   }
@@ -128,6 +130,7 @@ export class AICrawlerService implements OnModuleInit {
       new GeminiStrategy(ctx),
       new GrokStrategy(ctx),
       new ClovaXStrategy(ctx),
+      new NaverAiBriefingStrategy(ctx),
     ];
     for (const s of strategyList) {
       this.strategies.set(s.platform, s);
@@ -515,6 +518,10 @@ export class AICrawlerService implements OnModuleInit {
       case 'CLOVA_X':
         const clovaKey = process.env.CLOVA_X_API_KEY?.trim();
         return !!clovaKey && clovaKey.length > 10;
+      case 'NAVER_AI_BRIEFING':
+        // API 키 불필요 (SERP 직접 수집). 기본 비활성 — Render IP에서 네이버 접근 검증 후
+        // NAVER_BRIEFING_ENABLED=true 로 켠다 (데이터센터 IP 차단 리스크 대응).
+        return process.env.NAVER_BRIEFING_ENABLED?.trim().toLowerCase() === 'true';
       default:
         return false;
     }
@@ -2183,6 +2190,7 @@ JSON 형식으로만 답변:
       GROK: 0.70,         // X 실시간 + 웹검색, Perplexity와 ChatGPT 중간
       CLAUDE: 0.55,       // 웹검색 없음, 학습 데이터 기반
       CLOVA_X: 0.50,      // 한국어 특화 학습, 웹검색 기본 미지원 (캘리브레이션으로 보정 예정)
+      NAVER_AI_BRIEFING: 0.90, // 실제 사용자에게 노출되는 SERP 그대로 수집 — 추정 아닌 실측
     };
 
     let score = baseReliability[platform] || 0.5;
@@ -2296,6 +2304,7 @@ JSON 형식으로만 답변:
       GROK: 1.2,        // 초기값 — 실데이터 누적 후 캘리브레이션
       CLAUDE: 1.0,
       CLOVA_X: 1.0,     // 초기값 — 한국 시장 특화 데이터 누적 후 재산정
+      NAVER_AI_BRIEFING: 1.0, // 초기값 — 노출률 자체가 낮아(파일럿 8%) 데이터 누적 후 재산정
     };
     return weights[platform] || 1.0;
   }

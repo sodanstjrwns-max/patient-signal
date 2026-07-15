@@ -64,6 +64,7 @@ enum AIPlatform {
   GOOGLE_AI_OVERVIEW
   GROK       // xAI Grok - 실시간 검색 강점, X(Twitter) 통합
   CLOVA_X    // Naver HyperCLOVA X - 한국 시장 토종 LLM 1위 후보
+  NAVER_AI_BRIEFING // 네이버 모바일 검색 AI 브리핑 (HyperCLOVA X + 검색 그라운딩) - 직접 수집
 }
 
 enum SentimentLabel {

@@ -51,6 +51,7 @@ export function getPlatformName(platform: string): string {
     GOOGLE_AI_OVERVIEW: 'Google AI Overview',
     GROK: 'Grok',
     CLOVA_X: 'CLOVA X',
+    NAVER_AI_BRIEFING: '네이버 AI 브리핑',
   };
   return names[platform] || platform;
 }
@@ -64,6 +65,7 @@ export function getPlatformColor(platform: string): string {
     GOOGLE_AI_OVERVIEW: '#ea4335',
     GROK: '#000000',      // xAI 브랜드 색상 (블랙)
     CLOVA_X: '#03c75a',   // 네이버 그린
+    NAVER_AI_BRIEFING: '#00b843', // 네이버 그린 계열 (CLOVA X와 구분되는 진한 톤)
   };
   return colors[platform] || '#6b7280';
 }
