@@ -480,7 +480,12 @@ export class SchedulerService implements OnModuleInit {
     //  - FREE: 3개 / STARTER: 5개 / STANDARD: 10개 / PRO·ENTERPRISE: 무제한
     // ============================================================
     const promptsPerCrawl = (planLimits as any).promptsPerCrawl;
-    const sortedPrompts = [...hospital.prompts].sort((a: any, b: any) => a.id.localeCompare(b.id));
+    // 네이버 브리핑 전용 프롬프트는 6-AI 크롤에서 제외 (별도 naverBriefingCrawl에서 처리)
+    // — 세션 플랫폼과 교집합이 공집합이 돼 failed로 잘못 집계되는 것 방지
+    const crawlablePrompts = hospital.prompts.filter(
+      (p: any) => p.platformSpecific !== 'NAVER_AI_BRIEFING',
+    );
+    const sortedPrompts = [...crawlablePrompts].sort((a: any, b: any) => a.id.localeCompare(b.id));
     const effectivePrompts =
       promptsPerCrawl && promptsPerCrawl !== -1 && sortedPrompts.length > promptsPerCrawl
         ? sortedPrompts.slice(0, promptsPerCrawl)
@@ -718,8 +723,13 @@ export class SchedulerService implements OnModuleInit {
 
     outer: for (const hospital of hospitals) {
       // 한국어 프롬프트만 (AI 브리핑은 한국어 검색 SERP 전용)
+      // 공용(platformSpecific=null) + 네이버 브리핑 전용 프롬프트 포함
+      // (전용 프롬프트는 6-AI 크롤에서 자동 제외 → API 비용 증가 없음)
       const koreanPrompts = (hospital.prompts || [])
-        .filter((p: any) => /[가-힐]/.test(p.promptText) && !p.platformSpecific)
+        .filter((p: any) =>
+          /[가-힣]/.test(p.promptText) &&
+          (!p.platformSpecific || p.platformSpecific === 'NAVER_AI_BRIEFING'),
+        )
         .sort((a: any, b: any) => a.id.localeCompare(b.id))
         .slice(0, maxPrompts);
 
