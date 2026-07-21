@@ -245,6 +245,8 @@ export const crawlerApi = {
     api.post(`/source-intel/enrich/${hospitalId}`, null, { params: { days, limit, analyze: analyze ? 'true' : 'false' }, timeout: 30000 }),
   getEnrichStatus: (hospitalId: string) =>
     api.get(`/source-intel/status/${hospitalId}`, { timeout: 15000 }),
+  getNewChannels: (hospitalId: string, windowDays?: number, minCitations?: number) =>
+    api.get(`/source-intel/new-channels/${hospitalId}`, { params: { windowDays, minCitations }, timeout: 120000 }),
   // Phase 2: 심화 인사이트
   getPositioningMap: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/positioning/${hospitalId}`, { params: { days }, timeout: 60000 }),

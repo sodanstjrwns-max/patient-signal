@@ -9,11 +9,13 @@
  *  GET  /source-intel/hint-keywords/:hospitalId — AI hint keyword 집계
  *  GET  /source-intel/source-detail/:snapshotId — 단일 소스 상세
  *  GET  /source-intel/summary/:hospitalId    — 출처 인텔리전스 통합 요약
+ *  GET  /source-intel/new-channels/:hospitalId — 신규 인용 채널 탐지 (NEW/SURGING)
  */
 import { Controller, Get, Param, Post, Query, UseGuards, NotFoundException, Body } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrismaClient } from '@prisma/client';
 import { SourcePipelineService } from './source-pipeline.service';
+import { NewChannelsService } from './new-channels.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -38,7 +40,26 @@ const ENRICH_STATUS = new Map<string, {
 @Controller('source-intel')
 @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 export class SourceIntelController {
-  constructor(private pipeline: SourcePipelineService) {}
+  constructor(
+    private pipeline: SourcePipelineService,
+    private newChannels: NewChannelsService,
+  ) {}
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  @Get('new-channels/:hospitalId')
+  @ApiOperation({ summary: '신규 인용 채널 탐지 — 최근 윈도우 vs 베이스라인 비교 (NEW/SURGING/위성사이트 의심)' })
+  async getNewChannels(
+    @Param('hospitalId') hospitalId: string,
+    @Query('windowDays') windowDays?: string,
+    @Query('baselineDays') baselineDays?: string,
+    @Query('minCitations') minCitations?: string,
+  ) {
+    return this.newChannels.detect(hospitalId, {
+      windowDays: windowDays ? parseInt(windowDays) : undefined,
+      baselineDays: baselineDays ? parseInt(baselineDays) : undefined,
+      minCitations: minCitations ? parseInt(minCitations) : undefined,
+    });
+  }
 
   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   @Post('enrich/:hospitalId')

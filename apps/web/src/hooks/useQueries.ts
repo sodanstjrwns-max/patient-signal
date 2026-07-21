@@ -256,6 +256,18 @@ export function useHintKeywords(lazy = false) {
   });
 }
 
+/** 신규 인용 채널 탐지 */
+export function useNewChannels(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.sourceIntel.newChannels(hospitalId!),
+    queryFn: () => crawlerApi.getNewChannels(hospitalId!, 30).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
 /** Enrich 진행 상태 — polling */
 export function useEnrichStatus(hospitalId: string | undefined, polling = false) {
   return useQuery({

@@ -43,6 +43,7 @@ export const queryKeys = {
     instagram: (hospitalId: string) => ['source-intel-instagram', hospitalId] as const,
     hintKeywords: (hospitalId: string) => ['source-intel-hint-keywords', hospitalId] as const,
     status: (hospitalId: string) => ['source-intel-status', hospitalId] as const,
+    newChannels: (hospitalId: string) => ['source-intel-new-channels', hospitalId] as const,
   },
 
   // === GEO Content ===

@@ -21,6 +21,7 @@ import {
   useTopSources,
   useInstagramIntel,
   useHintKeywords,
+  useNewChannels,
   useEnrichStatus,
   usePositioningInsight,
   useSourceQualityInsight,
@@ -61,6 +62,8 @@ import {
   FileSearch,
   Hash,
   MessageCircle,
+  Antenna,
+  ShieldAlert,
 } from 'lucide-react';
 
 const platformNames: Record<string, string> = {
@@ -71,6 +74,7 @@ const platformNames: Record<string, string> = {
   GOOGLE_AI_OVERVIEW: 'Google AI',
   GROK: 'Grok',
   CLOVA_X: 'CLOVA X',
+  NAVER_AI_BRIEFING: '네이버 AI 브리핑',
 };
 
 const platformColors: Record<string, string> = {
@@ -98,7 +102,7 @@ export default function InsightsPage() {
   const hospitalId = useHospitalId();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'breadth', 'sourceIntel', 'positioning', 'sourceQuality', 'actions'] as const;
+  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'breadth', 'sourceIntel', 'newChannels', 'positioning', 'sourceQuality', 'actions'] as const;
   type TabType = typeof validTabs[number];
   const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
@@ -124,6 +128,7 @@ export default function InsightsPage() {
   const { data: siTopSources, isLoading: siTopLoading } = useTopSources(activeTab !== 'sourceIntel');
   const { data: siInstagram, isLoading: siIgLoading } = useInstagramIntel(activeTab !== 'sourceIntel');
   const { data: siHints, isLoading: siHintsLoading } = useHintKeywords(activeTab !== 'sourceIntel');
+  const { data: newChannelsData, isLoading: newChannelsLoading, error: newChannelsError } = useNewChannels(activeTab !== 'newChannels');
   const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
   const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
   const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
@@ -139,6 +144,7 @@ export default function InsightsPage() {
     (activeTab === 'urlMatrix' && urlMatrixError) ||
     (activeTab === 'breadth' && breadthError) ||
     (activeTab === 'sourceIntel' && siSummaryError) ||
+    (activeTab === 'newChannels' && newChannelsError) ||
     (activeTab === 'positioning' && positionError) ||
     (activeTab === 'sourceQuality' && sourceQualityError) ||
     (activeTab === 'actions' && actionError)
@@ -153,6 +159,7 @@ export default function InsightsPage() {
     (activeTab === 'urlMatrix' && urlMatrixLoading) ||
     (activeTab === 'breadth' && breadthLoading) ||
     (activeTab === 'sourceIntel' && siSummaryLoading && siTopLoading && siIgLoading && siHintsLoading) ||
+    (activeTab === 'newChannels' && newChannelsLoading) ||
     (activeTab === 'positioning' && positionLoading) ||
     (activeTab === 'sourceQuality' && sourceQualityLoading) ||
     (activeTab === 'actions' && actionLoading)
@@ -183,7 +190,8 @@ export default function InsightsPage() {
             { key: 'topUrls', icon: ExternalLink, label: 'Top URL 랭킹' },
             { key: 'urlMatrix', icon: BarChart3, label: 'AI×URL 매트릭스' },
             { key: 'breadth', icon: Award, label: 'Breadth 리포트' },
-            { key: 'sourceIntel', icon: Sparkles, label: '출처 인텔리전스 🆕' },
+            { key: 'sourceIntel', icon: Sparkles, label: '출처 인텔리전스' },
+            { key: 'newChannels', icon: Antenna, label: '신규 인용 채널 🆕' },
             { key: 'sourceQuality', icon: Shield, label: '출처 품질' },
           ].map(tab => (
             <Button
@@ -247,6 +255,7 @@ export default function InsightsPage() {
                 hospitalId={hospitalId!}
               />
             )}
+            {activeTab === 'newChannels' && newChannelsData && <NewChannels data={newChannelsData} />}
             {activeTab === 'sourceQuality' && sourceQualityData && <SourceQuality data={sourceQualityData} />}
           </>
         )}
@@ -2679,6 +2688,169 @@ function ActionReport({ data }: { data: any }) {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ==================== 신규 인용 채널 탐지 ====================
+const channelCategoryConfig: Record<string, { label: string; color: string; desc: string }> = {
+  social: { label: '소셜', color: 'bg-pink-100 text-pink-700', desc: '소셜 플랫폼 — 캡션 공식 적용 대상' },
+  directory: { label: '디렉토리', color: 'bg-blue-100 text-blue-700', desc: '병원 정보/예약/가격비교 — 프로필 정비 대상' },
+  hospital_site: { label: '병원 사이트', color: 'bg-amber-100 text-amber-700', desc: '경쟁 병원 자사 사이트 — 콘텐츠 공세 감시' },
+  satellite_suspect: { label: '⚠️ 위성 의심', color: 'bg-red-100 text-red-700', desc: '어뷰징성 위성 사이트(PBN) 의심 — 감시 대상' },
+  wiki_media: { label: '위키/미디어', color: 'bg-purple-100 text-purple-700', desc: '위키·언론·기관 — 프로필 등재 검토' },
+  other: { label: '기타', color: 'bg-slate-100 text-slate-600', desc: '' },
+};
+
+function NewChannels({ data }: { data: any }) {
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const channels = (data?.channels || []).filter(
+    (c: any) => !categoryFilter || c.category === categoryFilter,
+  );
+  const totals = data?.totals || {};
+
+  return (
+    <div className="space-y-6">
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-brand-600">{totals.newDomains ?? 0}</p>
+            <p className="text-xs text-slate-500 mt-1">신규 채널 (최근 {data?.windowDays}일)</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-amber-600">{totals.surgingDomains ?? 0}</p>
+            <p className="text-xs text-slate-500 mt-1">급성장 채널 (5배+)</p>
+          </CardContent>
+        </Card>
+        <Card className={totals.satelliteSuspects > 0 ? 'border-red-200 bg-red-50/40' : ''}>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-red-600">{totals.satelliteSuspects ?? 0}</p>
+            <p className="text-xs text-slate-500 mt-1">위성 사이트 의심</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-2xl font-bold text-slate-700">{totals.recentDomains ?? 0}</p>
+            <p className="text-xs text-slate-500 mt-1">활성 인용 도메인 전체</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 위성 사이트 경고 배너 */}
+      {totals.satelliteSuspects > 0 && (
+        <Card className="border-red-200 bg-red-50/50">
+          <CardContent className="p-4 flex items-start gap-3">
+            <ShieldAlert className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-slate-700">
+              <span className="font-semibold text-red-700">위성 사이트(PBN) 의심 채널 {totals.satelliteSuspects}개 감지.</span>{' '}
+              익명 도메인에 특정 병원 홍보성 콘텐츠를 올려 AI 인용을 노리는 패턴입니다.
+              AI 플랫폼이 정화하면 해당 채널 의존 병원의 가시성이 급락할 수 있으니, 감시만 하고 모방하지 마세요.
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 카테고리 필터 */}
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={!categoryFilter ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setCategoryFilter(null)}
+        >
+          전체 ({data?.channels?.length ?? 0})
+        </Button>
+        {Object.entries(channelCategoryConfig).map(([key, cfg]) => {
+          const count = (data?.channels || []).filter((c: any) => c.category === key).length;
+          if (count === 0) return null;
+          return (
+            <Button
+              key={key}
+              variant={categoryFilter === key ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setCategoryFilter(categoryFilter === key ? null : key)}
+            >
+              {cfg.label} ({count})
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* 채널 리스트 */}
+      {channels.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-slate-500 text-sm">
+            최근 {data?.windowDays}일간 새로 나타난 인용 채널이 없습니다.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {channels.map((ch: any) => {
+            const cfg = channelCategoryConfig[ch.category] || channelCategoryConfig.other;
+            const topPlatforms = Object.entries(ch.platforms as Record<string, number>)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3);
+            return (
+              <Card key={ch.domain} className={ch.category === 'satellite_suspect' ? 'border-red-200' : ''}>
+                <CardContent className="p-4">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ch.status === 'NEW' ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {ch.status === 'NEW' ? '🆕 신규' : `📈 급성장${ch.growthX ? ` ×${ch.growthX}` : ''}`}
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>{cfg.label}</span>
+                    {ch.isOurs && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">우리 병원</span>
+                    )}
+                    <a
+                      href={`https://${ch.domain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-semibold text-slate-800 hover:text-brand-600 flex items-center gap-1"
+                    >
+                      {ch.domain}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 mb-2">
+                    <span>인용 <b className="text-slate-800">{ch.recentCount}회</b>{ch.baselineCount > 0 && <span className="text-slate-400"> (이전 {ch.baselineCount}회)</span>}</span>
+                    <span>우리 병원 언급 동반율 <b className={ch.mentionRate >= 50 ? 'text-green-600' : ch.mentionRate >= 20 ? 'text-amber-600' : 'text-red-600'}>{ch.mentionRate}%</b></span>
+                    {ch.firstSeenAt && <span>첫 등장 {new Date(ch.firstSeenAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>}
+                    <span className="flex gap-1">
+                      {topPlatforms.map(([p, c]) => (
+                        <span key={p} className={`px-1.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}>
+                          {platformNames[p] || p} {c as number}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+
+                  {ch.sampleUrls?.length > 0 && (
+                    <div className="text-xs text-slate-400 space-y-0.5">
+                      {ch.sampleUrls.slice(0, 2).map((s: any) => (
+                        <div key={s.url} className="truncate">
+                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-brand-600">
+                            {decodeURIComponent(s.url).slice(0, 90)}
+                          </a>
+                          <span className="ml-1">({s.count}회)</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {cfg.desc && <p className="text-xs text-slate-400 mt-2">{cfg.desc}</p>}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-xs text-slate-400 text-right">
+        최근 {data?.windowDays}일 vs 이전 {data?.baselineDays}일 비교 · 최소 {data?.minCitations}회 인용 기준 · 6시간마다 갱신
+      </p>
     </div>
   );
 }
