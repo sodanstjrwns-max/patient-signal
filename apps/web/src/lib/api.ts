@@ -217,8 +217,8 @@ export const crawlerApi = {
   // Phase 1: 인사이트 분석
   getMentionAnalysis: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/mention-analysis/${hospitalId}`, { params: { days }, timeout: 60000 }),
-  getResponseTrend: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getResponseTrend: (hospitalId: string, days?: number, cohort?: 'all' | 'fixed') =>
+    api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days, cohort }, timeout: 60000 }),
   getSourceAnalysis: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days }, timeout: 60000 }),
   // ✅ 새로 추가: 상세 출처 분석

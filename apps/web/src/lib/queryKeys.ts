@@ -24,7 +24,7 @@ export const queryKeys = {
   // === Insights (대시보드 + 인사이트 페이지 공유) ===
   insights: {
     mention: (hospitalId: string) => ['insights-mention', hospitalId] as const,
-    trend: (hospitalId: string) => ['insights-trend', hospitalId] as const,
+    trend: (hospitalId: string, cohort: string = 'all') => ['insights-trend', hospitalId, cohort] as const,
     sources: (hospitalId: string) => ['insights-sources', hospitalId] as const,
     sourcesDiagnostic: (hospitalId: string) => ['insights-sources-diagnostic', hospitalId] as const,
     topUrls: (hospitalId: string) => ['insights-top-urls', hospitalId] as const,

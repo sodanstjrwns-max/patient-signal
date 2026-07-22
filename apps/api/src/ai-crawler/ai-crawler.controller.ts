@@ -670,17 +670,40 @@ export class AICrawlerController {
   @UseInterceptors(HttpCacheInterceptor)
   @CacheTTL(600)
   @Get('insights/trend/:hospitalId')
-  @ApiOperation({ summary: 'AI 응답 트렌드 추적 - 주간/월간 변화' })
+  @ApiOperation({ summary: 'AI 응답 트렌드 추적 - 주간/월간 변화 (cohort=fixed: 기간 시작 전 생성된 프롬프트만 집계 → 신규 프롬프트 유입 착시 제거)' })
   async getResponseTrend(
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
+    @Query('cohort') cohort?: string,
   ) {
     try {
     const daysNum = parseInt(days || '60');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
+    const fixedCohort = cohort === 'fixed';
 
-    const responses = await this.prisma.aIResponse.findMany({
+    // 프롬프트 생성일 조회 — 고정 코호트 필터 + 기간 내 프롬프트 추가 마커에 사용
+    const prompts = await this.prisma.prompt.findMany({
+      where: { hospitalId },
+      select: { id: true, createdAt: true },
+    });
+    // 고정 코호트 = 분석 기간 시작 전에 이미 존재하던 프롬프트 (기간 내내 동일 셋 → 비교 가능)
+    const cohortPromptIds = new Set(
+      prompts.filter(p => p.createdAt < since).map(p => p.id),
+    );
+    // 기간 내 프롬프트 추가 이벤트 (일별) — 차트에 "N개 추가" 마커로 표시해 착시 원인 시각화
+    const markerMap: Record<string, number> = {};
+    for (const p of prompts) {
+      if (p.createdAt >= since) {
+        const d = p.createdAt.toISOString().split('T')[0];
+        markerMap[d] = (markerMap[d] || 0) + 1;
+      }
+    }
+    const promptMarkers = Object.entries(markerMap)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    let responses = await this.prisma.aIResponse.findMany({
       where: {
         hospitalId,
         createdAt: { gte: since },
@@ -692,9 +715,15 @@ export class AICrawlerController {
         mentionPosition: true,
         createdAt: true,
         responseDate: true,
+        promptId: true,
       },
       orderBy: { createdAt: 'asc' },
     });
+
+    // 고정 코호트: 기간 시작 전 생성 프롬프트의 응답만 (promptId 유실분은 검증 불가 → 제외)
+    if (fixedCohort) {
+      responses = responses.filter(r => r.promptId && cohortPromptIds.has(r.promptId));
+    }
 
     // 일별 그룹화
     const dailyMap: Record<string, {
@@ -801,6 +830,13 @@ export class AICrawlerController {
 
     return {
       period: `최근 ${daysNum}일`,
+      cohort: fixedCohort ? 'fixed' : 'all',
+      cohortInfo: {
+        totalPrompts: prompts.length,
+        cohortPrompts: cohortPromptIds.size, // 기간 시작 전부터 존재한 프롬프트 수
+        addedInPeriod: prompts.length - cohortPromptIds.size,
+      },
+      promptMarkers, // 기간 내 프롬프트 추가 이벤트 [{date, count}] — 착시 원인 시각화용
       dailyData,
       weeklyData,
       platformTrend,

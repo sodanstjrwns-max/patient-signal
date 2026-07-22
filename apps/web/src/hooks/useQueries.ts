@@ -132,12 +132,12 @@ export function useMentionInsight(lazy = false) {
   });
 }
 
-/** 트렌드 분석 */
-export function useTrendInsight(lazy = false) {
+/** 트렌드 분석 — cohort='fixed'면 기간 시작 전 생성 프롬프트만 집계 (신규 프롬프트 유입 착시 제거) */
+export function useTrendInsight(lazy = false, cohort: 'all' | 'fixed' = 'all') {
   const hospitalId = useHospitalId();
   return useQuery({
-    queryKey: queryKeys.insights.trend(hospitalId!),
-    queryFn: () => crawlerApi.getResponseTrend(hospitalId!, 60).then(r => r.data),
+    queryKey: queryKeys.insights.trend(hospitalId!, cohort),
+    queryFn: () => crawlerApi.getResponseTrend(hospitalId!, 60, cohort).then(r => r.data),
     enabled: !!hospitalId && !lazy,
     staleTime: STALE_TIMES.INSIGHTS,
     retry: 1,

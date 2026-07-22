@@ -106,6 +106,7 @@ export default function InsightsPage() {
   type TabType = typeof validTabs[number];
   const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const [trendCohort, setTrendCohort] = useState<'all' | 'fixed'>('all');
   const queryClient = useQueryClient();
 
   // URL 파라미터 변경 시 탭 동기화
@@ -118,7 +119,7 @@ export default function InsightsPage() {
   // 【캐싱 통합 완료】공유 훅 사용 → 대시보드에서 프리페치된 데이터 자동 활용
   // lazy 파라미터로 비활성 탭은 fetch 안 함 (이미 캐시 있으면 즉시 표시)
   const { data: mentionData, isLoading: mentionLoading, error: mentionError } = useMentionInsight(activeTab !== 'mention');
-  const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend');
+  const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend', trendCohort);
   const { data: sourceData, isLoading: sourceLoading, error: sourceError } = useSourceInsight(activeTab !== 'sources');
   const { data: diagnosticData } = useSourceDiagnostic(activeTab !== 'sources');
   const { data: topUrlsData, isLoading: topUrlsLoading, error: topUrlsError } = useTopUrls(activeTab !== 'topUrls', 100);
@@ -241,7 +242,7 @@ export default function InsightsPage() {
             {activeTab === 'actions' && actionData && <ActionReport data={actionData} />}
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
             {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
-            {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} />}
+            {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} cohort={trendCohort} onCohortChange={setTrendCohort} />}
             {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} diagnostic={diagnosticData} />}
             {activeTab === 'topUrls' && topUrlsData && <TopUrlsRanking data={topUrlsData} />}
             {activeTab === 'urlMatrix' && urlMatrixData && <UrlMatrix data={urlMatrixData} />}
@@ -521,9 +522,44 @@ function MentionAnalysis({ data }: { data: any }) {
 }
 
 // ==================== 2. 트렌드 분석 ====================
-function TrendAnalysis({ data }: { data: any }) {
+function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'all' | 'fixed'; onCohortChange: (c: 'all' | 'fixed') => void }) {
+  const markerDates = new Set((data.promptMarkers || []).map((m: any) => m.date));
+  const markerCount = (date: string) => (data.promptMarkers || []).find((m: any) => m.date === date)?.count || 0;
   return (
     <div className="space-y-6">
+      {/* 코호트 토글 — 신규 프롬프트 유입 착시 제거 */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-xl border bg-white p-1">
+          <button
+            onClick={() => onCohortChange('all')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              cohort === 'all' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            전체 프롬프트
+          </button>
+          <button
+            onClick={() => onCohortChange('fixed')}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              cohort === 'fixed' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            고정 코호트
+          </button>
+        </div>
+        {cohort === 'fixed' ? (
+          <p className="text-xs text-slate-500">
+            기간 시작 전부터 있던 프롬프트 <span className="font-semibold text-slate-700">{data.cohortInfo?.cohortPrompts ?? 0}개</span>만 집계 — 같은 질문 셋으로 기간 전체를 비교합니다
+          </p>
+        ) : (
+          data.cohortInfo?.addedInPeriod > 0 && (
+            <p className="text-xs text-amber-600">
+              ⚠️ 기간 중 프롬프트 {data.cohortInfo.addedInPeriod}개 추가됨 — 평균이 희석될 수 있으니 실제 성과 추이는 &lsquo;고정 코호트&rsquo;로 확인하세요
+            </p>
+          )
+        )}
+      </div>
+
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
@@ -624,7 +660,14 @@ function TrendAnalysis({ data }: { data: any }) {
                 <tbody>
                   {data.dailyData.slice(-14).reverse().map((day: any) => (
                     <tr key={day.date} className="border-b last:border-0 hover:bg-white/60">
-                      <td className="py-2 text-slate-700">{new Date(day.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}</td>
+                      <td className="py-2 text-slate-700">
+                        {new Date(day.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}
+                        {markerDates.has(day.date) && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700" title={`이날 프롬프트 ${markerCount(day.date)}개 추가 — 이후 언급률 변동은 신규 질문 유입 영향일 수 있음`}>
+                            +{markerCount(day.date)} 프롬프트
+                          </span>
+                        )}
+                      </td>
                       <td className="py-2 text-center text-slate-600">{day.total}</td>
                       <td className="py-2 text-center text-green-600 font-medium">{day.mentioned}</td>
                       <td className="py-2 text-center">
