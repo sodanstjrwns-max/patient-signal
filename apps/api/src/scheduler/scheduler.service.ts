@@ -137,7 +137,11 @@ export class SchedulerService implements OnModuleInit {
         status: 'RUNNING',
         startedAt: { lt: zombieThreshold },
       },
-      data: { status: 'FAILED', completedAt: new Date() },
+      data: {
+        status: 'FAILED',
+        completedAt: new Date(),
+        errorMessage: '[ZOMBIE] 30분 이상 RUNNING 상태 — Render Cron 타임아웃으로 추정, 자동 정리됨',
+      },
     });
     if (zombieResult.count > 0) {
       this.logger.warn(`🧟 좀비 잡 자동 정리: ${zombieResult.count}건 RUNNING→FAILED`);
@@ -467,9 +471,14 @@ export class SchedulerService implements OnModuleInit {
       // 방금 만든 crawlJob도 RUNNING으로 집계되므로 > 비교
       if (crawlCount > planLimits.crawlsPerMonth) {
         this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
+        // 장애가 아닌 플랜 정책 스킵 — FAILED에 사유를 남겨 모니터링 노이즈/유저 오해 방지
         await this.prisma.crawlJob.update({
           where: { id: crawlJob.id },
-          data: { status: 'FAILED', completedAt: new Date() },
+          data: {
+            status: 'FAILED',
+            completedAt: new Date(),
+            errorMessage: `[SKIP] 월간 크롤링 한도 소진 (${planLimits.crawlsPerMonth}/${planLimits.crawlsPerMonth}회, ${hospital.planType} 플랜) — 플랜 업그레이드 시 매일 자동 크롤링됩니다`,
+          },
         });
         return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'monthly-limit' };
       }
@@ -631,10 +640,14 @@ export class SchedulerService implements OnModuleInit {
     return hospitalResult;
 
     } catch (error) {
-      // 예상치 못한 예외 → 아직 RUNNING이면 FAILED 마킹 (이미 COMPLETED면 건드리지 않음)
+      // 예상치 못한 예외 → 아직 RUNNING이면 FAILED 마킹 (이미 COMPLETED면 건드리지 않음) + 에러 사유 보존
       await this.prisma.crawlJob.updateMany({
         where: { id: crawlJob.id, status: 'RUNNING' },
-        data: { status: 'FAILED', completedAt: new Date() },
+        data: {
+          status: 'FAILED',
+          completedAt: new Date(),
+          errorMessage: `[ERROR] ${String(error?.message || error).slice(0, 500)}`,
+        },
       }).catch(() => undefined);
       throw error;
     }
