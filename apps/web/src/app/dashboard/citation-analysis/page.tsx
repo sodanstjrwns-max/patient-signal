@@ -5,6 +5,7 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TermTip } from '@/components/ui/term-tooltip';
 import { useAuthStore } from '@/stores/auth';
 import { citationApi } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
@@ -135,25 +136,25 @@ export default function CitationAnalysisPage() {
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-brand-600">{stats.totalCitations}</p>
-                <p className="text-xs text-slate-500 mt-1">총 인용 수 (30일)</p>
+                <p className="text-xs text-slate-500 mt-1"><TermTip term="totalCitations">총 인용 수 (30일)</TermTip></p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-green-600">{stats.totalDomains}</p>
-                <p className="text-xs text-slate-500 mt-1">인용 도메인</p>
+                <p className="text-xs text-slate-500 mt-1"><TermTip term="citationDomains">인용 도메인</TermTip></p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-emerald-600">{stats.naverCitationRate}%</p>
-                <p className="text-xs text-slate-500 mt-1">네이버 인용률</p>
+                <p className="text-xs text-slate-500 mt-1"><TermTip term="naverCitationRate">네이버 인용률</TermTip></p>
               </CardContent>
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-purple-600">{stats.overallCompanionRate ?? 0}%</p>
-                <p className="text-xs text-slate-500 mt-1" title="인용된 응답 중 우리 병원 이름이 실제 언급된 비율 — 인용돼도 이름이 안 나오면 홍보 효과가 없습니다">언급 동반율 ⓘ</p>
+                <p className="text-xs text-slate-500 mt-1"><TermTip term="companionRate">언급 동반율</TermTip></p>
               </CardContent>
             </Card>
           </div>
@@ -484,14 +485,11 @@ export default function CitationAnalysisPage() {
                         <span className="text-xs text-slate-500">
                           {d.count}회 ({d.percentage}%)
                           {d.companionRate != null && (
-                            <span
-                              className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                d.companionRate >= 50 ? 'bg-green-100 text-green-700' : d.companionRate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500'
-                              }`}
-                              title={`이 도메인이 인용될 때 우리 병원이 함께 언급되는 비율 — 낮으면 인용만 되고 홍보 효과는 없는 채널`}
-                            >
+                            <TermTip term="companionRate" icon={false} className={`ml-2 !inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              d.companionRate >= 50 ? 'bg-green-100 text-green-700' : d.companionRate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500'
+                            }`}>
                               동반 {d.companionRate}%
-                            </span>
+                            </TermTip>
                           )}
                         </span>
                       </div>

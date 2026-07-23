@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { TermTip } from '@/components/ui/term-tooltip';
 import { crawlerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from '@/hooks/useToast';
@@ -536,7 +537,7 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
               cohort === 'all' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            전체 프롬프트
+            <TermTip term="allPrompts" icon={false}>전체 프롬프트</TermTip>
           </button>
           <button
             onClick={() => onCohortChange('fixed')}
@@ -544,7 +545,7 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
               cohort === 'fixed' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            고정 코호트
+            <TermTip term="fixedCohort" icon={false}>고정 코호트</TermTip>
           </button>
         </div>
         {cohort === 'fixed' ? (
@@ -564,25 +565,25 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium">전체 응답 (60일)</p>
+            <p className="text-xs text-brand-600 font-medium"><TermTip term="totalResponses">전체 응답 (60일)</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{data.summary?.totalResponses || 0}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium">총 언급</p>
+            <p className="text-xs text-green-600 font-medium"><TermTip term="totalMentions">총 언급</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{data.summary?.totalMentions || 0}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
           <CardContent className="p-4">
-            <p className="text-xs text-amber-600 font-medium">언급률</p>
+            <p className="text-xs text-amber-600 font-medium"><TermTip term="mentionRate">언급률</TermTip></p>
             <p className="text-2xl font-bold text-amber-800">{data.summary?.overallMentionRate || 0}%</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium" title="언급된 응답 중 첫 번째로 추천된 비율 — 언급률이 그대로여도 이 값이 떨어지면 경쟁사가 치고 올라오는 조기 경보">1위 점유율 ⓘ</p>
+            <p className="text-xs text-purple-600 font-medium"><TermTip term="firstPositionShare">1위 점유율</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{data.summary?.firstPositionShare ?? 0}%</p>
             <p className="text-[10px] text-purple-500 mt-0.5">언급 시 첫 번째로 불린 비율</p>
           </CardContent>
@@ -595,7 +596,7 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
           <CardContent className="p-5">
             <h3 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-purple-600" />
-              AI 추천 순서 분포
+              <TermTip term="positionDistribution" icon={false}>AI 추천 순서 분포</TermTip>
             </h3>
             <p className="text-xs text-slate-500 mb-3">AI 답변은 보통 3~5곳을 추천합니다 — 언급돼도 몇 번째로 불렸는지가 환자 눈에 꽂힐 확률을 가릅니다</p>
             {(() => {
@@ -659,12 +660,12 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
                 <div className="flex justify-between items-end">
                   <div>
                     <p className="text-3xl font-bold text-slate-900">{stats.mentionRate}%</p>
-                    <p className="text-xs text-slate-500">언급률</p>
+                    <p className="text-xs text-slate-500"><TermTip term="mentionRate" icon={false}>언급률</TermTip></p>
                   </div>
                   {stats.firstShare != null && (
                     <div className="text-center">
                       <p className="text-lg font-bold text-purple-600">{stats.firstShare}%</p>
-                      <p className="text-xs text-slate-400">1위 점유</p>
+                      <p className="text-xs text-slate-400"><TermTip term="firstPositionShare" icon={false}>1위 점유</TermTip></p>
                     </div>
                   )}
                   <div className="text-right">
@@ -700,9 +701,9 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
                     <th className="pb-2 font-medium text-slate-500">날짜</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">전체</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">언급</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">언급률</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center" title="언급 중 1번째로 추천된 비율">1위 점유</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">감성</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="mentionRate" icon={false}>언급률</TermTip></th>
+                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="firstPositionShare">1위 점유</TermTip></th>
+                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="sentiment" icon={false}>감성</TermTip></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -786,19 +787,19 @@ function SourceAnalysis({ data, diagnostic }: { data: any; diagnostic?: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium">인용된 출처</p>
+            <p className="text-xs text-brand-600 font-medium"><TermTip term="citedSources">인용된 출처</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{data.totalUrls || 0}개</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium">출처 포함 응답</p>
+            <p className="text-xs text-green-600 font-medium"><TermTip term="responsesWithSources">출처 포함 응답</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{data.totalResponsesWithSources || 0}건</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
           <CardContent className="p-4 col-span-2 sm:col-span-1">
-            <p className="text-xs text-amber-600 font-medium">분석 채널</p>
+            <p className="text-xs text-amber-600 font-medium"><TermTip term="analysisChannels">분석 채널</TermTip></p>
             <p className="text-2xl font-bold text-amber-800">{data.categories?.length || 0}개</p>
           </CardContent>
         </Card>
@@ -907,8 +908,8 @@ function SourceAnalysis({ data, diagnostic }: { data: any; diagnostic?: any }) {
                     <th className="pb-2 font-medium text-slate-500 w-10">#</th>
                     <th className="pb-2 font-medium text-slate-500">도메인</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">카테고리</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">인용 수</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">인용 AI</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="citedCount" icon={false}>인용 수</TermTip></th>
+                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="citedAI" icon={false}>인용 AI</TermTip></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -953,20 +954,20 @@ function TopUrlsRanking({ data }: { data: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
           <CardContent className="p-4">
-            <p className="text-xs text-indigo-600 font-medium">고유 URL</p>
+            <p className="text-xs text-indigo-600 font-medium"><TermTip term="uniqueUrls">고유 URL</TermTip></p>
             <p className="text-2xl font-bold text-indigo-800">{data.totalUniqueUrls || 0}개</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
           <CardContent className="p-4">
-            <p className="text-xs text-rose-600 font-medium">크로스-AI 인용</p>
+            <p className="text-xs text-rose-600 font-medium"><TermTip term="crossAI">크로스-AI 인용</TermTip></p>
             <p className="text-2xl font-bold text-rose-800">{data.crossAICount || 0}개</p>
             <p className="text-[10px] text-rose-500 mt-0.5">3개 이상 AI가 인용</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium">Gemini 디코딩</p>
+            <p className="text-xs text-purple-600 font-medium"><TermTip term="geminiDecoded">Gemini 디코딩</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{data.geminiDecoded || 0}건</p>
           </CardContent>
         </Card>
@@ -998,8 +999,8 @@ function TopUrlsRanking({ data }: { data: any }) {
                     <tr className="border-b text-left">
                       <th className="pb-2 font-medium text-slate-500 w-10">#</th>
                       <th className="pb-2 font-medium text-slate-500">URL</th>
-                      <th className="pb-2 font-medium text-slate-500 text-center w-16">인용</th>
-                      <th className="pb-2 font-medium text-slate-500 text-center w-20">병원 언급률</th>
+                      <th className="pb-2 font-medium text-slate-500 text-center w-16"><TermTip term="citedCount" icon={false}>인용</TermTip></th>
+                      <th className="pb-2 font-medium text-slate-500 text-center w-20"><TermTip term="hospitalMentionRate" icon={false}>병원 언급률</TermTip></th>
                       <th className="pb-2 font-medium text-slate-500 text-center">AI</th>
                       <th className="pb-2 font-medium text-slate-500 text-center w-24">최근 인용</th>
                     </tr>
@@ -1243,28 +1244,28 @@ function BreadthInsights({ data }: { data: any }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className={`border-2 ${authColor}`}>
           <CardContent className="p-4">
-            <p className="text-xs font-medium opacity-80">종합 권위도</p>
+            <p className="text-xs font-medium opacity-80"><TermTip term="authority" icon={false}>종합 권위도</TermTip></p>
             <p className="text-3xl font-bold mt-1">{summary.overallAuthority}/10</p>
             <p className="text-xs mt-1 opacity-90">{summary.overallAuthorityTier}</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium">총 인용 URL</p>
+            <p className="text-xs text-brand-600 font-medium"><TermTip term="totalCitations">총 인용 URL</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{summary.totalUrls?.toLocaleString()}</p>
             <p className="text-xs text-brand-600 mt-1">{summary.totalResponses?.toLocaleString()}개 응답</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium">카테고리 다양성</p>
+            <p className="text-xs text-purple-600 font-medium"><TermTip term="categoryDiversity">카테고리 다양성</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{summary.uniqueCategories}</p>
             <p className="text-xs text-purple-600 mt-1">/ 25개 카테고리</p>
           </CardContent>
         </Card>
         <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium">긍정 감성</p>
+            <p className="text-xs text-green-600 font-medium"><TermTip term="positiveSentiment">긍정 감성</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{sentiment.positiveRate}%</p>
             <p className="text-xs text-green-600 mt-1">
               부정 {sentiment.negativeRate}% · {data.period}
@@ -1278,7 +1279,7 @@ function BreadthInsights({ data }: { data: any }) {
         <CardContent className="p-5">
           <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
             <Shield className="h-5 w-5 text-brand-600" />
-            권위도 Tier 분포
+            <TermTip term="authorityTier" icon={false}>권위도 Tier 분포</TermTip>
           </h3>
           <p className="text-xs text-slate-500 mb-4">
             AI가 우리 병원 정보를 어떤 신뢰 등급 출처에서 가져오는지 — Tier S/A가 많을수록 견고합니다
@@ -2680,7 +2681,7 @@ function ActionReport({ data }: { data: any }) {
           {/* 핵심 수치 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-white/10 rounded-2xl p-3 text-center">
-              <p className="text-xs text-slate-300">전체 언급률</p>
+              <p className="text-xs text-slate-300"><TermTip term="mentionRate" icon={false}>전체 언급률</TermTip></p>
               <p className="text-2xl font-bold">{summary.overallMentionRate || 0}%</p>
             </div>
             <div className="bg-white/10 rounded-2xl p-3 text-center">
@@ -2916,7 +2917,7 @@ function NewChannels({ data }: { data: any }) {
 
                   <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 mb-2">
                     <span>인용 <b className="text-slate-800">{ch.recentCount}회</b>{ch.baselineCount > 0 && <span className="text-slate-400"> (이전 {ch.baselineCount}회)</span>}</span>
-                    <span>우리 병원 언급 동반율 <b className={ch.mentionRate >= 50 ? 'text-green-600' : ch.mentionRate >= 20 ? 'text-amber-600' : 'text-red-600'}>{ch.mentionRate}%</b></span>
+                    <span><TermTip term="companionRate" icon={false}>우리 병원 언급 동반율</TermTip> <b className={ch.mentionRate >= 50 ? 'text-green-600' : ch.mentionRate >= 20 ? 'text-amber-600' : 'text-red-600'}>{ch.mentionRate}%</b></span>
                     {ch.firstSeenAt && <span>첫 등장 {new Date(ch.firstSeenAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>}
                     <span className="flex gap-1">
                       {topPlatforms.map(([p, c]) => (
