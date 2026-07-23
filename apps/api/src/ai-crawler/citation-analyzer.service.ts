@@ -964,17 +964,24 @@ ${ourContentSection}
         responseDate: { gte: thirtyDaysAgo },
         citedSources: { isEmpty: false },
       },
-      select: { citedSources: true, aiPlatform: true },
+      select: { citedSources: true, aiPlatform: true, isMentioned: true },
     });
 
-    const domainCounts = new Map<string, { count: number; platforms: Set<string> }>();
+    // 동반율(companion rate): 해당 도메인이 인용된 응답 중 병원명이 실제 언급된 비율
+    // "인용 ≠ 언급" — 인용돼도 이름이 안 나오면 홍보 효과 없음. 소스의 진짜 성적표
+    const domainCounts = new Map<string, { count: number; mentioned: number; platforms: Set<string> }>();
     let totalCitations = 0;
+    let mentionedCitations = 0;
 
     for (const r of responses) {
       for (const url of r.citedSources) {
         const domain = this.extractDomain(url);
-        const entry = domainCounts.get(domain) || { count: 0, platforms: new Set() };
+        const entry = domainCounts.get(domain) || { count: 0, mentioned: 0, platforms: new Set() };
         entry.count++;
+        if (r.isMentioned) {
+          entry.mentioned++;
+          mentionedCitations++;
+        }
         entry.platforms.add(r.aiPlatform);
         domainCounts.set(domain, entry);
         totalCitations++;
@@ -987,6 +994,8 @@ ${ourContentSection}
         count: data.count,
         platforms: Array.from(data.platforms),
         percentage: totalCitations > 0 ? Math.round((data.count / totalCitations) * 100) : 0,
+        // 동반율: 이 도메인이 인용될 때 우리 병원이 언급되는 비율 (%)
+        companionRate: data.count > 0 ? Math.round((data.mentioned / data.count) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 15);
@@ -1000,6 +1009,8 @@ ${ourContentSection}
       totalDomains: domainCounts.size,
       topDomains,
       naverCitationRate: totalCitations > 0 ? Math.round((naverCount / totalCitations) * 100) : 0,
+      // 전체 동반율: 인용 전체 중 병원 언급이 함께 나온 비율
+      overallCompanionRate: totalCitations > 0 ? Math.round((mentionedCitations / totalCitations) * 100) : 0,
     };
   }
 

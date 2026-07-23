@@ -580,13 +580,54 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
             <p className="text-2xl font-bold text-amber-800">{data.summary?.overallMentionRate || 0}%</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
           <CardContent className="p-4">
-            <p className="text-xs text-slate-500 font-medium">분석 기간</p>
-            <p className="text-lg font-bold text-slate-800">{data.period}</p>
+            <p className="text-xs text-purple-600 font-medium" title="언급된 응답 중 첫 번째로 추천된 비율 — 언급률이 그대로여도 이 값이 떨어지면 경쟁사가 치고 올라오는 조기 경보">1위 점유율 ⓘ</p>
+            <p className="text-2xl font-bold text-purple-800">{data.summary?.firstPositionShare ?? 0}%</p>
+            <p className="text-[10px] text-purple-500 mt-0.5">언급 시 첫 번째로 불린 비율</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* 추천 순서 분포 — 언급 ≠ 1등 */}
+      {data.summary?.positionDistribution && data.summary.totalMentions > 0 && (
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-purple-600" />
+              AI 추천 순서 분포
+            </h3>
+            <p className="text-xs text-slate-500 mb-3">AI 답변은 보통 3~5곳을 추천합니다 — 언급돼도 몇 번째로 불렸는지가 환자 눈에 꽂힐 확률을 가릅니다</p>
+            {(() => {
+              const pd = data.summary.positionDistribution;
+              const totalPos = pd.first + pd.second + pd.third + pd.fourthPlus;
+              if (totalPos === 0) return <p className="text-xs text-slate-400">포지션 데이터 없음</p>;
+              const rows = [
+                { label: '1번째', count: pd.first, color: 'bg-purple-500' },
+                { label: '2번째', count: pd.second, color: 'bg-purple-300' },
+                { label: '3번째', count: pd.third, color: 'bg-slate-300' },
+                { label: '4번째 이하', count: pd.fourthPlus, color: 'bg-slate-200' },
+              ];
+              return (
+                <div className="space-y-2">
+                  {rows.map(row => {
+                    const pct = Math.round((row.count / totalPos) * 100);
+                    return (
+                      <div key={row.label} className="flex items-center gap-3">
+                        <span className="text-xs text-slate-600 w-16">{row.label}</span>
+                        <div className="flex-1 h-4 bg-slate-50 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${row.color}`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs text-slate-600 w-20 text-right">{row.count}건 ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 플랫폼별 트렌드 */}
       <Card>
@@ -620,6 +661,12 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
                     <p className="text-3xl font-bold text-slate-900">{stats.mentionRate}%</p>
                     <p className="text-xs text-slate-500">언급률</p>
                   </div>
+                  {stats.firstShare != null && (
+                    <div className="text-center">
+                      <p className="text-lg font-bold text-purple-600">{stats.firstShare}%</p>
+                      <p className="text-xs text-slate-400">1위 점유</p>
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-sm text-slate-600">{stats.mentioned}/{stats.total}</p>
                     <p className="text-xs text-slate-400">언급/전체</p>
@@ -654,6 +701,7 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
                     <th className="pb-2 font-medium text-slate-500 text-center">전체</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">언급</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">언급률</th>
+                    <th className="pb-2 font-medium text-slate-500 text-center" title="언급 중 1번째로 추천된 비율">1위 점유</th>
                     <th className="pb-2 font-medium text-slate-500 text-center">감성</th>
                   </tr>
                 </thead>
@@ -674,6 +722,15 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
                         <span className={`font-medium ${day.mentionRate >= 50 ? 'text-green-600' : day.mentionRate >= 30 ? 'text-amber-600' : 'text-red-500'}`}>
                           {day.mentionRate}%
                         </span>
+                      </td>
+                      <td className="py-2 text-center">
+                        {day.firstShare != null ? (
+                          <span className={`text-xs font-medium ${day.firstShare >= 50 ? 'text-purple-600' : 'text-slate-500'}`}>
+                            {day.firstShare}%
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-300">-</span>
+                        )}
                       </td>
                       <td className="py-2 text-center">
                         <span className="text-green-500 text-xs">+{day.sentiment.positive}</span>

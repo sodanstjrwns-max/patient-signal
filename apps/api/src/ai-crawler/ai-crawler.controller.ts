@@ -730,6 +730,7 @@ export class AICrawlerController {
       date: string;
       total: number;
       mentioned: number;
+      firstPosition: number; // 언급 중 1번째로 추천된 건수 (언급 ≠ 1등 — 1위 점유율 추적)
       platforms: Record<string, { total: number; mentioned: number }>;
       sentiment: { positive: number; neutral: number; negative: number };
       avgPosition: number;
@@ -743,6 +744,7 @@ export class AICrawlerController {
           date: dateKey,
           total: 0,
           mentioned: 0,
+          firstPosition: 0,
           platforms: {},
           sentiment: { positive: 0, neutral: 0, negative: 0 },
           avgPosition: 0,
@@ -754,6 +756,7 @@ export class AICrawlerController {
       if (r.isMentioned) {
         day.mentioned++;
         if (r.mentionPosition) day.positions.push(r.mentionPosition);
+        if (r.mentionPosition === 1) day.firstPosition++;
       }
       
       // 플랫폼별
@@ -775,6 +778,8 @@ export class AICrawlerController {
       .map(day => ({
         ...day,
         mentionRate: day.total > 0 ? Math.round((day.mentioned / day.total) * 100) : 0,
+        // 1위 점유율: 언급된 응답 중 첫 번째로 추천된 비율 — 언급률이 유지돼도 이 값이 떨어지면 경쟁사 추격 조기 경보
+        firstShare: day.mentioned > 0 ? Math.round((day.firstPosition / day.mentioned) * 100) : null,
         avgPosition: day.positions.length > 0 ? +(day.positions.reduce((s, p) => s + p, 0) / day.positions.length).toFixed(1) : null,
         platforms: Object.fromEntries(
           Object.entries(day.platforms).map(([p, v]) => [p, {
@@ -806,12 +811,13 @@ export class AICrawlerController {
     }
 
     // 플랫폼별 전체 트렌드
-    const platformTrend: Record<string, { total: number; mentioned: number; mentionRate: number; trend: string }> = {};
+    const platformTrend: Record<string, { total: number; mentioned: number; mentionRate: number; firstShare: number | null; trend: string }> = {};
     const platforms = ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'];
     for (const p of platforms) {
       const pResponses = responses.filter(r => r.aiPlatform === p);
       const total = pResponses.length;
       const mentioned = pResponses.filter(r => r.isMentioned).length;
+      const pFirst = pResponses.filter(r => r.isMentioned && r.mentionPosition === 1).length;
       
       // 최근 절반 vs 이전 절반 비교로 트렌드 계산
       const mid = Math.floor(pResponses.length / 2);
@@ -824,6 +830,7 @@ export class AICrawlerController {
         total,
         mentioned,
         mentionRate: total > 0 ? Math.round((mentioned / total) * 100) : 0,
+        firstShare: mentioned > 0 ? Math.round((pFirst / mentioned) * 100) : null,
         trend: secondRate > firstRate + 0.1 ? 'UP' : secondRate < firstRate - 0.1 ? 'DOWN' : 'STABLE',
       };
     }
@@ -840,11 +847,27 @@ export class AICrawlerController {
       dailyData,
       weeklyData,
       platformTrend,
-      summary: {
-        totalResponses: responses.length,
-        totalMentions: responses.filter(r => r.isMentioned).length,
-        overallMentionRate: responses.length > 0 ? Math.round((responses.filter(r => r.isMentioned).length / responses.length) * 100) : 0,
-      },
+      summary: (() => {
+        const totalMentions = responses.filter(r => r.isMentioned).length;
+        const totalFirst = responses.filter(r => r.isMentioned && r.mentionPosition === 1).length;
+        // 포지션 분포: 1/2/3/4+ — "언급 ≠ 1등" 시각화용
+        const positionDist = { first: 0, second: 0, third: 0, fourthPlus: 0 };
+        for (const r of responses) {
+          if (!r.isMentioned || !r.mentionPosition) continue;
+          if (r.mentionPosition === 1) positionDist.first++;
+          else if (r.mentionPosition === 2) positionDist.second++;
+          else if (r.mentionPosition === 3) positionDist.third++;
+          else positionDist.fourthPlus++;
+        }
+        return {
+          totalResponses: responses.length,
+          totalMentions,
+          overallMentionRate: responses.length > 0 ? Math.round((totalMentions / responses.length) * 100) : 0,
+          // 1위 점유율: 언급 중 첫 번째로 불린 비율 — 언급률과 별도로 추적해야 하는 지표
+          firstPositionShare: totalMentions > 0 ? Math.round((totalFirst / totalMentions) * 100) : 0,
+          positionDistribution: positionDist,
+        };
+      })(),
     };
     } catch (error) {
       this.logger.error(`[getResponseTrend] 실패: ${error.message}`, error.stack);

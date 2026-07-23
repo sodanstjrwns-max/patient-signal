@@ -152,8 +152,8 @@ export default function CitationAnalysisPage() {
             </Card>
             <Card className="border-0 shadow-sm">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-purple-600">{recentAnalyses.length}</p>
-                <p className="text-xs text-slate-500 mt-1">분석 이력</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.overallCompanionRate ?? 0}%</p>
+                <p className="text-xs text-slate-500 mt-1" title="인용된 응답 중 우리 병원 이름이 실제 언급된 비율 — 인용돼도 이름이 안 나오면 홍보 효과가 없습니다">언급 동반율 ⓘ</p>
               </CardContent>
             </Card>
           </div>
@@ -481,7 +481,19 @@ export default function CitationAnalysisPage() {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-0.5">
                         <span className="text-sm text-slate-700 font-medium">{d.domain}</span>
-                        <span className="text-xs text-slate-500">{d.count}회 ({d.percentage}%)</span>
+                        <span className="text-xs text-slate-500">
+                          {d.count}회 ({d.percentage}%)
+                          {d.companionRate != null && (
+                            <span
+                              className={`ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                d.companionRate >= 50 ? 'bg-green-100 text-green-700' : d.companionRate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500'
+                              }`}
+                              title={`이 도메인이 인용될 때 우리 병원이 함께 언급되는 비율 — 낮으면 인용만 되고 홍보 효과는 없는 채널`}
+                            >
+                              동반 {d.companionRate}%
+                            </span>
+                          )}
+                        </span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                         <div
