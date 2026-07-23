@@ -156,6 +156,18 @@ export function useSourceInsight(lazy = false) {
   });
 }
 
+/** Gemini 실제 식단 (리다이렉트 디코딩 분포) */
+export function useGeminiDiet(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.insights.geminiDiet(hospitalId!),
+    queryFn: () => crawlerApi.getGeminiDiet(hospitalId!, 60).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
 /** Top URL 랭킹 (페이지 단위) */
 export function useTopUrls(lazy = false, limit = 50) {
   const hospitalId = useHospitalId();

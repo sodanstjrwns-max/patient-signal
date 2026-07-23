@@ -224,6 +224,9 @@ export const crawlerApi = {
   // ✅ 새로 추가: 상세 출처 분석
   getSourceDiagnostic: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/sources-diagnostic/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  // Gemini 실제 식단 (그라운딩 리다이렉트 디코딩 분포)
+  getGeminiDiet: (hospitalId: string, days?: number) =>
+    api.get(`/ai-crawler/insights/gemini-diet/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getTopUrls: (hospitalId: string, days?: number, limit?: number) =>
     api.get(`/ai-crawler/insights/top-urls/${hospitalId}`, { params: { days, limit }, timeout: 60000 }),
   getUrlMatrix: (hospitalId: string, days?: number, topN?: number) =>

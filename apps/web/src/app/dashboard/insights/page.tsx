@@ -14,6 +14,7 @@ import {
   useMentionInsight,
   useTrendInsight,
   useSourceInsight,
+  useGeminiDiet,
   useTopUrls,
   useUrlMatrix,
   useSourceDiagnostic,
@@ -123,6 +124,7 @@ export default function InsightsPage() {
   const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend', trendCohort);
   const { data: sourceData, isLoading: sourceLoading, error: sourceError } = useSourceInsight(activeTab !== 'sources');
   const { data: diagnosticData } = useSourceDiagnostic(activeTab !== 'sources');
+  const { data: geminiDietData } = useGeminiDiet(activeTab !== 'sources');
   const { data: topUrlsData, isLoading: topUrlsLoading, error: topUrlsError } = useTopUrls(activeTab !== 'topUrls', 100);
   const { data: urlMatrixData, isLoading: urlMatrixLoading, error: urlMatrixError } = useUrlMatrix(activeTab !== 'urlMatrix', 30);
   const { data: breadthData, isLoading: breadthLoading, error: breadthError } = useBreadthInsight(activeTab !== 'breadth');
@@ -244,7 +246,7 @@ export default function InsightsPage() {
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
             {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
             {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} cohort={trendCohort} onCohortChange={setTrendCohort} />}
-            {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} diagnostic={diagnosticData} />}
+            {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} diagnostic={diagnosticData} geminiDiet={geminiDietData} />}
             {activeTab === 'topUrls' && topUrlsData && <TopUrlsRanking data={topUrlsData} />}
             {activeTab === 'urlMatrix' && urlMatrixData && <UrlMatrix data={urlMatrixData} />}
             {activeTab === 'breadth' && breadthData && <BreadthInsights data={breadthData} />}
@@ -754,8 +756,158 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
   );
 }
 
+// ==================== 3-a. Gemini 실제 식단 위젯 ====================
+function GeminiDietWidget({ diet }: { diet: any }) {
+  const [showAllDomains, setShowAllDomains] = useState(false);
+  const categories: any[] = diet.categories || [];
+  const topDomains: any[] = diet.topDomains || [];
+  const own = diet.ownDomain;
+
+  const catColors: Record<string, string> = {
+    '우리 병원 홈페이지': 'bg-brand-500',
+    '모두닥': 'bg-teal-500',
+    '굿닥': 'bg-cyan-500',
+    '캐시닥': 'bg-sky-500',
+    '마이닥터': 'bg-blue-400',
+    '닥터나우': 'bg-indigo-400',
+    '하이닥': 'bg-blue-300',
+    '병원 홈페이지(타 병원)': 'bg-slate-400',
+    '티스토리': 'bg-orange-400',
+    '유튜브': 'bg-red-400',
+    '카카오': 'bg-yellow-400',
+    '나무위키': 'bg-green-500',
+    '위키피디아': 'bg-emerald-400',
+    '기타': 'bg-slate-300',
+  };
+
+  const companionBadge = (rate: number) =>
+    rate >= 50 ? 'bg-green-100 text-green-700' : rate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500';
+
+  return (
+    <Card className="border-purple-200">
+      <CardContent className="p-5">
+        <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <Eye className="h-5 w-5 text-purple-600" />
+          Gemini 실제 식단 <span className="text-xs font-normal text-slate-400">({diet.period} · 리다이렉트 {diet.totalRedirects?.toLocaleString()}개 디코딩 {diet.decodeRate}%)</span>
+        </h3>
+        <p className="text-xs text-slate-500 mb-4">
+          Gemini는 인용 URL을 전부 마스킹합니다 — 가면을 벗기면 실제로 어떤 채널을 긁는지 보입니다.
+          고유 도메인 <strong>{diet.uniqueDomains?.toLocaleString()}개</strong> 발견
+        </p>
+
+        {/* 핵심 경고: 네이버/인스타 부재 */}
+        <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
+          <p className="text-xs text-purple-800">
+            💡 <strong>Gemini는 구글 색인 세계입니다</strong> — 네이버 블로그·카페·인스타·틱톡 비중{' '}
+            <strong>{diet.naverInstaShare}%</strong>
+            {diet.naverInstaShare < 1 && ' (사실상 0)'}. 네이버·인스타 콘텐츠는 Gemini에게 보이지 않습니다.
+            Gemini 공략 = 공식홈 구글 색인 + 의료 플랫폼(모두닥·굿닥 등) + 유튜브·티스토리.
+          </p>
+        </div>
+
+        {/* 자사 도메인 성적 */}
+        {own && (
+          <div className={`mb-4 p-3 rounded-xl border ${own.count > 0 ? 'bg-brand-50 border-brand-100' : 'bg-red-50 border-red-100'}`}>
+            {own.count > 0 ? (
+              <p className="text-xs text-slate-700">
+                🏠 <strong>{own.domain}</strong> — Gemini 인용 <strong>{own.count.toLocaleString()}회</strong> (전체 {own.rank}위)
+                · <TermTip term="companionRate" icon={false}>동반율</TermTip>{' '}
+                <span className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(own.companionRate)}`}>{own.companionRate}%</span>
+                {own.companionRate >= 90 && ' — 인용 = 곧 언급. 최상급 엔티티 설계입니다'}
+                {own.companionRate < 30 && ' — 인용돼도 이름이 안 실립니다. 페이지에 병원명·지역 엔티티 보강 필요'}
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-xs text-red-700">
+                  ⚠️ 등록된 <strong>{own.domain}</strong> — Gemini가 {diet.period}간 한 번도 인용하지 않았습니다.
+                </p>
+                {(diet.suspectedOwnDomains || []).length > 0 ? (
+                  <div className="p-2 bg-white/70 rounded-lg border border-red-100">
+                    <p className="text-[11px] text-slate-600 mb-1">
+                      🔍 대신 아래 도메인이 우리 병원 페이지처럼 인용되고 있습니다 (고동반율 자동 탐지):
+                    </p>
+                    {diet.suspectedOwnDomains.map((d: any) => (
+                      <p key={d.domain} className="text-xs text-slate-700">
+                        🏠 <strong>{d.domain}</strong> — {d.count.toLocaleString()}회 인용 (전체 {d.rank}위) ·{' '}
+                        <TermTip term="companionRate" icon={false}>동반율</TermTip>{' '}
+                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(d.companionRate)}`}>
+                          {d.companionRate}%
+                        </span>
+                      </p>
+                    ))}
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      → 설정에서 웹사이트 URL이 실제 운영 도메인과 일치하는지 확인해 보세요.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-red-500">구글 색인 상태 점검이 필요합니다.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 카테고리 분포 바 */}
+        <div className="space-y-2 mb-5">
+          {categories.slice(0, 10).map((cat: any) => (
+            <div key={cat.category} className="flex items-center gap-3">
+              <span className="text-xs text-slate-600 w-36 flex-shrink-0 truncate">{cat.category}</span>
+              <div className="flex-1 h-4 bg-slate-50 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${catColors[cat.category] || 'bg-slate-300'}`}
+                  style={{ width: `${Math.max(cat.percentage, 1)}%` }}
+                />
+              </div>
+              <span className="text-xs text-slate-500 w-32 text-right">
+                {cat.count.toLocaleString()}회 ({cat.percentage}%)
+                <span className={`ml-1 px-1 py-0.5 rounded text-[10px] ${companionBadge(cat.companionRate)}`}>동반 {cat.companionRate}%</span>
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Top 도메인 테이블 */}
+        <div className="border-t pt-3">
+          <p className="text-xs font-medium text-slate-600 mb-2">가면 뒤 실제 도메인 Top {showAllDomains ? 20 : 8}</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-left text-slate-400">
+                  <th className="pb-1 w-8">#</th>
+                  <th className="pb-1">도메인</th>
+                  <th className="pb-1 text-center w-20"><TermTip term="citedCount" icon={false}>인용</TermTip></th>
+                  <th className="pb-1 text-center w-24"><TermTip term="companionRate" icon={false}>동반율</TermTip></th>
+                </tr>
+              </thead>
+              <tbody>
+                {topDomains.slice(0, showAllDomains ? 20 : 8).map((d: any) => (
+                  <tr key={d.domain} className={`border-b last:border-0 ${d.isOwn ? 'bg-brand-50/60 font-medium' : ''}`}>
+                    <td className="py-1.5 text-slate-400">{d.rank}</td>
+                    <td className="py-1.5 text-slate-700 truncate max-w-[220px]">
+                      {d.domain}{d.isOwn && <span className="ml-1.5 text-[10px] text-brand-600">🏠 우리</span>}
+                    </td>
+                    <td className="py-1.5 text-center text-slate-600">{d.count.toLocaleString()}</td>
+                    <td className="py-1.5 text-center">
+                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${companionBadge(d.companionRate)}`}>{d.companionRate}%</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {topDomains.length > 8 && (
+            <button onClick={() => setShowAllDomains(!showAllDomains)} className="mt-2 text-xs text-brand-600 hover:text-brand-700 font-medium">
+              {showAllDomains ? '접기 ▲' : `더 보기 (Top 20) ▼`}
+            </button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ==================== 3. 출처 분석 ====================
-function SourceAnalysis({ data, diagnostic }: { data: any; diagnostic?: any }) {
+function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnostic?: any; geminiDiet?: any }) {
   return (
     <div className="space-y-6">
       {/* Gemini 디코딩 배지 */}
@@ -782,6 +934,9 @@ function SourceAnalysis({ data, diagnostic }: { data: any; diagnostic?: any }) {
           </CardContent>
         </Card>
       )}
+
+      {/* Gemini 실제 식단 — 가면 뒤 도메인 분포 */}
+      {geminiDiet && geminiDiet.decoded > 0 && <GeminiDietWidget diet={geminiDiet} />}
 
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">

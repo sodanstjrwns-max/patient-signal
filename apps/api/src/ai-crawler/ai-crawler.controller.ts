@@ -2264,6 +2264,201 @@ export class AICrawlerController {
     };
   }
 
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Gemini 실제 식단 — 가면(vertexaisearch 리다이렉트) 뒤 실제 도메인 분포
+  //
+  // Gemini는 인용 URL을 전부 grounding-api-redirect로 마스킹하므로
+  // 도메인 집계 시 '구글 1위' 착시가 발생. source_hints로 디코딩해
+  // Gemini가 실제로 어떤 채널을 긁는지 + 자사 도메인 동반율을 노출.
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
+  @Get('insights/gemini-diet/:hospitalId')
+  @ApiOperation({ summary: 'Gemini 실제 식단 - 그라운딩 리다이렉트 디코딩 후 실제 도메인/카테고리 분포' })
+  async getGeminiDiet(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const windowDays = Math.min(parseInt(days || '60', 10) || 60, 90);
+    const since = new Date();
+    since.setDate(since.getDate() - windowDays);
+
+    const [hospital, responses] = await Promise.all([
+      this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { name: true, websiteUrl: true },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: {
+          hospitalId,
+          aiPlatform: 'GEMINI',
+          createdAt: { gte: since },
+        },
+        select: {
+          citedSources: true,
+          isMentioned: true,
+          sourceHints: true,
+        },
+      }),
+    ]);
+
+    // 자사 도메인 (websiteUrl에서 추출)
+    let ownDomain: string | null = null;
+    if (hospital?.websiteUrl) {
+      try {
+        ownDomain = new URL(
+          hospital.websiteUrl.startsWith('http') ? hospital.websiteUrl : `https://${hospital.websiteUrl}`,
+        ).hostname.replace(/^www\./, '').toLowerCase();
+      } catch {}
+    }
+
+    const okHint = (x: string) =>
+      x.length > 0 && x.includes('.') && !x.includes(' ') && !x.includes('vertexaisearch');
+    const extractReal = (s: any): string | null => {
+      if (!s || typeof s !== 'object') return null;
+      const title = (s.title || '').toString().trim().toLowerCase();
+      const domain = (s.domain || '').toString().trim().toLowerCase();
+      if (okHint(title)) return title.replace(/^www\./, '');
+      if (okHint(domain)) return domain.replace(/^www\./, '');
+      return null;
+    };
+
+    // 카테고리 분류 (Gemini 식단 전용 — 의료 플랫폼 세분화)
+    const dietCategory = (d: string): string => {
+      if (ownDomain && (d === ownDomain || d.endsWith(`.${ownDomain}`))) return '우리 병원 홈페이지';
+      if (d.includes('modoodoc')) return '모두닥';
+      if (d.includes('goodoc')) return '굿닥';
+      if (d.includes('cashdoc')) return '캐시닥';
+      if (d.includes('my-doctor.io')) return '마이닥터';
+      if (d.includes('doctornow')) return '닥터나우';
+      if (d.includes('hidoc')) return '하이닥';
+      if (d.includes('blog.naver')) return '네이버 블로그';
+      if (d.includes('cafe.naver')) return '네이버 카페';
+      if (d.includes('naver')) return '네이버 기타';
+      if (d.includes('instagram')) return '인스타그램';
+      if (d.includes('tiktok')) return '틱톡';
+      if (d.includes('youtube') || d.includes('youtu.be')) return '유튜브';
+      if (d.includes('namu.wiki')) return '나무위키';
+      if (d.includes('tistory')) return '티스토리';
+      if (d.includes('wikipedia')) return '위키피디아';
+      if (d.includes('gangnamunni')) return '강남언니';
+      if (d.includes('kakao')) return '카카오';
+      if (d.includes('google') || d.includes('maps.app')) return '구글 계열';
+      if (d.includes('.go.kr') || d.includes('hira') || d.includes('nhis')) return '정부/공공';
+      if (d.includes('.ac.kr')) return '대학/학술';
+      if (/dent|dental|chika|tooth|plant|ortho|clinic|hospital|med|hanui|derma|skin/.test(d)) return '병원 홈페이지(타 병원)';
+      return '기타';
+    };
+
+    let totalRedirects = 0;
+    let decoded = 0;
+    let undecoded = 0;
+    const domainMap = new Map<string, { count: number; mentioned: number }>();
+
+    for (const r of responses) {
+      const hints: string[] = [];
+      if (r.sourceHints) {
+        try {
+          const arr = Array.isArray((r.sourceHints as any)?.sources) ? (r.sourceHints as any).sources : [];
+          for (const s of arr) {
+            const real = extractReal(s);
+            if (real) hints.push(real);
+          }
+        } catch {}
+      }
+      let hi = 0;
+      for (const url of r.citedSources || []) {
+        if (!url.includes('grounding-api-redirect')) continue;
+        totalRedirects++;
+        const real = hints[hi] || hints[0];
+        hi++;
+        if (!real) { undecoded++; continue; }
+        decoded++;
+        const s = domainMap.get(real) || { count: 0, mentioned: 0 };
+        s.count++;
+        if (r.isMentioned) s.mentioned++;
+        domainMap.set(real, s);
+      }
+    }
+
+    const sorted = [...domainMap.entries()].sort((a, b) => b[1].count - a[1].count);
+
+    // 카테고리 집계
+    const catMap = new Map<string, { count: number; mentioned: number; domains: number }>();
+    for (const [d, v] of sorted) {
+      const c = dietCategory(d);
+      const s = catMap.get(c) || { count: 0, mentioned: 0, domains: 0 };
+      s.count += v.count;
+      s.mentioned += v.mentioned;
+      s.domains++;
+      catMap.set(c, s);
+    }
+    const categories = [...catMap.entries()]
+      .map(([category, v]) => ({
+        category,
+        count: v.count,
+        domains: v.domains,
+        percentage: decoded > 0 ? Math.round((v.count / decoded) * 1000) / 10 : 0,
+        companionRate: v.count > 0 ? Math.round((v.mentioned / v.count) * 100) : 0,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // 자사 도메인 통계
+    const own = ownDomain ? domainMap.get(ownDomain) : null;
+    const ownStats = own
+      ? {
+          domain: ownDomain,
+          count: own.count,
+          companionRate: Math.round((own.mentioned / own.count) * 100),
+          rank: sorted.findIndex(([d]) => d === ownDomain) + 1,
+        }
+      : ownDomain
+        ? { domain: ownDomain, count: 0, companionRate: null, rank: null }
+        : null;
+
+    // 등록 도메인이 인용 0인데 동반율 90%+ 고빈도 도메인이 있으면 자사 도메인 후보로 제시
+    // (병원 등록 websiteUrl ≠ 실제 운영 도메인인 케이스 자동 탐지)
+    const suspectedOwnDomains =
+      !own || own.count === 0
+        ? sorted
+            .filter(([d, v]) => d !== ownDomain && v.count >= 50 && v.mentioned / v.count >= 0.9)
+            .slice(0, 3)
+            .map(([domain, v]) => ({
+              domain,
+              count: v.count,
+              companionRate: Math.round((v.mentioned / v.count) * 100),
+              rank: sorted.findIndex(([d]) => d === domain) + 1,
+            }))
+        : [];
+
+    // 네이버/인스타 부재 플래그 (Gemini 특성 경고용)
+    const naverInstaCount = sorted
+      .filter(([d]) => d.includes('naver') || d.includes('instagram') || d.includes('tiktok'))
+      .reduce((sum, [, v]) => sum + v.count, 0);
+
+    return {
+      hospitalName: hospital?.name,
+      period: `${windowDays}일`,
+      geminiResponses: responses.length,
+      totalRedirects,
+      decoded,
+      undecoded,
+      decodeRate: totalRedirects > 0 ? Math.round((decoded / totalRedirects) * 100) : 0,
+      uniqueDomains: sorted.length,
+      naverInstaShare: decoded > 0 ? Math.round((naverInstaCount / decoded) * 1000) / 10 : 0,
+      ownDomain: ownStats,
+      suspectedOwnDomains,
+      categories,
+      topDomains: sorted.slice(0, 20).map(([domain, v], i) => ({
+        rank: i + 1,
+        domain,
+        count: v.count,
+        companionRate: Math.round((v.mentioned / v.count) * 100),
+        isOwn: ownDomain != null && (domain === ownDomain || domain.endsWith(`.${ownDomain}`)),
+      })),
+    };
+  }
+
   @UseInterceptors(HttpCacheInterceptor)
   @CacheTTL(600)
   @Get('insights/action-report/:hospitalId')
