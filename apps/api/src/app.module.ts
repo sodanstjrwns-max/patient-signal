@@ -23,6 +23,7 @@ import { AdminModule } from './admin/admin.module';
 import { GeoContentModule } from './geo-content/geo-content.module';
 import { PublicApiModule } from './public-api/public-api.module';
 import { SourceIntelModule } from './source-intel/source-intel.module';
+import { LectureMetricsModule } from './lecture-metrics/lecture-metrics.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { SourceIntelModule } from './source-intel/source-intel.module';
     GeoContentModule,
     PublicApiModule,
     SourceIntelModule,
+    LectureMetricsModule,
   ],
   controllers: [AppController],
   providers: [
