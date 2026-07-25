@@ -17,7 +17,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { TermTip } from '@/components/ui/term-tooltip';
 import { useAuthStore } from '@/stores/auth';
-import { lectureMetricsApi } from '@/lib/api';
+import { growthApi } from '@/lib/api';
 import {
   Loader2, AlertTriangle, CheckCircle2, Info, TrendingUp, TrendingDown,
   Layers, MapPin, Globe2, UserRound, Radar, BellRing, Gauge, Boxes,
@@ -124,7 +124,7 @@ function VsBench({ value, bench, unit = '%', higherIsBetter = true }: {
 function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ['lm-summary', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getSummary(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getSummary(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
 
@@ -213,12 +213,12 @@ function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number })
 function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) {
   const eff = useQuery({
     queryKey: ['lm-eff', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getCitationEfficiency(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getCitationEfficiency(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
   const pf = useQuery({
     queryKey: ['lm-pf', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getPortfolio(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getPortfolio(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
 
@@ -432,17 +432,17 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
 function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
   const rg = useQuery({
     queryKey: ['lm-region', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getRegionLeverage(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getRegionLeverage(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
   const df = useQuery({
     queryKey: ['lm-diff', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getDifficulty(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getDifficulty(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
   const lg = useQuery({
     queryKey: ['lm-lang', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getLanguageScoreboard(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getLanguageScoreboard(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
 
@@ -692,17 +692,17 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
 function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
   const db = useQuery({
     queryKey: ['lm-director', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getDirectorBranding(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getDirectorBranding(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
   const ag = useQuery({
     queryKey: ['lm-aeogeo', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getAeoGeoSplit(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getAeoGeoSplit(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
   const na = useQuery({
     queryKey: ['lm-neg', hospitalId, days],
-    queryFn: () => lectureMetricsApi.getNegativeAlerts(hospitalId, days).then((r) => r.data),
+    queryFn: () => growthApi.getNegativeAlerts(hospitalId, days).then((r) => r.data),
     enabled: !!hospitalId,
   });
 
@@ -1038,7 +1038,7 @@ const TABS = [
 
 const DAY_OPTIONS = [7, 30, 90] as const;
 
-export default function LectureMetricsPage() {
+export default function GrowthDiagnosisPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('overview');

@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
-import { LectureMetricsService } from './lecture-metrics.service';
+import { GrowthDiagnosisService } from './growth-diagnosis.service';
 
 /**
  * 성장 진단 API
@@ -12,13 +12,13 @@ import { LectureMetricsService } from './lecture-metrics.service';
  *    (Ownership 가드가 request.user를 요구하므로 반드시 뒤에 와야 함)
  */
 @ApiTags('성장 진단')
-@Controller('lecture-metrics')
+@Controller('growth')
 @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 @UseInterceptors(HttpCacheInterceptor)
 @CacheTTL(600)
 @ApiBearerAuth()
-export class LectureMetricsController {
-  constructor(private readonly service: LectureMetricsService) {}
+export class GrowthDiagnosisController {
+  constructor(private readonly service: GrowthDiagnosisService) {}
 
   /** days 쿼리 안전 파싱 — 1~365 범위로 클램프 */
   private parseDays(days?: string): number {
@@ -34,7 +34,7 @@ export class LectureMetricsController {
   })
   @ApiQuery({ name: 'days', required: false, description: '집계 기간 (기본 30일, 최대 365)' })
   async summary(@Param('hospitalId') hospitalId: string, @Query('days') days?: string) {
-    return this.service.getLectureSummary(hospitalId, this.parseDays(days));
+    return this.service.getGrowthSummary(hospitalId, this.parseDays(days));
   }
 
   @Get(':hospitalId/citation-efficiency')

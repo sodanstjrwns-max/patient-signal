@@ -72,7 +72,7 @@ const navGroups: NavGroup[] = [
       { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
       { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
       { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
-      { name: '성장 진단', href: '/dashboard/lecture-metrics', icon: Gauge, badge: 'NEW' },
+      { name: '성장 진단', href: '/dashboard/growth', icon: Gauge, badge: 'NEW' },
       { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
       { name: '인용 출처', href: '/dashboard/insights?tab=sources', icon: Globe },
     ],

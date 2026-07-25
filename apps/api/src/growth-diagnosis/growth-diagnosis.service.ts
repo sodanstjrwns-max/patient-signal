@@ -39,8 +39,8 @@ import {
  *  ⚠️ DB 마이그레이션 0. 전부 기존 컬럼으로 계산.
  */
 @Injectable()
-export class LectureMetricsService {
-  private readonly logger = new Logger(LectureMetricsService.name);
+export class GrowthDiagnosisService {
+  private readonly logger = new Logger(GrowthDiagnosisService.name);
 
   constructor(private prisma: PrismaService) {}
 
@@ -1015,7 +1015,7 @@ export class LectureMetricsService {
   // ═════════════════════════════════════════════════════════════
   // 통합 요약 — 대시보드 상단 카드용
   // ═════════════════════════════════════════════════════════════
-  async getLectureSummary(hospitalId: string, days = 30) {
+  async getGrowthSummary(hospitalId: string, days = 30) {
     const [efficiency, portfolio, region, director, split, difficulty, negative] =
       await Promise.all([
         this.getCitationEfficiency(hospitalId, days),

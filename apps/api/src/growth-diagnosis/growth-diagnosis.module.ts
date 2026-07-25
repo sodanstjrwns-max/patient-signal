@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { LectureMetricsController } from './lecture-metrics.controller';
-import { LectureMetricsService } from './lecture-metrics.service';
+import { GrowthDiagnosisController } from './growth-diagnosis.controller';
+import { GrowthDiagnosisService } from './growth-diagnosis.service';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { AppCacheModule } from '../common/cache/cache.module';
 
@@ -10,8 +10,8 @@ import { AppCacheModule } from '../common/cache/cache.module';
  */
 @Module({
   imports: [PrismaModule, AppCacheModule],
-  controllers: [LectureMetricsController],
-  providers: [LectureMetricsService],
-  exports: [LectureMetricsService],
+  controllers: [GrowthDiagnosisController],
+  providers: [GrowthDiagnosisService],
+  exports: [GrowthDiagnosisService],
 })
-export class LectureMetricsModule {}
+export class GrowthDiagnosisModule {}
