@@ -13,6 +13,7 @@ import {
   Play, Target, FlaskConical, Award, XCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 // ─── 타입 ───
 interface StageData {
@@ -233,7 +234,7 @@ export default function FunnelPage() {
           {/* 건강 점수 */}
           <Card className="lg:col-span-1">
             <CardContent className="p-6 text-center">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">퍼널 건강 점수</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"><TermTip term="funnelHealth">퍼널 건강 점수</TermTip></p>
               <div className="flex items-end justify-center gap-2">
                 <span className={`text-6xl font-black tabular-nums ${healthScore >= 60 ? 'text-emerald-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`} style={{ textShadow: '0 4px 24px rgba(99,102,241,0.15)' }}>
                   {healthScore}
@@ -262,7 +263,7 @@ export default function FunnelPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">이번 달 추정 기회 손실</p>
-                  <p className="text-sm text-slate-500">전환 직결 단계(비교·결정)에서 AI 미노출로 놓치는 잠재 신환</p>
+                  <p className="text-sm text-slate-500"><TermTip term="funnelLeak">전환 직결 단계(비교·결정)에서 AI 미노출로 놓치는 잠재 신환</TermTip></p>
                 </div>
                 <Banknote className="w-8 h-8 text-red-300" />
               </div>

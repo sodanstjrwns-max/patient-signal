@@ -27,6 +27,7 @@ import {
   Filter,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 const platformColors: Record<string, string> = {
   CHATGPT: 'bg-green-100 text-green-800',
@@ -431,7 +432,7 @@ export default function ResponsesPage() {
                       )}
                       {response.recommendationDepth && (
                         <span className="flex items-center gap-1">
-                          추천 깊이: <strong>{response.recommendationDepth}</strong>
+                          <TermTip term="recommendationDepth">추천 깊이</TermTip>: <strong>{response.recommendationDepth}</strong>
                         </span>
                       )}
                     </div>

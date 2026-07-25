@@ -10,7 +10,6 @@ import {
   SourceItem,
   SourceHints,
   CircuitBreakerState,
-  PLATFORM_WEIGHTS,
   AnswerPositionType,
 } from './types';
 import { buildUsage } from './llm-pricing';
@@ -25,6 +24,7 @@ import {
   ClovaXStrategy,
   NaverAiBriefingStrategy,
 } from './strategies';
+import { FALLBACK_WEIGHTS } from '../scores/weight.service';
 
 @Injectable()
 export class AICrawlerService implements OnModuleInit {
@@ -2297,58 +2297,35 @@ JSON 형식으로만 답변:
    * 플랫폼별 가중치
    */
   private getPlatformWeight(platform: AIPlatform): number {
-    // 폴백 가중치 (실제 운영은 WeightProfile DB에서 동적 로드, 캘리브레이션 RUN으로 갱신됨)
-    const weights: Record<string, number> = {
-      PERPLEXITY: 1.4,
-      CHATGPT: 1.3,
-      GEMINI: 1.2,
-      GROK: 1.2,        // 초기값 — 실데이터 누적 후 캘리브레이션
-      CLAUDE: 1.0,
-      CLOVA_X: 1.0,     // 초기값 — 한국 시장 특화 데이터 누적 후 재산정
-      NAVER_AI_BRIEFING: 1.0, // 초기값 — 노출률 자체가 낮아(파일럿 8%) 데이터 누적 후 재산정
-    };
-    return weights[platform] || 1.0;
+    // 단일 출처: scores/weight.service.ts 의 FALLBACK_WEIGHTS.PLATFORM
+    // (운영 중에는 WeightProfile DB가 이 값을 덮어쓰고, 캘리브레이션 RUN으로 갱신됨)
+    return FALLBACK_WEIGHTS.PLATFORM[platform] ?? 1.0;
   }
 
   /**
    * 감성 V2 → ABHS 팩터 변환
    */
   private sentimentToFactor(sentV2: number): number {
-    switch (sentV2) {
-      case -2: return 0;
-      case -1: return 0.25;
-      case 0: return 0.5;
-      case 1: return 1.0;
-      case 2: return 1.5;
-      default: return Math.max(0, (sentV2 + 2) / 4 * 1.5);
-    }
+    // 단일 출처: FALLBACK_WEIGHTS.SENTIMENT
+    const f = FALLBACK_WEIGHTS.SENTIMENT[String(sentV2)];
+    if (f !== undefined) return f;
+    return Math.max(0, ((sentV2 + 2) / 4) * 1.5);
   }
 
   /**
    * 추천 깊이 → 점수 변환
    */
   private getDepthScore(depth: string): number {
-    const scores: Record<string, number> = {
-      R3: 4.0,
-      R2: 3.0,
-      R1: 1.5,
-      R0: 0.0,
-    };
-    return scores[depth] || 0;
+    // 단일 출처: FALLBACK_WEIGHTS.DEPTH
+    return FALLBACK_WEIGHTS.DEPTH[depth] ?? 0;
   }
 
   /**
    * 질문 의도 → 배율 변환
    */
   private getIntentMultiplier(intent: string): number {
-    const multipliers: Record<string, number> = {
-      RESERVATION: 1.5,  // 예약 의도 (매출 직결)
-      REVIEW: 1.3,        // 후기/리뷰 (신뢰도 핵심)
-      FEAR: 1.2,          // 공포/걱정 (전환 기회)
-      COMPARISON: 1.1,    // 비교 의도 (경쟁 분석)
-      INFORMATION: 1.0,   // 정보 탐색 (기본값)
-    };
-    return multipliers[intent] || 1.0;
+    // 단일 출처: FALLBACK_WEIGHTS.INTENT
+    return FALLBACK_WEIGHTS.INTENT[intent] ?? 1.0;
   }
 
   /**

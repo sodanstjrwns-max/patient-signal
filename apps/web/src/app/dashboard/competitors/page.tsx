@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 interface Suggestion {
   name: string;
@@ -692,7 +693,7 @@ export default function CompetitorsPage() {
                     {compScore !== undefined && (
                       <div className="mt-4 pt-3 border-t">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-500">AI 가시성 점수</span>
+                          <span className="text-sm text-slate-500"><TermTip term="visibilityScore">AI 가시성 점수</TermTip></span>
                           <div className="flex items-center gap-2">
                             <span className="font-semibold text-slate-900">
                               {compScore}점

@@ -16,10 +16,16 @@ import { WeightKind, WeightScope, Prisma } from '@prisma/client';
 // ============ 코드 fallback (DB 비어있을 때 안전망) ============
 export const FALLBACK_WEIGHTS = {
   PLATFORM: {
-    PERPLEXITY: 1.4,
+    // ⚠️ 이 블록이 플랫폼 가중치의 유일한 단일 출처(Single Source of Truth)다.
+    // 의미: "점유율"이 아니라 예약 전환 기여 배율(1.0~1.4).
+    // 출처를 늘리지 말 것 — 크롤러/ABHS/캘리브레이션 모두 여기를 참조한다.
+    PERPLEXITY: 1.4,        // 출처를 붙여 답해 환자 신뢰도가 가장 높음
     CHATGPT: 1.3,
     GEMINI: 1.2,
+    GROK: 1.2,              // 초기값 — 실데이터 누적 후 캘리브레이션
     CLAUDE: 1.0,
+    CLOVA_X: 1.0,           // 초기값 — 한국 시장 데이터 누적 후 재산정
+    NAVER_AI_BRIEFING: 1.0, // 초기값 — 노출률 자체가 낮아(파일럿 8%) 재산정 필요
   } as Record<string, number>,
   DEPTH: {
     R3: 4.0,

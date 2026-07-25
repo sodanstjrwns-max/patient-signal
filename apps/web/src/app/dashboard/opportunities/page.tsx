@@ -15,6 +15,7 @@ import {
   ThumbsUp, ThumbsDown, Minus, Clock, Sparkles, Loader2, PenTool,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 // ─── API 호출: Content Gap + 경쟁사 언급 vs 우리 병원 미언급 (axios interceptor 사용) ───
 const fetchOpportunities = async (hospitalId: string) => {
@@ -200,7 +201,7 @@ export default function OpportunitiesPage() {
                 <Target className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">Content Gap</p>
+                <p className="text-sm text-slate-500"><TermTip term="contentGap">Content Gap</TermTip></p>
                 <p className="text-2xl font-bold text-slate-900">{contentGaps.length}</p>
               </div>
             </div>
@@ -343,7 +344,7 @@ export default function OpportunitiesPage() {
                         )}
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-slate-50 rounded-2xl p-3">
-                            <p className="text-[10px] text-slate-400 mb-1">질문 의도</p>
+                            <p className="text-[10px] text-slate-400 mb-1"><TermTip term="queryIntent">질문 의도</TermTip></p>
                             <p className="text-xs font-medium text-slate-700">{opp.intent || '정보 탐색'}</p>
                           </div>
                           <div className="bg-slate-50 rounded-2xl p-3">

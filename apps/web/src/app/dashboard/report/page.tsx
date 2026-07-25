@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT', CLAUDE: 'Claude', PERPLEXITY: 'Perplexity', GEMINI: 'Gemini', GROK: 'Grok', CLOVA_X: 'CLOVA X',
@@ -132,24 +133,24 @@ export default function WeeklyReportPage() {
 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div className="bg-white/10 rounded-xl p-4">
-              <p className="text-xs text-brand-200">ABHS 종합</p>
+              <p className="text-xs text-brand-200"><TermTip term="abhs" className="text-brand-200">ABHS 종합</TermTip></p>
               <p className="text-3xl font-bold">{abhs?.abhsScore ?? 0}</p>
               <p className="text-xs text-brand-200">/100</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
               <p className="text-xs text-brand-200">Voice Share</p>
               <p className="text-3xl font-bold">{abhs?.sovPercent ?? 0}%</p>
-              <p className="text-xs text-brand-200">언급 점유율</p>
+              <p className="text-xs text-brand-200"><TermTip term="sov" className="text-brand-200">언급 점유율</TermTip></p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
-              <p className="text-xs text-brand-200">평균 감성</p>
+              <p className="text-xs text-brand-200"><TermTip term="sentiment" className="text-brand-200">평균 감성</TermTip></p>
               <p className="text-3xl font-bold">
                 {(abhs?.avgSentimentV2 ?? 0) > 0 ? '+' : ''}{(abhs?.avgSentimentV2 ?? 0).toFixed(1)}
               </p>
               <p className="text-xs text-brand-200">{sentimentLabel(abhs?.avgSentimentV2 ?? 0).text}</p>
             </div>
             <div className="bg-white/10 rounded-xl p-4">
-              <p className="text-xs text-brand-200">경쟁 점유율</p>
+              <p className="text-xs text-brand-200"><TermTip term="competitorShare" className="text-brand-200">경쟁 점유율</TermTip></p>
               <p className="text-3xl font-bold">{competitiveShare?.mySharePercent ?? 0}%</p>
               <p className="text-xs text-brand-200">Weighted Share</p>
             </div>
@@ -223,7 +224,7 @@ export default function WeeklyReportPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
-                <PieChart className="h-4 w-4" /> 추천 깊이 분포
+                <PieChart className="h-4 w-4" /> <TermTip term="recommendationDepth">추천 깊이 분포</TermTip>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -257,7 +258,7 @@ export default function WeeklyReportPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-sm">
-              <Activity className="h-4 w-4" /> 질문 의도별 AI 가시성
+              <Activity className="h-4 w-4" /> <TermTip term="queryIntent">질문 의도별 AI 가시성</TermTip>
             </CardTitle>
           </CardHeader>
           <CardContent>

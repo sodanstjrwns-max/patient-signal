@@ -76,10 +76,7 @@ export interface CircuitBreakerState {
   state: 'closed' | 'open' | 'half-open';
 }
 
-// 플랫폼 가중치 상수
-export const PLATFORM_WEIGHTS: Record<string, number> = {
-  CHATGPT: 0.35,
-  PERPLEXITY: 0.30,
-  CLAUDE: 0.20,
-  GEMINI: 0.15,
-};
+// ⚠️ 삭제됨: PLATFORM_WEIGHTS (합=1.0 점유율 개념)
+// ABHS의 플랫폼 가중치는 "점유율"이 아니라 "예약 전환 기여 배율(1.0~1.4)"이며,
+// 단일 출처는 scores/weight.service.ts 의 FALLBACK_WEIGHTS.PLATFORM 이다.
+// 여기에 유사 상수를 다시 만들면 두 개의 진실이 생겨 점수가 어긋난다.

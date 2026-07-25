@@ -16,6 +16,7 @@ import {
   Copy, Download, Filter, RefreshCw, ArrowRight,
   Code, FileDown, X,
 } from 'lucide-react';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 // ─── Types ───
 interface GeoContentItem {
@@ -563,7 +564,7 @@ function CreateContentModal({ onClose, onCreated }: { onClose: () => void; onCre
           {/* 퍼널 단계 + 톤 */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">퍼널 단계</label>
+              <label className="block text-sm font-semibold text-slate-700 mb-1.5"><TermTip term="funnelStage">퍼널 단계</TermTip></label>
               <select
                 value={funnelStage}
                 onChange={(e) => setFunnelStage(e.target.value)}

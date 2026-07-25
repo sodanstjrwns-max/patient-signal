@@ -14,6 +14,7 @@ import {
   Clock, FileText, BarChart3, Filter, ArrowRight,
   AlertTriangle, Eye, PenTool, RefreshCw, Play,
 } from 'lucide-react';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 // ─── Types ───
 interface CalendarItem {
@@ -173,7 +174,7 @@ export default function ContentCalendarPage() {
         {calendar?.total > 0 && (
           <Card className="border-0 shadow-sm">
             <CardContent className="p-4">
-              <h4 className="text-xs font-semibold text-slate-500 mb-2">퍼널 분포</h4>
+              <h4 className="text-xs font-semibold text-slate-500 mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
               <div className="flex h-6 rounded-full overflow-hidden">
                 {Object.entries(funnelDist).map(([stage, count]: [string, any]) => {
                   const config = funnelConfig[stage] || funnelConfig.AWARENESS;

@@ -34,6 +34,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TermTip } from '@/components/ui/term-tooltip';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT',
@@ -185,7 +186,7 @@ export default function AnalyticsPage() {
               <Card className="md:col-span-2 bg-gradient-to-br from-brand-600 to-indigo-700 text-white border-0">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-blue-100">ABHS 종합 점수</p>
+                    <p className="text-sm text-blue-100"><TermTip term="abhs" className="text-blue-100">ABHS 종합 점수</TermTip></p>
                     <Shield className="h-5 w-5 text-brand-200" />
                   </div>
                   <div className="flex items-end gap-2">
@@ -211,14 +212,14 @@ export default function AnalyticsPage() {
                   <p className="text-3xl font-bold text-slate-900">
                     {abhs?.sovPercent ?? 0}%
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">언급 점유율</p>
+                  <p className="text-xs text-slate-400 mt-1"><TermTip term="sov">언급 점유율</TermTip></p>
                 </CardContent>
               </Card>
 
               {/* 평균 감성 */}
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-slate-500 mb-1">평균 감성</p>
+                  <p className="text-sm text-slate-500 mb-1"><TermTip term="sentiment">평균 감성</TermTip></p>
                   <p className={`text-3xl font-bold ${sentimentLabel(abhs?.avgSentimentV2 ?? 0).color}`}>
                     {abhs?.avgSentimentV2 != null ? (abhs.avgSentimentV2 > 0 ? '+' : '') + abhs.avgSentimentV2.toFixed(1) : '0'}
                   </p>
@@ -231,7 +232,7 @@ export default function AnalyticsPage() {
               {/* 경쟁 점유율 */}
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-sm text-slate-500 mb-1">경쟁 점유율</p>
+                  <p className="text-sm text-slate-500 mb-1"><TermTip term="competitorShare">경쟁 점유율</TermTip></p>
                   <p className="text-3xl font-bold text-indigo-600">
                     {competitiveShare?.mySharePercent ?? 0}%
                   </p>
@@ -247,7 +248,7 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5" />
-                    플랫폼별 ABHS 기여도
+                    <TermTip term="platformWeight">플랫폼별 ABHS 기여도</TermTip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -297,7 +298,7 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <PieChart className="h-5 w-5" />
-                    추천 깊이 분포
+                    <TermTip term="recommendationDepth">추천 깊이 분포</TermTip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -329,9 +330,9 @@ export default function AnalyticsPage() {
                   
                   {/* 깊이 설명 */}
                   <div className="mt-6 p-3 bg-slate-50 rounded-2xl text-xs text-slate-500 space-y-1">
-                    <p><strong>R3</strong>: AI가 우리 병원만 단독 추천</p>
-                    <p><strong>R2</strong>: 복수 추천 중 1~2순위</p>
-                    <p><strong>R1</strong>: 단순 언급/하위 노출</p>
+                    <p><TermTip term="r3"><strong>R3</strong></TermTip>: AI가 우리 병원만 단독 추천</p>
+                    <p><TermTip term="r2"><strong>R2</strong></TermTip>: 복수 추천 중 1~2순위</p>
+                    <p><TermTip term="r1"><strong>R1</strong></TermTip>: 단순 언급/하위 노출</p>
                     <p><strong>R0</strong>: 미언급 또는 부정 맥락</p>
                   </div>
                 </CardContent>

@@ -20,7 +20,8 @@ module.exports = {
       args: 'run start',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
+        NODE_OPTIONS: '--max-old-space-size=400'
       },
       watch: false,
       instances: 1,
