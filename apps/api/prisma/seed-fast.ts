@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import 'dotenv/config';
+import { buildCitedUrls } from './seed-citation-sources';
 
 const prisma = new PrismaClient();
 
@@ -153,6 +154,19 @@ async function main() {
           const im = intent === 'RESERVATION' ? 1.5 : intent === 'REVIEW' ? 1.3 : intent === 'FEAR' ? 1.2 : intent === 'COMPARISON' ? 1.1 : 1.0;
           const ac = (isMentioned ? 1.0 : 0.0) * sf * ds * (pw[plat]!) * im;
 
+          // 【P2-1】인용 소스 — 실제 국내 치과 AEO 도메인 분포 기반
+          const citeSeed = batch.length + dayOff * 31;
+          let citedUrlsFast: string[] = [];
+          if (isMentioned) {
+            if (plat === 'PERPLEXITY') {
+              citedUrlsFast = buildCitedUrls((prompt as any).specialtyCategory, citeSeed, 2 + Math.floor(Math.random() * 2));
+            } else if (plat === 'GEMINI' && Math.random() < 0.5) {
+              citedUrlsFast = buildCitedUrls((prompt as any).specialtyCategory, citeSeed, 1);
+            } else if (Math.random() < 0.2) {
+              citedUrlsFast = buildCitedUrls((prompt as any).specialtyCategory, citeSeed, 1);
+            }
+          }
+
           batch.push({
             promptId: prompt.id,
             hospitalId: hospital!.id,
@@ -171,14 +185,15 @@ async function main() {
             totalRecommendations: tr,
             sentimentScore: sv2 / 2,
             sentimentLabel: (sv2 >= 1 ? 'POSITIVE' : sv2 <= -1 ? 'NEGATIVE' : 'NEUTRAL') as any,
-            citedSources: plat === 'PERPLEXITY' && isMentioned ? ['https://seoulbd.co.kr'] : [],
+            // 【P2-1】 단일 도메인 → 실제 분포 기반 인용 소스
+            citedSources: citedUrlsFast,
             competitorsMentioned: isMentioned && tr && tr > 1 ? ['강남우리치과'] : [],
             sentimentScoreV2: sv2,
             recommendationDepth: depth,
             queryIntent: intent,
             platformWeight: pw[plat],
             abhsContribution: ac,
-            citedUrl: plat === 'PERPLEXITY' && isMentioned ? 'https://seoulbd.co.kr' : null,
+            citedUrl: citedUrlsFast[0] || null,
             isVerified: true,
           });
         }

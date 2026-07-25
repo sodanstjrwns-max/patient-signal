@@ -72,7 +72,8 @@ export default function OpportunitiesPage() {
   const hospitalId = user?.hospitalId;
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps'>('opportunities');
+  // 【P2-2】 null = 아직 사용자가 탭을 고르지 않음 → 데이터가 있는 탭을 자동 선택
+  const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps' | null>(null);
   const [generatingGapIds, setGeneratingGapIds] = useState<Set<string>>(new Set());
   const [generatingBlogGapIds, setGeneratingBlogGapIds] = useState<Set<string>>(new Set());
 
@@ -139,6 +140,12 @@ export default function OpportunitiesPage() {
 
   const highCount = opportunities.filter(o => o.urgency === 'high').length;
   const mediumCount = opportunities.filter(o => o.urgency === 'medium').length;
+
+  // 【P2-2】 상단 카드에 '전체 기회 4'라고 떠 있는데 기본 탭(노출 기회 0)이 열려서
+  //          "기회가 없습니다"가 보이던 불일치 해소 — 데이터가 있는 탭을 기본으로 연다.
+  const effectiveSection: 'opportunities' | 'gaps' =
+    activeSection ??
+    (opportunities.length === 0 && contentGaps.length > 0 ? 'gaps' : 'opportunities');
 
   if (isLoading) {
     return (
@@ -241,7 +248,7 @@ export default function OpportunitiesPage() {
         <button
           onClick={() => setActiveSection('opportunities')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-2xl transition-all ${
-            activeSection === 'opportunities'
+            effectiveSection === 'opportunities'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
               : 'text-slate-500 hover:bg-white/60'
           }`}
@@ -252,7 +259,7 @@ export default function OpportunitiesPage() {
         <button
           onClick={() => setActiveSection('gaps')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-2xl transition-all ${
-            activeSection === 'gaps'
+            effectiveSection === 'gaps'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
               : 'text-slate-500 hover:bg-white/60'
           }`}
@@ -263,7 +270,7 @@ export default function OpportunitiesPage() {
       </div>
 
       {/* 노출 기회 섹션 */}
-      {activeSection === 'opportunities' && (
+      {effectiveSection === 'opportunities' && (
         <div className="space-y-3">
           {sortedOpportunities.length === 0 ? (
             <Card>
@@ -273,6 +280,15 @@ export default function OpportunitiesPage() {
                 <p className="text-slate-400 text-sm mt-1">
                   AI 크롤링 데이터가 쌓이면 경쟁사 대비 우리 병원의 노출 기회가 자동으로 감지됩니다
                 </p>
+                {contentGaps.length > 0 && (
+                  <button
+                    onClick={() => setActiveSection('gaps')}
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-2xl bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100 transition-all"
+                  >
+                    <Target className="h-4 w-4" />
+                    Content Gap {contentGaps.length}건 보러가기
+                  </button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -357,7 +373,7 @@ export default function OpportunitiesPage() {
       )}
 
       {/* Content Gap 섹션 */}
-      {activeSection === 'gaps' && (
+      {effectiveSection === 'gaps' && (
         <div className="space-y-3">
           {contentGaps.length === 0 ? (
             <Card>

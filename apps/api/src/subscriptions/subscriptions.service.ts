@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { PlanType, SubscriptionStatus } from '@prisma/client';
@@ -211,9 +211,68 @@ export class SubscriptionsService {
   }
 
   /**
-   * 플랜 업그레이드 - 추가 질문 자동 생성 + 경쟁사 조사 트리거
+   * 【보안 P0-1】 유료 업그레이드 결제 근거 검증
+   * 하나라도 충족하면 통과, 전부 없으면 403.
    */
-  async upgradePlan(hospitalId: string, newPlan: PlanType) {
+  private async assertPaidUpgradeAllowed(hospitalId: string, newPlan: PlanType) {
+    const RECENT_PAYMENT_WINDOW_MS = 30 * 60 * 1000; // 30분
+
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { hospitalId },
+      select: { billingKey: true, paymentMethodId: true },
+    });
+
+    // (b) 빌링키/결제수단 등록됨 → 자동결제 가능
+    if (subscription?.billingKey || subscription?.paymentMethodId) {
+      return;
+    }
+
+    // (a) 최근 30분 내 해당 플랜 결제 완료 이력
+    const recentPayment = await this.prisma.payment.findFirst({
+      where: {
+        hospitalId,
+        planType: newPlan,
+        status: 'DONE',
+        createdAt: { gte: new Date(Date.now() - RECENT_PAYMENT_WINDOW_MS) },
+      },
+      select: { id: true },
+    });
+    if (recentPayment) {
+      return;
+    }
+
+    // (c) 쿠폰 리딤 이력 (해당 플랜에 적용된 것)
+    const redemption = await this.prisma.couponRedemption.findFirst({
+      where: { hospitalId, appliedPlan: newPlan },
+      select: { id: true },
+    });
+    if (redemption) {
+      return;
+    }
+
+    this.logger.warn(
+      `[P0-1 차단] 결제 근거 없는 업그레이드 시도: hospitalId=${hospitalId}, newPlan=${newPlan}`,
+    );
+    throw new ForbiddenException(
+      '결제가 확인되지 않았습니다. 결제 또는 쿠폰 적용 후 이용해 주세요.',
+    );
+  }
+
+  /**
+   * 플랜 업그레이드 - 추가 질문 자동 생성 + 경쟁사 조사 트리거
+   *
+   * 【보안 P0-1】 유료 플랜으로의 업그레이드는 반드시 결제 근거가 있어야 함.
+   *   - 결제 웹훅/승인 처리 등 서버 내부 호출은 { verifiedByPayment: true }로 우회
+   *   - 클라이언트 직접 호출(PATCH /subscriptions/upgrade)은 아래 3가지 중 하나 필요:
+   *       (a) 최근 30분 내 해당 플랜 DONE 결제 이력
+   *       (b) 등록된 빌링키(자동결제 수단)
+   *       (c) 적용된 쿠폰 리딤 이력
+   */
+  async upgradePlan(
+    hospitalId: string,
+    newPlan: PlanType,
+    options: { verifiedByPayment?: boolean } = {},
+  ) {
     const subscription = await this.prisma.subscription.findFirst({
       where: { hospitalId },
     });
@@ -226,6 +285,11 @@ export class SubscriptionsService {
     const planOrder = { FREE: 0, STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
     if (planOrder[newPlan] <= planOrder[subscription.planType]) {
       throw new BadRequestException('현재 플랜보다 높은 플랜만 선택할 수 있습니다.');
+    }
+
+    // ── 【P0-1】 결제 근거 검증 ──
+    if (!options.verifiedByPayment && planOrder[newPlan] >= planOrder.STARTER) {
+      await this.assertPaidUpgradeAllowed(hospitalId, newPlan);
     }
 
     const previousPlan = subscription.planType;

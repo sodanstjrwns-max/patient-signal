@@ -3,6 +3,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import 'dotenv/config';
+import { buildCitedUrls } from './seed-citation-sources';
 
 const prisma = new PrismaClient();
 
@@ -240,11 +241,20 @@ async function main() {
         const pw = platformWeights[platform] || 1.0;
         const abhsContribution = (isMentioned ? 1.0 : 0.0) * sentFactor * depthScore * pw * intentMult;
 
-        // 인용 URL (Perplexity 주로)
-        const citedUrl = platform === 'PERPLEXITY' && isMentioned 
-          ? `https://example.com/dental/${prompt.specialtyCategory || 'general'}` 
-          : null;
-        const citedSources = citedUrl ? [citedUrl] : [];
+        // 인용 URL — 【P2-1】 example.com 단일 도메인 → 실제 국내 치과 AEO 도메인 분포로 교체
+        // Perplexity는 인용을 많이(2~3개), 나머지 플랫폼도 일부 인용을 달아서 현실성 확보
+        const citeSeed = totalResponses + dayOffset * 31;
+        let citedSources: string[] = [];
+        if (isMentioned) {
+          if (platform === 'PERPLEXITY') {
+            citedSources = buildCitedUrls(prompt.specialtyCategory, citeSeed, 2 + Math.floor(Math.random() * 2));
+          } else if (platform === 'GEMINI' && Math.random() < 0.5) {
+            citedSources = buildCitedUrls(prompt.specialtyCategory, citeSeed, 1 + Math.floor(Math.random() * 2));
+          } else if (Math.random() < 0.2) {
+            citedSources = buildCitedUrls(prompt.specialtyCategory, citeSeed, 1);
+          }
+        }
+        const citedUrl = citedSources[0] || null;
 
         // 응답 텍스트 (프롬프트 언어별 — 외국어 질문에는 외국어 응답)
         const promptLang = promptLangMap.get(prompt.promptText);

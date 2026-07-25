@@ -1,10 +1,12 @@
 import {
   Controller, Get, Post, Body, Param, Query, UseGuards, Logger,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { CouponsService } from './coupons.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { AdminEmailGuard } from '../common/guards/admin-email.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { CreateCouponDto } from './dto/create-coupon.dto';
 
 @ApiTags('쿠폰')
 @Controller('coupons')
@@ -73,23 +75,29 @@ export class CouponsController {
 
   /**
    * 쿠폰 목록 (관리자)
+   * 【P0-2】 AdminEmailGuard 추가 — 기존에는 로그인한 아무 유저나 전체 쿠폰을 열람 가능했음
    */
   @Get('admin/list')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminEmailGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '쿠폰 목록', description: '전체 쿠폰 목록을 조회합니다 (관리자용)' })
+  @ApiOperation({ summary: '쿠폰 목록', description: '전체 쿠폰 목록을 조회합니다 (관리자 전용)' })
+  @ApiResponse({ status: 403, description: '관리자 권한 없음' })
   async listCoupons() {
     return this.couponsService.listCoupons();
   }
 
   /**
    * 쿠폰 생성 (관리자)
+   * 【P0-2】 AdminEmailGuard + CreateCouponDto — 기존에는 일반 유저가
+   *          freeMonths:120 같은 쿠폰을 직접 발급할 수 있었음
    */
   @Post('admin/create')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, AdminEmailGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '쿠폰 생성', description: '새로운 쿠폰을 생성합니다 (관리자용)' })
-  async createCoupon(@Body() body: any) {
-    return this.couponsService.createCoupon(body);
+  @ApiOperation({ summary: '쿠폰 생성', description: '새로운 쿠폰을 생성합니다 (관리자 전용)' })
+  @ApiResponse({ status: 403, description: '관리자 권한 없음' })
+  async createCoupon(@CurrentUser() user: any, @Body() dto: CreateCouponDto) {
+    this.logger.log(`[쿠폰 생성] admin=${user?.email} code=${dto.code}`);
+    return this.couponsService.createCoupon(dto);
   }
 }

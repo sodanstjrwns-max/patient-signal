@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { PlanType } from '@prisma/client';
+import { CouponType, PlanType, Prisma } from '@prisma/client';
+import { CreateCouponDto } from './dto/create-coupon.dto';
 
 // 플랜별 가격 (Single Source of Truth)
 export const PLAN_PRICES: Record<string, number> = {
@@ -302,8 +303,53 @@ export class CouponsService {
 
   /**
    * 쿠폰 생성 (관리자)
+   * 【P0-2】 any → CreateCouponDto. 타입별 필수 필드 검증 + 코드 중복 방지.
    */
-  async createCoupon(data: any) {
-    return this.prisma.coupon.create({ data });
+  async createCoupon(dto: CreateCouponDto) {
+    // ① 쿠폰 타입별 필수 값 검증
+    if (dto.couponType === CouponType.PERCENT_OFF && !dto.discountPercent) {
+      throw new BadRequestException('PERCENT_OFF 쿠폰은 discountPercent가 필요합니다.');
+    }
+    if (dto.couponType === CouponType.AMOUNT_OFF && !dto.discountAmount) {
+      throw new BadRequestException('AMOUNT_OFF 쿠폰은 discountAmount가 필요합니다.');
+    }
+    if (dto.couponType === CouponType.FREE_PERIOD && !dto.freeMonths) {
+      throw new BadRequestException('FREE_PERIOD 쿠폰은 freeMonths가 필요합니다.');
+    }
+
+    // ② 기간 유효성
+    const startsAt = dto.startsAt ? new Date(dto.startsAt) : undefined;
+    const expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : undefined;
+    if (startsAt && expiresAt && expiresAt <= startsAt) {
+      throw new BadRequestException('만료일은 시작일보다 뒤여야 합니다.');
+    }
+
+    const code = dto.code.trim().toUpperCase();
+
+    // ③ 코드 중복 — Prisma P2002 500 대신 친절한 400
+    const existing = await this.prisma.coupon.findUnique({ where: { code } });
+    if (existing) {
+      throw new BadRequestException(`이미 존재하는 쿠폰 코드입니다: ${code}`);
+    }
+
+    const data: Prisma.CouponCreateInput = {
+      code,
+      name: dto.name,
+      description: dto.description,
+      couponType: dto.couponType,
+      discountPercent: dto.discountPercent,
+      discountAmount: dto.discountAmount,
+      freeMonths: dto.freeMonths,
+      applicablePlans: dto.applicablePlans ?? [],
+      maxUses: dto.maxUses ?? 0,
+      maxUsesPerUser: dto.maxUsesPerUser ?? 1,
+      ...(startsAt ? { startsAt } : {}),
+      expiresAt: expiresAt ?? null,
+      isActive: dto.isActive ?? true,
+    };
+
+    const coupon = await this.prisma.coupon.create({ data });
+    this.logger.log(`쿠폰 생성 완료: ${coupon.code} (${coupon.couponType})`);
+    return coupon;
   }
 }

@@ -110,6 +110,37 @@ if [ -n "$KEY" ]; then
 fi
 
 echo ""
+echo "═══ 13-B. 🔒 P0 회귀 테스트 (2026-07-25 패치) ═══"
+pass=0; fail=0
+chk() { # chk "라벨" 기대코드 실제코드 본문
+  if [ "$2" = "$3" ]; then echo "  ✅ PASS  $1  → $3"; pass=$((pass+1));
+  else echo "  ❌ FAIL  $1  → 기대 $2, 실제 $3 : $(echo "$4" | head -c 150)"; fail=$((fail+1)); fi
+}
+
+# P0-1: 결제 근거 없는 유료 업그레이드 → 403 이어야 함
+body=$(curl -s -m 15 -o /tmp/p01.json -w "%{http_code}" -X PATCH "$API/subscriptions/upgrade" \
+  -H "Authorization: Bearer $T_NEW" -H "Content-Type: application/json" -d '{"planType":"ENTERPRISE"}')
+chk "P0-1 무결제 ENTERPRISE 업그레이드 차단" 403 "$body" "$(cat /tmp/p01.json)"
+
+# P0-1b: 존재하지 않는 플랜 타입 → 400 (DTO 검증)
+body=$(curl -s -m 15 -o /tmp/p01b.json -w "%{http_code}" -X PATCH "$API/subscriptions/upgrade" \
+  -H "Authorization: Bearer $T_NEW" -H "Content-Type: application/json" -d '{"planType":"GODMODE"}')
+chk "P0-1b 잘못된 planType DTO 거부" 400 "$body" "$(cat /tmp/p01b.json)"
+
+# P0-2a: 일반 유저의 쿠폰 목록 조회 → 403
+body=$(curl -s -m 15 -o /tmp/p02a.json -w "%{http_code}" "$API/coupons/admin/list" \
+  -H "Authorization: Bearer $T_NEW")
+chk "P0-2a 일반유저 쿠폰 목록 차단" 403 "$body" "$(cat /tmp/p02a.json)"
+
+# P0-2b: 일반 유저의 쿠폰 생성 → 403
+body=$(curl -s -m 15 -o /tmp/p02b.json -w "%{http_code}" -X POST "$API/coupons/admin/create" \
+  -H "Authorization: Bearer $T_NEW" -H "Content-Type: application/json" \
+  -d '{"code":"PWNED-ENT-2026","name":"hack","couponType":"FREE_PERIOD","freeMonths":120}')
+chk "P0-2b 일반유저 쿠폰 생성 차단" 403 "$body" "$(cat /tmp/p02b.json)"
+
+echo "  ── P0 회귀: PASS=$pass FAIL=$fail ──"
+
+echo ""
 echo "═══ 14. Rate limit 확인 (로그인 20연타) ═══"
 for i in $(seq 1 20); do
   printf "%s " $(curl -s -m 10 -o /dev/null -w "%{http_code}" -X POST $API/auth/login -H "Content-Type: application/json" -d '{"email":"demo@patientsignal.kr","password":"wrongpass"}')

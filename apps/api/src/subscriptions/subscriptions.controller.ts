@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { AdminEmailGuard } from '../common/guards/admin-email.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { UpgradePlanDto } from './dto/upgrade-plan.dto';
 import { PlanType } from '@prisma/client';
 
 @ApiTags('구독')
@@ -91,15 +92,21 @@ export class SubscriptionsController {
   @Patch('upgrade')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: '플랜 업그레이드', description: '더 높은 플랜으로 업그레이드합니다' })
+  @ApiOperation({
+    summary: '플랜 업그레이드',
+    description:
+      '더 높은 플랜으로 업그레이드합니다. 결제/빌링키/쿠폰 근거가 없으면 403을 반환합니다.',
+  })
+  @ApiResponse({ status: 403, description: '결제 근거 없음' })
   async upgradePlan(
     @CurrentUser() user: any,
-    @Body() body: { planType: PlanType },
+    @Body() body: UpgradePlanDto,
   ) {
     if (!user.hospitalId) {
       return { success: false, message: '병원 정보가 등록되지 않았습니다.' };
     }
 
+    // 【P0-1】 클라이언트 호출은 항상 결제 검증을 거침 (verifiedByPayment 미전달)
     return this.subscriptionsService.upgradePlan(user.hospitalId, body.planType);
   }
 

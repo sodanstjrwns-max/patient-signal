@@ -206,15 +206,15 @@ Render 무료/저가 인스턴스에서 배포 실패로 이어질 수 있으니
 
 ## 4. 조치 우선순위 요약
 
-| 순위 | 항목 | 예상 작업량 | 리스크 |
-|------|------|------------|--------|
-| 🔴 즉시 | P0-1 무료 업그레이드 차단 | 30분 | **매출 전액** |
-| 🔴 즉시 | P0-2 쿠폰 어드민 가드 | 15분 | 쿠폰 유출/매출 |
-| 🟠 이번 주 | P1-1 26,823일 배너 | 5분 | 신뢰도 |
-| 🟠 이번 주 | P1-2 DTO + 에러 마스킹 | 2시간 | 정보 노출 |
-| 🟡 다음 | P2-1 데모 데이터 현실화 | 1시간 | 세일즈 |
-| 🟡 다음 | P2-2 기회분석 숫자 정합 | 30분 | UX |
-| 🟡 다음 | P2-3 빌드 OOM 가드 | 5분 | 배포 |
+| 순위 | 항목 | 예상 작업량 | 리스크 | 상태 |
+|------|------|------------|--------|------|
+| 🔴 즉시 | P0-1 무료 업그레이드 차단 | 30분 | **매출 전액** | ✅ **2026-07-25 조치 완료** |
+| 🔴 즉시 | P0-2 쿠폰 어드민 가드 | 15분 | 쿠폰 유출/매출 | ✅ **2026-07-25 조치 완료** |
+| 🟠 이번 주 | P1-1 26,823일 배너 | 5분 | 신뢰도 | ⬜ 미조치 |
+| 🟠 이번 주 | P1-2 DTO + 에러 마스킹 | 2시간 | 정보 노출 | 🟨 부분 (업그레이드/쿠폰 DTO만) |
+| 🟡 다음 | P2-1 데모 데이터 현실화 | 1시간 | 세일즈 | ✅ **2026-07-25 조치 완료** |
+| 🟡 다음 | P2-2 기회분석 숫자 정합 | 30분 | UX | ✅ **2026-07-25 조치 완료** |
+| 🟡 다음 | P2-3 빌드 OOM 가드 | 5분 | 배포 | ✅ **2026-07-25 조치 완료** |
 
 ---
 
@@ -231,3 +231,119 @@ Render 무료/저가 인스턴스에서 배포 실패로 이어질 수 있으니
 P0 두 개가 공교롭게 **둘 다 매출 방어선**입니다. 데이터는 철벽으로 막아놓고 지갑은 열려 있는 격이에요. 다행히 둘 다 **가드 한 줄 + 검증 한 블록**이면 끝나는 수준입니다. 45분이면 막습니다.
 
 "필요한 진료를 받지 못하는 사람이 없도록" 만드신 시스템이, "결제 안 하고도 다 쓰는 사람이 없도록"까지 챙기면 완성입니다 😄
+
+
+---
+
+## 6. 조치 내역 (2026-07-25 패치)
+
+### ✅ P0-1 — 결제 없는 유료 업그레이드 차단
+
+**변경**: `apps/api/src/subscriptions/subscriptions.service.ts`, `subscriptions.controller.ts`, `dto/upgrade-plan.dto.ts` (신규)
+
+`upgradePlan()`에 `assertPaidUpgradeAllowed()` 사전 검증을 추가했습니다. STARTER 이상 플랜으로 올라갈 때, 아래 **3가지 중 하나**가 있어야만 통과합니다.
+
+| # | 통과 조건 | 근거 |
+|---|-----------|------|
+| a | 최근 **30분 내** 해당 플랜의 `status='DONE'` 결제 이력 | 정상 결제 직후 |
+| b | `subscription.billingKey` 또는 `paymentMethodId` 존재 | 자동결제 등록 완료 |
+| c | 해당 플랜의 `couponRedemption` 이력 | 쿠폰 적용 사용자 |
+
+결제 웹훅 등 **서버 내부 호출**은 `upgradePlan(hospitalId, plan, { verifiedByPayment: true })`로 우회할 수 있게 열어뒀습니다 (컨트롤러는 이 옵션을 절대 전달하지 않음).
+
+추가로 `UpgradePlanDto`(`@IsEnum(PlanType)`)를 도입해, 예전엔 임의 문자열이 Prisma까지 흘러가 500이 나던 문제를 400으로 정리했습니다.
+
+### ✅ P0-2 — 쿠폰 어드민 API 가드 + DTO
+
+**변경**: `apps/api/src/coupons/coupons.controller.ts`, `coupons.service.ts`, `dto/create-coupon.dto.ts` (신규)
+
+- `GET /coupons/admin/list`, `POST /coupons/admin/create` → `@UseGuards(JwtAuthGuard, AdminEmailGuard)`
+  (이미 프로젝트에 있던 `AdminEmailGuard`를 재활용 — `ADMIN_EMAILS` 화이트리스트 기반)
+- `createCoupon(data: any)` → `createCoupon(dto: CreateCouponDto)`
+- 서비스 레벨 의미 검증 추가: 타입별 필수값(PERCENT_OFF↔discountPercent 등), 기간 역전, **코드 중복(P2002 500 → 400)**
+- 상한: `freeMonths ≤ 24`, `discountPercent ≤ 100`, `maxUses ≤ 100,000`
+- 코드 형식 강제: `^[A-Z0-9-]+$`, 자동 대문자 정규화
+- `whitelist: true` + `forbidNonWhitelisted: true`로 `currentUses` 같은 **미허용 필드 주입 차단**
+
+### ✅ P2-1 — 데모 인용 출처 현실화
+
+**변경**: `apps/api/prisma/seed-citation-sources.ts` (신규), `seed.ts`, `seed-fast.ts`
+
+`example.com` / `seoulbd.co.kr` 단일 도메인 → **실제 국내 치과 AEO 환경 근사 분포 13개 도메인**으로 교체.
+
+```
+34.6% blog.naver.com    12.2% m.blog.naver.com   8.7% cafe.naver.com
+ 8.0% seoulbd.co.kr      7.2% instagram.com      6.4% modoodoc.com
+ 5.5% youtube.com        4.3% kda.or.kr          3.8% namu.wiki
+ 3.0% health.chosun.com  2.7% hidoc.co.kr        1.9% kin.naver.com
+ 1.7% dailydental.co.kr
+```
+
+각 도메인에 `sourceType` / `category` / `authorityScore`(1-10)를 부여해 **인용 분석·소스 인텔 화면이 의미 있는 분포로 렌더**되도록 했습니다. 인용 플랫폼도 Perplexity 편중을 완화(Perplexity 2~3건 / Gemini 50% 1~2건 / 기타 20% 1건).
+
+> ⚠️ 기존 시드 데이터에는 소급 적용되지 않습니다. 데모 환경 갱신이 필요하면 `npm run seed` 재실행이 필요합니다.
+
+### ✅ P2-2 — 기회 분석 화면 숫자 정합
+
+**변경**: `apps/web/src/app/dashboard/opportunities/page.tsx`
+
+원인은 숫자 계산 오류가 아니라 **기본 탭 선택 로직**이었습니다. 상단 카드는 "전체 기회 4"인데 기본 탭이 항상 `opportunities`(0건)로 열려 "기회가 없습니다"가 표시됐습니다.
+
+- `activeSection` 초기값 `'opportunities'` → `null`(미선택)
+- `effectiveSection` 파생값 도입 — 사용자가 탭을 고르기 전이면 **데이터가 있는 탭을 자동 선택**
+- 빈 상태 카드에 "Content Gap N건 보러가기" CTA 추가 (막다른 길 제거)
+
+검증(실브라우저): 탭 상태 `노출 기회(0)=비활성 / Content Gap(4)=활성`, "없습니다" 문구 미노출, 콘솔 에러 0건.
+
+### ✅ P2-3 — 빌드 OOM 가드
+
+**변경**: `apps/api/package.json`
+
+```diff
+- ... && nest build
++ ... && NODE_OPTIONS=--max-old-space-size=2048 nest build
+```
+
+`cross-env`는 의존성에 없어 도입하지 않았습니다 (Render/CI 모두 Linux 셸이라 인라인 env로 충분).
+
+---
+
+## 7. 회귀 검증 결과 (2026-07-25)
+
+패치 후 `scripts/sim-write.sh`에 **P0 회귀 테스트 섹션(13-B)을 상설화**했습니다.
+
+| 테스트 | 기대 | 결과 |
+|--------|------|------|
+| P0-1 무결제 ENTERPRISE 업그레이드 | 403 | ✅ 403 `결제가 확인되지 않았습니다...` |
+| P0-1b `planType: "GODMODE"` | 400 | ✅ 400 `유효한 플랜 타입이 아닙니다.` |
+| P0-2a 일반유저 쿠폰 목록 | 403 | ✅ 403 `관리자 권한이 필요합니다.` |
+| P0-2b 일반유저 쿠폰 생성 | 403 | ✅ 403 `관리자 권한이 필요합니다.` |
+
+**오버블록(정상 경로 막힘) 확인 — 전부 통과**:
+
+| 정상 경로 | 결과 |
+|-----------|------|
+| 결제 이력(DONE) 있는 병원의 ENTERPRISE 업그레이드 | ✅ 200, 질문 +28 / 경쟁사 슬롯 +989 정상 처리 |
+| `ADMIN_EMAILS` 등록 계정의 쿠폰 목록/생성 | ✅ 200 / 201 |
+| FREE_PERIOD인데 freeMonths 누락 | ✅ 400 (친절한 메시지) |
+| 쿠폰 코드 중복 | ✅ 400 (기존엔 Prisma P2002 500) |
+| freeMonths 120 (상한 초과) | ✅ 400 |
+| `currentUses` 필드 주입 | ✅ 400 `property currentUses should not exist` |
+
+**회귀 없음 확인**:
+- GET 전수 스모크: **70/71 통과** (유일한 ERR은 의도된 `scheduler/queue-status` 401 — cron secret 필요)
+- 크로스테넌트 침투 **13개 경로 전부 403 유지**
+- 토큰 없는 접근 3경로 401 유지, 결제 위조 방어 유지
+- API 빌드(tsc) / Web 빌드(next build) 모두 성공, PM2 정상 기동
+- 검증에 쓴 임시 데이터(결제·쿠폰·프롬프트 28건·시뮬 병원/유저) 및 `.env` 변경 **전부 원복** — DB는 유저 1 / 병원 1 / 프롬프트 21 / AI응답 1,701 / 쿠폰 0 / 결제 0 상태
+
+---
+
+## 8. 남은 과제
+
+| 항목 | 내용 | 비고 |
+|------|------|------|
+| 🟠 P1-1 | TrialBanner "26,823일" 가드 | 5분. `daysLeft` 상한(90일) 체크만 넣으면 끝 |
+| 🟠 P1-2 | `competitors.create`, `prompts.generate-presets` DTO + Prisma 에러 마스킹 | 이번 패치로 업그레이드/쿠폰 2곳만 처리됨 |
+| 🟡 운영 | 프로덕션 `ADMIN_EMAILS` 실제 운영자 이메일로 설정 | 현재 `admin@example.com` — **미설정 시 쿠폰 어드민 API 전면 차단됨(안전 기본값)** |
+| 🟡 데이터 | 데모 환경 시드 재실행 (P2-1 반영) | 기존 1,701건은 여전히 `example.com` |
