@@ -478,3 +478,36 @@ export const paymentsApi = {
   getBillingInfo: (hospitalId: string) =>
     api.get(`/payments/billing/${hospitalId}`),
 };
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 강의록 실행 지표 API — 강의록의 측정 가능한 원칙 8종
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+export const lectureMetricsApi = {
+  /** 8개 지표 종합 요약 카드 */
+  getSummary: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/summary`, { params: { days }, timeout: 60000 }),
+  /** 25번 — 문서당 인용 효율 (인용수 = 선호도 x 공급량 분해) */
+  getCitationEfficiency: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/citation-efficiency`, { params: { days }, timeout: 60000 }),
+  /** 30·32번 — 포트폴리오 4구역 + 채널 수명 */
+  getPortfolio: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/portfolio`, { params: { days }, timeout: 60000 }),
+  /** 12·24번 — 지역 단위 배율표 */
+  getRegionLeverage: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/region-leverage`, { params: { days }, timeout: 60000 }),
+  /** 20번 — 원장 실명 브랜딩률 */
+  getDirectorBranding: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/director-branding`, { params: { days }, timeout: 60000 }),
+  /** AEO(실시간 검색) vs GEO(사전학습 진입) 분리 */
+  getAeoGeoSplit: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/aeo-geo-split`, { params: { days }, timeout: 60000 }),
+  /** 13번 — 언어별 성적표 */
+  getLanguageScoreboard: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/language-scoreboard`, { params: { days }, timeout: 60000 }),
+  /** 28-②번 — 질문 난이도별 SoV (쉬운 질문의 착시 제거) */
+  getDifficulty: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/difficulty`, { params: { days }, timeout: 60000 }),
+  /** 29번 — 부정 언급 조기경보 */
+  getNegativeAlerts: (hospitalId: string, days?: number) =>
+    api.get(`/lecture-metrics/${hospitalId}/negative-alerts`, { params: { days }, timeout: 60000 }),
+};
