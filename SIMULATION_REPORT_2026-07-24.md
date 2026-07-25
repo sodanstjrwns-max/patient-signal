@@ -210,8 +210,8 @@ Render 무료/저가 인스턴스에서 배포 실패로 이어질 수 있으니
 |------|------|------------|--------|------|
 | 🔴 즉시 | P0-1 무료 업그레이드 차단 | 30분 | **매출 전액** | ✅ **2026-07-25 조치 완료** |
 | 🔴 즉시 | P0-2 쿠폰 어드민 가드 | 15분 | 쿠폰 유출/매출 | ✅ **2026-07-25 조치 완료** |
-| 🟠 이번 주 | P1-1 26,823일 배너 | 5분 | 신뢰도 | ⬜ 미조치 |
-| 🟠 이번 주 | P1-2 DTO + 에러 마스킹 | 2시간 | 정보 노출 | 🟨 부분 (업그레이드/쿠폰 DTO만) |
+| 🟠 이번 주 | P1-1 26,823일 배너 | 5분 | 신뢰도 | ✅ **2026-07-25 조치 완료** |
+| 🟠 이번 주 | P1-2 DTO + 에러 마스킹 | 2시간 | 정보 노출 | ✅ **2026-07-25 조치 완료** |
 | 🟡 다음 | P2-1 데모 데이터 현실화 | 1시간 | 세일즈 | ✅ **2026-07-25 조치 완료** |
 | 🟡 다음 | P2-2 기회분석 숫자 정합 | 30분 | UX | ✅ **2026-07-25 조치 완료** |
 | 🟡 다음 | P2-3 빌드 OOM 가드 | 5분 | 배포 | ✅ **2026-07-25 조치 완료** |
@@ -308,6 +308,66 @@ P0 두 개가 공교롭게 **둘 다 매출 방어선**입니다. 데이터는 �
 
 ---
 
+### ✅ P1-1 — "무료 체험 26,823일 남음" 배너 제거
+
+원인이 **앞뒤 양쪽**에 있었습니다. 시드의 `currentPeriodEnd = 2099-12-31`이 그대로 일수로 환산돼 API가 `daysRemaining: 26823`을 내려주고, 프론트엔드엔 상한 검사가 아예 없었습니다. 한쪽만 고치면 재발하므로 둘 다 막았습니다.
+
+**백엔드**: `apps/api/src/subscriptions/subscriptions.service.ts` — `getMySubscription()`
+
+```ts
+const UNLIMITED_THRESHOLD_DAYS = 365 * 5;      // 5년 초과 = 사실상 무기한
+const isUnlimitedPeriod = rawDaysRemaining > UNLIMITED_THRESHOLD_DAYS;
+const daysRemaining = isUnlimitedPeriod ? 0 : rawDaysRemaining;
+// 응답에 isUnlimitedPeriod / rawDaysRemaining 추가 (UI가 판단할 수 있게)
+```
+
+**프론트엔드**: `apps/web/src/components/dashboard/TrialBanner.tsx`
+
+```ts
+const MAX_BANNER_DAYS = 90;
+function isDisplayableDays(days: unknown, maxDays = MAX_BANNER_DAYS): days is number {
+  return typeof days === 'number' && Number.isFinite(days) && days > 0 && days <= maxDays;
+}
+if (subInfo.isUnlimitedPeriod && !subInfo.isExpired) return null;   // 무기한 → 카운트다운 무의미
+```
+
+쿠폰 분기의 기존 `daysLeft > 30` 체크는 **`NaN`을 통과시켜** "NaN일 남음"이 뜰 수 있었습니다. `isDisplayableDays()`로 교체해 `NaN`/음수/이상 상한을 전부 차단했습니다.
+
+---
+
+### ✅ P1-2 — DTO 3곳 추가 + Prisma 에러 마스킹
+
+**(a) `competitors.create` / `accept-suggestion`** — `apps/api/src/competitors/dto/create-competitor.dto.ts` 신규
+
+`competitorName`에 `@Transform` trim + `@Length(2, 100)`. 500의 실제 발원지였던 `normalizeDentalName()`에도 방어를 넣었습니다 — 과거 유입된 `null`/비문자열이 들어와도 빈 문자열 처리:
+
+```ts
+if (typeof name !== 'string') return '';
+```
+
+**(b) `prompts.generate-presets`** — `apps/api/src/prompts/dto/generate-presets.dto.ts` 신규
+
+`specialtyType`에 `@IsEnum(SpecialtyType)`, `region`에 `@Length(2, 60)` + 연속 공백 정규화. 온보딩/업그레이드 자동생성 같은 **내부 호출은 DTO를 안 거치므로** 서비스에도 `safeRegion` 가드를 이중으로 뒀습니다.
+
+**(c) Prisma 에러 마스킹** — `apps/api/src/common/filters/all-exceptions.filter.ts`
+
+기존엔 분류 안 된 `Error`의 `message`가 **그대로 클라이언트에 나갔습니다**. Prisma 실패 시 쿼리 조각·모델명·컬럼명이 응답 JSON에 노출되는 구조였습니다.
+
+| Prisma 코드 | HTTP | errorCode | 클라이언트 메시지 |
+|---|---|---|---|
+| P2002 | 409 | `DUPLICATE_ENTRY` | 이미 등록된 값입니다. (필드명) |
+| P2025 | 404 | `NOT_FOUND` | 요청하신 데이터를 찾을 수 없습니다. |
+| P2003 | 400 | `INVALID_REFERENCE` | 연결된 데이터가 존재하지 않습니다. |
+| P2014 | 400 | `RELATION_VIOLATION` | 다른 데이터와 연결되어 있어 처리할 수 없습니다. |
+| P2000 | 400 | `VALUE_TOO_LONG` | 입력값이 너무 깁니다. |
+| P2011 | 400 | `NULL_CONSTRAINT` | 필수 항목이 누락되었습니다. |
+| P1001/P1002 | 503 | `DATABASE_UNAVAILABLE` | 일시적으로 DB 접근 불가 |
+| 그 외 | 500 | `DATABASE_ERROR` | 서버 오류가 발생했습니다. |
+
+`PrismaClientValidationError`는 400 `INVALID_QUERY`, 나머지 Prisma 예외군은 503으로 처리했습니다. 핵심은 `isClientSafeMessage` 플래그입니다 — **분류에 성공한 예외만 원본 메시지를 내보내고, 나머지는 일괄 일반 메시지로 치환**합니다. 원문·스택은 `logger.error`에 그대로 남으므로 디버깅에는 영향 없습니다.
+
+---
+
 ## 7. 회귀 검증 결과 (2026-07-25)
 
 패치 후 `scripts/sim-write.sh`에 **P0 회귀 테스트 섹션(13-B)을 상설화**했습니다.
@@ -330,6 +390,49 @@ P0 두 개가 공교롭게 **둘 다 매출 방어선**입니다. 데이터는 �
 | freeMonths 120 (상한 초과) | ✅ 400 |
 | `currentUses` 필드 주입 | ✅ 400 `property currentUses should not exist` |
 
+### P1 검증 (2026-07-25 2차 패치)
+
+**P1-1 — 배너**
+
+| 확인 | 결과 |
+|---|---|
+| `/subscriptions/me` 응답 | ✅ `daysRemaining: 0`, `rawDaysRemaining: 26822`, `isUnlimitedPeriod: true` |
+| 실브라우저 대시보드 (Playwright) | ✅ "무료 체험 …일 남음" 텍스트 **0건**, `26,8xx` 매칭 없음, `NaN` 없음, JS 에러 없음 |
+
+**P1-2a/b — DTO (전부 기존 500 → 400)**
+
+| 요청 | 결과 |
+|---|---|
+| `POST /competitors/:hid` `{}` | ✅ 400 |
+| `{"competitorName":"가"}` (1자) | ✅ 400 |
+| `{"competitorName":123}` (숫자) | ✅ 400 |
+| `POST /competitors/:hid/accept-suggestion` `{}` | ✅ 400 |
+| `POST /prompts/:hid/generate-presets` `{}` | ✅ 400 |
+| `{"specialtyType":"DENTAL"}` (region 누락) | ✅ 400 |
+| `{"specialtyType":"WRONG", ...}` | ✅ 400 |
+| `{"region":"서"}` (1자) | ✅ 400 |
+
+**P1-2c — 에러 마스킹 (필터 직접 호출 단위 검증 8케이스)**
+
+| 주입한 예외 | HTTP | 클라이언트 메시지 | 누출 |
+|---|---|---|---|
+| P2002 (`prisma.hospital.create()` 원문 포함) | 409 | 이미 등록된 값입니다. (email) | ✅ 없음 |
+| P2025 | 404 | 요청하신 데이터를 찾을 수 없습니다. | ✅ 없음 |
+| P2003 (`prompts_hospital_id_fkey` 포함) | 400 | 연결된 데이터가 존재하지 않습니다. | ✅ 없음 |
+| P2000 (`Column: prompt_text` 포함) | 400 | 입력값이 너무 깁니다. | ✅ 없음 |
+| P9999 (`relation "secret_table"` 포함) | 500 | 서버 오류가 발생했습니다… | ✅ 없음 |
+| `PrismaClientValidationError` | 400 | 요청 형식이 올바르지 않습니다. | ✅ 없음 |
+| 일반 `Error` (`internalSecretConfig` 포함) | 500 | 서버 오류가 발생했습니다… | ✅ 없음 |
+| `BadRequestException` (통과해야 함) | 400 | 경쟁사 이름은 2~100자여야 합니다. | ✅ 정상 통과 |
+
+로그 쪽엔 `[DUPLICATE_ENTRY] Invalid \`prisma.hospital.create()\` …` 처럼 원문이 그대로 남는 것도 확인했습니다.
+
+**보너스 — 시뮬 스크립트 버그 발견**
+
+DTO를 넣자 `sim-write.sh`의 섹션 9·10이 400으로 떨어졌습니다. 확인해보니 스크립트가 `text`/`name`이라는 **존재하지 않는 필드명**을 쓰고 있었고, 그동안 검증이 없어서 조용히 500이 나던 걸 "동작한다"고 착각하던 구간이었습니다. 스크립트를 `promptText`/`competitorName`으로 수정 후 CRUD 전 구간 정상(생성 201 → 토글 → 수정 → 남의 것 삭제 403 → 본인 삭제 200) 확인했습니다.
+
+---
+
 **회귀 없음 확인**:
 - GET 전수 스모크: **70/71 통과** (유일한 ERR은 의도된 `scheduler/queue-status` 401 — cron secret 필요)
 - 크로스테넌트 침투 **13개 경로 전부 403 유지**
@@ -343,7 +446,7 @@ P0 두 개가 공교롭게 **둘 다 매출 방어선**입니다. 데이터는 �
 
 | 항목 | 내용 | 비고 |
 |------|------|------|
-| 🟠 P1-1 | TrialBanner "26,823일" 가드 | 5분. `daysLeft` 상한(90일) 체크만 넣으면 끝 |
-| 🟠 P1-2 | `competitors.create`, `prompts.generate-presets` DTO + Prisma 에러 마스킹 | 이번 패치로 업그레이드/쿠폰 2곳만 처리됨 |
 | 🟡 운영 | 프로덕션 `ADMIN_EMAILS` 실제 운영자 이메일로 설정 | 현재 `admin@example.com` — **미설정 시 쿠폰 어드민 API 전면 차단됨(안전 기본값)** |
+| 🟡 데이터 | 데모 계정 `currentPeriodEnd = 2099-12-31` 정리 | P1-1로 화면엔 안 뜨지만, 값 자체를 현실적인 만료일로 바꾸는 게 근본 해결 |
+| 🔵 개선 | 나머지 인라인 `@Body()` 엔드포인트 DTO화 | 이번에 5곳 처리. 전수 점검하면 몇 곳 더 나올 가능성 |
 | 🟡 데이터 | 데모 환경 시드 재실행 (P2-1 반영) | 기존 1,701건은 여전히 `example.com` |

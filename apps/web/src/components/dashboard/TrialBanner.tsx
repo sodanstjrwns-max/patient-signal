@@ -20,6 +20,25 @@ interface SubscriptionInfo {
   isCouponUser: boolean;
   couponName: string | null;
   couponFreeMonths: number;
+  /** 【P1-1】 무기한 구독(내부 계정/평생 쿠폰 등) — true면 만료 카운트다운을 표시하지 않음 */
+  isUnlimitedPeriod: boolean;
+}
+
+/**
+ * 【P1-1】 배너를 띄울 만한 "남은 일수"의 상한.
+ *
+ * 문제: currentPeriodEnd가 2099-12-31 같은 사실상 무기한 값이면
+ *       daysRemaining이 26,823처럼 계산되어
+ *       "무료 체험 26,823일 남음" 배너가 전 화면 상단에 노출됐음.
+ *
+ * 해석: 90일을 넘게 남았다는 건 "곧 끝나니 결제하세요" 알림의 대상이 아니다
+ *       (무기한 계정이거나 데이터 이상). 두 경우 모두 배너를 숨기는 게 맞다.
+ */
+const MAX_BANNER_DAYS = 90;
+
+/** 배너로 표시해도 되는 유효한 잔여일수인지 검사 (NaN/음수/비정상 상한 방어) */
+function isDisplayableDays(days: unknown, maxDays: number = MAX_BANNER_DAYS): days is number {
+  return typeof days === 'number' && Number.isFinite(days) && days > 0 && days <= maxDays;
 }
 
 export function TrialBanner() {
@@ -49,6 +68,7 @@ export function TrialBanner() {
           isCouponUser: data.isCouponUser || false,
           couponName: data.couponName || null,
           couponFreeMonths: data.couponFreeMonths || 0,
+          isUnlimitedPeriod: data.isUnlimitedPeriod || false,
         };
 
         setSubInfo(info);
@@ -122,12 +142,15 @@ export function TrialBanner() {
   // 이미 결제한 사용자(빌링키 있음)이고 만료 아닌 경우 → 배너 불필요
   if (subInfo.hasBillingKey && !subInfo.isExpired) return null;
 
+  // 【P1-1】 무기한 구독 → 만료 카운트다운 배너 자체가 무의미
+  if (subInfo.isUnlimitedPeriod && !subInfo.isExpired) return null;
+
   // ─── 쿠폰 사용자 전용 배너 (만료 30일 이내) ───
   if (subInfo.isCouponUser && subInfo.status === 'ACTIVE' && !subInfo.hasBillingKey) {
     const daysLeft = subInfo.daysRemaining;
-    
-    // 30일 넘게 남았으면 배너 안 보여줌
-    if (daysLeft > 30) return null;
+
+    // 【P1-1】 30일 초과 / NaN / 0 이하는 모두 숨김 (기존엔 NaN이 통과해 "NaN일"이 노출될 수 있었음)
+    if (!isDisplayableDays(daysLeft, 30)) return null;
 
     const isUrgent = daysLeft <= 3;
     const isWarning = daysLeft <= 7;
@@ -212,6 +235,10 @@ export function TrialBanner() {
   if (!subInfo.isInTrial && !subInfo.isUnpaidActive) return null;
 
   const daysLeft = subInfo.isInTrial ? subInfo.trialDaysRemaining : subInfo.daysRemaining;
+
+  // 【P1-1】 "무료 체험 26,823일 남음" 방지 — 무기한/이상치는 배너 대상이 아님
+  if (!isDisplayableDays(daysLeft)) return null;
+
   const isUrgent = daysLeft <= 2;
   const isExpiring = daysLeft <= 4;
   const planName = subInfo.planType || 'STARTER';

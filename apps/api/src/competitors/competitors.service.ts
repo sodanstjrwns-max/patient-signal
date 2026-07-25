@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { CreateCompetitorDto } from './dto/create-competitor.dto';
 
 export interface CompetitorSuggestion {
   name: string;
@@ -26,6 +27,8 @@ export class CompetitorsService {
    *     "우리가족치과의원" → "우리가족치과"
    */
   private normalizeDentalName(name: string): string {
+    // 【P1-2】 방어: DB에 과거 유입된 null/빈값이나 비문자열이 들어와도 500 대신 빈 문자열 처리
+    if (typeof name !== 'string') return '';
     let normalized = name.trim();
     // 공백 제거
     normalized = normalized.replace(/\s+/g, '');
@@ -94,7 +97,7 @@ export class CompetitorsService {
   /**
    * 경쟁사 추가 (중복 체크 포함)
    */
-  async create(hospitalId: string, dto: { competitorName: string; competitorRegion?: string }) {
+  async create(hospitalId: string, dto: CreateCompetitorDto) {
     // 기존 경쟁사 중복 체크 (정규화 기반)
     const existingCompetitors = await this.prisma.competitor.findMany({
       where: { hospitalId },
@@ -412,7 +415,7 @@ export class CompetitorsService {
    */
   async acceptSuggestion(
     hospitalId: string,
-    dto: { competitorName: string; competitorRegion?: string },
+    dto: CreateCompetitorDto,
   ) {
     // 정규화 기반 중복 체크 (정확한 이름 + 유사 이름 모두)
     const allCompetitors = await this.prisma.competitor.findMany({

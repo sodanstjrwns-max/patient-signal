@@ -2,6 +2,7 @@ import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } fro
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptsService } from './prompts.service';
 import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
+import { GeneratePresetsDto } from './dto/generate-presets.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PlanGuard } from '../common/guards/plan.guard';
@@ -86,7 +87,7 @@ export class PromptsController {
   @ApiOperation({ summary: '프리셋 질문 생성' })
   async generateFromPresets(
     @Param('hospitalId') hospitalId: string,
-    @Body() body: { specialtyType: string; region: string },
+    @Body() body: GeneratePresetsDto,
   ) {
     return this.promptsService.generateFromPresets(
       hospitalId,

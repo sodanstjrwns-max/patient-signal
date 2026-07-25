@@ -190,6 +190,10 @@ export class PromptsService {
   async generateFromPresets(hospitalId: string, specialtyType: string, region: string) {
     const maxPrompts = await this.getPromptLimit(hospitalId);
 
+    // 【P1-2】 DTO가 1차 방어선이지만, 내부 호출(온보딩/업그레이드 자동생성)에서도
+    //          region이 비어 들어올 수 있으므로 서비스 레벨에서도 안전값 처리
+    const safeRegion = typeof region === 'string' ? region.trim() : '';
+
     const presets = await this.prisma.presetPrompt.findMany({
       where: {
         specialtyType: specialtyType as any,
@@ -200,10 +204,10 @@ export class PromptsService {
 
     const prompts = presets.map((preset) => ({
       hospitalId,
-      promptText: preset.promptTemplate.replace('{지역}', region),
+      promptText: preset.promptTemplate.replace('{지역}', safeRegion).trim(),
       promptType: 'PRESET' as const,
       specialtyCategory: preset.category,
-      regionKeywords: region.split(' '),
+      regionKeywords: safeRegion ? safeRegion.split(/\s+/).filter(Boolean) : [],
       isActive: true,
     }));
 

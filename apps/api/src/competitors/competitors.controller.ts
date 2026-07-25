@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
+import { CreateCompetitorDto } from './dto/create-competitor.dto';
 
 @ApiTags('경쟁사 분석')
 @Controller('competitors')
@@ -40,7 +41,7 @@ export class CompetitorsController {
   @ApiOperation({ summary: 'AI 제안 경쟁사 수락' })
   async acceptSuggestion(
     @Param('hospitalId') hospitalId: string,
-    @Body() dto: { competitorName: string; competitorRegion?: string },
+    @Body() dto: CreateCompetitorDto,
   ) {
     return this.competitorsService.acceptSuggestion(hospitalId, dto);
   }
@@ -75,7 +76,7 @@ export class CompetitorsController {
   @ApiOperation({ summary: '경쟁사 추가' })
   async create(
     @Param('hospitalId') hospitalId: string,
-    @Body() dto: { competitorName: string; competitorRegion?: string },
+    @Body() dto: CreateCompetitorDto,
   ) {
     return this.competitorsService.create(hospitalId, dto);
   }

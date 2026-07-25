@@ -74,19 +74,19 @@ done
 
 echo ""
 echo "═══ 9. 정상 쓰기: 데모 계정 프롬프트 CRUD ═══"
-CR=$(curl -s -m 20 -X POST "$API/prompts/$DEMO_H" -H "Authorization: Bearer $T_DEMO" -H "Content-Type: application/json" -d '{"text":"시뮬레이션 테스트 질문 - 잠실 임플란트 잘하는 곳","category":"TREATMENT","intentStage":"AWARENESS"}')
+CR=$(curl -s -m 20 -X POST "$API/prompts/$DEMO_H" -H "Authorization: Bearer $T_DEMO" -H "Content-Type: application/json" -d '{"promptText":"시뮬레이션 테스트 질문 - 잠실 임플란트 잘하는 곳","promptType":"CUSTOM","specialtyCategory":"임플란트","regionKeywords":["서울","잠실"]}')
 echo "생성: $(echo $CR | head -c 250)"
 PID=$(echo "$CR" | python3 -c "import sys,json;print(json.load(sys.stdin).get('id',''))" 2>/dev/null)
 if [ -n "$PID" ]; then
   echo "토글: $(curl -s -m 20 -X POST "$API/prompts/$PID/toggle" -H "Authorization: Bearer $T_DEMO" | head -c 150)"
-  echo "수정: $(curl -s -m 20 -X PUT "$API/prompts/$PID" -H "Authorization: Bearer $T_DEMO" -H "Content-Type: application/json" -d '{"text":"수정된 시뮬 질문"}' | head -c 150)"
+  echo "수정: $(curl -s -m 20 -X PUT "$API/prompts/$PID" -H "Authorization: Bearer $T_DEMO" -H "Content-Type: application/json" -d '{"promptText":"수정된 시뮬 질문"}' | head -c 150)"
   echo "🔒 남의 프롬프트 삭제 시도: $(curl -s -m 20 -o /tmp/o5 -w '%{http_code}' -X DELETE "$API/prompts/$PID" -H "Authorization: Bearer $T_NEW") $(head -c 120 /tmp/o5)"
   echo "삭제: $(curl -s -m 20 -o /tmp/o6 -w '%{http_code}' -X DELETE "$API/prompts/$PID" -H "Authorization: Bearer $T_DEMO") $(head -c 120 /tmp/o6)"
 fi
 
 echo ""
 echo "═══ 10. 경쟁사 추가/삭제 ═══"
-CC=$(curl -s -m 30 -X POST "$API/competitors/$NEW_H" -H "Authorization: Bearer $T_NEW" -H "Content-Type: application/json" -d '{"name":"테스트경쟁치과","region":"송파구"}')
+CC=$(curl -s -m 30 -X POST "$API/competitors/$NEW_H" -H "Authorization: Bearer $T_NEW" -H "Content-Type: application/json" -d '{"competitorName":"테스트경쟁치과","competitorRegion":"송파구"}')
 echo "$CC" | head -c 250; echo
 
 echo ""

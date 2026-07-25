@@ -101,9 +101,16 @@ export class SubscriptionsService {
     const now = new Date();
     const isExpired = subscription.currentPeriodEnd < now;
     const isActive = !isExpired && ['TRIAL', 'ACTIVE'].includes(subscription.status);
-    const daysRemaining = Math.max(0, Math.ceil(
+    const rawDaysRemaining = Math.max(0, Math.ceil(
       (subscription.currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     ));
+
+    // 【P1-1】 currentPeriodEnd가 2099-12-31 같은 사실상 무기한 값이면
+    //          daysRemaining이 26,823처럼 나와 "무료 체험 26,823일 남음" 배너가 떴음.
+    //          UI가 판단할 수 있도록 무기한 여부를 명시적으로 내려준다.
+    const UNLIMITED_THRESHOLD_DAYS = 365 * 5; // 5년 초과 = 사실상 무기한
+    const isUnlimitedPeriod = rawDaysRemaining > UNLIMITED_THRESHOLD_DAYS;
+    const daysRemaining = isUnlimitedPeriod ? 0 : rawDaysRemaining;
 
     // 체험 기간 남은 일수 계산
     const trialDaysUsed = Math.ceil(
@@ -143,6 +150,9 @@ export class SubscriptionsService {
       needsPayment,
       trialDaysRemaining: isInTrial ? Math.max(0, 7 - trialDaysUsed) : 0,
       daysRemaining,
+      // 【P1-1】 무기한 구독(내부 계정/평생 쿠폰 등) — 클라이언트는 만료 카운트다운을 숨겨야 함
+      isUnlimitedPeriod,
+      rawDaysRemaining,
       planType: subscription.planType,
       status: subscription.status,
       willCancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
