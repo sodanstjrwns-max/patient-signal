@@ -2,7 +2,7 @@
 
 /**
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- *  강의록 실행 지표 — 강의록의 원칙을 숫자로 검증하는 화면
+ *  성장 진단 — 노출 수치 뒤에 숨은 원인을 분해해 보여주는 화면
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  * 탭 구성
  *   개요     8개 지표 종합 카드
@@ -49,8 +49,8 @@ const DIFF_STYLE: Record<string, string> = {
 };
 
 function SectionTitle({
-  icon: Icon, lecture, title, desc,
-}: { icon: any; lecture: string; title: string; desc: string }) {
+  icon: Icon, tag, title, desc,
+}: { icon: any; tag?: string; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-3 mb-4">
       <div className="h-10 w-10 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
@@ -59,9 +59,11 @@ function SectionTitle({
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-base font-black text-slate-900">{title}</h2>
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-900 text-white tracking-wide">
-            강의록 {lecture}
-          </span>
+          {tag && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wide">
+              {tag}
+            </span>
+          )}
         </div>
         <p className="text-xs text-slate-500 font-medium mt-0.5">{desc}</p>
       </div>
@@ -163,10 +165,7 @@ function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number })
           return (
             <Card key={c.key} className={`border ${st.ring}`}>
               <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 tracking-wide flex-shrink-0">
-                    {c.lectureItem}
-                  </span>
+                <div className="flex items-start justify-end gap-2 mb-2">
                   <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${st.bg} ${st.text}`}>
                     <Icon className="h-2.5 w-2.5" />
                     {st.label}
@@ -191,7 +190,7 @@ function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number })
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <Radar className="h-4 w-4 text-brand-600" />
-              <h3 className="text-sm font-black text-slate-900">강의록이 말하는 것</h3>
+              <h3 className="text-sm font-black text-slate-900">이 숫자가 말하는 것</h3>
             </div>
             <ul className="space-y-2.5">
               {insights.map((s, i) => (
@@ -225,12 +224,12 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
 
   return (
     <div className="space-y-6">
-      {/* ── 25번 인용 효율 ── */}
+      {/* ── 인용 효율 ── */}
       <Card>
         <CardContent className="p-5">
           <SectionTitle
             icon={Gauge}
-            lecture="25번"
+            tag="채널 효율"
             title="문서당 인용 효율"
             desc="인용수 = 선호도 × 공급량. 나누지 않으면 물량 많은 채널이 좋은 채널처럼 보입니다."
           />
@@ -347,12 +346,12 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
         </CardContent>
       </Card>
 
-      {/* ── 30·32번 포트폴리오 ── */}
+      {/* ── 채널 포트폴리오 ── */}
       <Card>
         <CardContent className="p-5">
           <SectionTitle
             icon={Boxes}
-            lecture="30·32번"
+            tag="자산 배치"
             title="채널 포트폴리오 배치"
             desc="본진 / 고효율 저격수 / 물량 파도 / 하지마 — 지금 우리 인용은 어디에 몰려 있나."
           />
@@ -454,7 +453,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={MapPin}
-            lecture="12·24번"
+            tag="지역 전략"
             title="지역 단위 배율표"
             desc="좁게 물으면 우리가 나온다. 동 단위가 시/구 단위보다 몇 배 유리한가."
           />
@@ -572,7 +571,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={Target}
-            lecture="28-②번"
+            tag="착시 보정"
             title="질문 난이도별 점유율"
             desc="쉬운 질문만 넣고 SoV 90%를 자랑하는 건 경쟁 없는 곳에서 이긴 것입니다."
           />
@@ -633,7 +632,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={Globe2}
-            lecture="13번"
+            tag="다국어"
             title="언어별 성적표"
             desc="외국어는 경쟁자가 손을 안 대는 무주공산일 수 있습니다. 확인해야 압니다."
           />
@@ -714,7 +713,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={UserRound}
-            lecture="20번"
+            tag="개인 브랜딩"
             title="원장 실명 브랜딩률"
             desc="AI는 병원은 말해도 사람은 말하지 않습니다. 실명이 엔티티가 되어야 사람이 브랜드가 됩니다."
           />
@@ -815,7 +814,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={Layers}
-            lecture="AEO/GEO"
+            tag="노출 경로"
             title="실시간 검색 vs 사전학습 진입"
             desc="검색을 거쳐 답한 것과 검색 없이 답한 것은 다른 싸움입니다. 후자가 진짜 자산입니다."
           />
@@ -902,7 +901,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
         <CardContent className="p-5">
           <SectionTitle
             icon={BellRing}
-            lecture="29번"
+            tag="리스크"
             title="부정 언급 조기경보"
             desc="비율은 0.1%로 작습니다. 그런데 그 답변을 본 환자는 100% 그 문장을 읽습니다."
           />
@@ -1048,7 +1047,7 @@ export default function LectureMetricsPage() {
   if (!hospitalId) {
     return (
       <>
-        <Header title="강의록 실행 지표" description="강의록의 원칙을 숫자로 검증합니다" />
+        <Header title="성장 진단" description="노출 수치 뒤에 숨은 원인을 분해합니다" />
         <div className="p-4 sm:p-6">
           <Empty msg="병원 정보를 불러오는 중입니다." />
         </div>
@@ -1059,8 +1058,8 @@ export default function LectureMetricsPage() {
   return (
     <>
       <Header
-        title="강의록 실행 지표"
-        description="강의록의 원칙이 우리 병원에서 실제로 작동하는지 숫자로 확인합니다"
+        title="성장 진단"
+        description="언급률만 보면 놓치는 것 — 왜 오르고 왜 안 오르는지 원인을 분해합니다"
       />
 
       <div className="p-4 sm:p-6 space-y-4">

@@ -5,8 +5,8 @@ import { PrismaModule } from '../common/prisma/prisma.module';
 import { AppCacheModule } from '../common/cache/cache.module';
 
 /**
- * 【Batch A】강의록 실행 지표 모듈
- * DB 마이그레이션 없이 기존 컬럼만으로 강의록 8항목을 계산한다.
+ * 성장 진단 모듈
+ * DB 마이그레이션 없이 기존 컬럼만으로 8개 원인 분해 지표를 계산한다.
  */
 @Module({
   imports: [PrismaModule, AppCacheModule],

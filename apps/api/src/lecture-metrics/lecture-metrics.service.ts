@@ -24,7 +24,7 @@ import {
 
 /**
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- *  【Batch A】강의록 실행 지표 — 데이터는 이미 DB에 있고 계산만 없던 8항목
+ *  성장 진단 — 이미 수집된 데이터에서 '원인'을 분해하는 8개 지표
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  *
  *  25번 문서당 인용 효율 (역인과 오류 차단)  ← 최우선. 제품이 유발 중인 오류를 멈춘다.
@@ -178,7 +178,7 @@ export class LectureMetricsService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 25번】문서당 인용 효율 — 역인과 오류 차단
+  // 문서당 인용 효율 — 역인과 오류 차단
   // ═════════════════════════════════════════════════════════════
   /**
    * 인용수 = 선호도 × 공급량 을 분해한다.
@@ -289,7 +289,7 @@ export class LectureMetricsService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 32·30번】포트폴리오 4구역 배치 + 소모/축적
+  // 채널 포트폴리오 4구역 배치 + 소모/축적
   // ═════════════════════════════════════════════════════════════
   async getPortfolioMap(hospitalId: string, days = 30) {
     const { hospital, ownDomains } = await this.getHospitalContext(hospitalId);
@@ -366,7 +366,7 @@ export class LectureMetricsService {
     const warnings: string[] = [];
     if (homeBase.citations === 0) {
       warnings.push(
-        '본진(홈페이지·GBP) 인용이 0건입니다. 강의록 2번 — 홈페이지가 최상위 출처인데 지금은 입장권조차 없는 상태입니다.',
+        '본진(홈페이지·GBP) 인용이 0건입니다. AI가 가장 신뢰하는 출처는 병원 공식 홈페이지인데, 지금은 그 입장권조차 없는 상태입니다.',
       );
     } else if (homeBase.share < 5) {
       warnings.push(
@@ -392,15 +392,15 @@ export class LectureMetricsService {
       durability,
       warnings,
       methodology:
-        '강의록 32번 포트폴리오 배치표(본진/고효율 저격수/물량 파도/하지마)와 30번 채널 수명(축적형 영구 vs 소모형 2~6주)을 인용 도메인에 매핑한 결과입니다.',
+        '인용된 도메인을 네 구역(본진 / 고효율 저격수 / 물량 파도 / 하지마)과 채널 수명(축적형 = 영구 자산, 소모형 = 2~6주 후 소멸)에 매핑한 결과입니다.',
     };
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 12·24번】지역 단위 배율표
+  // 지역 단위 배율표
   // ═════════════════════════════════════════════════════════════
   /**
-   * 강의록 실측 재현:
+   * 실측 재현:
    *   전체   동 46.6% vs 시 27.3% = 1.7배
    *   Gemini 동 68.6% vs 시 22.8% = 3.0배  ← GBP가 교과서라서
    *   CLOVA X 동 5.9% vs 시 8.1% = 역전
@@ -482,7 +482,7 @@ export class LectureMetricsService {
       })
       .sort((a, b) => b.totalResponses - a.totalResponses);
 
-    // 역전 플랫폼 = 좁은 지역이 오히려 불리한 곳 (강의록: CLOVA X)
+    // 역전 플랫폼 = 좁은 지역이 오히려 불리한 곳 (실측 사례: CLOVA X)
     const inverted = platforms.filter(
       (p) => p.dongVsSigungu !== null && p.dongVsSigungu < 1,
     );
@@ -504,10 +504,10 @@ export class LectureMetricsService {
       platforms,
       inverted: inverted.map((p) => ({ platform: p.platform, ratio: p.dongVsSigungu })),
       benchmark: {
-        note: '강의록 실측 벤치마크',
+        note: '동종 병원 42만 건 인용 실측 기준값',
         overallDongVsSigungu: 1.7,
         geminiDongVsSigungu: 3.0,
-        source: '강의록 12번·24번 (동 46.6% vs 시 27.3%, Gemini 68.6% vs 22.8%)',
+        source: '실측: 동 단위 46.6% vs 시 단위 27.3% / Gemini 68.6% vs 22.8%',
       },
       insight:
         dong && sigungu
@@ -520,7 +520,7 @@ export class LectureMetricsService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 20번】원장 실명 브랜딩률
+  // 원장 실명 브랜딩률
   // ═════════════════════════════════════════════════════════════
   async getDirectorBranding(hospitalId: string, days = 30) {
     const { hospital } = await this.getHospitalContext(hospitalId);
@@ -563,7 +563,7 @@ export class LectureMetricsService {
       /** '원장/의료진' 같은 일반명사 언급률 */
       titleRate,
       realNameMentions: realNameCount,
-      /** 실명이 등장한 비율 — 강의록 실측 0.7% */
+      /** 실명이 등장한 비율 — 업계 실측 0.7% */
       realNameRate,
       /** 일반명사는 나오는데 실명은 안 나오는 격차 */
       brandingGap: Math.round((titleRate - realNameRate) * 10) / 10,
@@ -577,18 +577,18 @@ export class LectureMetricsService {
         }))
         .sort((a, b) => b.responses - a.responses),
       benchmark: {
-        note: '강의록 실측 벤치마크',
+        note: '동종 병원 실측 기준값',
         titleRate: 25.8,
         realNameRate: 0.7,
-        source: '강의록 20번',
+        source: "실측: '원장' 직함 언급 25.8% vs 실명 언급 0.7%",
       },
       prescription:
         doctorNames.length === 0
           ? '원장 실명이 병원 정보에 등록되어 있지 않아 측정할 수 없습니다. 설정 > 병원 강점에 "○○○ 원장" 형태로 넣으면 자동 추적됩니다.'
           : realNameRate < 5
             ? `AI는 '원장'이라는 일반명사는 ${titleRate}% 언급하는데, 실명은 ${realNameRate}%뿐입니다. 실명이 엔티티로 학습되어 있지 않다는 뜻입니다. 처방: 나무위키·위키백과·네이버 인물정보에 원장 엔티티를 만드십시오.`
-            : `실명 언급률 ${realNameRate}% — 강의록 벤치마크 0.7%를 크게 상회합니다. 원장 엔티티가 이미 학습된 상태입니다.`,
-      insight: '강의록 20번: AI는 병원은 말해도 사람은 말하지 않는다. 실명이 엔티티가 되어야 사람이 브랜드가 된다.',
+            : `실명 언급률 ${realNameRate}% — 업계 기준값 0.7%를 크게 상회합니다. 원장 엔티티가 이미 학습된 상태입니다.`,
+      insight: 'AI는 병원 이름은 말해도 사람 이름은 말하지 않습니다. 실명이 엔티티로 학습돼야 원장 개인이 브랜드가 됩니다.',
     };
   }
 
@@ -596,7 +596,7 @@ export class LectureMetricsService {
   // AEO vs GEO 분리 (isWebSearch)
   // ═════════════════════════════════════════════════════════════
   /**
-   * 강의록: AEO = 실시간 검색 + RAG (반영 2~4주, 단기전)
+   * AEO = 실시간 검색 + RAG (반영 2~4주, 단기전)
    *         GEO = 사전학습 진입 (모델 업데이트 주기, 장기전)
    *
    * isWebSearch=false 인데 언급됐다 = 검색 없이도 안다 = **사전학습에 진입한 자산**
@@ -682,7 +682,7 @@ export class LectureMetricsService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 13번】언어별 성적표
+  // 언어별 성적표
   // ═════════════════════════════════════════════════════════════
   async getLanguageScoreboard(hospitalId: string, days = 30) {
     const { hospital } = await this.getHospitalContext(hospitalId);
@@ -741,12 +741,12 @@ export class LectureMetricsService {
       koreanMentionRate: ko?.mentionRate ?? 0,
       foreignMentionRate: foreignRate,
       foreignResponses: foreignTotal,
-      /** 외국어가 한국어보다 유리한 배율 — 강의록 "무주공산" 검증 */
+      /** 외국어가 한국어보다 유리한 배율 — 저경쟁 구간 검증 */
       foreignAdvantage:
         ko && ko.mentionRate > 0 ? Math.round((foreignRate / ko.mentionRate) * 100) / 100 : null,
       insight:
         foreignTotal === 0
-          ? '외국어 질문이 없습니다. 강의록 13번 — 다국어는 무주공산입니다. 경쟁자가 아예 없는 영역에 질문을 심어보십시오.'
+          ? '외국어 질문이 없습니다. 다국어 영역은 경쟁 병원이 거의 손대지 않는 구간이므로, 질문을 심어 확인해 볼 가치가 큽니다.'
           : foreignRate > (ko?.mentionRate ?? 0)
             ? `외국어 질문 언급률 ${foreignRate}%가 한국어 ${ko?.mentionRate ?? 0}%보다 높습니다. 무주공산이 실제로 확인됩니다 — 다국어 콘텐츠 투자 회수율이 국내보다 좋습니다.`
             : `외국어 질문 언급률 ${foreignRate}% vs 한국어 ${ko?.mentionRate ?? 0}%. 외국어 영역에서 아직 우위를 못 잡았습니다.`,
@@ -754,7 +754,7 @@ export class LectureMetricsService {
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 28-②】질문 난이도별 SoV — 쉬운 질문의 착시 제거
+  // 질문 난이도별 SoV — 쉬운 질문의 착시 제거
   // ═════════════════════════════════════════════════════════════
   async getDifficultyBreakdown(hospitalId: string, days = 30) {
     const { hospital } = await this.getHospitalContext(hospitalId);
@@ -857,15 +857,15 @@ export class LectureMetricsService {
       methodology:
         '난이도는 지역 범위(동<시<도<전국) + 비교·추천 요구 + 조건 개수로 판정합니다. ' +
         '종합 SoV는 쉬운 질문 비중에 좌우되므로, 난이도 3구간 단순평균(balancedSov)을 함께 봐야 착시가 사라집니다.',
-      insight: '강의록 28-②: 쉬운 질문만 넣고 SoV 90%를 자랑하는 건 경쟁 없는 곳에서 이긴 것이다.',
+      insight: '쉬운 질문만 넣어 SoV 90%가 나왔다면, 경쟁이 없는 곳에서 이긴 것입니다. 난이도를 섞어야 실력이 보입니다.',
     };
   }
 
   // ═════════════════════════════════════════════════════════════
-  // 【강의록 29번】부정 언급 조기경보
+  // 부정 언급 조기경보
   // ═════════════════════════════════════════════════════════════
   /**
-   * 강의록: 긍정 88.9 / 중립 11.0 / 부정 0.1%
+   * 업계 실측: 긍정 88.9 / 중립 11.0 / 부정 0.1%
    * → 드물다. 드물어서 평균에 묻힌다. 묻히니까 치명적이다.
    *   비율로 보면 안 되고 **건별로 잡아야** 한다.
    */
@@ -900,7 +900,7 @@ export class LectureMetricsService {
     let negative = 0;
 
     const alerts: any[] = [];
-    /** 부정 응답에서 인용된 도메인 = 부정의 출처 후보 (강의록 29번 역추적) */
+    /** 부정 응답에서 인용된 도메인 = 부정의 출처 후보 (역추적) */
     const negativeDomains = new Map<string, number>();
 
     for (const r of responses) {
@@ -991,11 +991,11 @@ export class LectureMetricsService {
         negative: { count: negative, rate: rate(negative) },
       },
       benchmark: {
-        note: '강의록 실측 벤치마크',
+        note: '동종 병원 실측 기준값',
         positive: 88.9,
         neutral: 11.0,
         negative: 0.1,
-        source: '강의록 29번',
+        source: '실측: 긍정 88.9% / 중립 11.0% / 부정 0.1%',
       },
       /** 건수 기준 경보 — 비율이 낮아도 건이 있으면 무조건 노출 */
       alertCount: alerts.length,
@@ -1004,7 +1004,7 @@ export class LectureMetricsService {
       topNegativeSources,
       insight:
         negative === 0
-          ? '부정 언급 0건입니다. 다만 강의록 29번대로 부정은 0.1% 수준으로 드물게 터지므로, 비율이 아니라 건수로 계속 감시합니다.'
+          ? '부정 언급 0건입니다. 다만 부정은 0.1% 수준으로 드물게 터지므로, 비율이 아니라 건수로 계속 감시합니다.'
           : `부정 언급 ${negative}건 (${rate(negative)}%). 비율은 작아도 이 답변을 본 환자는 100% 그 문장을 읽습니다.` +
             (topNegativeSources.length > 0
               ? ` 가장 자주 인용된 부정 출처는 ${topNegativeSources[0].domain}(${topNegativeSources[0].negativeResponses}건)입니다 — 여기를 최신·고신뢰 정보로 덮어써야 합니다.`
@@ -1033,16 +1033,14 @@ export class LectureMetricsService {
     const cards = [
       {
         key: 'homeBaseShare',
-        lectureItem: 2,
         title: '본진(홈페이지·GBP) 비중',
         value: homeBase?.share ?? 0,
         unit: '%',
         status: (homeBase?.share ?? 0) >= 10 ? 'GOOD' : (homeBase?.share ?? 0) > 0 ? 'WARN' : 'BAD',
-        note: '강의록 2번 — 홈페이지가 최상위 출처',
+        note: 'AI가 가장 신뢰하는 출처는 공식 홈페이지',
       },
       {
         key: 'efficiencyLeader',
-        lectureItem: 25,
         title: '문서당 효율 1위 채널',
         value: efficiency.channels[0]?.channelLabel ?? '-',
         unit: '',
@@ -1051,7 +1049,6 @@ export class LectureMetricsService {
       },
       {
         key: 'dongLeverage',
-        lectureItem: 12,
         title: '동 단위 유리 배율',
         value: region.dongVsSigungu ?? 0,
         unit: '배',
@@ -1063,20 +1060,18 @@ export class LectureMetricsService {
               : region.dongVsSigungu >= 1
                 ? 'WARN'
                 : 'BAD',
-        note: '강의록 벤치마크 1.7배',
+        note: '업계 기준값 1.7배',
       },
       {
         key: 'realNameRate',
-        lectureItem: 20,
         title: '원장 실명 언급률',
         value: director.realNameRate,
         unit: '%',
         status: director.realNameRate >= 5 ? 'GOOD' : director.realNameRate > 0 ? 'WARN' : 'BAD',
-        note: '강의록 벤치마크 0.7%',
+        note: '업계 기준값 0.7%',
       },
       {
         key: 'geoPenetration',
-        lectureItem: 0,
         title: 'GEO 진입도 (검색 없이 인지)',
         value: split.geo.mentionRate,
         unit: '%',
@@ -1085,7 +1080,6 @@ export class LectureMetricsService {
       },
       {
         key: 'balancedSov',
-        lectureItem: 28,
         title: '착시 보정 SoV',
         value: difficulty.balancedSov,
         unit: '%',
@@ -1095,7 +1089,6 @@ export class LectureMetricsService {
       },
       {
         key: 'negativeAlerts',
-        lectureItem: 29,
         title: '부정 언급 경보',
         value: negative.alertCount,
         unit: '건',
@@ -1104,7 +1097,6 @@ export class LectureMetricsService {
       },
       {
         key: 'avoidShare',
-        lectureItem: 32,
         title: "'하지마' 구역 비중",
         value: avoid?.share ?? 0,
         unit: '%',
@@ -1114,21 +1106,19 @@ export class LectureMetricsService {
     ];
 
     // 모든 경고 통합 (우선순위 순)
-    const allWarnings = [
-      ...portfolio.warnings.map((w) => ({ lectureItem: 32, message: w })),
-      ...difficulty.warnings.map((w) => ({ lectureItem: 28, message: w })),
+    const allWarnings: string[] = [
+      ...portfolio.warnings,
+      ...difficulty.warnings,
     ];
     if (negative.criticalCount > 0) {
-      allWarnings.unshift({
-        lectureItem: 29,
-        message: `치명적 부정 언급 ${negative.criticalCount}건이 감지됐습니다. 부정은 드물기 때문에 평균에 묻히지만, 그 답변을 본 환자에게는 100%입니다.`,
-      });
+      allWarnings.unshift(
+        `치명적 부정 언급 ${negative.criticalCount}건이 감지됐습니다. 부정은 드물기 때문에 평균에 묻히지만, 그 답변을 본 환자에게는 100%입니다.`,
+      );
     }
     if (director.realNameRate === 0 && director.doctorNameCandidates.length > 0) {
-      allWarnings.push({
-        lectureItem: 20,
-        message: `원장 실명이 AI 답변에 단 한 번도 등장하지 않았습니다. 실명이 엔티티로 학습되지 않은 상태입니다.`,
-      });
+      allWarnings.push(
+        `원장 실명이 AI 답변에 단 한 번도 등장하지 않았습니다. 실명이 엔티티로 학습되지 않은 상태입니다.`,
+      );
     }
 
     return {
@@ -1137,12 +1127,12 @@ export class LectureMetricsService {
       cards,
       warnings: allWarnings,
       insights: [
-        { lectureItem: 25, text: efficiency.insight },
-        { lectureItem: 12, text: region.insight },
-        { lectureItem: 20, text: director.prescription },
-        { lectureItem: 0, text: split.insight },
-        { lectureItem: 29, text: negative.insight },
-      ],
+        efficiency.insight,
+        region.insight,
+        director.prescription,
+        split.insight,
+        negative.insight,
+      ].filter((t): t is string => !!t),
     };
   }
 }

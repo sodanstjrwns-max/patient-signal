@@ -6,12 +6,12 @@ import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guar
 import { LectureMetricsService } from './lecture-metrics.service';
 
 /**
- * 강의록 실행 지표 API
+ * 성장 진단 API
  *
  * ⚠️ 가드 순서 고정: JwtAuthGuard → HospitalOwnershipGuard
  *    (Ownership 가드가 request.user를 요구하므로 반드시 뒤에 와야 함)
  */
-@ApiTags('강의록 실행 지표')
+@ApiTags('성장 진단')
 @Controller('lecture-metrics')
 @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 @UseInterceptors(HttpCacheInterceptor)
@@ -29,8 +29,8 @@ export class LectureMetricsController {
 
   @Get(':hospitalId/summary')
   @ApiOperation({
-    summary: '강의록 실행 지표 종합 (카드 8개 + 경고 + 인사이트)',
-    description: '강의록 2·12·20·25·28·29·32번 지표를 대시보드 카드 형태로 통합 반환',
+    summary: '성장 진단 종합 (카드 8개 + 경고 + 인사이트)',
+    description: '노출 원인을 분해한 8개 지표를 대시보드 카드 형태로 통합 반환',
   })
   @ApiQuery({ name: 'days', required: false, description: '집계 기간 (기본 30일, 최대 365)' })
   async summary(@Param('hospitalId') hospitalId: string, @Query('days') days?: string) {
@@ -64,7 +64,7 @@ export class LectureMetricsController {
   @Get(':hospitalId/region-leverage')
   @ApiOperation({
     summary: '【12·24번】지역 단위 배율표 (동 vs 시 vs 도)',
-    description: '강의록 실측 1.7배 / Gemini 3.0배 벤치마크 대비 자사 배율',
+    description: '업계 실측 1.7배 / Gemini 3.0배 기준값 대비 자사 배율',
   })
   @ApiQuery({ name: 'days', required: false })
   async regionLeverage(@Param('hospitalId') hospitalId: string, @Query('days') days?: string) {

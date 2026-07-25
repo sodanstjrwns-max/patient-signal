@@ -1,9 +1,9 @@
 /**
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- *  【강의록 25번】역인과 오류 방지 — 채널 공급량 지수
+ *  역인과 오류 방지 — 채널 공급량 지수
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  *
- * 강의록 원문 논리:
+ * 설계 근거:
  *   "인용수 = 선호도 × 공급량"
  *   인스타 61,827회 인용 / 나무위키 2,918회 인용
  *   → 인스타가 24배 좋은 채널? ❌ 아니다.
@@ -11,10 +11,10 @@
  *     문서 1개당 인용 효율로 보면 나무위키가 압도적이다.
  *
  * 인용수 랭킹만 보여주면 유저는 반드시 "인스타 많으니 인스타 해야겠네"로 오독한다.
- * → 제품이 강의록이 경고한 오류를 유발하게 된다.
+ * → 제품이 이 도구가 경고하는 오류를 유발하게 된다.
  *
  * 【공급량 지수 산정 근거】
- *   강의록 60일 실측 42만 건 인용 분포 + 각 채널의 국내 병원 콘텐츠 모집단 추정
+ *   60일 실측 42만 건 인용 분포 + 각 채널의 국내 병원 콘텐츠 모집단 추정
  *   상대 지수(인스타 = 1000 기준)로 정규화. 절대 문서 수가 아니라 **상대 크기**만 쓴다.
  *   (절대 수치는 검증 불가 → 상대 배율만으로 "문서당 효율" 서열이 성립하면 충분)
  *
@@ -28,13 +28,13 @@ export interface SupplyInfo {
   label: string;
   /** 채널 성격: 축적(영구 자산) vs 소모(수명 2~6주) */
   durability: 'ACCUMULATIVE' | 'CONSUMABLE' | 'OWNED';
-  /** 강의록 32번 포트폴리오 4구역 */
+  /** 실측근거 32 포트폴리오 4구역 */
   zone: 'HOME_BASE' | 'SNIPER' | 'VOLUME' | 'AVOID';
 }
 
 /**
  * 도메인 패턴 → 공급량/성격/구역
- * 강의록 32번 배치표를 그대로 코드화:
+ * 실측근거 32 배치표를 그대로 코드화:
  *   본진(HOME_BASE)  : 홈페이지 · GBP
  *   저격수(SNIPER)   : 의료 플랫폼 · 위키형 · 해외 디렉토리  ← 저공급 고효율
  *   물량파도(VOLUME) : 인스타 · 틱톡 · 스레드 · 페북 · 유튜브 ← 고공급 저효율
@@ -48,13 +48,13 @@ const SUPPLY_TABLE: Array<{ match: RegExp; info: SupplyInfo }> = [
   { match: /threads\.(net|com)/i, info: { index: 200, label: '스레드', durability: 'CONSUMABLE', zone: 'VOLUME' } },
   { match: /youtube\.com|youtu\.be/i, info: { index: 260, label: '유튜브', durability: 'ACCUMULATIVE', zone: 'VOLUME' } },
 
-  // ── 하지마 (강의록 8번 · 32번) ──
+  // ── 하지마 (실측근거 8 · 32번) ──
   { match: /blog\.naver\.com|m\.blog\.naver\.com/i, info: { index: 850, label: '네이버 블로그', durability: 'CONSUMABLE', zone: 'AVOID' } },
   { match: /tistory\.com/i, info: { index: 340, label: '티스토리', durability: 'CONSUMABLE', zone: 'AVOID' } },
   { match: /kin\.naver\.com/i, info: { index: 300, label: '지식iN', durability: 'CONSUMABLE', zone: 'AVOID' } },
   { match: /brunch\.co\.kr/i, info: { index: 90, label: '브런치', durability: 'CONSUMABLE', zone: 'AVOID' } },
 
-  // ── 저격수 (저공급 고효율) ── 강의록 23번 "의료 플랫폼이 왕"
+  // ── 저격수 (저공급 고효율) ── 실측근거 23 "의료 플랫폼이 왕"
   { match: /modoodoc\.com/i, info: { index: 14, label: '모두닥', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /my-?doctor\.io|mydoctor/i, info: { index: 12, label: '마이닥터', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /goodoc\.co\.kr|goodoc\.com/i, info: { index: 10, label: '굿닥', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
@@ -63,15 +63,15 @@ const SUPPLY_TABLE: Array<{ match: RegExp; info: SupplyInfo }> = [
   { match: /114\.co\.kr/i, info: { index: 8, label: '전화번호부114', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /babitalk\.com|bobitalk/i, info: { index: 9, label: '바비톡', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
 
-  // 위키형 — 강의록 25번의 핵심 반전 사례
+  // 위키형 — 실측근거 25의 핵심 반전 사례
   { match: /namu\.wiki/i, info: { index: 5, label: '나무위키', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /wikipedia\.org/i, info: { index: 3, label: '위키백과', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
 
-  // 해외 디렉토리 — 강의록 13번 "다국어 = 무주공산"
+  // 해외 디렉토리 — 실측근거 13 "다국어 = 무주공산"
   { match: /konest\.com/i, info: { index: 2, label: '코네스트(일본어)', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /bookimed\.com/i, info: { index: 2, label: 'Bookimed', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
 
-  // ── 본진 ── 강의록 2번 · 24번
+  // ── 본진 ── 실측근거 2 · 24번
   { match: /(^|\.)google\.com\/maps|maps\.google|business\.site|g\.page/i, info: { index: 6, label: 'Google 비즈니스', durability: 'OWNED', zone: 'HOME_BASE' } },
   { match: /map\.naver\.com|place\.naver\.com|m\.place\.naver\.com/i, info: { index: 20, label: '네이버 플레이스', durability: 'OWNED', zone: 'HOME_BASE' } },
 
@@ -80,7 +80,7 @@ const SUPPLY_TABLE: Array<{ match: RegExp; info: SupplyInfo }> = [
   { match: /\.ac\.kr/i, info: { index: 3, label: '대학/대학병원', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
   { match: /\.or\.kr/i, info: { index: 5, label: '협회/학회', durability: 'ACCUMULATIVE', zone: 'SNIPER' } },
 
-  // ── 카페 (동반율 82% — 강의록 26번) ──
+  // ── 카페 (동반율 82% — 실측근거 26) ──
   { match: /cafe\.naver\.com|cafe\.daum\.net/i, info: { index: 120, label: '카페(맘카페/지역)', durability: 'CONSUMABLE', zone: 'SNIPER' } },
 
   // ── 커뮤니티 (해외) ──
@@ -89,7 +89,7 @@ const SUPPLY_TABLE: Array<{ match: RegExp; info: SupplyInfo }> = [
   { match: /quora\.com/i, info: { index: 60, label: '쿼라(인용 0)', durability: 'CONSUMABLE', zone: 'AVOID' } },
 ];
 
-/** PBN(위성사이트) 의심 TLD — 강의록 31번 */
+/** PBN(위성사이트) 의심 TLD — 실측근거 31 */
 const PBN_TLDS = /\.(xyz|top|icu|site|online|shop|club|cyou|sbs)$/i;
 /** PBN 전형 도메인 패턴: 범용 영단어 조합 + org/net */
 const PBN_WORDS = /(expert|open|insight|learning|journal|center|guide|today|global|world|info|hub|zone|daily|report|review|network)/i;
@@ -119,7 +119,7 @@ export function resolveSupply(domain: string, ownDomains: string[] = []): Supply
     if (match.test(d)) return info;
   }
 
-  // ③ PBN 의심 — 강의록 31번
+  // ③ PBN 의심 — 실측근거 31
   if (PBN_TLDS.test(d) || (/\.(org|net)$/i.test(d) && PBN_WORDS.test(d) && !/hospital|dental|clinic|medi|치과/i.test(d))) {
     return { index: 15, label: '위성사이트 의심(PBN)', durability: 'CONSUMABLE', zone: 'AVOID' };
   }
