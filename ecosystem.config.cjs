@@ -21,6 +21,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
+        // 샌드박스(RAM 985MB) 전용 힙 제한 — Render/Vercel 운영에는 영향 없음
         NODE_OPTIONS: '--max-old-space-size=400'
       },
       watch: false,
