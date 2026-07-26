@@ -58,6 +58,9 @@ import {
 import Link from 'next/link';
 import { getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
 import { toast } from '@/hooks/useToast';
+import { MetricValue, resolveState } from '@/components/ui/metric-value';
+import { TermTip } from '@/components/ui/term-tooltip';
+import { DiagnosisBoard, buildFindings } from '@/components/dashboard/DiagnosisBoard';
 
 // ─── 플랫폼 색상/이름 ───
 const PLATFORM_META: Record<string, { name: string; color: string; bg: string; text: string; ringClass: string }> = {
@@ -115,10 +118,15 @@ export default function DashboardPage() {
 
   const { data: weekly } = useWeeklyScore();
   const { data: comparison } = useCompetitorComparison(canUseFeature(planType, 'competitorComparison'));
-  const { data: platformDetails } = usePlatformScores();
+  const { data: platformDetails, isLoading: platformLoading, isError: platformError } = usePlatformScores();
   const { data: mentionInsight } = useMentionInsight();
   const { data: sourceInsight } = useSourceInsight();
-  const { data: abhs } = useABHS();
+  const {
+    data: abhs,
+    isLoading: abhsLoading,
+    isError: abhsError,
+    refetch: refetchAbhs,
+  } = useABHS();
   const { data: ranking } = useRanking();
 
   const handleRefresh = () => {
@@ -146,19 +154,41 @@ export default function DashboardPage() {
     );
   }
 
-  // ─── SoV 계산 ───
-  const sovPercent = abhs?.sovPercent ?? 0;
-  const sovChange = weekly?.scoreChange ?? 0;
-  const abhsScore = abhs?.abhsScore ?? 0;
-  const avgSentiment = abhs?.avgSentimentV2 ?? 0;
+  // ─── 지표 상태 판정 ───
+  // ⚠️ 과거에는 `abhs?.sovPercent ?? 0` 으로 값을 꺼냈다. API가 타임아웃/에러여도
+  //    화면엔 "0%"가 찍혀서, 원장이 "우리 병원 AI 노출 0%"로 오독했다.
+  //    모르는 건 모른다고 표시한다. 0은 "정말 0일 때"만 쓴다.
+  const abhsState = resolveState({
+    isLoading: abhsLoading,
+    isError: abhsError,
+    hasData: abhs ? (abhs as any).hasData !== false : undefined,
+  });
+  const abhsOk = abhsState === 'ok' && !!abhs;
 
-  // 플랫폼별 SoV 데이터 추출
+  const sovPercent = abhsOk ? (abhs as any).sovPercent ?? null : null;
+  const sovChange = weekly?.scoreChange ?? 0;
+  const abhsScore = abhsOk ? (abhs as any).abhsScore ?? null : null;
+  const avgSentiment = abhsOk ? (abhs as any).avgSentimentV2 ?? null : null;
+  const depthDist = abhsOk ? ((abhs as any).depthDistribution ?? null) : null;
+  const intentScores = abhsOk ? ((abhs as any).intentScores ?? null) : null;
+
+  // ─── 플랫폼 데이터: 단일 출처(scores/platforms) ───
+  // 과거엔 abhs.platformContributions / platforms / dashboard.platformScores
+  // 세 곳에서 같은 개념을 각각 계산해 화면마다 값이 달랐다. platforms 하나로 통일한다.
+  const platformState = resolveState({
+    isLoading: platformLoading,
+    isError: platformError,
+    hasData: Array.isArray(platformDetails) ? platformDetails.length > 0 : undefined,
+  });
   const platformSovData = Array.isArray(platformDetails)
     ? platformDetails.map((p: any) => ({
         key: p.platform,
         name: PLATFORM_META[p.platform]?.name || p.platformName,
         mentionRate: p.mentionRate ?? 0,
+        mentionedCount: p.mentionedCount ?? 0,
+        totalQueries: p.totalQueries ?? 0,
         score: p.visibilityScore ?? 0,
+        hasData: p.hasData !== false && (p.totalQueries ?? 0) > 0,
         trend: p.trend?.direction || 'STABLE',
         trendChange: p.trend?.change ?? 0,
         color: PLATFORM_META[p.platform]?.color || '#6B7280',
@@ -168,13 +198,31 @@ export default function DashboardPage() {
       }))
     : [];
 
+  // ─── 진단 소견 생성 (근거 있는 것만) ───
+  const findings = buildFindings({
+    sovPercent,
+    mentionedCount: abhsOk ? (abhs as any).mentionedCount ?? null : null,
+    totalResponses: abhsOk ? (abhs as any).totalResponses ?? null : null,
+    depthDistribution: depthDist,
+    intentScores,
+    platforms: platformSovData.map(p => ({
+      key: p.key,
+      name: p.name,
+      mentionRate: p.mentionRate,
+      mentionedCount: p.mentionedCount,
+      totalQueries: p.totalQueries,
+    })),
+    negativeRate: dashboard?.sentiment?.negativeRate ?? null,
+    topCompetitor: weekly?.topCompetitors?.[0] ?? null,
+  });
+
   // Journey step completion
   const journeyDone = [
     (dashboard?.stats?.totalPrompts || 0) > 0,
     !!mentionInsight,
-    !!abhs,
+    abhsOk,
     (dashboard?.stats?.totalCompetitors || 0) > 0,
-    !!abhs,
+    abhsOk,
   ];
 
   return (
@@ -301,10 +349,24 @@ export default function DashboardPage() {
               <div className="flex items-end gap-6 mb-6">
                 <div>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-7xl sm:text-8xl font-black tracking-tighter tabular-nums leading-none">{sovPercent}</span>
-                    <span className="text-3xl font-bold text-white/25">%</span>
+                    <MetricValue
+                      state={abhsState}
+                      dark
+                      skeletonWidth="w-40"
+                      emptyLabel="아직 분석 전"
+                      onRetry={() => refetchAbhs()}
+                    >
+                      <>
+                        <span className="text-7xl sm:text-8xl font-black tracking-tighter tabular-nums leading-none">{sovPercent}</span>
+                        <span className="text-3xl font-bold text-white/25">%</span>
+                      </>
+                    </MetricValue>
                   </div>
-                  <p className="text-sm text-slate-400 mt-2 font-medium">AI가 우리 병원을 추천하는 비율</p>
+                  <p className="text-sm text-slate-400 mt-2 font-medium">
+                    {abhsState === 'ok' && sovPercent !== null && (abhs as any)?.totalResponses
+                      ? `환자 질문 ${((abhs as any).totalResponses as number).toLocaleString()}번 중 ${(((abhs as any).mentionedCount ?? 0) as number).toLocaleString()}번 우리 병원이 언급됐습니다`
+                      : 'AI가 우리 병원을 추천하는 비율'}
+                  </p>
                 </div>
                 {sovChange !== 0 && (
                   <div className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl text-sm font-bold backdrop-blur-md ${
@@ -329,30 +391,36 @@ export default function DashboardPage() {
                   ) : null}
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.04]">
-                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">ABHS</p>
-                  <p className="text-2xl font-black tabular-nums">{abhsScore}<span className="text-sm text-slate-600 ml-0.5 font-medium">/100</span></p>
-                </div>
-                <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.04]">
-                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">감성 톤</p>
-                  <p className={`text-2xl font-black tabular-nums ${avgSentiment >= 0.5 ? 'text-emerald-400' : avgSentiment <= -0.5 ? 'text-red-400' : 'text-slate-300'}`}>
-                    {avgSentiment > 0 ? '+' : ''}{avgSentiment.toFixed(1)}
+                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">
+                    <TermTip term="abhs" className="text-slate-500">추천 품질</TermTip>
                   </p>
+                  <MetricValue state={abhsState} dark skeletonWidth="w-16" emptyLabel="분석 전" onRetry={() => refetchAbhs()}>
+                    <p className="text-2xl font-black tabular-nums">{abhsScore}<span className="text-sm text-slate-600 ml-0.5 font-medium">/100</span></p>
+                  </MetricValue>
                 </div>
                 <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.04]">
-                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">추천 깊이</p>
-                  <div className="flex items-center gap-1.5 text-sm">
-                    {abhs?.depthDistribution ? (
-                      <>
-                        <span className="font-black text-emerald-400">R3 {abhs.depthDistribution.R3 ?? 0}</span>
-                        <span className="text-white/10">·</span>
-                        <span className="font-bold text-brand-400">R2 {abhs.depthDistribution.R2 ?? 0}</span>
-                        <span className="text-white/10">·</span>
-                        <span className="font-semibold text-amber-400">R1 {abhs.depthDistribution.R1 ?? 0}</span>
-                      </>
-                    ) : (
-                      <span className="text-slate-500 font-medium">수집 중</span>
-                    )}
-                  </div>
+                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">
+                    <TermTip term="sentiment" className="text-slate-500">말투</TermTip>
+                  </p>
+                  <MetricValue state={abhsState} dark skeletonWidth="w-14" emptyLabel="분석 전" onRetry={() => refetchAbhs()}>
+                    <p className={`text-2xl font-black tabular-nums ${(avgSentiment ?? 0) >= 0.5 ? 'text-emerald-400' : (avgSentiment ?? 0) <= -0.5 ? 'text-red-400' : 'text-slate-300'}`}>
+                      {(avgSentiment ?? 0) > 0 ? '+' : ''}{(avgSentiment ?? 0).toFixed(1)}
+                    </p>
+                  </MetricValue>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-white/[0.04] border border-white/[0.04]">
+                  <p className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-widest">
+                    <TermTip term="recommendationDepth" className="text-slate-500">추천 깊이</TermTip>
+                  </p>
+                  <MetricValue state={abhsState} dark skeletonWidth="w-24" emptyLabel="분석 전" onRetry={() => refetchAbhs()}>
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="font-black text-emerald-400">1순위 {depthDist?.R3 ?? 0}</span>
+                      <span className="text-white/10">·</span>
+                      <span className="font-bold text-brand-400">상위 {depthDist?.R2 ?? 0}</span>
+                      <span className="text-white/10">·</span>
+                      <span className="font-semibold text-amber-400">단순 {depthDist?.R1 ?? 0}</span>
+                    </div>
+                  </MetricValue>
                 </div>
               </div>
             </div>
@@ -400,16 +468,30 @@ export default function DashboardPage() {
         </div>
 
         {/* ═══════════════════════════════════════════
-            BENTO ROW 2: Platform cards (4 cols)
+            진단 → 원인 → 처방 (이 화면의 핵심)
+        ═══════════════════════════════════════════ */}
+        <DiagnosisBoard findings={findings} loading={abhsLoading || platformLoading} />
+
+        {/* ═══════════════════════════════════════════
+            BENTO ROW 2: Platform cards
+            ⚠️ 출처는 scores/platforms 하나뿐이다. 과거엔 여기서
+               dashboard.platformScores로 폴백해, 같은 화면 안에
+               서로 다른 언급률이 동시에 표시됐다.
         ═══════════════════════════════════════════ */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {(platformSovData.length > 0 ? platformSovData : ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'].map(key => ({
             key,
             name: PLATFORM_META[key]?.name || key,
-            mentionRate: (dashboard?.platformScores as any)?.[key.toLowerCase()] ?? 0,
+            mentionRate: 0,
+            mentionedCount: 0,
+            totalQueries: 0,
+            score: 0,
+            hasData: false,
             trend: 'STABLE',
             trendChange: 0,
             color: PLATFORM_META[key]?.color || '#6B7280',
+            bg: PLATFORM_META[key]?.bg || 'bg-slate-50',
+            text: PLATFORM_META[key]?.text || 'text-slate-700',
             ringClass: PLATFORM_META[key]?.ringClass || 'ring-slate-200',
           }))).map((p) => {
             // 【티저】STARTER 플랜은 GROK/CLOVA_X를 첫 질문 1개만 미리보기로 수집
@@ -432,18 +514,35 @@ export default function DashboardPage() {
                 {p.trend === 'UP' && <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />}
                 {p.trend === 'DOWN' && <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900 tabular-nums">{p.mentionRate}</span>
-                <span className="text-sm text-slate-400 font-bold">%</span>
-              </div>
-              <div className="w-full h-2 bg-slate-100/80 rounded-full mt-3 overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(p.mentionRate * 2, 100)}%`, backgroundColor: p.color }} />
-              </div>
-              {p.trendChange !== 0 && (
-                <p className={`text-[11px] mt-2.5 font-bold ${p.trendChange > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {p.trendChange > 0 ? '+' : ''}{p.trendChange}%p vs 이전
-                </p>
-              )}
+              <MetricValue
+                state={p.hasData ? platformState : (platformState === 'ok' ? 'empty' : platformState)}
+                skeletonWidth="w-20"
+                emptyLabel="아직 수집 전"
+              >
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-slate-900 tabular-nums">{p.mentionRate}</span>
+                    <span className="text-sm text-slate-400 font-bold">%</span>
+                  </div>
+                  {/* 분모를 함께 보여준다 — "0%"가 실패인지 진짜 0인지 한눈에 구분 */}
+                  <p className="text-[11px] text-slate-400 font-semibold mt-1 tabular-nums">
+                    질문 {p.totalQueries.toLocaleString()}번 중 {p.mentionedCount.toLocaleString()}번 언급
+                  </p>
+                  <div className="w-full h-2 bg-slate-100/80 rounded-full mt-2.5 overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(p.mentionRate * 2, 100)}%`, backgroundColor: p.color }} />
+                  </div>
+                  {p.mentionedCount === 0 && p.totalQueries > 0 && (
+                    <p className="text-[11px] mt-2.5 font-bold text-red-500">
+                      이 채널에서는 한 번도 안 나옵니다
+                    </p>
+                  )}
+                  {p.trendChange !== 0 && (
+                    <p className={`text-[11px] mt-2.5 font-bold ${p.trendChange > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {p.trendChange > 0 ? '+' : ''}{p.trendChange}%p vs 이전
+                    </p>
+                  )}
+                </>
+              </MetricValue>
               {isTeaser && (
                 <Link href="/dashboard/billing" className="block text-[11px] mt-2.5 font-bold text-violet-600 hover:text-violet-800 transition-colors">
                   첫 질문 1개만 분석 중 — 전체 분석은 STANDARD부터 →

@@ -500,6 +500,10 @@ export class AICrawlerController {
           mentionPosition: true,
           sentimentLabel: true,
           competitorsMentioned: true,
+          // 신뢰도 필드 — 과거엔 select에서 빠져 있어 아래 confidenceSummary를
+          // 0.5/0으로 하드코딩할 수밖에 없었다. 실측값을 그대로 쓴다.
+          confidenceScore: true,
+          isLowConfidence: true,
           prompt: { select: { promptText: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -623,13 +627,18 @@ export class AICrawlerController {
       ourStrengthProfile: ourAttributes,
       competitorComparison,
       // 【할루시네이션 감소】신뢰도 요약
-      confidenceSummary: {
-        avgConfidence: responses.length > 0
-          ? 0.5 : 0,
-        lowConfidenceCount: 0,
-        highConfidenceCount: 0,
-        totalWithConfidence: 0,
-      },
+      confidenceSummary: (() => {
+        const scored = responses.filter(r => (r as any).confidenceScore != null);
+        const avg = scored.length > 0
+          ? scored.reduce((a, r) => a + ((r as any).confidenceScore as number), 0) / scored.length
+          : 0;
+        return {
+          avgConfidence: Math.round(avg * 100) / 100,
+          lowConfidenceCount: responses.filter(r => (r as any).isLowConfidence === true).length,
+          highConfidenceCount: scored.filter(r => ((r as any).confidenceScore as number) >= 0.7).length,
+          totalWithConfidence: scored.length,
+        };
+      })(),
       // 샘플 추천 멘트 (언급된 응답 중 대표 3개)
       sampleMentions: responses
         .filter(r => r.isMentioned && r.responseText)
@@ -644,8 +653,8 @@ export class AICrawlerController {
             excerpt: nameIdx >= 0 ? '...' + r.responseText.substring(start, end) + '...' : r.responseText.substring(0, 300),
             position: r.mentionPosition,
             sentiment: r.sentimentLabel,
-            confidenceScore: null,
-            isLowConfidence: false,
+            confidenceScore: (r as any).confidenceScore ?? null,
+            isLowConfidence: (r as any).isLowConfidence ?? false,
           };
         }),
     };

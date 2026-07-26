@@ -25,10 +25,14 @@ export interface ABHSResult {
   avgSentimentV2: number;              // 평균 감성 점수
   platformContributions: Record<string, PlatformContribution>;
   intentScores: Record<string, number>; // 의도별 점수
-  depthDistribution: Record<string, number>; // R0~R3 분포
+  depthDistribution: Record<string, number>; // R0~R3 분포 (언급된 응답 기준)
   rawScore: number;                    // 정규화 전 원시 점수
   maxPossibleScore: number;            // 최대 가능 점수
   competitiveShare?: number;           // 경쟁사 대비 점유율
+  // 아래 3개는 "데이터가 없어서 0"인지 "정말 0"인지 프런트가 구분하기 위한 근거값
+  totalResponses: number;              // 집계에 사용된 전체 응답 수
+  mentionedCount: number;              // 그중 우리 병원이 언급된 수
+  hasData: boolean;                    // false면 계산 불가 (0으로 표시하면 안 됨)
 }
 
 export interface PlatformContribution {
@@ -37,8 +41,9 @@ export interface PlatformContribution {
   contribution: number;       // 이 플랫폼의 ABHS 기여분
   sovPercent: number;
   avgSentiment: number;
-  avgDepth: string;
+  avgDepth: string;           // 언급된 응답만의 평균 추천 깊이
   responseCount: number;
+  mentionedCount: number;     // 언급된 응답 수 (avgDepth의 모집단)
 }
 
 export interface ABHSResponseAnalysis {
@@ -95,17 +100,13 @@ export class ABHSService {
         totalRecommendations: true,
         sentimentScore: true,
         sentimentLabel: true,
-        citedSources: true,
-        competitorsMentioned: true,
-        responseText: true,
-        responseDate: true,
         sentimentScoreV2: true,
         recommendationDepth: true,
         queryIntent: true,
-        platformWeight: true,
-        abhsContribution: true,
-        citedUrl: true,
-        prompt: { select: { id: true, promptText: true, specialtyCategory: true } },
+        // ⚠️ responseText / citedSources / competitorsMentioned / prompt 는
+        // 이 계산에서 쓰이지 않는다. 20,000건 규모 병원에서 responseText까지
+        // 통째로 로딩하면 응답이 30초 타임아웃을 넘겨 프런트가 abhs=undefined를
+        // 받고 화면에 0을 그려버린다. 필요한 필드만 select 한다.
       },
     });
 
@@ -144,6 +145,7 @@ export class ABHSService {
       let sentimentSum = 0;
       let depthSum = 0;
       let sentimentCount = 0;
+      let depthCount = 0;
 
       for (const resp of platResponses) {
         const sentV2 = (resp as any).sentimentScoreV2 ?? this.legacySentimentToV2(resp.sentimentScore, resp.sentimentLabel);
@@ -167,15 +169,27 @@ export class ABHSService {
           sentimentSum += sentV2;
           sentimentCount++;
         }
-        depthSum += depthScore;
+        // ⚠️ 추천 깊이는 "언급된 응답"에서만 의미가 있다.
+        // 언급 안 된 응답(=R0)까지 분모에 넣으면 언급률이 4%인 병원은
+        // 실제로 R2/R3를 여러 건 받고도 평균이 항상 R0으로 찍힌다.
+        // (같은 파일 아래 depthDistribution은 이미 언급분만 집계 중 — 모순 제거)
+        if (resp.isMentioned) {
+          depthSum += depthScore;
+          depthCount++;
+        }
       }
 
       totalWeightedScore += platScore;
       totalMaxScore += platMaxScore;
 
       const avgSentiment = sentimentCount > 0 ? sentimentSum / sentimentCount : 0;
-      const avgDepthScore = platResponses.length > 0 ? depthSum / platResponses.length : 0;
-      const avgDepth = avgDepthScore >= 3.5 ? 'R3' : avgDepthScore >= 2.5 ? 'R2' : avgDepthScore >= 1.0 ? 'R1' : 'R0';
+      const avgDepthScore = depthCount > 0 ? depthSum / depthCount : 0;
+      const avgDepth =
+        depthCount === 0 ? 'R0'
+        : avgDepthScore >= 3.5 ? 'R3'
+        : avgDepthScore >= 2.5 ? 'R2'
+        : avgDepthScore >= 1.0 ? 'R1'
+        : 'R0';
 
       platformContributions[platform] = {
         weight,
@@ -185,6 +199,7 @@ export class ABHSService {
         avgSentiment,
         avgDepth,
         responseCount: platResponses.length,
+        mentionedCount: platMentioned.length,
       };
     }
 
@@ -241,6 +256,9 @@ export class ABHSService {
       depthDistribution,
       rawScore: Math.round(totalWeightedScore * 100) / 100,
       maxPossibleScore: Math.round(totalMaxScore * 100) / 100,
+      totalResponses,
+      mentionedCount: mentionedResponses.length,
+      hasData: true,
     };
   }
 
@@ -584,6 +602,10 @@ export class ABHSService {
       depthDistribution: { R0: 0, R1: 0, R2: 0, R3: 0 },
       rawScore: 0,
       maxPossibleScore: 0,
+      totalResponses: 0,
+      mentionedCount: 0,
+      // 응답 자체가 없으면 "0점"이 아니라 "아직 모른다" — 프런트가 0을 그리면 안 된다
+      hasData: false,
     };
   }
 

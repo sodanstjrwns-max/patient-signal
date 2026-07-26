@@ -1818,30 +1818,93 @@ JSON 형식으로만 답변:
     const end = Math.min(response.length, firstIndex + matchedVariant.length + 100);
     const context = response.slice(start, end).toLowerCase();
 
-    // 【개선7】개선된 키워드 목록 (부정어 패턴 추가)
-    const positiveKeywords = ['추천', '좋은', '유명', '전문', '실력', '친절', '만족', '최고', '인기', '신뢰', '베스트', '인정', '검증', '우수', '탁월', '뛰어난', '정확한', '안전한', '깨끗한', '편안한'];
-    const negativeKeywords = ['불만', '비추', '비싼', '불친절', '후회', '문제', '주의', '논란', '피해', '사기', '최악', '실망', '부작용', '위험', '비위생'];
-    // 부정어 패턴: "추천하지 않는다", "좋지 않다" 등
-    const negationPatterns = ['않', '못', '안 ', '없', '아닌'];
+    return this.scoreSentimentContext(context);
+  }
 
-    let score = 0;
-    for (const keyword of positiveKeywords) {
-      if (context.includes(keyword)) {
-        // 부정어 패턴 체크
-        const keywordIdx = context.indexOf(keyword);
-        const prefix = context.slice(Math.max(0, keywordIdx - 5), keywordIdx);
-        const suffix = context.slice(keywordIdx, keywordIdx + keyword.length + 5);
-        const hasNegation = negationPatterns.some(neg => prefix.includes(neg) || suffix.includes(neg));
-        
-        if (hasNegation) {
-          score -= 0.15; // 부정어 + 긍정 키워드 = 부정
-        } else {
-          score += 0.15;
+  /**
+   * 감성 점수 산출 — 절(clause) 단위 판정
+   *
+   * [기존 문제]
+   *   부정어를 키워드 앞뒤 ±5자에서만 찾았다. 한국어는 부정 표현이 서술어 끝에
+   *   오기 때문에 이 창이 너무 좁다. 그래서 아래 문장이 POSITIVE로 집계됐다:
+   *     "역삼동 A치과를 추천하는 분들이 많지만 저는 권하지 않습니다"
+   *   또 keyword를 indexOf로 첫 등장만 검사해서, 같은 단어가 여러 번 나와도
+   *   한 번만 반영됐다.
+   *
+   * [변경]
+   *   1) 문장부호 + 역접 연결어미(하지만/그러나/다만/…)로 절을 나눈다.
+   *   2) 부정 판정은 "그 키워드가 들어 있는 절 안"에서만 한다.
+   *   3) 역접 뒤 절은 화자의 실제 입장이므로 가중치를 2배로 둔다.
+   *   4) "추천하지 않", "권하지 않" 같은 강한 비추천 표현은 별도 감점한다.
+   */
+  private scoreSentimentContext(context: string): { score: number; label: SentimentLabel } {
+    const POSITIVE = ['추천', '좋은', '유명', '전문', '실력', '친절', '만족', '최고', '인기', '신뢰', '베스트', '인정', '검증', '우수', '탁월', '뛰어난', '정확한', '안전한', '깨끗한', '편안한'];
+    const NEGATIVE = ['불만', '비추', '비싼', '비싸', '불친절', '후회', '문제', '주의', '논란', '피해', '사기', '최악', '실망', '부작용', '위험', '비위생', '불결', '불안전'];
+    // 긍정어 앞에 붙어 뜻을 뒤집는 접두사 — "불친절"이 "친절"로 집계되던 문제 방지
+    const NEG_PREFIX = ['불', '미', '무', '비'];
+    // 절 안에 있으면 그 절의 긍정 표현을 뒤집는 부정 표지
+    const NEGATION = ['않', '못하', '못한', '안 ', '없', '아닌', '아니', '말라', '말고', '글쎄'];
+    // 부정 여부와 무관하게 강하게 감점되는 관용 표현
+    const STRONG_NEGATIVE = ['추천하지 않', '권하지 않', '권하고 싶지 않', '비추천', '가지 마', '피하는 게', '피하시', '조심하'];
+    // 역접 — 이 뒤가 화자의 진짜 입장
+    const CONTRAST = ['하지만', '그러나', '지만', '다만', '반면', '그렇지만', '오히려', 'however', 'but '];
+
+    // 1) 절 분리
+    const rawClauses = context
+      .split(/(?<=[.!?。])\s+|[\n·•]|,\s*/)
+      .flatMap(seg => {
+        // 역접 연결어미에서 한 번 더 쪼갠다 (표지는 뒤쪽 절에 남긴다)
+        let parts = [seg];
+        for (const c of CONTRAST) {
+          parts = parts.flatMap(p => {
+            const i = p.indexOf(c);
+            if (i === -1) return [p];
+            return [p.slice(0, i + c.length), p.slice(i + c.length)];
+          });
         }
+        return parts;
+      })
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const clauses = rawClauses.length > 0 ? rawClauses : [context];
+
+    // 2) 역접 지점 이후 절을 식별 (가중치 2배)
+    let contrastSeen = false;
+    let score = 0;
+
+    for (const clause of clauses) {
+      const isAfterContrast = contrastSeen;
+      if (CONTRAST.some(c => clause.includes(c))) contrastSeen = true;
+
+      const w = isAfterContrast ? 2 : 1;
+      const hasNegation = NEGATION.some(neg => clause.includes(neg));
+
+      // 강한 비추천 표현 — 절 단위로 즉시 감점
+      for (const sn of STRONG_NEGATIVE) {
+        if (clause.includes(sn)) score -= 0.5 * w;
       }
-    }
-    for (const keyword of negativeKeywords) {
-      if (context.includes(keyword)) score -= 0.2;
+
+      // 긍정 키워드: 같은 절에 부정 표지가 있으면 반전.
+      // 단, "불친절"처럼 부정 접두사가 바로 앞에 붙은 등장은 긍정으로 세지 않는다.
+      for (const kw of POSITIVE) {
+        let idx = clause.indexOf(kw);
+        let counted = false;
+        while (idx !== -1) {
+          const prevChar = idx > 0 ? clause[idx - 1] : '';
+          if (!NEG_PREFIX.includes(prevChar)) { counted = true; break; }
+          idx = clause.indexOf(kw, idx + kw.length);
+        }
+        if (!counted) continue;
+        score += (hasNegation ? -0.15 : 0.15) * w;
+      }
+
+      // 부정 키워드는 반전시키지 않는다 ("문제 없다"류 오탐을 피하려면
+      // 부정 표지가 있을 때 감점 폭만 줄인다)
+      for (const kw of NEGATIVE) {
+        if (!clause.includes(kw)) continue;
+        score -= (hasNegation ? 0.05 : 0.2) * w;
+      }
     }
 
     score = Math.max(-1, Math.min(1, score));
