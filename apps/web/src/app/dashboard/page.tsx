@@ -189,6 +189,9 @@ export default function DashboardPage() {
         totalQueries: p.totalQueries ?? 0,
         score: p.visibilityScore ?? 0,
         hasData: p.hasData !== false && (p.totalQueries ?? 0) > 0,
+        // 【수집 신선도】"0%"와 "수집이 멈춤"은 다른 문제 — 백엔드가 판정해서 내려준다
+        collectionStatus: (p.collectionStatus ?? null) as 'ACTIVE' | 'STALLED' | 'NEVER' | null,
+        staleDays: (p.staleDays ?? null) as number | null,
         trend: p.trend?.direction || 'STABLE',
         trendChange: p.trend?.change ?? 0,
         color: PLATFORM_META[p.platform]?.color || '#6B7280',
@@ -211,6 +214,8 @@ export default function DashboardPage() {
       mentionRate: p.mentionRate,
       mentionedCount: p.mentionedCount,
       totalQueries: p.totalQueries,
+      collectionStatus: p.collectionStatus,
+      staleDays: p.staleDays,
     })),
     negativeRate: dashboard?.sentiment?.negativeRate ?? null,
     topCompetitor: weekly?.topCompetitors?.[0] ?? null,
@@ -487,6 +492,8 @@ export default function DashboardPage() {
             totalQueries: 0,
             score: 0,
             hasData: false,
+            collectionStatus: null as 'ACTIVE' | 'STALLED' | 'NEVER' | null,
+            staleDays: null as number | null,
             trend: 'STABLE',
             trendChange: 0,
             color: PLATFORM_META[key]?.color || '#6B7280',
@@ -496,6 +503,8 @@ export default function DashboardPage() {
           }))).map((p) => {
             // 【티저】STARTER 플랜은 GROK/CLOVA_X를 첫 질문 1개만 미리보기로 수집
             const isTeaser = planType === 'STARTER' && (p.key === 'GROK' || p.key === 'CLOVA_X');
+            // 【수집 중단】3일 넘게 새 응답이 없으면 숫자보다 이 사실이 먼저다
+            const isStalled = p.collectionStatus === 'STALLED';
             return (
             <div key={p.key} className="glass-bento p-5 group relative overflow-hidden">
               {/* Accent top bar */}
@@ -505,9 +514,14 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ring-2 ring-offset-2 ring-offset-white/60 ${p.ringClass}`} style={{ backgroundColor: p.color }} />
                   <span className="text-sm font-black text-slate-800">{p.name}</span>
-                  {isTeaser && (
+                  {isTeaser && !isStalled && (
                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 whitespace-nowrap">
                       미리보기
+                    </span>
+                  )}
+                  {isStalled && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 whitespace-nowrap">
+                      수집 멈춤
                     </span>
                   )}
                 </div>
@@ -531,11 +545,15 @@ export default function DashboardPage() {
                   <div className="w-full h-2 bg-slate-100/80 rounded-full mt-2.5 overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${Math.min(p.mentionRate * 2, 100)}%`, backgroundColor: p.color }} />
                   </div>
-                  {p.mentionedCount === 0 && p.totalQueries > 0 && (
+                  {isStalled ? (
+                    <p className="text-[11px] mt-2.5 font-bold text-amber-700 leading-snug">
+                      {p.staleDays}일째 새 응답이 없습니다 — 이 숫자는 옛날 것입니다
+                    </p>
+                  ) : p.mentionedCount === 0 && p.totalQueries > 0 ? (
                     <p className="text-[11px] mt-2.5 font-bold text-red-500">
                       이 채널에서는 한 번도 안 나옵니다
                     </p>
-                  )}
+                  ) : null}
                   {p.trendChange !== 0 && (
                     <p className={`text-[11px] mt-2.5 font-bold ${p.trendChange > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
                       {p.trendChange > 0 ? '+' : ''}{p.trendChange}%p vs 이전
@@ -543,9 +561,9 @@ export default function DashboardPage() {
                   )}
                 </>
               </MetricValue>
-              {isTeaser && (
+              {isTeaser && !isStalled && (
                 <Link href="/dashboard/billing" className="block text-[11px] mt-2.5 font-bold text-violet-600 hover:text-violet-800 transition-colors">
-                  첫 질문 1개만 분석 중 — 전체 분석은 STANDARD부터 →
+                  일부 질문만 미리보기로 분석 중 — 전체 분석은 STANDARD부터 →
                 </Link>
               )}
             </div>

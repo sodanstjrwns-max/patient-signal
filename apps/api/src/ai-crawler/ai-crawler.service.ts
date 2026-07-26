@@ -572,6 +572,22 @@ export class AICrawlerService implements OnModuleInit {
         return result;
       } catch (error: any) {
         lastError = error;
+
+        // 【과금 실패】크레딧 소진/한도 초과는 재시도해봐야 100% 또 실패한다.
+        // 2026-07-14 xAI 크레딧 소진 → Grok이 매 세션 3회씩 헛돌며 12일간 조용히 죽어 있었음.
+        // 즉시 중단하고 ERROR 레벨로 눈에 띄게 남긴다.
+        const msg = String(error.message || '');
+        const isBillingError =
+          /used all available credits|monthly spending limit|insufficient_quota|billing|quota exceeded|payment required/i.test(msg) ||
+          error.status === 402;
+        if (isBillingError) {
+          this.logger.error(
+            `💳 [${label}] 과금/크레딧 문제로 수집 불가 — 재시도 중단. ` +
+            `벤더 콘솔에서 크레딧/한도를 확인하세요. 원문: ${msg}`,
+          );
+          break;
+        }
+
         const isRetryable = 
           error.message?.includes('timeout') ||
           error.message?.includes('타임아웃') ||

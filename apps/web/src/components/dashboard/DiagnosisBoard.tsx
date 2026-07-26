@@ -32,6 +32,9 @@ export interface DiagnosisInput {
     mentionRate: number;
     mentionedCount: number;
     totalQueries: number;
+    /** 백엔드 판정: ACTIVE(수집 중) / STALLED(3일+ 응답 없음) / NEVER(한 번도 수집 안 됨) */
+    collectionStatus?: 'ACTIVE' | 'STALLED' | 'NEVER' | null;
+    staleDays?: number | null;
   }>;
   negativeRate: number | null;
   topCompetitor: { name: string; count: number } | null;
@@ -143,8 +146,29 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
     }
   }
 
-  // ── 3. 채널 구멍 — 한 군데도 안 나오는 플랫폼 ──
-  const dead = d.platforms.filter(p => p.totalQueries >= 30 && p.mentionedCount === 0);
+  // ── 2.5 수집 중단 — 모든 소견에 앞선다 (지표가 틀렸을 수 있다는 뜻이므로)
+  //   배경: 2026-07-14 xAI 크레딧이 느낌없이 소진돼 Grok 수집이 12일간 멈췄는데
+  //   화면엔 그저 "0%"로 보여 아무도 몰랐다. 숫자보다 "이 숫자를 믿지 말라"가 먼저다.
+  const stalled = d.platforms.filter(p => p.collectionStatus === 'STALLED');
+  if (stalled.length > 0) {
+    const worst = Math.max(...stalled.map(p => p.staleDays ?? 0));
+    out.push({
+      id: 'collection-stalled',
+      severity: 'critical',
+      headline: `${stalled.map(p => p.name).join(' · ')} 수집이 멈췄습니다`,
+      cause: `${stalled.map(p => `${p.name} ${p.staleDays ?? 0}일째 새 응답 없음`).join(', ')}. ` +
+        `이 채널의 숫자는 최대 ${worst}일 전 기록입니다. ` +
+        `언급이 안 되고 있는 것이 아니라, 물어보는 것 자체가 안 되고 있습니다 (API 키/크레딧 문제가 가장 흔합니다).`,
+      action: '설정 → API 연동에서 해당 플랫폼 상태를 확인하세요. 복구 전까지 이 채널 수치로는 판단하지 마세요.',
+      href: '/dashboard/api-keys',
+      cta: 'API 연동 상태 확인',
+    });
+  }
+
+  // ── 3. 채널 구멍 — 한 군데도 안 나오는 플랫폼 (수집이 살아있는 채널만 판단) ──
+  const dead = d.platforms.filter(
+    p => p.totalQueries >= 30 && p.mentionedCount === 0 && p.collectionStatus !== 'STALLED',
+  );
   if (dead.length > 0) {
     out.push({
       id: 'platform-dead',
@@ -210,7 +234,12 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
   }
 
   const order: Record<Severity, number> = { critical: 0, warn: 1, good: 2 };
-  return out.sort((a, b) => order[a.severity] - order[b.severity]);
+  // 수집 중단은 "지표 자체를 믿지 말라"는 경고이므로 무조건 최상단
+  return out.sort((a, b) => {
+    if (a.id === 'collection-stalled') return -1;
+    if (b.id === 'collection-stalled') return 1;
+    return order[a.severity] - order[b.severity];
+  });
 }
 
 export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loading?: boolean }) {

@@ -103,6 +103,23 @@ export class ScoresService {
       
       const totalQueries = platformResponses.length;
       const mentionedCount = platformResponses.filter(r => r.isMentioned).length;
+
+      // 【수집 신선도】"언급 0%"와 "수집 자체가 멈춤"은 완전히 다른 문제다.
+      // 2026-07-14 xAI 크레딧 소진으로 Grok 수집이 12일간 멈췄는데
+      // 화면에는 그냥 "0%"로 보여서 아무도 눈치채지 못한 사고 재발 방지.
+      const lastResponseDate = platformResponses.length > 0
+        ? platformResponses.reduce<Date | null>((latest, r) => {
+            const d = r.responseDate ? new Date(r.responseDate) : null;
+            if (!d) return latest;
+            return !latest || d > latest ? d : latest;
+          }, null)
+        : null;
+      const staleDays = lastResponseDate
+        ? Math.floor((Date.now() - lastResponseDate.getTime()) / 86400000)
+        : null;
+      // 3일 이상 새 응답이 없으면 수집이 멈춘 것으로 본다 (정상 크롤은 하루 3세션)
+      const collectionStatus: 'ACTIVE' | 'STALLED' | 'NEVER' =
+        totalQueries === 0 ? 'NEVER' : (staleDays !== null && staleDays >= 3 ? 'STALLED' : 'ACTIVE');
       const positiveCount = platformResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;
       const neutralCount = platformResponses.filter(r => r.sentimentLabel === 'NEUTRAL').length;
       const negativeCount = platformResponses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
@@ -185,6 +202,10 @@ export class ScoresService {
         verificationRate: totalQueries > 0 ? Math.round((verifiedCount / totalQueries) * 100) : 0,
         repeatConsistency: repeatAnalysis,
         hasData: totalQueries > 0,  // 데이터 유무 표시
+        // 【수집 신선도】프런트가 "0%(진짜 안 나옴)"와 "수집 중단"을 구분하기 위한 근거
+        lastResponseDate: lastResponseDate ? lastResponseDate.toISOString() : null,
+        staleDays,
+        collectionStatus,
       };
     }); // 항상 6개 플랫폼 모두 반환 (데이터 없으면 visibilityScore=0)
   }
