@@ -192,6 +192,9 @@ export default function DashboardPage() {
         // 【수집 신선도】"0%"와 "수집이 멈춤"은 다른 문제 — 백엔드가 판정해서 내려준다
         collectionStatus: (p.collectionStatus ?? null) as 'ACTIVE' | 'STALLED' | 'NEVER' | null,
         staleDays: (p.staleDays ?? null) as number | null,
+        // 【같은 0%, 다른 원인】웹을 안 보는 채널인가 vs 출처에 우리가 없는 것인가
+        zeroReason: (p.zeroReason ?? null) as 'NO_WEB_SEARCH' | 'SOURCE_GAP' | null,
+        competitorsPerResponse: (p.competitorsPerResponse ?? null) as number | null,
         trend: p.trend?.direction || 'STABLE',
         trendChange: p.trend?.change ?? 0,
         color: PLATFORM_META[p.platform]?.color || '#6B7280',
@@ -216,6 +219,8 @@ export default function DashboardPage() {
       totalQueries: p.totalQueries,
       collectionStatus: p.collectionStatus,
       staleDays: p.staleDays,
+      zeroReason: p.zeroReason,
+      competitorsPerResponse: p.competitorsPerResponse,
     })),
     negativeRate: dashboard?.sentiment?.negativeRate ?? null,
     topCompetitor: weekly?.topCompetitors?.[0] ?? null,
@@ -494,6 +499,8 @@ export default function DashboardPage() {
             hasData: false,
             collectionStatus: null as 'ACTIVE' | 'STALLED' | 'NEVER' | null,
             staleDays: null as number | null,
+            zeroReason: null as 'NO_WEB_SEARCH' | 'SOURCE_GAP' | null,
+            competitorsPerResponse: null as number | null,
             trend: 'STABLE',
             trendChange: 0,
             color: PLATFORM_META[key]?.color || '#6B7280',
@@ -549,9 +556,18 @@ export default function DashboardPage() {
                     <p className="text-[11px] mt-2.5 font-bold text-amber-700 leading-snug">
                       {p.staleDays}일째 새 응답이 없습니다 — 이 숫자는 옛날 것입니다
                     </p>
+                  ) : p.zeroReason === 'NO_WEB_SEARCH' ? (
+                    <p className="text-[11px] mt-2.5 font-bold text-slate-500 leading-snug">
+                      웹을 보지 않는 채널 — 콘텐츠로 움직이기 어렵습니다
+                    </p>
                   ) : p.mentionedCount === 0 && p.totalQueries > 0 ? (
-                    <p className="text-[11px] mt-2.5 font-bold text-red-500">
-                      이 채널에서는 한 번도 안 나옵니다
+                    <p className="text-[11px] mt-2.5 font-bold text-red-500 leading-snug">
+                      한 번도 안 나옵니다
+                      {(p.competitorsPerResponse ?? 0) >= 1 && (
+                        <span className="block font-semibold text-slate-500 mt-0.5">
+                          그러나 경쟁 변원은 한 번에 {p.competitorsPerResponse}개썯 나옵니다
+                        </span>
+                      )}
                     </p>
                   ) : null}
                   {p.trendChange !== 0 && (

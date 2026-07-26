@@ -67,6 +67,8 @@ export class ScoresService {
       aiPlatform: true, isMentioned: true, mentionPosition: true,
       totalRecommendations: true, sentimentLabel: true, sentimentScore: true,
       responseDate: true, repeatIndex: true, isWebSearch: true, isVerified: true,
+      // 【0건 원인 규명】"웹을 안 봐서 0건"인지 "웹은 보는데 출처에 우리가 없어서 0건"인지 판별
+      competitorsMentioned: true,
     } as const;
 
     const [allResponses, last7DaysResponses, prev7DaysResponses] = await Promise.all([
@@ -120,6 +122,26 @@ export class ScoresService {
       // 3일 이상 새 응답이 없으면 수집이 멈춘 것으로 본다 (정상 크롤은 하루 3세션)
       const collectionStatus: 'ACTIVE' | 'STALLED' | 'NEVER' =
         totalQueries === 0 ? 'NEVER' : (staleDays !== null && staleDays >= 3 ? 'STALLED' : 'ACTIVE');
+
+      // 【0건 원인 규명】같은 "0%"라도 처방이 완전히 다르다.
+      //  - 웹을 안 보는 채널(CLOVA X 등)  → 콘텐츠를 늘려도 안 나옴. 학습 데이터/브랜드 인지도 싸움.
+      //  - 웹을 보는데 경쟁사만 뽑는 채널 → 그 채널이 읽는 출처에 우리가 없는 것. 출처 진입이 처방.
+      // 2026-07-26 실측: CLOVA X 웹검색 0/100·경쟁사 0.2개/응답 vs GROK 100/100·경쟁사 5.0개/응답
+      const webSearchHits = platformResponses.filter(r => r.isWebSearch).length;
+      const webSearchRateRaw = totalQueries > 0 ? webSearchHits / totalQueries : 0;
+      const competitorMentions = platformResponses.reduce(
+        (sum, r) => sum + ((r as any).competitorsMentioned?.length ?? 0), 0,
+      );
+      const competitorsPerResponse = totalQueries > 0 ? competitorMentions / totalQueries : 0;
+      // 표본이 30건 이상일 때만 원인을 단정한다 (근거 없으면 판정하지 않음)
+      let zeroReason: 'NO_WEB_SEARCH' | 'SOURCE_GAP' | null = null;
+      if (totalQueries >= 30 && mentionedCount === 0 && collectionStatus === 'ACTIVE') {
+        if (webSearchRateRaw < 0.1) {
+          zeroReason = 'NO_WEB_SEARCH';       // 웹을 안 본다 → 콘텐츠로 해결 불가
+        } else if (competitorsPerResponse >= 1) {
+          zeroReason = 'SOURCE_GAP';          // 웹은 보는데 우리만 없다 → 출처 진입 문제
+        }
+      }
       const positiveCount = platformResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;
       const neutralCount = platformResponses.filter(r => r.sentimentLabel === 'NEUTRAL').length;
       const negativeCount = platformResponses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
@@ -206,6 +228,9 @@ export class ScoresService {
         lastResponseDate: lastResponseDate ? lastResponseDate.toISOString() : null,
         staleDays,
         collectionStatus,
+        // 【0건 원인】프런트가 같은 0%에 다른 처방을 내리기 위한 근거
+        competitorsPerResponse: Math.round(competitorsPerResponse * 10) / 10,
+        zeroReason,
       };
     }); // 항상 6개 플랫폼 모두 반환 (데이터 없으면 visibilityScore=0)
   }

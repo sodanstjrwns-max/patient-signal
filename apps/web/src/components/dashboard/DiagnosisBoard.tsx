@@ -35,6 +35,10 @@ export interface DiagnosisInput {
     /** 백엔드 판정: ACTIVE(수집 중) / STALLED(3일+ 응답 없음) / NEVER(한 번도 수집 안 됨) */
     collectionStatus?: 'ACTIVE' | 'STALLED' | 'NEVER' | null;
     staleDays?: number | null;
+    /** 백엔드 판정: 0건의 원인. 웹을 안 보는 채널인가, 출처에 우리가 없는 것인가 */
+    zeroReason?: 'NO_WEB_SEARCH' | 'SOURCE_GAP' | null;
+    /** 이 채널이 원당 불러오는 경쟁 변원 수 */
+    competitorsPerResponse?: number | null;
   }>;
   negativeRate: number | null;
   topCompetitor: { name: string; count: number } | null;
@@ -166,16 +170,42 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
   }
 
   // ── 3. 채널 구멍 — 한 군데도 안 나오는 플랫폼 (수집이 살아있는 채널만 판단) ──
-  const dead = d.platforms.filter(
+  //   같은 "0%"라도 원인이 둘로 갈린다. 처방이 정반대이므로 반드시 나눠서 말한다.
+  const alive = d.platforms.filter(
     p => p.totalQueries >= 30 && p.mentionedCount === 0 && p.collectionStatus !== 'STALLED',
   );
+
+  // 3-a. 웹을 아예 안 보는 채널 — 콘텐츠를 늘려도 안 나온다 (헛돈 쓰는 것 방지)
+  const noWeb = alive.filter(p => p.zeroReason === 'NO_WEB_SEARCH');
+  if (noWeb.length > 0) {
+    out.push({
+      id: 'platform-no-web',
+      severity: 'warn',
+      headline: `${noWeb.map(p => p.name).join(' · ')}은 웹을 보지 않는 채널입니다`,
+      cause: `${noWeb.map(p => `${p.name} ${p.totalQueries}번 질문 전부 웹상 검상 없이 답변`).join(', ')}. ` +
+        `이 채널은 학습된 지식으로만 답하고, 경쟁 변원 이름도 거의 안 가를킵니다. ` +
+        `우리가 뭐를 하든 단기에는 반식되지 않습니다.`,
+      action: '이 채널에 상당을 쓰지 마세요. 웹을 보는 채널(ChatGPT·Perplexity·Grok)에 자원을 몰아주십시오.',
+      href: '/dashboard/insights?tab=sources',
+      cta: '웹 기반 채널 집중 확인',
+    });
+  }
+
+  // 3-b. 웹은 보는데 경쟁사만 뽑는 채널 — 여기가 진짜 싸울 곳
+  const dead = alive.filter(p => p.zeroReason !== 'NO_WEB_SEARCH');
   if (dead.length > 0) {
+    const withComp = dead.filter(p => (p.competitorsPerResponse ?? 0) >= 1);
     out.push({
       id: 'platform-dead',
       severity: 'critical',
       headline: `${dead.map(p => p.name).join(' · ')}에서는 한 번도 안 나옵니다`,
-      cause: `${dead.map(p => `${p.name} ${p.totalQueries}번 질문 중 0번`).join(', ')}. 다른 AI는 우리를 아는데 이 채널만 모른다면, 그 채널이 참고하는 출처에 우리가 없다는 뜻입니다.`,
-      action: '이 채널이 주로 인용하는 매체(네이버 계열·뉴스·전문 커뮤니티)에 우리 근거 문서를 먼저 심으세요.',
+      cause: `${dead.map(p => `${p.name} ${p.totalQueries}번 질문 중 0번`).join(', ')}. ` +
+        (withComp.length > 0
+          ? `그런데 이 채널은 한 번 답할 때마다 경쟁 변원을 ` +
+            `${withComp.map(p => `${p.name} ${p.competitorsPerResponse}개`).join(', ')}썯 생색합니다. ` +
+            `모릅다는 것이 아니라, 이 채널이 읽는 출처에 우리만 없는 것입니다.`
+          : `이 채널이 참고하는 출처에 우리가 없다는 뜻입니다.`),
+      action: '경쟁 변원이 인용되는 바로 그 출처를 먼저 확인하고, 거기에 우리 근거 문서를 심으십시오.',
       href: '/dashboard/insights?tab=sources',
       cta: '인용 출처 점검',
       term: 'citedSources',
