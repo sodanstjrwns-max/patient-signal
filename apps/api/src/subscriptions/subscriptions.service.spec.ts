@@ -19,6 +19,7 @@ function createService(prismaOverrides: any = {}) {
     },
     hospital: { update: jest.fn(), findUnique: jest.fn() },
     couponRedemption: { findFirst: jest.fn().mockResolvedValue(null) },
+    payment: { findFirst: jest.fn().mockResolvedValue(null) },
     ...prismaOverrides,
   };
   const hospitalsService: any = { handlePlanUpgrade: jest.fn().mockResolvedValue({ addedPrompts: 0, newFeatures: [] }) };
@@ -143,7 +144,8 @@ describe('SubscriptionsService — 구독 갱신/트라이얼 핵심 로직', ()
   describe('upgradePlan (다운그레이드 차단)', () => {
     it('상위 플랜으로는 업그레이드 성공 (STARTER → PRO)', async () => {
       const { service, prisma } = createService();
-      prisma.subscription.findFirst.mockResolvedValue({ id: 's1', planType: 'STARTER' });
+      // P0-1 결제 근거 검증 통과용: 빌링키 등록된 구독
+      prisma.subscription.findFirst.mockResolvedValue({ id: 's1', planType: 'STARTER', billingKey: 'bk_test' });
       const result = await service.upgradePlan('h1', 'PRO');
       expect(result.success).toBe(true);
       expect(result.previousPlan).toBe('STARTER');

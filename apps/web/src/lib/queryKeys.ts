@@ -28,6 +28,7 @@ export const queryKeys = {
     sources: (hospitalId: string) => ['insights-sources', hospitalId] as const,
     sourcesDiagnostic: (hospitalId: string) => ['insights-sources-diagnostic', hospitalId] as const,
     geminiDiet: (hospitalId: string) => ['insights-gemini-diet', hospitalId] as const,
+    channelPriority: (hospitalId: string) => ['insights-channel-priority', hospitalId] as const,
     topUrls: (hospitalId: string) => ['insights-top-urls', hospitalId] as const,
     urlMatrix: (hospitalId: string) => ['insights-url-matrix', hospitalId] as const,
     breadth: (hospitalId: string) => ['insights-breadth', hospitalId] as const,

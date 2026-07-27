@@ -2470,6 +2470,196 @@ export class AICrawlerController {
 
   @UseInterceptors(HttpCacheInterceptor)
   @CacheTTL(600)
+  @Get('insights/channel-priority/:hospitalId')
+  @ApiOperation({ summary: '채널 투자 우선순위 - 전 AI 플랫폼 인용량×동반율×통제가능성 스코어링' })
+  async getChannelPriority(
+    @Param('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const windowDays = Math.min(parseInt(days || '60', 10) || 60, 90);
+    const since = new Date();
+    since.setDate(since.getDate() - windowDays);
+
+    const [hospital, responses] = await Promise.all([
+      this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { name: true, websiteUrl: true },
+      }),
+      this.prisma.aIResponse.findMany({
+        where: { hospitalId, createdAt: { gte: since } },
+        select: {
+          aiPlatform: true,
+          citedSources: true,
+          isMentioned: true,
+          sourceHints: true,
+        },
+      }),
+    ]);
+
+    let ownDomain: string | null = null;
+    if (hospital?.websiteUrl) {
+      try {
+        ownDomain = new URL(
+          hospital.websiteUrl.startsWith('http') ? hospital.websiteUrl : `https://${hospital.websiteUrl}`,
+        ).hostname.replace(/^www\./, '').toLowerCase();
+      } catch {}
+    }
+
+    const okHint = (x: string) =>
+      x.length > 0 && x.includes('.') && !x.includes(' ') && !x.includes('vertexaisearch');
+    const extractReal = (s: any): string | null => {
+      if (!s || typeof s !== 'object') return null;
+      const title = (s.title || '').toString().trim().toLowerCase();
+      const domain = (s.domain || '').toString().trim().toLowerCase();
+      if (okHint(title)) return title.replace(/^www\./, '');
+      if (okHint(domain)) return domain.replace(/^www\./, '');
+      return null;
+    };
+
+    // 채널 분류 (도메인 + 원본 URL로 구글지도 등 세분화)
+    const channelOf = (d: string, url: string): string => {
+      if (ownDomain && (d === ownDomain || d.endsWith(`.${ownDomain}`))) return '우리 병원 홈페이지';
+      if (d.includes('modoodoc')) return '모두닥';
+      if (d.includes('goodoc')) return '굿닥';
+      if (d.includes('cashdoc')) return '캐시닥';
+      if (d.includes('my-doctor.io')) return '마이닥터';
+      if (d.includes('doctornow')) return '닥터나우';
+      if (d.includes('hidoc')) return '하이닥';
+      if (d.includes('blog.naver')) return '네이버 블로그';
+      if (d.includes('cafe.naver')) return '네이버 카페';
+      if (d.includes('map.naver') || d.includes('place.naver')) return '네이버 플레이스';
+      if (d.includes('naver')) return '네이버 기타';
+      if (d.includes('instagram')) return '인스타그램';
+      if (d.includes('tiktok')) return '틱톡';
+      if (d.includes('youtube') || d.includes('youtu.be')) return '유튜브';
+      if (d.includes('namu.wiki')) return '나무위키';
+      if (d.includes('tistory')) return '티스토리';
+      if (d.includes('wikipedia')) return '위키피디아';
+      if (d.includes('reddit')) return '레딧';
+      if (d.includes('gangnamunni')) return '강남언니';
+      if (d.includes('kakao')) return '카카오';
+      if (d.includes('maps.app') || d.includes('maps.google') || url.includes('google.com/maps')) return '구글 지도';
+      if (d.includes('google')) return '구글 기타';
+      if (d.includes('.go.kr') || d.includes('hira') || d.includes('nhis')) return '정부/공공';
+      if (d.includes('.ac.kr')) return '대학/학술';
+      if (/dent|dental|chika|tooth|plant|ortho|clinic|hospital|med|hanui|derma|skin/.test(d)) return '타 병원 홈페이지';
+      return '기타';
+    };
+
+    // 통제 가능성 (0~5): 우리가 직접 콘텐츠를 깔거나 프로필을 관리할 수 있는 정도
+    const CONTROLLABILITY: Record<string, number> = {
+      '우리 병원 홈페이지': 5,
+      '티스토리': 5,
+      '네이버 블로그': 5,
+      '인스타그램': 5,
+      '유튜브': 4,
+      '모두닥': 4,
+      '굿닥': 4,
+      '캐시닥': 4,
+      '마이닥터': 4,
+      '닥터나우': 4,
+      '하이닥': 4,
+      '강남언니': 4,
+      '구글 지도': 4,
+      '네이버 플레이스': 4,
+      '카카오': 3,
+      '틱톡': 3,
+      '네이버 카페': 2,
+      '레딧': 2,
+      '나무위키': 2,
+      '네이버 기타': 2,
+      '위키피디아': 1,
+      '정부/공공': 1,
+      '대학/학술': 1,
+      '구글 기타': 1,
+      '기타': 1,
+      '타 병원 홈페이지': 0,
+    };
+
+    type ChStat = { count: number; mentioned: number; platforms: Record<string, number> };
+    const chMap = new Map<string, ChStat>();
+    let totalCitations = 0;
+
+    for (const r of responses) {
+      const hints: string[] = [];
+      if (r.sourceHints) {
+        try {
+          const arr = Array.isArray((r.sourceHints as any)?.sources) ? (r.sourceHints as any).sources : [];
+          for (const s of arr) {
+            const real = extractReal(s);
+            if (real) hints.push(real);
+          }
+        } catch {}
+      }
+      let hi = 0;
+      for (const url of r.citedSources || []) {
+        let domain: string | null = null;
+        if (url.includes('grounding-api-redirect')) {
+          domain = hints[hi] || hints[0] || null;
+          hi++;
+        } else {
+          try {
+            domain = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+          } catch {}
+        }
+        if (!domain) continue;
+        totalCitations++;
+        const ch = channelOf(domain, url);
+        const s = chMap.get(ch) || { count: 0, mentioned: 0, platforms: {} };
+        s.count++;
+        if (r.isMentioned) s.mentioned++;
+        s.platforms[r.aiPlatform] = (s.platforms[r.aiPlatform] || 0) + 1;
+        chMap.set(ch, s);
+      }
+    }
+
+    const maxCount = Math.max(...[...chMap.values()].map((v) => v.count), 1);
+
+    const channels = [...chMap.entries()]
+      .map(([channel, v]) => {
+        const companionRate = v.count > 0 ? Math.round((v.mentioned / v.count) * 100) : 0;
+        const controllability = CONTROLLABILITY[channel] ?? 1;
+        // 3축 스코어: 식탁 점유(sqrt 압축) 45% + 침투 여지 25% + 통제 가능성 30%
+        const volumeScore = Math.round(Math.sqrt(v.count / maxCount) * 100);
+        const gapScore = 100 - companionRate;
+        const priorityScore =
+          controllability === 0
+            ? 0
+            : Math.round(volumeScore * 0.45 + gapScore * 0.25 + (controllability / 5) * 100 * 0.3);
+        let verdict: string;
+        if (controllability === 0) verdict = '통제 불가';
+        else if (volumeScore >= 30 && companionRate < 40) verdict = '집중 투자';
+        else if (volumeScore >= 30) verdict = '유지·강화';
+        else if (controllability >= 4) verdict = '저비용 실험';
+        else verdict = '후순위';
+        return {
+          channel,
+          count: v.count,
+          share: totalCitations > 0 ? Math.round((v.count / totalCitations) * 1000) / 10 : 0,
+          companionRate,
+          platforms: v.platforms,
+          platformCount: Object.keys(v.platforms).length,
+          controllability,
+          volumeScore,
+          gapScore,
+          priorityScore,
+          verdict,
+        };
+      })
+      .sort((a, b) => b.priorityScore - a.priorityScore);
+
+    return {
+      hospitalName: hospital?.name,
+      period: `${windowDays}일`,
+      analyzedResponses: responses.length,
+      totalCitations,
+      focus: channels.filter((c) => c.verdict === '집중 투자').slice(0, 3),
+      channels,
+    };
+  }
+
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(600)
   @Get('insights/action-report/:hospitalId')
   @ApiOperation({ summary: '자동 액션 리포트 - AI 기반 주간 실행 계획 생성' })
   async getActionReport(

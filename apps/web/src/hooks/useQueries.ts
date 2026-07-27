@@ -168,6 +168,18 @@ export function useGeminiDiet(lazy = false) {
   });
 }
 
+/** 채널 투자 우선순위 스코어 */
+export function useChannelPriority(lazy = false) {
+  const hospitalId = useHospitalId();
+  return useQuery({
+    queryKey: queryKeys.insights.channelPriority(hospitalId!),
+    queryFn: () => crawlerApi.getChannelPriority(hospitalId!, 60).then(r => r.data),
+    enabled: !!hospitalId && !lazy,
+    staleTime: STALE_TIMES.INSIGHTS,
+    retry: 1,
+  });
+}
+
 /** Top URL 랭킹 (페이지 단위) */
 export function useTopUrls(lazy = false, limit = 50) {
   const hospitalId = useHospitalId();

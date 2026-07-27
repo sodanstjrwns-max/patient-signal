@@ -15,6 +15,7 @@ import {
   useTrendInsight,
   useSourceInsight,
   useGeminiDiet,
+  useChannelPriority,
   useTopUrls,
   useUrlMatrix,
   useSourceDiagnostic,
@@ -136,6 +137,7 @@ export default function InsightsPage() {
   const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
   const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
   const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
+  const { data: channelPriorityData } = useChannelPriority(activeTab !== 'actions');
 
 
 
@@ -242,7 +244,14 @@ export default function InsightsPage() {
           </Card>
         ) : (
           <>
-            {activeTab === 'actions' && actionData && <ActionReport data={actionData} />}
+            {activeTab === 'actions' && actionData && (
+              <div className="space-y-6">
+                {channelPriorityData && channelPriorityData.totalCitations > 0 && (
+                  <ChannelPriorityWidget data={channelPriorityData} />
+                )}
+                <ActionReport data={actionData} />
+              </div>
+            )}
             {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
             {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
             {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} cohort={trendCohort} onCohortChange={setTrendCohort} />}
@@ -757,6 +766,110 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
 }
 
 // ==================== 3-a. Gemini 실제 식단 위젯 ====================
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 채널 투자 우선순위 — AI 식탁 점유(45%) + 침투 여지(25%) + 통제 가능성(30%)
+// "다음 콘텐츠 예산을 어디에 쓸까"에 대한 단일 랭킹 답변
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function ChannelPriorityWidget({ data }: { data: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const channels: any[] = data.channels || [];
+  const investable = channels.filter((c) => c.verdict !== '통제 불가');
+  const visible = expanded ? investable : investable.slice(0, 8);
+
+  const verdictStyle: Record<string, string> = {
+    '집중 투자': 'bg-red-100 text-red-700 border-red-200',
+    '유지·강화': 'bg-green-100 text-green-700 border-green-200',
+    '저비용 실험': 'bg-sky-100 text-sky-700 border-sky-200',
+    '후순위': 'bg-slate-100 text-slate-500 border-slate-200',
+  };
+  const scoreColor = (s: number) =>
+    s >= 70 ? 'text-red-600' : s >= 55 ? 'text-amber-600' : 'text-slate-500';
+
+  return (
+    <Card className="border-amber-200">
+      <CardContent className="p-5">
+        <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <Target className="h-5 w-5 text-amber-600" />
+          채널 투자 우선순위
+          <span className="text-xs font-normal text-slate-400">
+            ({data.period} · 전 AI 플랫폼 인용 {data.totalCitations?.toLocaleString()}건 기반)
+          </span>
+        </h3>
+        <p className="text-xs text-slate-500 mb-4">
+          AI가 많이 긁는 채널(식탁 점유 45%) × 아직 우리 이름이 덜 실리는 정도(침투 여지 25%) × 우리가 직접 깔 수 있는 정도(통제 가능성 30%)
+          — 다음 콘텐츠 예산을 어디에 쓸지 한 줄로 답합니다.
+        </p>
+
+        {/* 집중 투자 요약 */}
+        {(data.focus || []).length > 0 && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
+            <p className="text-xs text-amber-800">
+              🎯 <strong>이번 분기 집중 투자:</strong>{' '}
+              {data.focus.map((f: any, i: number) => (
+                <span key={f.channel}>
+                  {i > 0 && ' · '}
+                  <strong>{f.channel}</strong> (인용 {f.count.toLocaleString()}건인데{' '}
+                  <TermTip term="companionRate" icon={false}>동반율</TermTip> {f.companionRate}% — 식탁엔 자주 오르는데 우리 이름이 빠져 있음)
+                </span>
+              ))}
+            </p>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-slate-400 border-b border-slate-100">
+                <th className="text-left py-2 pr-2 font-medium">채널</th>
+                <th className="text-right py-2 px-2 font-medium">스코어</th>
+                <th className="text-left py-2 px-2 font-medium">판정</th>
+                <th className="text-right py-2 px-2 font-medium">인용</th>
+                <th className="text-right py-2 px-2 font-medium">동반율</th>
+                <th className="text-right py-2 px-2 font-medium hidden sm:table-cell">통제</th>
+                <th className="text-right py-2 pl-2 font-medium hidden sm:table-cell">AI 수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((c: any) => (
+                <tr key={c.channel} className="border-b border-slate-50 hover:bg-slate-50/50">
+                  <td className="py-2 pr-2 text-slate-700 font-medium">{c.channel}</td>
+                  <td className={`py-2 px-2 text-right font-bold ${scoreColor(c.priorityScore)}`}>{c.priorityScore}</td>
+                  <td className="py-2 px-2">
+                    <span className={`inline-flex px-1.5 py-0.5 rounded border text-[11px] font-semibold whitespace-nowrap ${verdictStyle[c.verdict] || 'bg-slate-100 text-slate-500'}`}>
+                      {c.verdict}
+                    </span>
+                  </td>
+                  <td className="py-2 px-2 text-right text-slate-600">{c.count.toLocaleString()}</td>
+                  <td className="py-2 px-2 text-right text-slate-600">{c.companionRate}%</td>
+                  <td className="py-2 px-2 text-right hidden sm:table-cell">
+                    <span className="text-amber-500">{'●'.repeat(c.controllability)}</span>
+                    <span className="text-slate-200">{'●'.repeat(5 - c.controllability)}</span>
+                  </td>
+                  <td className="py-2 pl-2 text-right text-slate-500 hidden sm:table-cell">{c.platformCount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {investable.length > 8 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="mt-3 text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
+          >
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {expanded ? '접기' : `전체 ${investable.length}개 채널 보기`}
+          </button>
+        )}
+
+        <p className="mt-3 text-[11px] text-slate-400">
+          * 스코어 = 식탁 점유 45% + 침투 여지(100−동반율) 25% + 통제 가능성 30% · 타 병원 홈페이지 등 통제 불가 채널은 제외
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function GeminiDietWidget({ diet }: { diet: any }) {
   const [showAllDomains, setShowAllDomains] = useState(false);
   const categories: any[] = diet.categories || [];
