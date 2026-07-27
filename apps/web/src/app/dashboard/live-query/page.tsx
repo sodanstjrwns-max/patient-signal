@@ -262,7 +262,7 @@ export default function LiveQueryPage() {
 
         {/* 카테고리 성과 바로가기 배너 */}
         <button
-          onClick={() => window.location.href = '/dashboard/category-analysis'}
+          onClick={() => window.location.href = '/dashboard/opportunities?tab=category'}
           className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl hover:from-purple-100 hover:to-blue-100 transition-all group"
         >
           <div className="flex items-center gap-2.5">

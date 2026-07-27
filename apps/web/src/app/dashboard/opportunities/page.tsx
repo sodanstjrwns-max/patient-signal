@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +17,8 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { TermTip } from '@/components/ui/term-tooltip';
+import { CategoryPerformance } from '@/components/dashboard/CategoryPerformance';
+import { PieChart } from 'lucide-react';
 
 // ─── API 호출: Content Gap + 경쟁사 언급 vs 우리 병원 미언급 (axios interceptor 사용) ───
 const fetchOpportunities = async (hospitalId: string) => {
@@ -72,9 +75,13 @@ export default function OpportunitiesPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // 【P2-2】 null = 아직 사용자가 탭을 고르지 않음 → 데이터가 있는 탭을 자동 선택
-  const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps' | null>(null);
+  // 【C안 병합】 구 /dashboard/category-analysis 페이지를 'category' 탭으로 흡수 (?tab=category 진입 지원)
+  const [activeSection, setActiveSection] = useState<'opportunities' | 'gaps' | 'category' | null>(
+    searchParams.get('tab') === 'category' ? 'category' : null,
+  );
   const [generatingGapIds, setGeneratingGapIds] = useState<Set<string>>(new Set());
   const [generatingBlogGapIds, setGeneratingBlogGapIds] = useState<Set<string>>(new Set());
 
@@ -144,7 +151,7 @@ export default function OpportunitiesPage() {
 
   // 【P2-2】 상단 카드에 '전체 기회 4'라고 떠 있는데 기본 탭(노출 기회 0)이 열려서
   //          "기회가 없습니다"가 보이던 불일치 해소 — 데이터가 있는 탭을 기본으로 연다.
-  const effectiveSection: 'opportunities' | 'gaps' =
+  const effectiveSection: 'opportunities' | 'gaps' | 'category' =
     activeSection ??
     (opportunities.length === 0 && contentGaps.length > 0 ? 'gaps' : 'opportunities');
 
@@ -268,7 +275,21 @@ export default function OpportunitiesPage() {
           <Target className="h-4 w-4" />
           Content Gap ({contentGaps.length})
         </button>
+        <button
+          onClick={() => setActiveSection('category')}
+          className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-2xl transition-all ${
+            effectiveSection === 'category'
+              ? 'bg-purple-50 text-purple-700 border border-purple-200'
+              : 'text-slate-500 hover:bg-white/60'
+          }`}
+        >
+          <PieChart className="h-4 w-4" />
+          카테고리 성과
+        </button>
       </div>
+
+      {/* 카테고리 성과 섹션 (구 category-analysis 페이지 흡수) */}
+      {effectiveSection === 'category' && <CategoryPerformance />}
 
       {/* 노출 기회 섹션 */}
       {effectiveSection === 'opportunities' && (

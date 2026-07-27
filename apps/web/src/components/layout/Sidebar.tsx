@@ -18,7 +18,6 @@ import {
   CreditCard,
   Lightbulb,
   Zap,
-  PieChart,
   Target,
   ChevronDown,
   Crown,
@@ -67,7 +66,6 @@ const navGroups: NavGroup[] = [
     defaultOpen: true,
     items: [
       { name: 'ABHS 분석 리포트', href: '/dashboard/analytics', icon: BarChart3 },
-      { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
       { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
       { name: '성장 진단', href: '/dashboard/growth', icon: Gauge, badge: 'NEW' },
       { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
