@@ -2628,7 +2628,7 @@ export class AICrawlerController {
             : Math.round(volumeScore * 0.45 + gapScore * 0.25 + (controllability / 5) * 100 * 0.3);
         let verdict: string;
         if (controllability === 0) verdict = '통제 불가';
-        else if (volumeScore >= 30 && companionRate < 40) verdict = '집중 투자';
+        else if (controllability >= 3 && volumeScore >= 30 && companionRate < 40) verdict = '집중 투자';
         else if (volumeScore >= 30) verdict = '유지·강화';
         else if (controllability >= 4) verdict = '저비용 실험';
         else verdict = '후순위';
