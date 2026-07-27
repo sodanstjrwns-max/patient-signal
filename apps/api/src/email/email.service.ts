@@ -653,7 +653,7 @@ export class EmailService {
   <p style="color:#6B7280;font-size:13px;">이번 주 총 ${data.totalCrawls}회 AI 분석 완료</p>
   
   <div style="text-align:center;margin:30px 0;">
-    <a href="${this.appUrl}/dashboard/report" class="button">상세 리포트 보기 →</a>
+    <a href="${this.appUrl}/dashboard/analytics" class="button">상세 리포트 보기 →</a>
   </div>
   <div class="footer"><p>© 2026 Patient Signal. All rights reserved.</p><p>이 메일은 매주 월요일 자동 발송됩니다.</p></div>
 </div></body></html>`;

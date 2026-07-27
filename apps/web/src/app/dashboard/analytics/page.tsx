@@ -597,13 +597,13 @@ export default function AnalyticsPage() {
                       <p className="text-xs text-slate-500">경쟁사는 있지만 우리가 없는 영역을 찾아 콘텐츠를 보강하세요.</p>
                     </div>
                   </Link>
-                  <Link href="/dashboard/report">
+                  <Link href="/dashboard/opportunities">
                     <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-brand-100 hover:shadow-card-hover transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-900">주간 리포트</span>
+                        <span className="text-sm font-medium text-slate-900">기회 분석</span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-slate-500">이번 주 성과를 리포트로 확인하고 팀에 공유하세요.</p>
+                      <p className="text-xs text-slate-500">경쟁사만 추천되는 질문을 찾아 우선 공략하세요.</p>
                     </div>
                   </Link>
                   <Link href="/dashboard">

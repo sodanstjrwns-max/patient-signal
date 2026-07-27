@@ -13,14 +13,12 @@ import {
   LogOut,
   Sparkles,
   Building2,
-  FileText,
   Menu,
   X,
   CreditCard,
   Lightbulb,
   Zap,
   PieChart,
-  Globe,
   Target,
   ChevronDown,
   Crown,
@@ -53,7 +51,6 @@ const navGroups: NavGroup[] = [
     items: [
       { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
       { name: '환자 퍼널 진단', href: '/dashboard/funnel', icon: Filter, badge: 'NEW' },
-      { name: '주간 리포트', href: '/dashboard/report', icon: FileText },
     ],
   },
   {
@@ -69,12 +66,11 @@ const navGroups: NavGroup[] = [
     label: '분석',
     defaultOpen: true,
     items: [
-      { name: 'ABHS 분석', href: '/dashboard/analytics', icon: BarChart3 },
+      { name: 'ABHS 분석 리포트', href: '/dashboard/analytics', icon: BarChart3 },
       { name: '카테고리 성과', href: '/dashboard/category-analysis', icon: PieChart },
       { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
       { name: '성장 진단', href: '/dashboard/growth', icon: Gauge, badge: 'NEW' },
       { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
-      { name: '인용 출처', href: '/dashboard/insights?tab=sources', icon: Globe },
     ],
   },
   {

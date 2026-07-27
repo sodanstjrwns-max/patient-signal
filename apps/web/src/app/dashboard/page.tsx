@@ -48,7 +48,6 @@ import {
   TrendingDown,
   Target,
   Shield,
-  FileText,
   BarChart3,
   CheckCircle2,
   AlertTriangle as AlertTriangleIcon,
@@ -78,7 +77,7 @@ const JOURNEY_STEPS = [
   { href: '/dashboard/insights', step: '2', label: 'AI 인사이트', icon: Lightbulb, iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
   { href: '/dashboard/analytics', step: '3', label: 'ABHS 분석', icon: BarChart3, iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' },
   { href: '/dashboard/competitors', step: '4', label: '경쟁사 비교', icon: Users, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
-  { href: '/dashboard/report', step: '5', label: '주간 리포트', icon: FileText, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+  { href: '/dashboard/opportunities', step: '5', label: '기회 분석', icon: Target, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
 ];
 
 export default function DashboardPage() {
