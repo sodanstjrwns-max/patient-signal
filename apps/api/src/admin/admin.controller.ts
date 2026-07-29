@@ -202,6 +202,26 @@ export class AdminController {
   }
 
   /**
+   * 【어드민】날짜별 SoV 순위 추이
+   * GET /api/admin/sov-daily?secret=xxx&days=30&hospitalId=xxx(선택)
+   *
+   * hospitalId 없으면: 날짜별 전체 순위표 배열
+   * hospitalId 있으면: 그 병원의 일별 순위/SoV 시계열 (그래프용)
+   */
+  @Public()
+  @Get('sov-daily')
+  async getSovDaily(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('days') days?: string,
+    @Query('hospitalId') hospitalId?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 90);
+    return this.adminService.getSovDaily(daysNum, hospitalId || undefined);
+  }
+
+  /**
    * 【외국인 GEO 실험】영어 질문 세트 + 영문 별칭 시딩
    * POST /api/admin/seed-foreigner-prompts?secret=xxx&hospitalId=xxx
    *

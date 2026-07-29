@@ -1084,6 +1084,10 @@ export class AdminService {
     const since = new Date();
     since.setDate(since.getDate() - days);
 
+    // 이전 기간 (순위 변동 계산용): since 직전 같은 길이 구간
+    const prevSince = new Date(since);
+    prevSince.setDate(prevSince.getDate() - days);
+
     // 병원별 총 응답/언급 수 — groupBy 두 번으로 집계 (raw SQL 없이 Prisma로)
     const totals = await this.prisma.aIResponse.groupBy({
       by: ['hospitalId'],
@@ -1097,6 +1101,28 @@ export class AdminService {
       _count: { _all: true },
       _avg: { mentionPosition: true },
     });
+
+    // 이전 기간 집계 (순위 변동)
+    const prevTotals = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId'],
+      where: { responseDate: { gte: prevSince, lt: since } },
+      _count: { _all: true },
+    });
+    const prevMentioned = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId'],
+      where: { responseDate: { gte: prevSince, lt: since }, isMentioned: true },
+      _count: { _all: true },
+    });
+    const prevMentionMap = new Map(prevMentioned.map(m => [m.hospitalId, m._count._all]));
+    const prevRankMap = new Map<string, { rank: number; sov: number }>();
+    prevTotals
+      .map(t => ({
+        hospitalId: t.hospitalId,
+        sov: t._count._all > 0 ? ((prevMentionMap.get(t.hospitalId) ?? 0) / t._count._all) * 100 : 0,
+        total: t._count._all,
+      }))
+      .sort((a, b) => b.sov - a.sov || b.total - a.total)
+      .forEach((r, i) => prevRankMap.set(r.hospitalId, { rank: i + 1, sov: Math.round(r.sov * 10) / 10 }));
 
     const mentionMap = new Map(
       mentioned.map(m => [
@@ -1144,7 +1170,18 @@ export class AdminService {
         };
       })
       .sort((a, b) => b.sovPercent - a.sovPercent || b.totalResponses - a.totalResponses)
-      .map((r, i) => ({ rank: i + 1, ...r }));
+      .map((r, i) => {
+        const prev = prevRankMap.get(r.hospitalId);
+        return {
+          rank: i + 1,
+          ...r,
+          // 순위 변동: 이전 기간 순위 - 현재 순위 (+ = 상승, - = 하락, null = 신규)
+          prevRank: prev?.rank ?? null,
+          rankChange: prev ? prev.rank - (i + 1) : null,
+          prevSovPercent: prev?.sov ?? null,
+          sovChange: prev ? Math.round((r.sovPercent - prev.sov) * 10) / 10 : null,
+        };
+      });
 
     this.logger.log(`[Admin] SoV 랭킹 조회: ${ranking.length}개 병원 (최근 ${days}일)`);
 
@@ -1155,5 +1192,91 @@ export class AdminService {
       note: 'SoV = 언급률(%) — 순위 지표가 아닌 등판 빈도. 응답 8건 미만은 lowConfidence.',
       ranking,
     };
+  }
+
+  /**
+   * 【어드민】날짜별 SoV 순위 추이
+   *
+   * 최근 N일 각 날짜에 대해 병원별 SoV를 계산하고 그날의 순위를 매김.
+   * 특정 hospitalId 지정 시 그 병원의 일별 순위/SoV만 반환 (추이 그래프용).
+   */
+  async getSovDaily(days = 30, hospitalId?: string) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    // 날짜×병원 단위 집계 (raw: Prisma groupBy는 날짜 절단 미지원)
+    const rows: Array<{
+      day: Date;
+      hospital_id: string;
+      total: number;
+      ours: number;
+      avg_pos: number | null;
+    }> = await this.prisma.$queryRaw`
+      SELECT DATE(response_date) AS day,
+             hospital_id,
+             COUNT(*)::int AS total,
+             SUM(CASE WHEN is_mentioned THEN 1 ELSE 0 END)::int AS ours,
+             AVG(CASE WHEN is_mentioned THEN mention_position END)::float AS avg_pos
+      FROM ai_responses
+      WHERE response_date >= ${since}
+      GROUP BY DATE(response_date), hospital_id
+    `;
+
+    // 병원 이름 매핑
+    const ids = [...new Set(rows.map(r => r.hospital_id))];
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, name: true },
+    });
+    const nameMap = new Map(hospitals.map(h => [h.id, h.name]));
+
+    // 날짜별로 묶어 그날의 순위 계산
+    const byDay = new Map<string, typeof rows>();
+    for (const r of rows) {
+      const key = new Date(r.day).toISOString().slice(0, 10);
+      if (!byDay.has(key)) byDay.set(key, []);
+      byDay.get(key)!.push(r);
+    }
+
+    const dailyRankings = [...byDay.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, dayRows]) => {
+        const ranked = dayRows
+          .map(r => ({
+            hospitalId: r.hospital_id,
+            name: nameMap.get(r.hospital_id) ?? '(삭제된 병원)',
+            totalResponses: r.total,
+            mentionedResponses: r.ours,
+            sovPercent: r.total > 0 ? Math.round((r.ours / r.total) * 1000) / 10 : 0,
+            avgMentionPosition: r.avg_pos ? Math.round(r.avg_pos * 100) / 100 : null,
+          }))
+          .sort((a, b) => b.sovPercent - a.sovPercent || b.totalResponses - a.totalResponses)
+          .map((r, i) => ({ rank: i + 1, ...r }));
+        return { date, hospitalCount: ranked.length, ranking: ranked };
+      });
+
+    // 특정 병원 추이만 요청한 경우: 날짜별 그 병원의 순위/SoV 시계열로 축약
+    if (hospitalId) {
+      const series = dailyRankings.map(d => {
+        const me = d.ranking.find(r => r.hospitalId === hospitalId);
+        return {
+          date: d.date,
+          rank: me?.rank ?? null,
+          hospitalCount: d.hospitalCount,
+          sovPercent: me?.sovPercent ?? null,
+          avgMentionPosition: me?.avgMentionPosition ?? null,
+          totalResponses: me?.totalResponses ?? 0,
+        };
+      });
+      return {
+        success: true,
+        periodDays: days,
+        hospitalId,
+        hospitalName: nameMap.get(hospitalId) ?? null,
+        series,
+      };
+    }
+
+    return { success: true, periodDays: days, days: dailyRankings };
   }
 }
