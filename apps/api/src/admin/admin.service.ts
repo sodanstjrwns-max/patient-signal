@@ -1099,8 +1099,41 @@ export class AdminService {
       by: ['hospitalId'],
       where: { responseDate: { gte: since }, isMentioned: true },
       _count: { _all: true },
-      _avg: { mentionPosition: true },
+      _avg: { mentionPosition: true, sentimentScore: true },
     });
+
+    // 1위로 호명된 횟수 (등판 중 mention_position = 1)
+    const firstPlace = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId'],
+      where: { responseDate: { gte: since }, isMentioned: true, mentionPosition: 1 },
+      _count: { _all: true },
+    });
+    const firstPlaceMap = new Map(firstPlace.map(f => [f.hospitalId, f._count._all]));
+
+    // 플랫폼별 총/언급 (병원×플랫폼)
+    const platTotals = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId', 'aiPlatform'],
+      where: { responseDate: { gte: since } },
+      _count: { _all: true },
+    });
+    const platMentioned = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId', 'aiPlatform'],
+      where: { responseDate: { gte: since }, isMentioned: true },
+      _count: { _all: true },
+    });
+    const platMentionedMap = new Map(
+      platMentioned.map(p => [`${p.hospitalId}|${p.aiPlatform}`, p._count._all]),
+    );
+    const platformsByHospital = new Map<string, Record<string, { total: number; mentioned: number; sov: number }>>();
+    for (const p of platTotals) {
+      const m = platMentionedMap.get(`${p.hospitalId}|${p.aiPlatform}`) ?? 0;
+      if (!platformsByHospital.has(p.hospitalId)) platformsByHospital.set(p.hospitalId, {});
+      platformsByHospital.get(p.hospitalId)![p.aiPlatform] = {
+        total: p._count._all,
+        mentioned: m,
+        sov: p._count._all > 0 ? Math.round((m / p._count._all) * 1000) / 10 : 0,
+      };
+    }
 
     // 이전 기간 집계 (순위 변동)
     const prevTotals = await this.prisma.aIResponse.groupBy({
@@ -1127,7 +1160,11 @@ export class AdminService {
     const mentionMap = new Map(
       mentioned.map(m => [
         m.hospitalId,
-        { count: m._count._all, avgPosition: m._avg.mentionPosition },
+        {
+          count: m._count._all,
+          avgPosition: m._avg.mentionPosition,
+          avgSentiment: m._avg.sentimentScore,
+        },
       ]),
     );
 
@@ -1166,6 +1203,19 @@ export class AdminService {
           avgMentionPosition: m?.avgPosition
             ? Math.round(m.avgPosition * 100) / 100
             : null,
+          // 등판 중 1위로 호명된 비율 (주연 비율)
+          firstPlaceCount: firstPlaceMap.get(t.hospitalId) ?? 0,
+          firstPlaceRate:
+            ours > 0
+              ? Math.round(((firstPlaceMap.get(t.hospitalId) ?? 0) / ours) * 1000) / 10
+              : null,
+          // 언급 응답 평균 감성 (-1~1)
+          avgSentiment:
+            m?.avgSentiment !== null && m?.avgSentiment !== undefined
+              ? Math.round(m.avgSentiment * 100) / 100
+              : null,
+          // 플랫폼별 SoV
+          platforms: platformsByHospital.get(t.hospitalId) ?? {},
           lowConfidence: total < MIN_SAMPLE,
         };
       })

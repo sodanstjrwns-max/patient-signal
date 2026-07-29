@@ -23,6 +23,12 @@ import {
 // 일반 앱의 NEXT_PUBLIC_API_URL과 분리해 하드 지정한다.
 const API_URL = 'https://patient-signal-1.onrender.com/api';
 
+interface PlatformStat {
+  total: number;
+  mentioned: number;
+  sov: number;
+}
+
 interface RankRow {
   rank: number;
   hospitalId: string;
@@ -34,6 +40,10 @@ interface RankRow {
   mentionedResponses: number;
   sovPercent: number;
   avgMentionPosition: number | null;
+  firstPlaceCount: number;
+  firstPlaceRate: number | null;
+  avgSentiment: number | null;
+  platforms: Record<string, PlatformStat>;
   lowConfidence: boolean;
   prevRank: number | null;
   rankChange: number | null;
@@ -64,7 +74,45 @@ interface TrendPoint {
   totalResponses: number;
 }
 
-type SortKey = 'sov' | 'mentions' | 'avgPos' | 'rankChange';
+type SortKey = 'sov' | 'mentions' | 'avgPos' | 'firstPlace' | 'sentiment' | 'rankChange';
+
+const PLATFORM_LABELS: Record<string, { short: string; color: string }> = {
+  CHATGPT: { short: 'GPT', color: '#10b981' },
+  PERPLEXITY: { short: 'PPX', color: '#38bdf8' },
+  CLAUDE: { short: 'CLD', color: '#f97316' },
+  GEMINI: { short: 'GEM', color: '#a78bfa' },
+  GROK: { short: 'GRK', color: '#e879f9' },
+  CLOVA_X: { short: 'CLV', color: '#4ade80' },
+};
+
+function sentimentFace(s: number | null) {
+  if (s === null) return { face: '—', cls: 'text-slate-600' };
+  if (s >= 0.3) return { face: '😊 ' + s.toFixed(2), cls: 'text-emerald-400' };
+  if (s <= -0.1) return { face: '😟 ' + s.toFixed(2), cls: 'text-red-400' };
+  return { face: '😐 ' + s.toFixed(2), cls: 'text-slate-300' };
+}
+
+/** 플랫폼별 SoV 미니 바 (테이블 셀용) */
+function PlatformBars({ platforms }: { platforms: Record<string, PlatformStat> }) {
+  const keys = Object.keys(PLATFORM_LABELS).filter(k => platforms[k]);
+  if (keys.length === 0) return <span className="text-slate-600 text-xs">—</span>;
+  return (
+    <span className="flex items-end gap-1">
+      {keys.map(k => {
+        const p = platforms[k];
+        const meta = PLATFORM_LABELS[k];
+        return (
+          <span key={k} className="flex flex-col items-center" title={`${k}: ${p.sov}% (${p.mentioned}/${p.total})`}>
+            <span className="w-4 bg-gray-800 rounded-sm overflow-hidden flex flex-col justify-end" style={{ height: 26 }}>
+              <span style={{ height: `${Math.max(2, Math.min(100, p.sov))}%`, background: meta.color, display: 'block' }} />
+            </span>
+            <span className="text-[8px] text-slate-500 mt-0.5">{meta.short}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
 
 const PLAN_COLORS: Record<string, string> = {
   FREE: 'bg-slate-100 text-slate-600',
@@ -201,6 +249,12 @@ export default function AdminSovPage() {
         // 등판 시 평균 순번: 낮을수록 좋음. null(등판 0회)은 맨 뒤로
         rows.sort((a, b) => (a.avgMentionPosition ?? 999) - (b.avgMentionPosition ?? 999));
         break;
+      case 'firstPlace':
+        rows.sort((a, b) => (b.firstPlaceRate ?? -1) - (a.firstPlaceRate ?? -1) || b.firstPlaceCount - a.firstPlaceCount);
+        break;
+      case 'sentiment':
+        rows.sort((a, b) => (b.avgSentiment ?? -999) - (a.avgSentiment ?? -999));
+        break;
       case 'rankChange':
         rows.sort((a, b) => (b.rankChange ?? -999) - (a.rankChange ?? -999));
         break;
@@ -211,6 +265,18 @@ export default function AdminSovPage() {
   }, [ranking, sortKey, search]);
 
   const selectedDay = dailyData.find(d => d.date === selectedDate);
+
+  // 요약 통계 (전체 고객 평균)
+  const summary = useMemo(() => {
+    if (ranking.length === 0) return null;
+    const withSample = ranking.filter(r => !r.lowConfidence);
+    const avgSov = withSample.reduce((s, r) => s + r.sovPercent, 0) / Math.max(withSample.length, 1);
+    const zero = withSample.filter(r => r.sovPercent === 0);
+    const risers = ranking.filter(r => (r.rankChange ?? 0) >= 3).length;
+    const fallers = ranking.filter(r => (r.rankChange ?? 0) <= -3).length;
+    const totalResp = ranking.reduce((s, r) => s + r.totalResponses, 0);
+    return { avgSov: Math.round(avgSov * 10) / 10, zeroCount: zero.length, risers, fallers, totalResp, hospitals: ranking.length };
+  }, [ranking]);
 
   // ---------- login gate ----------
   if (!authenticated) {
@@ -306,6 +372,24 @@ export default function AdminSovPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {view === 'overall' && summary && (
+          <section id="summary-cards" className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+            {[
+              { label: '고객 병원', value: summary.hospitals, sub: `응답 \u00d7${summary.totalResp.toLocaleString()}` },
+              { label: '평균 SoV', value: `${summary.avgSov}%`, sub: '표본충분 병원 기준' },
+              { label: '언급 0% 병원', value: summary.zeroCount, sub: '표본 충분한데 0 = CS 위험', warn: summary.zeroCount > 0 },
+              { label: '급상승 (+3↑)', value: summary.risers, sub: `직전 ${days}일 대비`, up: true },
+              { label: '급하락 (−3↓)', value: summary.fallers, sub: `직전 ${days}일 대비`, warn: summary.fallers > 0 },
+            ].map(c => (
+              <article key={c.label} className={`rounded-xl border p-3 ${c.warn ? 'border-red-900/60 bg-red-950/20' : 'border-gray-800 bg-slate-900/50'}`}>
+                <p className="text-[11px] text-slate-500">{c.label}</p>
+                <p className={`text-xl font-bold ${c.warn ? 'text-red-400' : c.up ? 'text-emerald-400' : 'text-white'}`}>{c.value}</p>
+                <p className="text-[10px] text-slate-600">{c.sub}</p>
+              </article>
+            ))}
+          </section>
+        )}
+
         {view === 'overall' && (
           <section id="overall-ranking">
             {/* 정렬 탭 + 검색 */}
@@ -315,6 +399,8 @@ export default function AdminSovPage() {
                   ['sov', 'SoV(언급률) 순'],
                   ['mentions', '언급 수 순'],
                   ['avgPos', '등판 시 평균 순번'],
+                  ['firstPlace', '1위 호명률 순'],
+                  ['sentiment', '감성 순'],
                   ['rankChange', '순위 변동 순'],
                 ] as [SortKey, string][]).map(([k, label]) => (
                   <button
@@ -336,7 +422,7 @@ export default function AdminSovPage() {
             </div>
 
             <p className="text-xs text-slate-500 mb-3">
-              SoV = 질문 100번 중 그 병원이 등판한 비율(언급률). 순위 변동은 직전 {days}일 대비. 병원 클릭 → 일별 추이.
+              SoV = 질문 100번 중 등판 비율 · 1위 호명 = 등판 중 첫 번째로 불린 비율 · 감성 = 언급 톤(-1~1) · 순위 변동은 직전 {days}일 대비 · 병원 클릭 → 일별 추이
             </p>
 
             <div className="overflow-x-auto rounded-xl border border-gray-800">
@@ -349,7 +435,10 @@ export default function AdminSovPage() {
                     <th className="px-3 py-2.5 text-right">SoV</th>
                     <th className="px-3 py-2.5 text-right">SoV 변화</th>
                     <th className="px-3 py-2.5 text-right">언급/전체</th>
-                    <th className="px-3 py-2.5 text-right">등판 시 평균 순번</th>
+                    <th className="px-3 py-2.5 text-right">평균 순번</th>
+                    <th className="px-3 py-2.5 text-right">1위 호명</th>
+                    <th className="px-3 py-2.5 text-right">감성</th>
+                    <th className="px-3 py-2.5 text-center">플랫폼 SoV</th>
                     <th className="px-3 py-2.5 text-left">플랜</th>
                   </tr>
                 </thead>
@@ -382,6 +471,19 @@ export default function AdminSovPage() {
                             {r.avgMentionPosition}위
                           </span>
                         ) : <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {r.firstPlaceRate !== null ? (
+                          <span className={r.firstPlaceRate >= 50 ? 'text-amber-300 font-semibold' : 'text-slate-300'} title={`등판 ${r.mentionedResponses}회 중 ${r.firstPlaceCount}회 1위`}>
+                            {r.firstPlaceRate}%
+                          </span>
+                        ) : <span className="text-slate-600">—</span>}
+                      </td>
+                      <td className="px-3 py-2 text-right text-xs">
+                        <span className={sentimentFace(r.avgSentiment).cls}>{sentimentFace(r.avgSentiment).face}</span>
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="flex justify-center"><PlatformBars platforms={r.platforms} /></span>
                       </td>
                       <td className="px-3 py-2">
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${PLAN_COLORS[r.planType ?? ''] ?? 'bg-slate-100 text-slate-600'}`}>
@@ -471,6 +573,41 @@ export default function AdminSovPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {(() => {
+              const row = ranking.find(r => r.hospitalId === trendHospital.id);
+              if (!row) return null;
+              const keys = Object.keys(PLATFORM_LABELS).filter(k => row.platforms[k]);
+              return (
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-5">
+                  {[
+                    { label: 'SoV', v: `${row.sovPercent}%` },
+                    { label: '평균 순번', v: row.avgMentionPosition ? `${row.avgMentionPosition}위` : '—' },
+                    { label: '1위 호명률', v: row.firstPlaceRate !== null ? `${row.firstPlaceRate}%` : '—' },
+                    { label: '감성', v: row.avgSentiment !== null ? row.avgSentiment.toFixed(2) : '—' },
+                    { label: '언급/전체', v: `${row.mentionedResponses.toLocaleString()}/${row.totalResponses.toLocaleString()}` },
+                    { label: '순위 변동', v: row.rankChange === null ? '신규' : row.rankChange > 0 ? `+${row.rankChange}` : `${row.rankChange}` },
+                  ].map(c => (
+                    <div key={c.label} className="bg-gray-950 border border-gray-800 rounded-lg p-2 text-center">
+                      <p className="text-[10px] text-slate-500">{c.label}</p>
+                      <p className="text-sm font-bold">{c.v}</p>
+                    </div>
+                  ))}
+                  {keys.length > 0 && (
+                    <div className="col-span-3 md:col-span-6 flex flex-wrap gap-2">
+                      {keys.map(k => {
+                        const p = row.platforms[k];
+                        return (
+                          <span key={k} className="text-[11px] px-2 py-1 rounded-full border border-gray-700" style={{ color: PLATFORM_LABELS[k].color }}>
+                            {k} {p.sov}% ({p.mentioned}/{p.total})
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {trendLoading ? (
               <p className="text-slate-500 text-sm py-16 text-center">불러오는 중…</p>
