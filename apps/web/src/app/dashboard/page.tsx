@@ -605,7 +605,11 @@ export default function DashboardPage() {
         ═══════════════════════════════════════════ */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
-            <ScoreChart data={dashboard?.scoreHistory || []} title="SoV 추이 (AI 가시성 점수)" />
+            <ScoreChart
+              data={dashboard?.scoreHistory || []}
+              title="AI 가시성 점수 추이"
+              subtitle="언급률·추천순서·감성·플랫폼 커버리지·인용을 합산한 종합 점수 (0~100) — SoV(%)와는 다른 지표입니다"
+            />
           </div>
           <PlatformStats 
             data={platformDetails || (dashboard?.platformScores || {})} 

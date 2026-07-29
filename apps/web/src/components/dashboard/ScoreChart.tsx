@@ -18,9 +18,10 @@ interface ScoreChartProps {
     mentionCount?: number;
   }[];
   title?: string;
+  subtitle?: string;
 }
 
-export function ScoreChart({ data, title = 'AI 가시성 점수 추이' }: ScoreChartProps) {
+export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitle }: ScoreChartProps) {
   const chartData = data.map((item) => ({
     date: new Date(item.scoreDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
     score: item.overallScore,
@@ -31,6 +32,9 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이' }: Score
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
+        {subtitle && (
+          <p className="text-xs text-slate-500 font-medium mt-1">{subtitle}</p>
+        )}
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">

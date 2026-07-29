@@ -182,7 +182,7 @@ export const TERMS: Record<string, { title: string; desc: string }> = {
   },
   sov: {
     title: 'SoV (점유율)',
-    desc: 'Share of Voice. AI 답변이라는 한정된 공간에서 우리 병원이 차지한 지분입니다. AI는 보통 3~5곳만 추천하므로, 6번째부터는 존재하지 않는 것과 같습니다.',
+    desc: 'Share of Voice. 전체 AI 답변 중 우리 병원이 "언급된" 답변의 비율(%)입니다. 예: 100번 물었을 때 9번 언급되면 9%. 순위가 아니라 등판 빈도입니다 — AI는 답변당 보통 3~5곳만 추천하므로, 언급된 답변 안에서 몇 번째로 불렸는지는 별도 지표(1위 점유율·추천 깊이)로 확인하세요.',
   },
   recommendationDepth: {
     title: '추천 깊이 (R0~R3)',
