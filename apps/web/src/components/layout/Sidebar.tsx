@@ -27,6 +27,7 @@ import {
   Key,
   Filter,
   Gauge,
+  BookOpen,
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -49,6 +50,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: true,
     items: [
       { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
+      { name: '이용 가이드', href: '/dashboard/guide', icon: BookOpen, badge: 'NEW' },
       { name: '환자 퍼널 진단', href: '/dashboard/funnel', icon: Filter, badge: 'NEW' },
     ],
   },
