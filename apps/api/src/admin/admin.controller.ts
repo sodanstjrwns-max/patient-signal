@@ -182,6 +182,28 @@ export class AdminController {
     return this.adminService.migrateUnpaidSubscriptionsToTrial(trialDays);
   }
 
+  /**
+   * 【외국인 GEO 실험】영어 질문 세트 + 영문 별칭 시딩
+   * POST /api/admin/seed-foreigner-prompts?secret=xxx&hospitalId=xxx
+   *
+   * Quora/Medium → AI 인용 전환 추적을 위한 영어 트래킹 질문 6종 추가.
+   * 중복 실행 안전 (동일 질문 존재 시 스킵).
+   */
+  @Public()
+  @Post('seed-foreigner-prompts')
+  async seedForeignerPrompts(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('hospitalId') hospitalId: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    this.logger.log(`[Admin] 외국인 GEO 질문 세트 시딩 시작: ${hospitalId}`);
+    return this.adminService.seedForeignerGeoPrompts(hospitalId);
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)

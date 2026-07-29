@@ -950,4 +950,122 @@ export class AdminService {
       details: results,
     };
   }
+
+  // ==================== 외국인 환자 GEO 질문 세트 시딩 ====================
+
+  /**
+   * 【외국인 GEO 실험】영어 질문 세트 + 영문 별칭을 특정 병원에 시딩
+   *
+   * 배경: 한국어 질문에서는 Quora/Medium 인용이 0건 (실측) —
+   * 영어 질문에서만 해당 채널이 AI 인용 코퍼스에 등판함.
+   * Quora 답변 축적 → AI 인용 전환을 주 단위로 추적하기 위한 트래킹 세트.
+   *
+   * - 중복 방지: 동일 promptText 존재 시 스킵 (재실행 안전 / idempotent)
+   * - 플랜 질문 수 제한과 무관하게 admin 권한으로 추가 (실험 목적)
+   */
+  async seedForeignerGeoPrompts(hospitalId: string) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true, nameAliases: true, websiteUrl: true },
+    });
+
+    if (!hospital) {
+      return { success: false, error: `병원을 찾을 수 없습니다: ${hospitalId}` };
+    }
+
+    // 1. 영문 별칭 추가 (AI 응답 내 영문 표기 언급 감지용)
+    const englishAliases = [
+      'Seoul BD Dental',
+      'Seoul BD Dental Clinic',
+      'BD Dental Clinic',
+      'Seoul BD',
+    ];
+    const mergedAliases = [...new Set([...(hospital.nameAliases || []), ...englishAliases])];
+    const aliasesAdded = mergedAliases.length - (hospital.nameAliases || []).length;
+
+    await this.prisma.hospital.update({
+      where: { id: hospital.id },
+      data: { nameAliases: mergedAliases },
+    });
+
+    // 2. 외국인 환자 GEO 질문 세트 (영어 — Quora/Medium 인용 트래킹용)
+    const foreignerPrompts: { text: string; category: string; keywords: string[] }[] = [
+      {
+        text: 'Best dental implant clinic in Seoul, South Korea for foreigners',
+        category: '외국인-임플란트',
+        keywords: ['Seoul', 'Korea'],
+      },
+      {
+        text: 'English speaking dentist near Camp Humphreys, South Korea',
+        category: '외국인-일반',
+        keywords: ['Camp Humphreys', 'Pyeongtaek'],
+      },
+      {
+        text: 'How much do dental implants cost in South Korea? Recommend a trusted clinic for international patients',
+        category: '외국인-임플란트',
+        keywords: ['Korea'],
+      },
+      {
+        text: 'Best dental clinic in Cheonan or Pyeongtaek for US military families',
+        category: '외국인-일반',
+        keywords: ['Cheonan', 'Pyeongtaek'],
+      },
+      {
+        text: 'Is it worth traveling to Korea for dental implants? Which clinic should I choose?',
+        category: '외국인-임플란트',
+        keywords: ['Korea'],
+      },
+      {
+        text: 'Where do expats in Korea recommend getting dental implants without broker fees?',
+        category: '외국인-임플란트',
+        keywords: ['Korea'],
+      },
+    ];
+
+    const results: { text: string; status: 'created' | 'skipped' }[] = [];
+
+    for (const p of foreignerPrompts) {
+      const existing = await this.prisma.prompt.findFirst({
+        where: { hospitalId: hospital.id, promptText: p.text },
+        select: { id: true },
+      });
+
+      if (existing) {
+        results.push({ text: p.text, status: 'skipped' });
+        continue;
+      }
+
+      await this.prisma.prompt.create({
+        data: {
+          hospitalId: hospital.id,
+          promptText: p.text,
+          promptType: 'CUSTOM',
+          specialtyCategory: p.category,
+          regionKeywords: p.keywords,
+          isActive: true,
+        },
+      });
+      results.push({ text: p.text, status: 'created' });
+    }
+
+    const created = results.filter(r => r.status === 'created').length;
+    const skipped = results.filter(r => r.status === 'skipped').length;
+
+    const activeCount = await this.prisma.prompt.count({
+      where: { hospitalId: hospital.id, isActive: true },
+    });
+
+    this.logger.log(
+      `[외국인 GEO 시딩] ${hospital.name}: 질문 ${created}건 생성, ${skipped}건 스킵, 별칭 ${aliasesAdded}건 추가 (활성 질문 총 ${activeCount}건)`,
+    );
+
+    return {
+      success: true,
+      hospital: { id: hospital.id, name: hospital.name },
+      prompts: { created, skipped, details: results },
+      aliases: { added: aliasesAdded, total: mergedAliases.length },
+      activePromptCount: activeCount,
+      note: '다음 크롤링 사이클부터 영어 질문이 4개 플랫폼에 포함됩니다. Quora/Medium 인용 여부는 인용 역분석 메뉴에서 추적하세요.',
+    };
+  }
 }
