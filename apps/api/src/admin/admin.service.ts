@@ -1068,4 +1068,92 @@ export class AdminService {
       note: '다음 크롤링 사이클부터 영어 질문이 4개 플랫폼에 포함됩니다. Quora/Medium 인용 여부는 인용 역분석 메뉴에서 추적하세요.',
     };
   }
+
+  // ==================== 전체 고객사 SoV 랭킹 ====================
+
+  /**
+   * 【어드민】전체 고객 병원 SoV 랭킹
+   *
+   * 각 병원의 최근 N일 AI 응답에서 언급률(SoV %)을 계산해 내림차순 정렬.
+   * SoV = 언급된 응답 수 / 전체 응답 수 × 100 (출석률 개념 — 순위 아님)
+   *
+   * 신뢰도: 응답 8건 미만 병원은 lowConfidence=true 플래그
+   * (calculateDailyScore와 동일한 최소 표본 기준)
+   */
+  async getSovRanking(days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    // 병원별 총 응답/언급 수 — groupBy 두 번으로 집계 (raw SQL 없이 Prisma로)
+    const totals = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId'],
+      where: { responseDate: { gte: since } },
+      _count: { _all: true },
+    });
+
+    const mentioned = await this.prisma.aIResponse.groupBy({
+      by: ['hospitalId'],
+      where: { responseDate: { gte: since }, isMentioned: true },
+      _count: { _all: true },
+      _avg: { mentionPosition: true },
+    });
+
+    const mentionMap = new Map(
+      mentioned.map(m => [
+        m.hospitalId,
+        { count: m._count._all, avgPosition: m._avg.mentionPosition },
+      ]),
+    );
+
+    const hospitalIds = totals.map(t => t.hospitalId);
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { id: { in: hospitalIds } },
+      select: {
+        id: true,
+        name: true,
+        regionSido: true,
+        regionSigungu: true,
+        specialtyType: true,
+        planType: true,
+      },
+    });
+    const hospitalMap = new Map(hospitals.map(h => [h.id, h]));
+
+    const MIN_SAMPLE = 8;
+
+    const ranking = totals
+      .map(t => {
+        const h = hospitalMap.get(t.hospitalId);
+        const m = mentionMap.get(t.hospitalId);
+        const total = t._count._all;
+        const ours = m?.count ?? 0;
+        const sov = total > 0 ? (ours / total) * 100 : 0;
+        return {
+          hospitalId: t.hospitalId,
+          name: h?.name ?? '(삭제된 병원)',
+          region: h ? `${h.regionSido} ${h.regionSigungu}` : null,
+          specialtyType: h?.specialtyType ?? null,
+          planType: h?.planType ?? null,
+          totalResponses: total,
+          mentionedResponses: ours,
+          sovPercent: Math.round(sov * 10) / 10,
+          avgMentionPosition: m?.avgPosition
+            ? Math.round(m.avgPosition * 100) / 100
+            : null,
+          lowConfidence: total < MIN_SAMPLE,
+        };
+      })
+      .sort((a, b) => b.sovPercent - a.sovPercent || b.totalResponses - a.totalResponses)
+      .map((r, i) => ({ rank: i + 1, ...r }));
+
+    this.logger.log(`[Admin] SoV 랭킹 조회: ${ranking.length}개 병원 (최근 ${days}일)`);
+
+    return {
+      success: true,
+      periodDays: days,
+      hospitalCount: ranking.length,
+      note: 'SoV = 언급률(%) — 순위 지표가 아닌 등판 빈도. 응답 8건 미만은 lowConfidence.',
+      ranking,
+    };
+  }
 }

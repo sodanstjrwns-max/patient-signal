@@ -183,6 +183,25 @@ export class AdminController {
   }
 
   /**
+   * 【어드민】전체 고객 병원 SoV 랭킹
+   * GET /api/admin/sov-ranking?secret=xxx&days=30
+   *
+   * 각 병원의 최근 N일 언급률(SoV %)을 내림차순 정렬.
+   * 응답 8건 미만 병원은 lowConfidence=true 표시.
+   */
+  @Public()
+  @Get('sov-ranking')
+  async getSovRanking(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 365);
+    return this.adminService.getSovRanking(daysNum);
+  }
+
+  /**
    * 【외국인 GEO 실험】영어 질문 세트 + 영문 별칭 시딩
    * POST /api/admin/seed-foreigner-prompts?secret=xxx&hospitalId=xxx
    *
