@@ -26,6 +26,7 @@ const API_URL = 'https://patient-signal-1.onrender.com/api';
 // 예쁜 URL 별칭 → 병원 UUID (신규 병원은 여기에 한 줄 추가)
 const SLUG_MAP: Record<string, string> = {
   isol: '5ead9625-6a69-4440-b925-8d9e4bf80ceb', // 이솔치과의원
+  jaeju: '07766011-30a9-4636-a989-9ef19c09fda0', // 재주좋은치과의원 (서초)
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
