@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { createHmac } from 'crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 @Injectable()
@@ -1328,5 +1329,98 @@ export class AdminService {
     }
 
     return { success: true, periodDays: days, days: dailyRankings };
+  }
+
+  // ==================== 병원 원장용 대시보드 (접근코드 게이트) ====================
+
+  /**
+   * 병원별 접근코드 산출 — HMAC-SHA256(ADMIN_SECRET, hospitalId) 앞 12자
+   *
+   * DB 스키마 변경 없이 병원마다 고유한 코드가 결정론적으로 나온다.
+   * 이 코드로는 해당 병원 스코프 데이터만 열람 가능 (ADMIN_SECRET 자체는 노출 안 됨).
+   * ADMIN_SECRET 미설정 환경에서는 null → 무조건 차단.
+   */
+  boardCodeFor(hospitalId: string): string | null {
+    const secret = process.env.ADMIN_SECRET;
+    if (!secret || !hospitalId) return null;
+    return createHmac('sha256', secret)
+      .update(`board:${hospitalId}`)
+      .digest('hex')
+      .slice(0, 12);
+  }
+
+  /**
+   * 【원장용】병원 스코프 대시보드 데이터
+   *
+   * 전체 랭킹을 집계하되 본인 병원 지표 + 익명화된 주변 경쟁(±3위)만 반환.
+   * 다른 고객 병원의 실명/ID는 절대 노출하지 않는다.
+   */
+  async getHospitalBoard(hospitalId: string, days = 30) {
+    const [rankingRes, dailyRes] = await Promise.all([
+      this.getSovRanking(days),
+      this.getSovDaily(Math.min(days, 90), hospitalId),
+    ]);
+
+    const idx = rankingRes.ranking.findIndex(r => r.hospitalId === hospitalId);
+    if (idx === -1) {
+      return {
+        success: false,
+        error: '해당 기간에 수집된 데이터가 없습니다',
+      };
+    }
+    const me = rankingRes.ranking[idx];
+
+    // 주변 경쟁 병원 (±3위) — 본인만 실명, 나머지는 지역+익명 라벨 (고객사 보호)
+    const windowStart = Math.max(0, idx - 3);
+    const windowRows = rankingRes.ranking.slice(windowStart, idx + 4);
+    let anonSeq = 0;
+    const nearby = windowRows.map(r => {
+      const isMe = r.hospitalId === hospitalId;
+      const label = isMe
+        ? r.name
+        : `${r.region?.split(' ')[0] ?? '전국'} 소재 병원 ${String.fromCharCode(65 + anonSeq++)}`;
+      return {
+        rank: r.rank,
+        name: label,
+        isMe,
+        sovPercent: r.sovPercent,
+        avgMentionPosition: r.avgMentionPosition,
+        firstPlaceRate: isMe ? r.firstPlaceRate : null,
+        rankChange: r.rankChange,
+      };
+    });
+
+    const percentile = Math.max(
+      1,
+      Math.round((me.rank / rankingRes.hospitalCount) * 100),
+    );
+
+    this.logger.log(
+      `[Board] 원장용 보드 조회: ${me.name} (${me.rank}위/${rankingRes.hospitalCount})`,
+    );
+
+    return {
+      success: true,
+      periodDays: days,
+      hospital: { id: hospitalId, name: me.name, region: me.region },
+      rank: me.rank,
+      hospitalCount: rankingRes.hospitalCount,
+      percentile, // 상위 N%
+      prevRank: me.prevRank,
+      rankChange: me.rankChange,
+      sovPercent: me.sovPercent,
+      prevSovPercent: me.prevSovPercent,
+      sovChange: me.sovChange,
+      totalResponses: me.totalResponses,
+      mentionedResponses: me.mentionedResponses,
+      avgMentionPosition: me.avgMentionPosition,
+      firstPlaceCount: me.firstPlaceCount,
+      firstPlaceRate: me.firstPlaceRate,
+      avgSentiment: me.avgSentiment,
+      platforms: me.platforms,
+      lowConfidence: me.lowConfidence,
+      daily: 'series' in dailyRes ? dailyRes.series : [],
+      nearby,
+    };
   }
 }

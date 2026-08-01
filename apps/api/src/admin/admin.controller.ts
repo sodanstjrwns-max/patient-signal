@@ -243,6 +243,53 @@ export class AdminController {
     return this.adminService.seedForeignerGeoPrompts(hospitalId);
   }
 
+  /**
+   * 【원장용 보드】병원 스코프 대시보드 — 병원별 접근코드로 열람
+   * GET /api/admin/hospital-board?hospitalId=xxx&code=xxx&days=30
+   *
+   * code = HMAC(ADMIN_SECRET, hospitalId) 앞 12자 — 병원마다 고유.
+   * 이 코드로는 해당 병원 데이터만 열림 (타 병원 실명 비노출, 경쟁은 익명 라벨).
+   */
+  @Public()
+  @Get('hospital-board')
+  async getHospitalBoard(
+    @Headers('x-board-code') headerCode: string,
+    @Query('code') queryCode: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    const expected = this.adminService.boardCodeFor(hospitalId);
+    const provided = headerCode || queryCode;
+    if (!hospitalId || !expected || !provided || provided !== expected) {
+      throw new UnauthorizedException('Unauthorized');
+    }
+    const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 7), 90);
+    return this.adminService.getHospitalBoard(hospitalId, daysNum);
+  }
+
+  /**
+   * 【어드민】병원별 보드 접근코드 조회 — 원장님께 전달할 코드 발급용
+   * GET /api/admin/board-code?secret=xxx&hospitalId=xxx
+   */
+  @Public()
+  @Get('board-code')
+  async getBoardCode(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('hospitalId') hospitalId: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    return {
+      success: true,
+      hospitalId,
+      code: this.adminService.boardCodeFor(hospitalId),
+      boardUrl: `https://patientsignal.kr/board/${hospitalId}`,
+    };
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)
