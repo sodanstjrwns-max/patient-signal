@@ -27,6 +27,12 @@ const API_URL = 'https://patient-signal-1.onrender.com/api';
 const SLUG_MAP: Record<string, string> = {
   isol: '5ead9625-6a69-4440-b925-8d9e4bf80ceb', // 이솔치과의원
   jaeju: '07766011-30a9-4636-a989-9ef19c09fda0', // 재주좋은치과의원 (서초)
+  seoulon: 'cc56a6ec-86ab-4121-8404-5879e93e053f', // 서울온한의원 (관악, 민성훈)
+  daegu365: '5c2e535e-71b2-493a-abf1-b22467f79d50', // 대구365치과 (북구, 김성주)
+  perfect: '03d42ef0-8c45-4391-aa9b-a916bd7f4eb9', // 서울퍼펙트치과 (분당, 김성진)
+  remember: '5a5e659a-97bc-4ff5-9952-3245cd28cd5a', // 서울리멤버치과 (관악, 박정기)
+  centum: '0c23bd5a-3b81-4b60-8f23-1c9a89da9637', // 서울센텀턱구강내과치과 (영등포, 남윤)
+  seoul365: 'c76b0723-367d-4dbc-8ca1-b30d2c017c6a', // 서울365치과의원 (인천 남동, 박준규)
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
