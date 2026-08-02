@@ -1331,6 +1331,87 @@ export class AdminService {
     return { success: true, periodDays: days, days: dailyRankings };
   }
 
+  // ==================== 인용 출처 도메인 인텔리전스 ====================
+
+  /**
+   * 【어드민】전체 AI 응답의 인용 출처 도메인 집계 + 신규 등장 탐지
+   *
+   * cited_sources 배열을 unnest해 도메인 단위로 정규화(프로토콜/www/경로 제거).
+   * firstSeen이 최근 N일 이내면 "신규 등장" — 어떤 출처가 새로 AI 인용 풀에 진입했는지 추적.
+   */
+  async getCitationDomains(days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const rows: Array<{
+      domain: string;
+      first_seen: Date;
+      last_seen: Date;
+      total_citations: number;
+      recent_citations: number;
+      platform_count: number;
+      platforms: string[];
+    }> = await this.prisma.$queryRaw`
+      WITH src AS (
+        SELECT response_date, ai_platform,
+               lower(
+                 regexp_replace(
+                   regexp_replace(
+                     regexp_replace(unnest(cited_sources), '^https?://', ''),
+                     '^www\\.', ''),
+                   '/.*$', '')
+               ) AS domain
+        FROM ai_responses
+        WHERE cited_sources IS NOT NULL
+          AND array_length(cited_sources, 1) > 0
+      )
+      SELECT domain,
+             MIN(response_date)                                            AS first_seen,
+             MAX(response_date)                                            AS last_seen,
+             COUNT(*)::int                                                 AS total_citations,
+             (COUNT(*) FILTER (WHERE response_date >= ${since}))::int      AS recent_citations,
+             COUNT(DISTINCT ai_platform)::int                              AS platform_count,
+             array_agg(DISTINCT ai_platform::text)                         AS platforms
+      FROM src
+      WHERE domain <> '' AND length(domain) > 2
+      GROUP BY domain
+    `;
+
+    const mapped = rows.map(r => ({
+      domain: r.domain,
+      firstSeen: new Date(r.first_seen).toISOString().slice(0, 10),
+      lastSeen: new Date(r.last_seen).toISOString().slice(0, 10),
+      totalCitations: r.total_citations,
+      recentCitations: r.recent_citations,
+      platformCount: r.platform_count,
+      platforms: r.platforms,
+      isNew: new Date(r.first_seen) >= since,
+    }));
+
+    // 신규 등장 (최근 N일 내 첫 인용) — 최근 인용 수 내림차순
+    const newDomains = mapped
+      .filter(d => d.isNew)
+      .sort((a, b) => b.recentCitations - a.recentCitations);
+
+    // 전체 TOP 30 (기존 강자 파악용)
+    const topDomains = [...mapped]
+      .sort((a, b) => b.totalCitations - a.totalCitations)
+      .slice(0, 30);
+
+    this.logger.log(
+      `[Admin] 인용 도메인 집계: 전체 ${mapped.length}종, 최근 ${days}일 신규 ${newDomains.length}종`,
+    );
+
+    return {
+      success: true,
+      periodDays: days,
+      totalDomains: mapped.length,
+      newDomainCount: newDomains.length,
+      newDomains,
+      topDomains,
+    };
+  }
+
   // ==================== 병원 원장용 대시보드 (접근코드 게이트) ====================
 
   /**

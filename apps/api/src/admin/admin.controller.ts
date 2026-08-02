@@ -244,6 +244,22 @@ export class AdminController {
   }
 
   /**
+   * 【어드민】인용 출처 도메인 집계 + 신규 등장 탐지
+   * GET /api/admin/citation-domains?secret=xxx&days=30
+   */
+  @Public()
+  @Get('citation-domains')
+  async getCitationDomains(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 365);
+    return this.adminService.getCitationDomains(daysNum);
+  }
+
+  /**
    * 【원장용 보드】병원 스코프 대시보드 — 병원별 접근코드로 열람
    * GET /api/admin/hospital-board?hospitalId=xxx&code=xxx&days=30
    *
