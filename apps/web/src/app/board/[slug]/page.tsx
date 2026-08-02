@@ -33,6 +33,7 @@ const SLUG_MAP: Record<string, string> = {
   remember: '5a5e659a-97bc-4ff5-9952-3245cd28cd5a', // 서울리멤버치과 (관악, 박정기)
   centum: '0c23bd5a-3b81-4b60-8f23-1c9a89da9637', // 서울센텀턱구강내과치과 (영등포, 남윤)
   seoul365: 'c76b0723-367d-4dbc-8ca1-b30d2c017c6a', // 서울365치과의원 (인천 남동, 박준규)
+  tuntun: '5563332b-9326-4c53-96c2-53855237c639', // 서울튼튼치과의원 (청주, 김진환)
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
