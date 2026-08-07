@@ -260,6 +260,26 @@ export class AdminController {
   }
 
   /**
+   * 【어드민】신뢰검증 단계(REVIEW+FEAR) 심층 진단
+   * GET /api/admin/trust-diagnosis?secret=xxx&hospitalId=xxx&days=30
+   */
+  @Public()
+  @Get('trust-diagnosis')
+  async getTrustDiagnosis(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 365);
+    return this.adminService.getTrustDiagnosis(hospitalId, daysNum);
+  }
+
+  /**
    * 【원장용 보드】병원 스코프 대시보드 — 병원별 접근코드로 열람
    * GET /api/admin/hospital-board?hospitalId=xxx&code=xxx&days=30
    *

@@ -1412,6 +1412,122 @@ export class AdminService {
     };
   }
 
+  // ==================== 신뢰검증(TRUST) 단계 심층 진단 ====================
+
+  /**
+   * 【어드민】특정 병원의 신뢰검증 단계(REVIEW+FEAR 의도) 심층 진단
+   *
+   * - 이 단계 질문에서 병원 SoV / 언급 실패 시 대신 언급된 경쟁사
+   * - AI가 이 단계 답변에서 실제 인용한 출처 도메인 (어디를 공략해야 하는지)
+   * - 질문별 성적 (어떤 후기 질문에서 지고 있는지)
+   */
+  async getTrustDiagnosis(hospitalId: string, days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true, regionSido: true, regionSigungu: true },
+    });
+    if (!hospital) return { success: false, error: '병원을 찾을 수 없습니다' };
+
+    const responses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        responseDate: { gte: since },
+        queryIntent: { in: ['REVIEW', 'FEAR'] },
+      },
+      select: {
+        aiPlatform: true,
+        queryIntent: true,
+        isMentioned: true,
+        mentionPosition: true,
+        sentimentScore: true,
+        competitorsMentioned: true,
+        citedSources: true,
+        archivedPromptText: true,
+        prompt: { select: { promptText: true } },
+      },
+    });
+
+    const total = responses.length;
+    const mentioned = responses.filter(r => r.isMentioned).length;
+
+    // 경쟁사 언급 집계 (미언급 응답에서 누가 대신 등판했나)
+    const compWhenAbsent = new Map<string, number>();
+    const compOverall = new Map<string, number>();
+    for (const r of responses) {
+      for (const c of r.competitorsMentioned ?? []) {
+        compOverall.set(c, (compOverall.get(c) ?? 0) + 1);
+        if (!r.isMentioned) compWhenAbsent.set(c, (compWhenAbsent.get(c) ?? 0) + 1);
+      }
+    }
+    const toSorted = (m: Map<string, number>) =>
+      [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15)
+        .map(([name, count]) => ({ name, count }));
+
+    // 이 단계 답변에서 AI가 인용한 출처 도메인
+    const domainCount = new Map<string, number>();
+    for (const r of responses) {
+      for (const s of r.citedSources ?? []) {
+        const domain = s.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].toLowerCase();
+        if (domain.length > 2) domainCount.set(domain, (domainCount.get(domain) ?? 0) + 1);
+      }
+    }
+
+    // 질문별 성적
+    const byPrompt = new Map<string, { total: number; mentioned: number; intent: string }>();
+    for (const r of responses) {
+      const text = r.prompt?.promptText ?? r.archivedPromptText ?? '(질문 유실)';
+      if (!byPrompt.has(text)) byPrompt.set(text, { total: 0, mentioned: 0, intent: r.queryIntent as string });
+      const p = byPrompt.get(text)!;
+      p.total += 1;
+      if (r.isMentioned) p.mentioned += 1;
+    }
+
+    // 플랫폼별
+    const byPlatform = new Map<string, { total: number; mentioned: number }>();
+    for (const r of responses) {
+      if (!byPlatform.has(r.aiPlatform)) byPlatform.set(r.aiPlatform, { total: 0, mentioned: 0 });
+      const p = byPlatform.get(r.aiPlatform)!;
+      p.total += 1;
+      if (r.isMentioned) p.mentioned += 1;
+    }
+
+    const sentiments = responses.filter(r => r.isMentioned && r.sentimentScore !== null);
+
+    return {
+      success: true,
+      hospital: { ...hospital },
+      periodDays: days,
+      trustStage: {
+        totalResponses: total,
+        mentionedResponses: mentioned,
+        sovPercent: total > 0 ? Math.round((mentioned / total) * 1000) / 10 : 0,
+        avgSentiment: sentiments.length > 0
+          ? Math.round((sentiments.reduce((s, r) => s + (r.sentimentScore ?? 0), 0) / sentiments.length) * 100) / 100
+          : null,
+      },
+      competitorsWhenAbsent: toSorted(compWhenAbsent),
+      competitorsOverall: toSorted(compOverall),
+      citedDomains: [...domainCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)
+        .map(([domain, count]) => ({ domain, count })),
+      prompts: [...byPrompt.entries()].map(([text, p]) => ({
+        promptText: text,
+        intent: p.intent,
+        total: p.total,
+        mentioned: p.mentioned,
+        sovPercent: p.total > 0 ? Math.round((p.mentioned / p.total) * 1000) / 10 : 0,
+      })).sort((a, b) => a.sovPercent - b.sovPercent),
+      platforms: [...byPlatform.entries()].map(([platform, p]) => ({
+        platform,
+        total: p.total,
+        mentioned: p.mentioned,
+        sovPercent: p.total > 0 ? Math.round((p.mentioned / p.total) * 1000) / 10 : 0,
+      })).sort((a, b) => b.sovPercent - a.sovPercent),
+    };
+  }
+
   // ==================== 병원 원장용 대시보드 (접근코드 게이트) ====================
 
   /**
