@@ -38,9 +38,14 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   // Google Gemini
   { prefix: 'gemini-2.5-flash-lite', pricing: { input: 0.1, output: 0.4 } },
   { prefix: 'gemini-2.5-flash', pricing: { input: 0.3, output: 2.5 } },
-  // xAI Grok
+  // xAI Grok (2026.08 갱신 — 구체적 prefix를 grok-4보다 앞에! prefix 매칭 순서 주의)
+  { prefix: 'grok-4.1-fast', pricing: { input: 0.2, output: 0.5 } },
+  { prefix: 'grok-4.3', pricing: { input: 1.25, output: 2.5 } },
+  { prefix: 'grok-4.20', pricing: { input: 1.25, output: 2.5 } },
+  { prefix: 'grok-4.5', pricing: { input: 2, output: 6 } },
   { prefix: 'grok-4', pricing: { input: 3, output: 15 } },
   { prefix: 'grok-3-fast', pricing: { input: 5, output: 25 } },
+  { prefix: 'grok-3-mini', pricing: { input: 0.3, output: 0.5 } },
   { prefix: 'grok-3', pricing: { input: 3, output: 15 } },
   // Naver CLOVA X (KRW→USD 환산 근사: HCX-005 약 ₩0.005/token 수준 가정)
   { prefix: 'HCX-005', pricing: { input: 1.5, output: 1.5 } },

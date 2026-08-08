@@ -14,8 +14,11 @@ import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.inte
  *  - 인용은 output_text의 annotations(url_citation) + 인라인 [[N]](url) 마크다운으로 반환
  *  - Responses API는 inline citations 기본 활성화
  *
- * 모델: grok-4 (GROK_MODEL env로 오버라이드, xAI가 최신 버전 자동 서빙 — 실측 grok-4.3)
- * 비용 주의: web_search tool 호출당 과금. 모델이 필요 시에만 검색(auto와 동일).
+ * 모델: grok-4.1-fast (GROK_MODEL env로 오버라이드 가능)
+ *  【2026.08 비용 절감】grok-4($3/$15) → grok-4.1-fast($0.20/$0.50, -95%)로 전환.
+ *  측정 목적은 "언급 여부"이므로 모델 급보다 web_search 유지가 핵심.
+ *  grok-4.1-fast가 미서빙/폐기되면 grok-4.3($1.25/$2.50)으로 자동 폴백.
+ * 비용 주의: web_search tool 호출당 과금($5/1k calls). 모델이 필요 시에만 검색(auto와 동일).
  */
 export class GrokStrategy implements PlatformStrategy {
   readonly platform: AIPlatform = 'GROK';
@@ -27,34 +30,57 @@ export class GrokStrategy implements PlatformStrategy {
     const xaiApiKey = process.env.XAI_API_KEY?.trim();
     if (!xaiApiKey) throw new Error('XAI_API_KEY가 설정되지 않았습니다');
 
-    const modelName = process.env.GROK_MODEL?.trim() || 'grok-4';
+    // 최저가 우선 후보 체인 — env 오버라이드 > 4.1-fast(최저가) > 4.3(현행 플래그십)
+    const envModel = process.env.GROK_MODEL?.trim();
+    const candidates = envModel ? [envModel, 'grok-4.1-fast', 'grok-4.3'] : ['grok-4.1-fast', 'grok-4.3'];
 
-    this.ctx.logger.log(`[Grok] Responses API 호출 시작 (${modelName}, web_search tool)`);
+    let data: any = null;
+    let modelName = candidates[0];
+    let lastError: Error | null = null;
 
-    const response = await fetch('https://api.x.ai/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${xaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: modelName,
-        input: [
-          {
-            role: 'user',
-            content: promptText, // 시스템 프롬프트 없음 — 다른 플랫폼과 일관성
-          },
-        ],
-        tools: [{ type: 'web_search' }],
-        // temperature 미지정: grok-4는 reasoning 모델 — Responses API에서
-        // 샘플링 파라미터 미지원/무시 가능성이 있어 기본값 사용
-      }),
-    });
+    for (const candidate of candidates) {
+      modelName = candidate;
+      this.ctx.logger.log(`[Grok] Responses API 호출 시작 (${modelName}, web_search tool)`);
 
-    const data: any = await response.json();
+      const response = await fetch('https://api.x.ai/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${xaiApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelName,
+          input: [
+            {
+              role: 'user',
+              content: promptText, // 시스템 프롬프트 없음 — 다른 플랫폼과 일관성
+            },
+          ],
+          tools: [{ type: 'web_search' }],
+          // temperature 미지정: reasoning 계열 — Responses API에서
+          // 샘플링 파라미터 미지원/무시 가능성이 있어 기본값 사용
+        }),
+      });
 
-    if (data.error) {
-      throw new Error(`Grok 에러: ${JSON.stringify(data.error)}`);
+      data = await response.json();
+
+      if (data?.error) {
+        const errStr = JSON.stringify(data.error);
+        // 모델 미존재/미지원 에러면 다음 후보로 폴백, 그 외(키/한도 등)는 즉시 throw
+        const isModelIssue = /model|not found|does not exist|deprecated|unavailable/i.test(errStr);
+        lastError = new Error(`Grok 에러 (${modelName}): ${errStr}`);
+        if (isModelIssue && candidate !== candidates[candidates.length - 1]) {
+          this.ctx.logger.warn(`[Grok] ${modelName} 실패(모델 이슈 추정) → 다음 후보 폴백: ${errStr.slice(0, 200)}`);
+          data = null;
+          continue;
+        }
+        throw lastError;
+      }
+      break;
+    }
+
+    if (!data) {
+      throw lastError || new Error('Grok: 모든 모델 후보 실패');
     }
     if (!Array.isArray(data.output)) {
       throw new Error(`Grok 응답 형식 오류: output 배열 없음 (${JSON.stringify(data).slice(0, 200)})`);
