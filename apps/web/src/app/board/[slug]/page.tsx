@@ -34,6 +34,69 @@ const SLUG_MAP: Record<string, string> = {
   centum: '0c23bd5a-3b81-4b60-8f23-1c9a89da9637', // 서울센텀턱구강내과치과 (영등포, 남윤)
   seoul365: 'c76b0723-367d-4dbc-8ca1-b30d2c017c6a', // 서울365치과의원 (인천 남동, 박준규)
   tuntun: '5563332b-9326-4c53-96c2-53855237c639', // 서울튼튼치과의원 (청주, 김진환)
+  jungwon: '5be253cd-cf58-4da4-9cb3-40de6165cbde', // 정원한의원 (오산)
+};
+
+// 병원별 맞춤 액션 플랜 (trust-diagnosis 등 실측 진단 기반 큐레이션)
+interface ActionItem {
+  priority: '지금 바로' | '이번 달' | '지속';
+  title: string;
+  detail: string;
+}
+interface ActionPlan {
+  headline: string;
+  strengths: string[];
+  weaknesses: string[];
+  items: ActionItem[];
+  basedOn: string;
+}
+const ACTION_PLANS: Record<string, ActionPlan> = {
+  jungwon: {
+    headline: '전체 성적은 상위 8% 우등생. 딱 하나, "후기 질문"에서만 78전 78패입니다.',
+    strengths: [
+      '지역 대표 질문에서 1순위 호명 61.9% — AI가 가장 먼저 부르는 한의원',
+      'Gemini(74.5%) · ChatGPT(64.3%) 노출 탄탄 — 메인 AI 2종 장악',
+      '언급 시 평균 1.56번째로 호명 — 답변 상단 고정',
+    ],
+    weaknesses: [
+      '한방다이어트 후기 질문: 30일간 78회 중 언급 0회 (경쟁 경희바른한의원은 42회)',
+      '경쟁사 무기는 무료 공개 홈페이지(modoo.at) — AI가 23회 직접 인용. 공개된 글이 없으면 AI는 못 봅니다',
+      'CLOVA X 언급 0% — 네이버 생태계(블로그·플레이스 리뷰) 신호 부족',
+    ],
+    items: [
+      {
+        priority: '지금 바로',
+        title: '한방다이어트 후기 콘텐츠를 "공개 웹"에 올리기',
+        detail:
+          '로그인 없이 볼 수 있는 페이지(홈페이지 후기 섭션, 네이버 블로그)에 다이어트 감량 사례·프로그램 설명 글을 주 1회 발행. 제목에 "오산 한방다이어트 후기" 키워드를 그대로 포함. 경쟁사가 이기는 이유는 단 하나, 글이 공개돼 있어서입니다.',
+      },
+      {
+        priority: '지금 바로',
+        title: '네이버 플레이스 리뷰 수집 루틴 만들기',
+        detail:
+          '치료 마무리 시 리뷰 요청 문자 발송(QR/링크). CLOVA X·네이버 AI 브리핑은 플레이스 리뷰를 직접 읽습니다. 현재 CLOVA X 언급 0% 구간은 여기서 바로 뤓어집니다.',
+      },
+      {
+        priority: '이번 달',
+        title: '홈페이지에 질문-답변(FAQ) 형식 페이지 추가',
+        detail:
+          '"한방다이어트 몇 kg 빠지나요?", "부작용은 없나요?" 같은 환자 질문 그대로를 제목으로 답변 글 작성. AI는 질문-답변 구조 문서를 가장 잘 인용합니다.',
+      },
+      {
+        priority: '이번 달',
+        title: 'Claude 노출 보강 (현재 17.2%로 취약)',
+        detail:
+          'Claude는 공신력 있는 외부 문서(언론 기사·협회 자료·지역 정보 사이트)를 선호. 지역 언론 건강 칼럼 기고나 오산시 지역 포털 등록을 검토하세요.',
+      },
+      {
+        priority: '지속',
+        title: '주 1회 이 보드에서 순위·후기 질문 회복 여부 확인',
+        detail:
+          '후기 콘텐츠 발행 후 2~4주 내 "후기 질문" 구간 언급률 변화가 지표입니다. 전체 순위는 이미 상위권이니 지키기 모드, 후기 구간은 공격 모드입니다.',
+      },
+    ],
+    basedOn: '최근 30일 AI 응답 610건 전수 분석 + 신뢰검증(후기·불안) 질문 78건 정밀 진단 기반',
+  },
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
@@ -504,6 +567,65 @@ export default function HospitalBoardPage() {
           </div>
         </article>
       </section>
+
+      {/* ===== 맞춤 액션 플랜 (큐레이션된 병원만 표시) ===== */}
+      {ACTION_PLANS[slug] && (
+        <section id="action-plan" className="max-w-6xl mx-auto px-6 mb-10">
+          <article className="bg-gradient-to-br from-emerald-500/10 to-sky-500/10 border border-emerald-400/20 rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🎯</span>
+              <h2 className="text-sm font-bold text-emerald-300">이제 뭐 하면 되나요? — 맞춤 액션 플랜</h2>
+            </div>
+            <p className="text-base font-bold text-white mb-5">{ACTION_PLANS[slug].headline}</p>
+
+            <div className="grid md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="text-xs font-bold text-emerald-400 mb-2">💪 지키면 되는 것 (강점)</h3>
+                <ul className="space-y-1.5">
+                  {ACTION_PLANS[slug].strengths.map((s, i) => (
+                    <li key={i} className="text-[13px] text-slate-300 leading-relaxed flex gap-2">
+                      <span className="text-emerald-400 shrink-0">✓</span>{s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="bg-white/5 rounded-xl p-4">
+                <h3 className="text-xs font-bold text-rose-400 mb-2">🔧 고치면 이기는 것 (약점)</h3>
+                <ul className="space-y-1.5">
+                  {ACTION_PLANS[slug].weaknesses.map((w, i) => (
+                    <li key={i} className="text-[13px] text-slate-300 leading-relaxed flex gap-2">
+                      <span className="text-rose-400 shrink-0">!</span>{w}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {ACTION_PLANS[slug].items.map((item, i) => (
+                <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-3">
+                  <span
+                    className={`shrink-0 h-fit text-[10px] font-bold px-2 py-1 rounded-full ${
+                      item.priority === '지금 바로'
+                        ? 'bg-rose-500/20 text-rose-300'
+                        : item.priority === '이번 달'
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : 'bg-sky-500/20 text-sky-300'
+                    }`}
+                  >
+                    {item.priority}
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-white mb-1">{item.title}</p>
+                    <p className="text-[13px] text-slate-400 leading-relaxed">{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-500 mt-4">{ACTION_PLANS[slug].basedOn}</p>
+          </article>
+        </section>
+      )}
 
       <footer className="max-w-6xl mx-auto px-6 text-center text-[11px] text-slate-600">
         Patient Signal · 실제 AI 응답 전수 분석 기반 · 데이터는 크롤링 주기에 따라 갱신됩니다
