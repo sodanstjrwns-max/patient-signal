@@ -46,8 +46,19 @@ export class PerplexityStrategy implements PlatformStrategy {
 
     const text = data.choices?.[0]?.message?.content || '';
 
-    // Perplexity citations 추출
-    const citations: string[] = data.citations || [];
+    // 【2026.08 파싱 감사】Perplexity 인용 추출 — 신구 필드 모두 수용
+    // 신: search_results[] ({url, title, date}) / 구: citations[] (string[])
+    const searchResults: Array<{ url?: string; title?: string }> = Array.isArray(data.search_results)
+      ? data.search_results
+      : [];
+    const legacyCitations: string[] = Array.isArray(data.citations) ? data.citations : [];
+    const citations: string[] = [
+      ...new Set([
+        ...searchResults.map((r) => r?.url).filter((u): u is string => typeof u === 'string' && u.startsWith('http')),
+        ...legacyCitations,
+      ]),
+    ];
+    const titleByUrl = new Map(searchResults.filter((r) => r?.url).map((r) => [r.url as string, r.title]));
 
     const result = this.ctx.analyzeResponse(text, hospitalName, 'PERPLEXITY', 'sonar');
     result.isWebSearch = true; // Perplexity는 항상 웹 검색 기반
@@ -67,9 +78,10 @@ export class PerplexityStrategy implements PlatformStrategy {
       result.citedSources = [...new Set([...result.citedSources, ...citations])].slice(0, 15);
     }
 
-    // 【소스 트래킹】Perplexity citations 구조화
+    // 【소스 트래킹】Perplexity citations 구조화 (search_results의 title 포함)
     const sourceItems: SourceItem[] = citations.map(url => ({
       url,
+      title: titleByUrl.get(url) || undefined,
       type: 'citation' as const,
       platform: 'PERPLEXITY',
       domain: this.ctx.extractDomain(url),
