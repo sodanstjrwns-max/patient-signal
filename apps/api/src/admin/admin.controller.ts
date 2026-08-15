@@ -379,6 +379,77 @@ export class AdminController {
     }
   }
 
+  /**
+   * 【어드민·디버그】xAI 서빙 모델 목록 + Grok 단건 호출 진단
+   * GET /api/admin/debug-grok?secret=xxx            → xAI /v1/models 목록 (실제 서빙명 확인)
+   * GET /api/admin/debug-grok?secret=xxx&model=grok-4.1-fast → 해당 모델 1회 호출 테스트
+   *
+   * 배경: GROK_MODEL env가 없는데도 크롤 770건 전부 grok-4.3으로 기록됨
+   * → grok-4.1-fast가 미서빙명이라 코드가 4.3으로 자동 폴백 중인 것으로 추정.
+   * 실제 서빙 모델명을 실측해 최저가 모델명을 확정한다.
+   */
+  @Public()
+  @Get('debug-grok')
+  async debugGrok(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('model') model?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    const xaiApiKey = process.env.XAI_API_KEY?.trim();
+    if (!xaiApiKey) return { success: false, error: 'XAI_API_KEY 미설정' };
+
+    const started = Date.now();
+
+    // 모델 미지정 → 서빙 중인 모델 목록 반환
+    if (!model) {
+      try {
+        const res = await fetch('https://api.x.ai/v1/models', {
+          headers: { Authorization: `Bearer ${xaiApiKey}` },
+        });
+        const data: any = await res.json();
+        const models = (data?.data || []).map((m: any) => m.id).sort();
+        return { success: res.ok, httpStatus: res.status, elapsedMs: Date.now() - started, models, error: data?.error || null };
+      } catch (e: any) {
+        return { success: false, elapsedMs: Date.now() - started, thrownError: e?.message };
+      }
+    }
+
+    // 모델 지정 → Responses API 단건 호출 테스트 (크롤과 동일 경로)
+    const modelName = model.replace(/[^a-z0-9.\-]/gi, '');
+    try {
+      const res = await fetch('https://api.x.ai/v1/responses', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${xaiApiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelName,
+          input: [{ role: 'user', content: '천안 임플란트 잘하는 치과 추천해줘' }],
+          tools: [{ type: 'web_search' }],
+        }),
+      });
+      const data: any = await res.json();
+      // Responses API output에서 텍스트 추출
+      let text = '';
+      for (const item of data?.output || []) {
+        for (const c of item?.content || []) {
+          if (typeof c?.text === 'string') text += c.text;
+        }
+      }
+      return {
+        success: !data?.error && res.ok,
+        model: modelName,
+        httpStatus: res.status,
+        elapsedMs: Date.now() - started,
+        error: data?.error || null,
+        actualModel: data?.model || null,
+        textPreview: text.slice(0, 300),
+        usage: data?.usage || null,
+      };
+    } catch (e: any) {
+      return { success: false, model: modelName, elapsedMs: Date.now() - started, thrownError: e?.message };
+    }
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)
