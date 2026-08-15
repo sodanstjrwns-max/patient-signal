@@ -14,10 +14,12 @@ import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.inte
  *  - 인용은 output_text의 annotations(url_citation) + 인라인 [[N]](url) 마크다운으로 반환
  *  - Responses API는 inline citations 기본 활성화
  *
- * 모델: grok-4.1-fast (GROK_MODEL env로 오버라이드 가능)
- *  【2026.08 비용 절감】grok-4($3/$15) → grok-4.1-fast($0.20/$0.50, -95%)로 전환.
- *  측정 목적은 "언급 여부"이므로 모델 급보다 web_search 유지가 핵심.
- *  grok-4.1-fast가 미서빙/폐기되면 grok-4.3($1.25/$2.50)으로 자동 폴백.
+ * 모델: grok-4.3 (GROK_MODEL env로 오버라이드 가능)
+ *  【2026.08.15 실측 확정】xAI /v1/models 조회 결과 grok-4.1-fast는 미서빙 모델명이었음
+ *  (서빙 목록: 4.20-0309 변종 3종 / 4.3 / 4.5 / 4.6). 현재 최저가 텍스트 티어는
+ *  grok-4.3 = grok-4.20 동일($1.25/$2.50)이며, 단건 테스트에서 4.20-non-reasoning은
+ *  검색을 3배(9회 vs 3회) 돌려 실측 비용이 오히려 2.9배 비쌈($0.0745 vs $0.0258).
+ *  → grok-4.3 단일 후보로 확정 (존재하지 않는 4.1-fast 시도로 매 호출 실패 1회씩 낭비하던 것 제거).
  * 비용 주의: web_search tool 호출당 과금($5/1k calls). 모델이 필요 시에만 검색(auto와 동일).
  */
 export class GrokStrategy implements PlatformStrategy {
@@ -30,9 +32,9 @@ export class GrokStrategy implements PlatformStrategy {
     const xaiApiKey = process.env.XAI_API_KEY?.trim();
     if (!xaiApiKey) throw new Error('XAI_API_KEY가 설정되지 않았습니다');
 
-    // 최저가 우선 후보 체인 — env 오버라이드 > 4.1-fast(최저가) > 4.3(현행 플래그십)
+    // 【2026.08.15 실측】grok-4.3이 서빙 중인 최저가 텍스트 모델 — env 오버라이드 > 4.3
     const envModel = process.env.GROK_MODEL?.trim();
-    const candidates = envModel ? [envModel, 'grok-4.1-fast', 'grok-4.3'] : ['grok-4.1-fast', 'grok-4.3'];
+    const candidates = envModel ? [envModel, 'grok-4.3'] : ['grok-4.3'];
 
     let data: any = null;
     let modelName = candidates[0];
