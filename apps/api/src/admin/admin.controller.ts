@@ -326,6 +326,59 @@ export class AdminController {
     };
   }
 
+  /**
+   * 【어드민·디버그】Gemini flash-lite grounding 단건 호출 진단
+   * GET /api/admin/debug-gemini?secret=xxx&model=gemini-2.5-flash-lite
+   *
+   * 배경: 크롤에서 flash-lite STEP1이 전멸하고 2.5-flash 폴백만 도는 원인 규명용.
+   * 프로덕션 환경(실제 GEMINI_API_KEY)에서 flash-lite + google_search를 1회 호출해
+   * 에러 원문을 그대로 반환한다.
+   */
+  @Public()
+  @Get('debug-gemini')
+  async debugGemini(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('model') model?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+    if (!geminiApiKey) return { success: false, error: 'GEMINI_API_KEY 미설정' };
+
+    const modelName = (model || 'gemini-2.5-flash-lite').replace(/[^a-z0-9.\-]/gi, '');
+    const started = Date.now();
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: '천안 임플란트 잘하는 치과 추천해줘' }] }],
+            generationConfig: { maxOutputTokens: 500 },
+            tools: [{ google_search: {} }],
+          }),
+        },
+      );
+      const data: any = await response.json();
+      const parts = data?.candidates?.[0]?.content?.parts || [];
+      const text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('');
+      return {
+        success: !data?.error,
+        model: modelName,
+        httpStatus: response.status,
+        elapsedMs: Date.now() - started,
+        error: data?.error || null,
+        textPreview: text.slice(0, 300),
+        finishReason: data?.candidates?.[0]?.finishReason || null,
+        groundingChunks: data?.candidates?.[0]?.groundingMetadata?.groundingChunks?.length ?? 0,
+        usage: data?.usageMetadata || null,
+      };
+    } catch (e: any) {
+      return { success: false, model: modelName, elapsedMs: Date.now() - started, thrownError: e?.message };
+    }
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)

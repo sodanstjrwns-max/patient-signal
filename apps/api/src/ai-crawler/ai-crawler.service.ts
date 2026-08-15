@@ -40,6 +40,31 @@ export class AICrawlerService implements OnModuleInit {
   private readonly CB_FAILURE_THRESHOLD = 5;  // 5번 연속 실패 시 회로 개방
   private readonly CB_RECOVERY_TIME = 60000;  // 60초 후 반개방으로 전환
 
+  // ============================================================
+  // 【2026.08 공유 크롤】동일 (플랫폼 × 질문)의 AI 응답을 병원 간 재사용
+  //
+  // 원리: "천안 임플란트 잘하는 곳" 같은 일반 질문은 병원 10곳이 각자
+  // 물어도 AI 답변은 동일한 1개다. 원본 API 응답(텍스트/인용/모델)은
+  // 병원과 무관하므로 1회만 호출하고, 병원별 채점(언급 여부/순위/감성)만
+  // 로컬에서 각각 다시 수행한다.
+  //  - 적용 범위: 배치 크롤(queryAllPlatforms)만. 라이브 쿼리는 신선도
+  //    우선이라 공유하지 않음 (allowShared 플래그로 제어).
+  //  - TTL 90분: 같은 크롤 세션 내 재사용, 세션 간(아침/저녁)은 새로 측정.
+  //  - 공유 히트 응답은 estimatedCostUsd=0 (실제 API 비용이 발생 안 했으므로).
+  //  - in-flight dedup: 동시 크롤 중인 병원들이 같은 질문을 동시에 쏘면
+  //    Promise 자체를 공유해 중복 호출 차단.
+  //  - SHARED_CRAWL_DISABLED=true 로 긴급 비활성화 가능.
+  // ============================================================
+  private sharedCrawlCache = new Map<string, { promise: Promise<AIQueryResult | null>; expiresAt: number }>();
+  private sharedCrawlStats = { hits: 0, misses: 0 };
+  private get sharedCrawlTtlMs(): number {
+    const min = parseInt(process.env.SHARED_CRAWL_TTL_MIN || '90', 10);
+    return (Number.isFinite(min) && min > 0 ? min : 90) * 60 * 1000;
+  }
+  private get sharedCrawlEnabled(): boolean {
+    return process.env.SHARED_CRAWL_DISABLED?.trim().toLowerCase() !== 'true';
+  }
+
   // 【P1-5】플랫폼별 질의 전략 (벤더 API 호출/파싱은 전략이, 분석은 공용 메서드가 담당)
   private strategies = new Map<AIPlatform, PlatformStrategy>();
 
@@ -328,7 +353,8 @@ export class AICrawlerService implements OnModuleInit {
         try {
           this.logger.log(`🔄 ${platform} [${repeatIdx + 1}/${this.REPEAT_COUNT}] 질의 시작`);
           
-          const result = await this.queryPlatform(platform, promptText, hospitalName);
+          // 【공유 크롤】동일 (플랫폼×질문) 응답은 세션 내 1회만 API 호출, 병원별 재채점
+          const result = await this.queryPlatformWithSharing(platform, promptText, hospitalName);
           result.repeatIndex = repeatIdx;
           
           // 【고도화 #5】환각 필터링 - 등록된 경쟁사 DB와 대조 + 패턴 기반
@@ -656,6 +682,86 @@ export class AICrawlerService implements OnModuleInit {
     result.inputTokens = usage.inputTokens;
     result.outputTokens = usage.outputTokens;
     result.estimatedCostUsd = usage.estimatedCostUsd;
+  }
+
+  /**
+   * 【2026.08 공유 크롤】(플랫폼 × 질문) 단위로 원본 API 응답을 재사용하는 래퍼
+   *
+   * - 배치 크롤(queryAllPlatforms) 전용. 라이브 쿼리는 queryPlatform 직접 사용.
+   * - 첫 병원: 실제 API 호출 → 결과를 TTL 캐시에 저장 (in-flight Promise 공유로 동시 중복 차단)
+   * - 이후 병원: 캐시된 원본 응답 텍스트를 자기 병원명으로 재채점(rescore)만 수행 → 비용 $0
+   */
+  private async queryPlatformWithSharing(
+    platform: AIPlatform,
+    promptText: string,
+    hospitalName: string,
+  ): Promise<AIQueryResult> {
+    if (!this.sharedCrawlEnabled) {
+      return this.queryPlatform(platform, promptText, hospitalName);
+    }
+
+    const key = `${platform}::${promptText.trim()}`;
+    const now = Date.now();
+
+    // 만료 엔트리 정리 (캐시 무한 증식 방지)
+    if (this.sharedCrawlCache.size > 3000) {
+      for (const [k, v] of this.sharedCrawlCache) {
+        if (v.expiresAt <= now) this.sharedCrawlCache.delete(k);
+      }
+    }
+
+    const entry = this.sharedCrawlCache.get(key);
+    if (entry && entry.expiresAt > now) {
+      const cached = await entry.promise; // 실패 시 null (아래에서 miss 처리)
+      if (cached) {
+        this.sharedCrawlStats.hits++;
+        if (this.sharedCrawlStats.hits % 100 === 0) {
+          const { hits, misses } = this.sharedCrawlStats;
+          const rate = ((hits / Math.max(hits + misses, 1)) * 100).toFixed(1);
+          this.logger.log(`[공유크롤] 누적 히트 ${hits} / 미스 ${misses} (히트율 ${rate}%)`);
+        }
+        return this.rescoreSharedResult(cached, hospitalName);
+      }
+      // 원본 호출이 실패했던 엔트리 — 제거 후 새로 시도
+      this.sharedCrawlCache.delete(key);
+    }
+
+    this.sharedCrawlStats.misses++;
+    const livePromise = this.queryPlatform(platform, promptText, hospitalName);
+    this.sharedCrawlCache.set(key, {
+      // 캐시에는 실패를 null로 흡수한 Promise를 저장 — 대기 중이던 다른 병원이 실패를 상속받지 않게
+      promise: livePromise.catch(() => null),
+      expiresAt: now + this.sharedCrawlTtlMs,
+    });
+
+    try {
+      return await livePromise; // 첫 호출 병원은 자기 병원명으로 이미 채점된 결과를 그대로 사용
+    } catch (err) {
+      this.sharedCrawlCache.delete(key); // 실패 엔트리는 즉시 제거 (다음 병원이 재시도)
+      throw err;
+    }
+  }
+
+  /**
+   * 【공유 크롤】캐시된 원본 응답을 다른 병원 관점으로 재채점
+   * - 언급 여부/순위/감성/경쟁사: 응답 텍스트에서 병원별로 재계산
+   * - 구조화 인용/sourceHints/토큰: 병원 무관 → 원본 계승
+   * - estimatedCostUsd = 0: 실제 API 호출이 발생하지 않았으므로
+   */
+  private rescoreSharedResult(shared: AIQueryResult, hospitalName: string): AIQueryResult {
+    const rescored = this.analyzeResponse(shared.response, hospitalName, shared.platform, shared.model);
+    rescored.isWebSearch = shared.isWebSearch;
+    rescored.verificationSource = shared.verificationSource;
+    // 구조화 인용(annotations/citations 등)은 텍스트 재분석으로는 복원 불가 → 원본과 병합
+    rescored.citedSources = [
+      ...new Set([...(shared.citedSources || []), ...rescored.citedSources]),
+    ].slice(0, 15);
+    rescored.sourceHints = shared.sourceHints;
+    // 토큰은 참고용으로 계승하되 비용은 0 (원가 집계 왜곡 방지 — 공유 히트는 공짜)
+    rescored.inputTokens = shared.inputTokens ?? null;
+    rescored.outputTokens = shared.outputTokens ?? null;
+    rescored.estimatedCostUsd = 0;
+    return rescored;
   }
 
   private async queryPlatform(
