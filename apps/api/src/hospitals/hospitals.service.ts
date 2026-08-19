@@ -78,7 +78,7 @@ export class HospitalsService {
     // 7일 후 자동으로 FREE로 다운그레이드 (Cron에서 처리)
     const now = new Date();
     const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 7); // 7일 후 만료
+    trialEnd.setDate(trialEnd.getDate() + 14); // 14일 후 만료 (2026.08.19 최종본: 전 제품 공통 14일)
 
     try {
       await this.prisma.subscription.create({
@@ -90,7 +90,7 @@ export class HospitalsService {
           currentPeriodEnd: trialEnd,
         },
       });
-      this.logger.log(`[트라이얼] STARTER 7일 체험 시작: hospitalId=${hospital.id}, 만료=${trialEnd.toISOString()}`);
+      this.logger.log(`[트라이얼] STARTER(S) 14일 체험 시작: hospitalId=${hospital.id}, 만료=${trialEnd.toISOString()}`);
     } catch (err) {
       this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }

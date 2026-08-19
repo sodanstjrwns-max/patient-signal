@@ -43,9 +43,9 @@ export class SubscriptionsService {
 
     const now = new Date();
 
-    // 7일 무료 체험 기간으로 설정 (결제 전까지는 체험)
+    // 14일 무료 체험 기간으로 설정 (2026.08.19 최종본: 전 제품 공통 14일, 카드 등록 없음)
     const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 7);
+    trialEnd.setDate(trialEnd.getDate() + 14);
 
     const subscription = await this.prisma.subscription.upsert({
       where: { hospitalId: data.hospitalId },
@@ -54,14 +54,14 @@ export class SubscriptionsService {
         planType: data.planType,
         status: 'TRIAL',
         currentPeriodStart: now,
-        currentPeriodEnd: trialEnd, // 7일 체험 기간
+        currentPeriodEnd: trialEnd, // 14일 체험 기간
         paymentMethodId: data.paymentId,
       },
       update: {
         planType: data.planType,
         status: 'TRIAL',
         currentPeriodStart: now,
-        currentPeriodEnd: trialEnd, // 7일 체험 기간
+        currentPeriodEnd: trialEnd, // 14일 체험 기간
         paymentMethodId: data.paymentId,
         cancelAtPeriodEnd: false,
       },

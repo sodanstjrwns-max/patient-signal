@@ -3,13 +3,14 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { CouponType, PlanType, Prisma } from '@prisma/client';
 import { CreateCouponDto } from './dto/create-coupon.dto';
 
-// 플랜별 가격 (Single Source of Truth)
+// 플랜별 가격 (Single Source of Truth) — 2026.08.19 가격·구성 최종본
+// 티어명: S(STARTER) / M(STANDARD) / L(PRO) / 별도(ENTERPRISE)
 export const PLAN_PRICES: Record<string, number> = {
   FREE: 0,             // 무료
-  STARTER: 120000,     // 12만원/월
-  STANDARD: 290000,    // 29만원/월
-  PRO: 590000,         // 59만원/월
-  ENTERPRISE: 0,       // 문의
+  STARTER: 99000,      // S 9.9만원/월 (VAT 별도)
+  STANDARD: 290000,    // M 29만원/월 ⭐
+  PRO: 490000,         // L 49만원/월
+  ENTERPRISE: 0,       // 별도 견적 (150만~)
 };
 
 @Injectable()

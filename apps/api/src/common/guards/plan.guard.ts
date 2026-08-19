@@ -23,12 +23,17 @@ export class PlanGuard implements CanActivate {
   private readonly logger = new Logger(PlanGuard.name);
 
   // 플랜별 기능 제한 정의 (Single Source of Truth)
+  // 【2026.08.19 가격·구성 최종본 반영】티어명 S/M/L (내부 enum은 유지, 표시만 매핑)
+  //  FREE / S(STARTER) 99,000 / M(STANDARD) 290,000 / L(PRO) 490,000 / 별도(ENTERPRISE) 150만~
+  //  - S: 크롤 주기 매일→주 2회 강등 (minDaysBetweenCrawls=3) — "매일"은 M부터 (최강 업셀 레버)
+  //  - M 이상: 네이버 AI 브리핑 포함 7개 플랫폼 전체 (한국 환자용 2개는 시그널 해자)
   static readonly PLAN_LIMITS = {
     FREE: {
       maxPrompts: 1,               // 질문 1개만
       maxCompetitors: 0,           // 경쟁사 분석 없음
       platforms: ['PERPLEXITY'],   // 가장 저렴한 1개만
       crawlsPerMonth: 4,           // 주 1회 (월 4회)
+      minDaysBetweenCrawls: 7,     // 【주기 강제】마지막 성공 크롤 후 7일 경과해야 재크롤 (월초 몰림 방지)
       maxDailyLiveQueries: 1,      // 실시간 질문 1회/일 (맛보기)
       promptsPerCrawl: 3,          // 【B안】1회 크롤링당 프롬프트 상한 (FREE: 3개)
       exportEnabled: false,
@@ -39,13 +44,14 @@ export class PlanGuard implements CanActivate {
     STARTER: {
       maxPrompts: 5,
       maxCompetitors: 1,           // 경쟁사 1개 맛보기
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // STARTER는 기존 4개 유지
-      // 【티저】STARTER는 프롬프트 1개(첫 번째)에 한해 GROK + CLOVA_X 맛보기 제공
-      //  → "네이버 AI에서 우리 병원이 어떻게 나오는지"를 보여줘 STANDARD 업셀 유도
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // S는 4개 + 티저
+      // 【티저】S는 프롬프트 1개(첫 번째)에 한해 GROK + CLOVA_X 맛보기 제공
+      //  → "네이버 AI에서 우리 병원이 어떻게 나오는지"를 보여줘 M 업셀 유도
       teaserPlatforms: ['GROK', 'CLOVA_X'],
-      crawlsPerMonth: 30,          // 매일 (AI 답변은 매일 바뀌므로 데이터 신선도 확보)
+      crawlsPerMonth: 9,           // 주 2회 (2026.08.19 최종본 — "매일"은 M부터)
+      minDaysBetweenCrawls: 3,     // 【주기 강제】3일 간격 = 주 2회 페이스 (월초 몰림 방지)
       maxDailyLiveQueries: 5,      // 실시간 질문 5회/일
-      promptsPerCrawl: 5,          // 【B안】1회 크롤링당 프롬프트 상한 (STARTER: 5개)
+      promptsPerCrawl: 5,          // 【B안】1회 크롤링당 프롬프트 상한 (S: 5개)
       exportEnabled: false,
       aiRecommendations: false,
       contentGap: false,
@@ -54,10 +60,12 @@ export class PlanGuard implements CanActivate {
     STANDARD: {
       maxPrompts: 15,
       maxCompetitors: 5,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'], // 6개 AI 전체 (백서 v2.0)
+      // 7개 전체 — NAVER_AI_BRIEFING은 별도 SERP 수집 크론에서 처리 (6-AI 세션과 교집합 없음 → 안전)
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
       crawlsPerMonth: 30,          // 매일
+      minDaysBetweenCrawls: 0,
       maxDailyLiveQueries: 10,     // 실시간 질문 10회/일
-      promptsPerCrawl: 10,         // 【B안】1회 크롤링당 프롬프트 상한 (STANDARD: 10개)
+      promptsPerCrawl: 10,         // 【B안】1회 크롤링당 프롬프트 상한 (M: 10개)
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: false,
@@ -66,10 +74,11 @@ export class PlanGuard implements CanActivate {
     PRO: {
       maxPrompts: 35,
       maxCompetitors: 10,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
       crawlsPerMonth: 30,          // 매일
+      minDaysBetweenCrawls: 0,
       maxDailyLiveQueries: 30,     // 실시간 질문 30회/일
-      promptsPerCrawl: -1,         // 【B안】PRO 이상은 무제한 (maxPrompts 그대로)
+      promptsPerCrawl: -1,         // 【B안】L 이상은 무제한 (maxPrompts 그대로)
       exportEnabled: true,
       aiRecommendations: true,
       contentGap: true,
@@ -78,8 +87,9 @@ export class PlanGuard implements CanActivate {
     ENTERPRISE: {
       maxPrompts: -1,              // unlimited
       maxCompetitors: -1,
-      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
+      platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
       crawlsPerMonth: -1,
+      minDaysBetweenCrawls: 0,
       maxDailyLiveQueries: -1,     // 실시간 질문 무제한 (실질 100회)
       promptsPerCrawl: -1,         // 【B안】ENTERPRISE 무제한
       exportEnabled: true,
@@ -87,6 +97,15 @@ export class PlanGuard implements CanActivate {
       contentGap: true,
       competitorAEO: true,
     },
+  };
+
+  /** 티어 표시명 매핑 — UI/에러 메시지용 (2026.08.19 최종본: S/M/L 통일) */
+  static readonly PLAN_DISPLAY: Record<string, string> = {
+    FREE: 'FREE',
+    STARTER: 'S',
+    STANDARD: 'M',
+    PRO: 'L',
+    ENTERPRISE: '별도(엔터프라이즈)',
   };
 
   constructor(
@@ -141,10 +160,11 @@ export class PlanGuard implements CanActivate {
     if (options.minPlan) {
       const planOrder = { FREE: 0, STARTER: 1, STANDARD: 2, PRO: 3, ENTERPRISE: 4 };
       if ((planOrder[planType] || 1) < (planOrder[options.minPlan] || 1)) {
+        const planLabel = PlanGuard.PLAN_DISPLAY[options.minPlan] || options.minPlan;
         throw new ForbiddenException({
           statusCode: 403,
           error: 'PLAN_UPGRADE_REQUIRED',
-          message: `이 기능은 ${options.minPlan} 플랜 이상에서 사용 가능합니다.`,
+          message: `이 기능은 ${planLabel} 플랜 이상에서 사용 가능합니다.`,
           currentPlan: planType,
           requiredPlan: options.minPlan,
           upgradeUrl: '/dashboard/settings',

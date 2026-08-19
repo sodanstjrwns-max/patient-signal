@@ -457,6 +457,39 @@ export class SchedulerService implements OnModuleInit {
       this.aiCrawlerService.setHospitalAliases(hospital.name, (hospital as any).nameAliases);
     }
 
+    // 【2026.08.19 최종본】크롤 주기 강제 — S(STARTER)=주 2회(3일 간격), FREE=주 1회(7일 간격)
+    // crawlsPerMonth만으로는 월초에 몰아서 소진 가능 → 최소 간격으로 "주 N회" 페이스 보장
+    const minDays = (planLimits as any).minDaysBetweenCrawls || 0;
+    if (minDays > 0) {
+      const lastCrawl = await this.prisma.crawlJob.findFirst({
+        where: {
+          hospitalId: hospital.id,
+          status: 'COMPLETED',
+          id: { not: crawlJob.id },
+        },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      });
+      if (lastCrawl?.startedAt) {
+        const daysSince = (Date.now() - lastCrawl.startedAt.getTime()) / 86_400_000;
+        // 0.75일 여유: 크론 실행 시각 편차로 2.9일차에 스킵되는 억울함 방지
+        if (daysSince < minDays - 0.25) {
+          this.logger.log(
+            `[${hospital.name}] 크롤 주기 미도래 (${daysSince.toFixed(1)}일/${minDays}일, ${hospital.planType}) - 스킵`,
+          );
+          await this.prisma.crawlJob.update({
+            where: { id: crawlJob.id },
+            data: {
+              status: 'FAILED',
+              completedAt: new Date(),
+              errorMessage: `[SKIP] 크롤 주기 미도래 (${hospital.planType} 플랜: ${minDays}일 간격) — 플랜 업그레이드 시 매일 자동 크롤링됩니다`,
+            },
+          });
+          return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'crawl-interval' };
+        }
+      }
+    }
+
     // 월간 크롤링 횟수 체크
     if (planLimits.crawlsPerMonth !== -1) {
       const now = new Date();
@@ -715,11 +748,15 @@ export class SchedulerService implements OnModuleInit {
       return { success: false, hospitals: 0, totalQueries: 0, shown: 0, mentioned: 0, failed: 0, aborted: false, durationSec: 0, error: msg };
     }
 
-    // 대상 병원: ENTERPRISE만 (또는 수동 지정  1개)
+    // 대상 병원: STANDARD 이상 (또는 수동 지정 1개)
+    // 【2026.08.19 최종본】M(STANDARD)부터 7개 플랫폼 전체 — 네이버 AI 브리핑 포함
     const hospitals = await this.prisma.hospital.findMany({
       where: options?.hospitalId
         ? { id: options.hospitalId }
-        : { planType: 'ENTERPRISE' },
+        : {
+            planType: { in: ['STANDARD', 'PRO', 'ENTERPRISE'] },
+            subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] },
+          },
       include: { prompts: { where: { isActive: true } } },
     });
 

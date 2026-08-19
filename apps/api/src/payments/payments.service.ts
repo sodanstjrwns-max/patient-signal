@@ -816,10 +816,11 @@ export class PaymentsService {
     for (const subscription of subscriptionsToRenew) {
       try {
         // 플랜별 금액
+        // 【2026.08.19 가격 최종본】S 9.9만 / M 29만 / L 49만 (VAT 별도)
         const planPrices: Record<string, number> = {
-          STARTER: 120000,
+          STARTER: 99000,
           STANDARD: 290000,
-          PRO: 590000,
+          PRO: 490000,
           ENTERPRISE: 0,
         };
 

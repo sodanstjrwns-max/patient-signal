@@ -276,8 +276,9 @@ export default function GuidePage() {
                   Q. 어떤 AI 플랫폼을 지원하나요?
                 </h4>
                 <p className="text-slate-600 text-sm">
-                  현재 ChatGPT(OpenAI), Claude, Gemini, Perplexity를 지원하며,
-                  추가 플랫폼도 순차적으로 지원 예정입니다.
+                  ChatGPT · Claude · Gemini · Perplexity · Grok · CLOVA X · 네이버 AI 브리핑 —
+                  총 7개 플랫폼을 지원합니다. 한국 환자가 실제로 쓰는 CLOVA X와 네이버 AI 브리핑까지
+                  추적하는 서비스는 Patient Signal이 유일합니다. (플랜별 지원 플랫폼 수는 요금제 참고)
                 </p>
               </div>
 

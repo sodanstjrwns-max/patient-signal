@@ -102,11 +102,12 @@ const navGroups: NavGroup[] = [
 
 const getPathname = (href: string) => href.split('?')[0];
 
+// 【2026.08.19 가격 최종본】티어명 S/M/L 통일
 const PLAN_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  ENTERPRISE: { label: 'Enterprise', color: 'text-amber-300', bg: 'bg-amber-500/10' },
-  PRO: { label: 'Pro', color: 'text-purple-300', bg: 'bg-purple-500/10' },
-  STANDARD: { label: 'Standard', color: 'text-brand-300', bg: 'bg-brand-500/10' },
-  STARTER: { label: 'Starter', color: 'text-emerald-300', bg: 'bg-emerald-500/10' },
+  ENTERPRISE: { label: '별도', color: 'text-amber-300', bg: 'bg-amber-500/10' },
+  PRO: { label: 'L', color: 'text-purple-300', bg: 'bg-purple-500/10' },
+  STANDARD: { label: 'M', color: 'text-brand-300', bg: 'bg-brand-500/10' },
+  STARTER: { label: 'S', color: 'text-emerald-300', bg: 'bg-emerald-500/10' },
   FREE: { label: 'Free', color: 'text-slate-400', bg: 'bg-slate-500/10' },
 };
 

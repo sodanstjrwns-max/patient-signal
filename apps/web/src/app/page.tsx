@@ -103,9 +103,9 @@ export default function HomePage() {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
-                <Link href="/guide">
+                <Link href="/pricing">
                   <Button variant="outline" size="lg" className="px-8 py-6 text-base glass font-bold">
-                    서비스 가이드 보기
+                    요금제 보기
                   </Button>
                 </Link>
               </div>
@@ -504,6 +504,9 @@ export default function HomePage() {
               </Link>
               <Link href="/guide" className="hover:text-slate-600 transition-colors font-medium">
                 사용 가이드
+              </Link>
+              <Link href="/pricing" className="hover:text-slate-600 transition-colors font-medium">
+                요금제
               </Link>
             </div>
           </div>

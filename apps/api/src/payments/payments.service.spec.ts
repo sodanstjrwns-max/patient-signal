@@ -158,10 +158,10 @@ describe('PaymentsService — 돈 계산/매핑 핵심 로직', () => {
       return { service, chargeSpy };
     }
 
-    it('STARTER 갱신 금액은 120,000원', async () => {
+    it('STARTER 갱신 금액은 99,000원', async () => {
       const { service, chargeSpy } = setupRenewal('STARTER');
       const result = await service.processAutoRenewals();
-      expect(chargeSpy).toHaveBeenCalledWith(expect.objectContaining({ amount: 120000 }));
+      expect(chargeSpy).toHaveBeenCalledWith(expect.objectContaining({ amount: 99000 }));
       expect(result.successful).toBe(1);
     });
 
@@ -171,10 +171,10 @@ describe('PaymentsService — 돈 계산/매핑 핵심 로직', () => {
       expect(chargeSpy).toHaveBeenCalledWith(expect.objectContaining({ amount: 290000 }));
     });
 
-    it('PRO 갱신 금액은 590,000원', async () => {
+    it('PRO 갱신 금액은 490,000원', async () => {
       const { service, chargeSpy } = setupRenewal('PRO');
       await service.processAutoRenewals();
-      expect(chargeSpy).toHaveBeenCalledWith(expect.objectContaining({ amount: 590000 }));
+      expect(chargeSpy).toHaveBeenCalledWith(expect.objectContaining({ amount: 490000 }));
     });
 
     it('결제 실패 시 failed로 집계되고 전체 프로세스는 계속됨', async () => {
@@ -208,20 +208,20 @@ describe('PaymentsService — 돈 계산/매핑 핵심 로직', () => {
   describe('assertValidPaymentAmount (결제 금액 위조 방지)', () => {
     const call = (service: any, data: any) => (service as any).assertValidPaymentAmount(data);
 
-    it('정가 결제는 통과 (STARTER 120,000원)', async () => {
+    it('정가 결제는 통과 (STARTER 99,000원)', async () => {
       const { service } = createService();
       const result = await call(service, {
         orderId: 'PS_STARTER_123_abc',
-        amount: 120000,
+        amount: 99000,
       });
       expect(result).toBeNull();
     });
 
-    it('정가 결제는 통과 (PRO 590,000원)', async () => {
+    it('정가 결제는 통과 (PRO 490,000원)', async () => {
       const { service } = createService();
       const result = await call(service, {
         orderId: 'PS_PRO_123_abc',
-        amount: 590000,
+        amount: 490000,
       });
       expect(result).toBeNull();
     });

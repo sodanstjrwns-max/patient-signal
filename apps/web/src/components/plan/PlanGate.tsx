@@ -24,7 +24,7 @@ export const PLAN_LIMITS = {
     platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
     // 【티저】첫 질문 1개에 한해 GROK/CLOVA_X 미리보기 수집 (백엔드 teaserPlatforms와 동기화)
     teaserPlatforms: ['GROK', 'CLOVA_X'],
-    crawlsPerMonth: 4,
+    crawlsPerMonth: 9, // 주 2회 (2026.08.19 최종본)
     exportEnabled: false,
     aiRecommendations: false,
     contentGap: false,
@@ -36,8 +36,8 @@ export const PLAN_LIMITS = {
   STANDARD: {
     maxPrompts: 15,
     maxCompetitors: 5,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
-    crawlsPerMonth: 8,
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
+    crawlsPerMonth: 30, // 매일
     exportEnabled: true,
     aiRecommendations: true,
     contentGap: false,
@@ -49,7 +49,7 @@ export const PLAN_LIMITS = {
   PRO: {
     maxPrompts: 35,
     maxCompetitors: 10,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
     crawlsPerMonth: 30,
     exportEnabled: true,
     aiRecommendations: true,
@@ -62,7 +62,7 @@ export const PLAN_LIMITS = {
   ENTERPRISE: {
     maxPrompts: -1,
     maxCompetitors: -1,
-    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X'],
+    platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
     crawlsPerMonth: -1,
     exportEnabled: true,
     aiRecommendations: true,
@@ -124,26 +124,31 @@ export function UpgradeModal({
   };
 
   const requiredPlan = getRequiredPlan(feature);
+  // 【2026.08.19 가격 최종본】티어 표시명 S/M/L
+  const planDisplay: Record<string, string> = {
+    STANDARD: 'M',
+    PRO: 'L',
+  };
   const planPrices: Record<string, string> = {
     STANDARD: '29만원/월',
-    PRO: '59만원/월',
+    PRO: '49만원/월',
   };
 
   const planFeatures: Record<string, string[]> = {
     STANDARD: [
-      '6개 AI 플랫폼 (ChatGPT, Claude, Perplexity, Gemini, Grok, CLOVA X)',
-      '매일 자동 크롤링 (월 30회)',
+      '7개 AI 플랫폼 전체 (CLOVA X·네이버 AI 브리핑 포함)',
+      '매일 자동 크롤링',
       '모니터링 질문 15개',
       '경쟁사 5개 비교 분석',
       'AI 질문 변형 생성',
       '자동 액션 인텔리전스',
     ],
     PRO: [
-      'Standard의 모든 기능',
+      'M의 모든 기능',
       '모니터링 질문 35개',
       '경쟁사 10개 비교 분석',
       'Content Gap 분석',
-      '매일 크롤링 (월 30회)',
+      '매일 크롤링',
       '우선 지원',
     ],
   };
@@ -165,7 +170,7 @@ export function UpgradeModal({
           </div>
           <p className="text-blue-100 text-sm">
             <strong>{featureNames[feature] || feature}</strong> 기능은{' '}
-            <strong>{requiredPlan}</strong> 플랜 이상에서 사용 가능합니다.
+            <strong>{planDisplay[requiredPlan] || requiredPlan}</strong> 플랜 이상에서 사용 가능합니다.
           </p>
         </div>
 
@@ -173,7 +178,7 @@ export function UpgradeModal({
         <div className="p-6">
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-lg">{requiredPlan} 플랜</span>
+              <span className="font-semibold text-lg">{planDisplay[requiredPlan] || requiredPlan} 플랜</span>
               <span className="text-brand-600 font-bold text-lg">
                 {planPrices[requiredPlan] || '문의'}
               </span>
@@ -190,7 +195,7 @@ export function UpgradeModal({
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 mb-4">
             <p className="text-sm text-yellow-800">
-              <strong>7일 무료 체험</strong> 가능! 마음에 안 들면 언제든 취소하세요.
+              <strong>14일 무료 체험</strong> 가능! 마음에 안 들면 언제든 취소하세요.
             </p>
           </div>
 

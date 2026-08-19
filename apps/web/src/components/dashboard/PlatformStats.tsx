@@ -184,7 +184,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-2xl">
                       <Link href={`/dashboard/billing?plan=STANDARD`} className="flex items-center gap-1.5 bg-slate-800 text-white px-3 py-1.5 rounded-full text-xs shadow-lg hover:bg-slate-700 transition-colors">
                         <Lock className="w-3 h-3" />
-                        <span>Standard 플랜에서 {platform.platformName} 분석 가능</span>
+                        <span>M 플랜에서 {platform.platformName} 분석 가능</span>
                       </Link>
                     </div>
                   )}

@@ -143,7 +143,7 @@ const MENU_GUIDE: {
         icon: Zap,
         name: '실시간 질문',
         href: '/dashboard/live-query',
-        what: '궁금한 질문을 지금 바로 AI 4개 플랫폼에 던져보고 즉시 결과를 받습니다. 상담실에서 환자가 물어본 그 질문, 바로 테스트해보세요.',
+        what: '궁금한 질문을 지금 바로 AI 플랫폼들에 던져보고 즉시 결과를 받습니다. 상담실에서 환자가 물어본 그 질문, 바로 테스트해보세요.',
         when: '필요할 때 — 일일 사용량 제한 있음',
       },
     ],
@@ -254,7 +254,7 @@ export default function GuidePage() {
                   </h2>
                   <p className="text-sm text-slate-600 leading-relaxed">
                     이제 환자들은 네이버 대신 ChatGPT·Gemini에게 &quot;○○동 임플란트 잘하는 치과&quot;를 묻습니다.
-                    Patient Signal은 매일 AI 4개 플랫폼(ChatGPT·Perplexity·Claude·Gemini)에 등록된 질문을 자동으로 던지고,
+                    Patient Signal은 AI 7개 플랫폼(ChatGPT·Claude·Gemini·Perplexity·Grok·CLOVA X·네이버 AI 브리핑)에 등록된 질문을 자동으로 던지고,
                     <strong className="text-slate-900"> 우리 병원이 등판하는지 · 몇 번째로 불리는지 · 어떤 톤으로 소개되는지</strong>를
                     추적해 점수로 보여줍니다. 광고비를 태우기 전에, AI가 우리를 어떻게 보고 있는지부터 아는 것이 순서입니다.
                   </p>

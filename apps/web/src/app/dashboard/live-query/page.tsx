@@ -64,12 +64,13 @@ const platformNames: Record<string, string> = {
   CLOVA_X: 'CLOVA X',
 };
 
+// 【2026.08.19 가격 최종본】티어명 S/M/L 통일
 const planDisplayNames: Record<string, string> = {
   FREE: '무료',
-  STARTER: 'Starter',
-  STANDARD: 'Standard',
-  PRO: 'Pro',
-  ENTERPRISE: 'Enterprise',
+  STARTER: 'S',
+  STANDARD: 'M',
+  PRO: 'L',
+  ENTERPRISE: '별도(엔터프라이즈)',
 };
 
 const categoryConfig: Record<string, { name: string; icon: any; color: string; bgColor: string; emoji: string }> = {
@@ -248,7 +249,7 @@ export default function LiveQueryPage() {
               )}
               <div className="flex items-center justify-between">
                 <p className={`text-xs ${isLimitReached ? 'text-red-600' : 'text-slate-500'}`}>
-                  {usage.isUnlimited ? 'Enterprise 플랜은 무제한' : isLimitReached ? '오늘 소진 완료. 자정에 초기화.' : `남은 횟수: ${usage.remaining}회`}
+                  {usage.isUnlimited ? '별도(엔터프라이즈) 플랜은 무제한' : isLimitReached ? '오늘 소진 완료. 자정에 초기화.' : `남은 횟수: ${usage.remaining}회`}
                 </p>
                 {planType !== 'ENTERPRISE' && planType !== 'PRO' && (
                   <button onClick={() => window.location.href = '/dashboard/settings'} className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
