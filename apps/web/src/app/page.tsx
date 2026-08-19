@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import SiteFooter from '@/components/layout/SiteFooter';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -485,33 +486,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-8 border-t border-slate-200/50 bg-white/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-400">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 via-violet-500 to-brand-600 flex items-center justify-center shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-white" />
-              </div>
-              <span className="font-bold">Patient Signal by 페이션트퍼널</span>
-            </div>
-            <div className="flex items-center gap-5">
-              <Link href="/terms" className="hover:text-slate-600 transition-colors font-medium">
-                이용약관
-              </Link>
-              <Link href="/privacy" className="hover:text-slate-600 transition-colors font-medium">
-                개인정보처리방침
-              </Link>
-              <Link href="/guide" className="hover:text-slate-600 transition-colors font-medium">
-                사용 가이드
-              </Link>
-              <Link href="/pricing" className="hover:text-slate-600 transition-colors font-medium">
-                요금제
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

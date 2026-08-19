@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import SiteFooter from '@/components/layout/SiteFooter';
 import { 
   Sparkles, 
   Search, 
@@ -319,6 +320,7 @@ export default function GuidePage() {
           </p>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

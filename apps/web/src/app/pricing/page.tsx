@@ -22,6 +22,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import SiteFooter from '@/components/layout/SiteFooter';
 
 const PLATFORMS_ALL = 'ChatGPT · Claude · Gemini · Perplexity · Grok · CLOVA X · 네이버 AI 브리핑';
 
@@ -341,6 +342,7 @@ export default function PricingPage() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

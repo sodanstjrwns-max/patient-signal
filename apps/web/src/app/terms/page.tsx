@@ -1,16 +1,19 @@
 'use client';
 
+import SiteFooter from '@/components/layout/SiteFooter';
+
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-mesh">
-      <div className="max-w-4xl mx-auto px-4 py-16">
+    <div className="min-h-screen bg-mesh flex flex-col">
+      <div className="flex-1 max-w-4xl mx-auto px-4 py-16 w-full">
         <h1 className="text-3xl font-bold text-slate-900 mb-8">이용약관</h1>
         
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-8 space-y-8">
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">제1조 (목적)</h2>
             <p className="text-slate-600 leading-relaxed">
-              본 약관은 페이션트 시그널(Patient Signal, 이하 "회사")이 제공하는 AI 검색 가시성 분석 서비스(이하 "서비스")의 
+              본 약관은 페이션트퍼널(이하 "회사")이 제공하는 AI 검색 가시성 분석 서비스 
+              페이션트 시그널(Patient Signal, 이하 "서비스")의 
               이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
             </p>
           </section>
@@ -52,20 +55,24 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (이용요금)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (이용요금 및 결제)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>서비스는 현재 무료로 제공됩니다.</li>
-              <li>향후 유료 전환 시 사전에 이용자에게 충분히 고지하며, 별도 동의 없이 요금이 부과되지 않습니다.</li>
-              <li>유료 전환 시점 및 가격 정책은 서비스 내 공지사항을 통해 안내됩니다.</li>
+              <li>서비스는 무료 플랜(FREE)과 유료 구독 플랜(S 월 99,000원 / M 월 290,000원 / L 월 490,000원, VAT 별도)으로 
+                제공됩니다. 상세 구성은 <a href="/pricing" className="text-indigo-600 hover:text-indigo-700 underline">요금제 페이지</a>에서 확인할 수 있습니다.</li>
+              <li>유료 플랜은 월 단위 구독이며, 결제일 기준으로 매월 자동 갱신됩니다. 연간 결제 시 2개월 무료 혜택이 적용됩니다.</li>
+              <li>신규 가입 시 카드 등록 없이 14일 무료 체험이 제공되며, 체험 기간 중 어떠한 요금도 청구되지 않습니다.</li>
+              <li>결제는 토스페이먼츠(주)를 통해 처리되며, 요금 변경 시 사전에 고지합니다.</li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (서비스 해지)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (구독 해지 및 환불)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>이용자는 언제든지 서비스 이용을 중단하고 계정을 삭제할 수 있습니다.</li>
-              <li>현재 서비스는 무료로 제공되므로 별도의 환불 절차가 없습니다.</li>
-              <li>서비스 관련 문의는 고객센터(support@patientsignal.kr)를 통해 접수할 수 있습니다.</li>
+              <li>이용자는 언제든지 구독을 해지할 수 있으며, 해지에 따른 위약금은 없습니다.</li>
+              <li>해지 시 현재 결제 주기 종료일까지 서비스를 계속 이용할 수 있으며, 다음 결제일부터 요금이 청구되지 않습니다.</li>
+              <li>환불은 별도의 <a href="/refund" className="text-indigo-600 hover:text-indigo-700 underline">환불규정</a>에 따릅니다. 
+                (결제 후 7일 이내 미사용 시 전액 환불, 이후 일할 계산)</li>
+              <li>서비스 관련 문의는 이메일(sodanstjrwns@naver.com)을 통해 접수할 수 있습니다.</li>
             </ol>
           </section>
 
@@ -98,7 +105,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
             <p className="text-slate-600">
-              본 약관은 2024년 1월 1일부터 시행됩니다.
+              본 약관은 2024년 1월 1일부터 시행되었으며, 2026년 8월 20일 개정되어 개정일부터 적용됩니다.
             </p>
           </section>
         </div>
@@ -109,6 +116,7 @@ export default function TermsPage() {
           </a>
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }

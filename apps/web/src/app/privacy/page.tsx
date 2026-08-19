@@ -1,15 +1,17 @@
 'use client';
 
+import SiteFooter from '@/components/layout/SiteFooter';
+
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-mesh">
-      <div className="max-w-4xl mx-auto px-4 py-16">
+    <div className="min-h-screen bg-mesh flex flex-col">
+      <div className="flex-1 max-w-4xl mx-auto px-4 py-16 w-full">
         <h1 className="text-3xl font-bold text-slate-900 mb-8">개인정보처리방침</h1>
         
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-8 space-y-8">
           <section>
             <p className="text-slate-600 leading-relaxed mb-4">
-              페이션트 시그널(Patient Signal, 이하 "회사")은 이용자의 개인정보를 중요시하며, 
+              페이션트퍼널(이하 "회사")은 페이션트 시그널(Patient Signal) 서비스를 운영하며 이용자의 개인정보를 중요시하고, 
               「개인정보 보호법」 등 관련 법령을 준수하고 있습니다. 본 개인정보처리방침은 회사가 
               이용자의 개인정보를 어떻게 수집, 이용, 보호하는지를 설명합니다.
             </p>
@@ -94,7 +96,11 @@ export default function PrivacyPage() {
                   <tbody>
                     <tr>
                       <td className="px-4 py-2 text-sm border-b">토스페이먼츠(주)</td>
-                      <td className="px-4 py-2 text-sm border-b">결제 처리</td>
+                      <td className="px-4 py-2 text-sm border-b">결제 처리 및 환불 (결제정보는 토스페이먼츠가 직접 처리하며 회사는 카드번호를 저장하지 않음)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-2 text-sm border-b">Cloudflare, Inc.</td>
+                      <td className="px-4 py-2 text-sm border-b">서비스 호스팅 및 인프라 운영</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-2 text-sm border-b">Supabase</td>
@@ -159,7 +165,8 @@ export default function PrivacyPage() {
               <p><strong>개인정보 보호책임자</strong></p>
               <p className="mt-2">성명: 문석준</p>
               <p>직책: 대표</p>
-              <p>이메일: support@patientsignal.kr</p>
+              <p>이메일: sodanstjrwns@naver.com</p>
+              <p>연락처: 010-5832-3372</p>
             </div>
             <p className="text-slate-600 mt-4">
               개인정보 처리에 관한 불만이나 피해구제 등에 관한 사항은 아래 기관에 문의할 수 있습니다:
@@ -182,7 +189,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
             <p className="text-slate-600">
-              본 개인정보처리방침은 2024년 1월 1일부터 시행됩니다.
+              본 개인정보처리방침은 2024년 1월 1일부터 시행되었으며, 2026년 8월 20일 개정되어 개정일부터 적용됩니다.
             </p>
           </section>
         </div>
@@ -193,6 +200,7 @@ export default function PrivacyPage() {
           </a>
         </div>
       </div>
+      <SiteFooter />
     </div>
   );
 }
