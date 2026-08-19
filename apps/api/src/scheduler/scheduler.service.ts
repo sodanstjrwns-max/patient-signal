@@ -459,7 +459,26 @@ export class SchedulerService implements OnModuleInit {
 
     // 【2026.08.19 최종본】크롤 주기 강제 — S(STARTER)=주 2회(3일 간격), FREE=주 1회(7일 간격)
     // crawlsPerMonth만으로는 월초에 몰아서 소진 가능 → 최소 간격으로 "주 N회" 페이스 보장
-    const minDays = (planLimits as any).minDaysBetweenCrawls || 0;
+    //
+    // 【기가입자 유예(grandfathering)】가격 개편(2026.08.19) 이전 가입한 STARTER는 매일 크롤 유지.
+    //  - 신규(컷오프 이후 가입)만 주 2회 적용 — "어제까지 매일 받다가 갑자기 격 3일" 항의 방지
+    //  - FREE는 유예 없음 (원래부터 주 1회)
+    //  - env GRANDFATHER_CUTOFF로 컷오프 조정 가능, 빈 문자열로 설정 시 유예 전면 해제
+    const cutoffEnv = process.env.GRANDFATHER_CUTOFF;
+    const grandfatherCutoff =
+      cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-19T15:00:00+09:00');
+    const isGrandfathered =
+      hospital.planType === 'STARTER' &&
+      grandfatherCutoff !== null &&
+      hospital.createdAt &&
+      new Date(hospital.createdAt) < grandfatherCutoff;
+
+    const minDays = isGrandfathered ? 0 : (planLimits as any).minDaysBetweenCrawls || 0;
+    // 유예 대상은 월간 한도도 매일 페이스(30회)로 상향
+    const effectiveCrawlsPerMonth = isGrandfathered ? 30 : planLimits.crawlsPerMonth;
+    if (isGrandfathered) {
+      this.logger.log(`[${hospital.name}] 기가입 STARTER 유예 — 매일 크롤 유지 (가입일 ${new Date(hospital.createdAt).toISOString().slice(0, 10)})`);
+    }
     if (minDays > 0) {
       const lastCrawl = await this.prisma.crawlJob.findFirst({
         where: {
@@ -490,8 +509,8 @@ export class SchedulerService implements OnModuleInit {
       }
     }
 
-    // 월간 크롤링 횟수 체크
-    if (planLimits.crawlsPerMonth !== -1) {
+    // 월간 크롤링 횟수 체크 (기가입 유예 대상은 매일 페이스 30회로 상향)
+    if (effectiveCrawlsPerMonth !== -1) {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const crawlCount = await this.prisma.crawlJob.count({
@@ -502,15 +521,15 @@ export class SchedulerService implements OnModuleInit {
         },
       });
       // 방금 만든 crawlJob도 RUNNING으로 집계되므로 > 비교
-      if (crawlCount > planLimits.crawlsPerMonth) {
-        this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${planLimits.crawlsPerMonth}) - 스킵`);
+      if (crawlCount > effectiveCrawlsPerMonth) {
+        this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${effectiveCrawlsPerMonth}) - 스킵`);
         // 장애가 아닌 플랜 정책 스킵 — FAILED에 사유를 남겨 모니터링 노이즈/유저 오해 방지
         await this.prisma.crawlJob.update({
           where: { id: crawlJob.id },
           data: {
             status: 'FAILED',
             completedAt: new Date(),
-            errorMessage: `[SKIP] 월간 크롤링 한도 소진 (${planLimits.crawlsPerMonth}/${planLimits.crawlsPerMonth}회, ${hospital.planType} 플랜) — 플랜 업그레이드 시 매일 자동 크롤링됩니다`,
+            errorMessage: `[SKIP] 월간 크롤링 한도 소진 (${effectiveCrawlsPerMonth}/${effectiveCrawlsPerMonth}회, ${hospital.planType} 플랜) — 플랜 업그레이드 시 매일 자동 크롤링됩니다`,
           },
         });
         return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'monthly-limit' };
