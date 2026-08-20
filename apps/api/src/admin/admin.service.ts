@@ -1698,7 +1698,7 @@ export class AdminService {
 
     // 병원별 상태표
     const cutoffEnv = process.env.GRANDFATHER_CUTOFF;
-    const gfCutoff = cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-19T15:00:00+09:00');
+    const gfCutoff = cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-20T12:00:00+09:00');
     const perHospital = hospitals.map((h) => {
       const last = lastMap.get(h.id) || null;
       const daysSince = last ? (now.getTime() - new Date(last).getTime()) / 86400000 : null;

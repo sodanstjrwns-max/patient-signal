@@ -463,10 +463,10 @@ export class SchedulerService implements OnModuleInit {
     // 【기가입자 유예(grandfathering)】가격 개편(2026.08.19) 이전 가입한 STARTER는 매일 크롤 유지.
     //  - 신규(컷오프 이후 가입)만 주 2회 적용 — "어제까지 매일 받다가 갑자기 격 3일" 항의 방지
     //  - FREE는 유예 없음 (원래부터 주 1회)
-    //  - env GRANDFATHER_CUTOFF로 컷오프 조정 가능, 빈 문자열로 설정 시 유예 전면 해제
+    //  - 컷오프 2026-08-20 12:00 KST (그 이전 가입 = 기가입, 매일 유지) — env GRANDFATHER_CUTOFF로 조정 가능, 빈 문자열로 설정 시 유예 전면 해제
     const cutoffEnv = process.env.GRANDFATHER_CUTOFF;
     const grandfatherCutoff =
-      cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-19T15:00:00+09:00');
+      cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-20T12:00:00+09:00');
     const isGrandfathered =
       hospital.planType === 'STARTER' &&
       grandfatherCutoff !== null &&
