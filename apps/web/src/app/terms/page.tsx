@@ -1,112 +1,178 @@
-'use client';
-
+import type { Metadata } from 'next';
 import SiteFooter from '@/components/layout/SiteFooter';
 
+export const metadata: Metadata = {
+  title: '이용약관 - Patient Signal',
+  description: '페이션트 시그널 이용약관',
+};
+
+// 2026-08-20 전 사이트 공통 법적 페이지 템플릿 적용 ({{서비스명}}=페이션트 시그널)
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-mesh flex flex-col">
-      <div className="flex-1 max-w-4xl mx-auto px-4 py-16 w-full">
-        <h1 className="text-3xl font-bold text-slate-900 mb-8">이용약관</h1>
-        
+      <main className="flex-1 max-w-4xl mx-auto px-4 py-16 w-full">
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">페이션트 시그널 이용약관</h1>
+        <p className="text-sm text-slate-400 mb-8">시행일: 2026년 8월 20일</p>
+
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-8 space-y-8">
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">제1조 (목적)</h2>
             <p className="text-slate-600 leading-relaxed">
-              본 약관은 페이션트퍼널(이하 "회사")이 제공하는 AI 검색 가시성 분석 서비스 
-              페이션트 시그널(Patient Signal, 이하 "서비스")의 
-              이용과 관련하여 회사와 이용자 간의 권리, 의무 및 책임사항을 규정함을 목적으로 합니다.
+              이 약관은 페이션트퍼널(이하 &quot;회사&quot;)이 제공하는 페이션트 시그널 및 관련 제반
+              서비스(이하 &quot;서비스&quot;)의 이용과 관련하여 회사와 회원 간의 권리, 의무 및
+              책임사항을 규정함을 목적으로 합니다.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">제2조 (정의)</h2>
-            <ul className="list-disc list-inside text-slate-600 space-y-2">
-              <li><strong>"서비스"</strong>란 회사가 제공하는 AI 플랫폼(ChatGPT, Claude, Perplexity, Gemini, Grok, CLOVA X 등)에서의 
-                병원/의료기관 검색 가시성 분석, 경쟁사 비교, 개선 인사이트 제공 등의 서비스를 말합니다.</li>
-              <li><strong>"이용자"</strong>란 본 약관에 따라 서비스를 이용하는 병원, 의료기관 또는 개인을 말합니다.</li>
-              <li><strong>"구독"</strong>이란 이용자가 서비스를 이용하기 위해 가입하는 이용권을 말합니다.</li>
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제3조 (약관의 효력 및 변경)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>본 약관은 서비스 화면에 게시하거나 기타의 방법으로 이용자에게 공지함으로써 효력이 발생합니다.</li>
-              <li>회사는 필요하다고 인정되는 경우 본 약관을 변경할 수 있으며, 변경된 약관은 공지 후 효력이 발생합니다.</li>
-              <li>이용자는 변경된 약관에 동의하지 않을 경우 서비스 이용을 중단하고 탈퇴할 수 있습니다.</li>
-            </ol>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제4조 (서비스의 제공)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>회사는 다음과 같은 서비스를 제공합니다:
-                <ul className="list-disc list-inside ml-4 mt-2 space-y-1">
-                  <li>AI 플랫폼 검색 결과 모니터링 및 분석</li>
-                  <li>가시성 점수 및 통계 제공</li>
-                  <li>경쟁사 비교 분석</li>
-                  <li>개선 인사이트 및 추천</li>
-                  <li>정기 리포트 제공</li>
-                </ul>
+              <li>
+                &quot;서비스&quot;란 회사가 웹사이트를 통해 제공하는 병·의원 경영 지원 소프트웨어 및
+                부가 기능 일체를 말합니다.
               </li>
-              <li>서비스는 연중무휴, 1일 24시간 제공함을 원칙으로 합니다. 단, 시스템 점검 등의 사유로 
-                서비스가 일시 중단될 수 있습니다.</li>
+              <li>&quot;회원&quot;이란 이 약관에 동의하고 회사와 이용계약을 체결한 자를 말합니다.</li>
+              <li>
+                &quot;구독&quot;이란 회원이 요금제를 선택하고 정기 결제를 통해 서비스를 이용하는 계약
+                형태를 말합니다.
+              </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (이용요금 및 결제)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제3조 (약관의 게시와 개정)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>서비스는 무료 플랜(FREE)과 유료 구독 플랜(S 월 99,000원 / M 월 290,000원 / L 월 490,000원, VAT 별도)으로 
-                제공됩니다. 상세 구성은 <a href="/pricing" className="text-indigo-600 hover:text-indigo-700 underline">요금제 페이지</a>에서 확인할 수 있습니다.</li>
-              <li>유료 플랜은 월 단위 구독이며, 결제일 기준으로 매월 자동 갱신됩니다. 연간 결제 시 2개월 무료 혜택이 적용됩니다.</li>
-              <li>신규 가입 시 카드 등록 없이 14일 무료 체험이 제공되며, 체험 기간 중 어떠한 요금도 청구되지 않습니다.</li>
-              <li>결제는 토스페이먼츠(주)를 통해 처리되며, 요금 변경 시 사전에 고지합니다.</li>
+              <li>회사는 이 약관을 서비스 초기 화면 또는 연결 화면에 게시합니다.</li>
+              <li>
+                회사는 관련 법령을 위배하지 않는 범위에서 약관을 개정할 수 있으며, 개정 시 적용일자
+                7일 전(회원에게 불리한 변경은 30일 전)부터 공지합니다.
+              </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (구독 해지 및 환불)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제4조 (이용계약의 체결)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>이용자는 언제든지 구독을 해지할 수 있으며, 해지에 따른 위약금은 없습니다.</li>
-              <li>해지 시 현재 결제 주기 종료일까지 서비스를 계속 이용할 수 있으며, 다음 결제일부터 요금이 청구되지 않습니다.</li>
-              <li>환불은 별도의 <a href="/refund" className="text-indigo-600 hover:text-indigo-700 underline">환불규정</a>에 따릅니다. 
-                (결제 후 7일 이내 미사용 시 전액 환불, 이후 일할 계산)</li>
-              <li>서비스 관련 문의는 이메일(sodanstjrwns@naver.com)을 통해 접수할 수 있습니다.</li>
+              <li>이용계약은 가입 신청자가 약관에 동의하고 회사가 이를 승낙함으로써 체결됩니다.</li>
+              <li>
+                회사는 타인 명의 도용, 허위 정보 기재 등의 경우 승낙을 거부하거나 사후에 계약을
+                해지할 수 있습니다.
+              </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제7조 (이용자의 의무)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (요금제·결제·갱신)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>이용자는 정확한 정보를 제공해야 하며, 허위 정보 제공 시 서비스 이용이 제한될 수 있습니다.</li>
-              <li>이용자는 계정 정보를 안전하게 관리해야 하며, 제3자에게 계정을 양도하거나 공유할 수 없습니다.</li>
-              <li>이용자는 서비스를 부정한 목적으로 사용해서는 안 됩니다.</li>
+              <li>
+                서비스 요금제와 가격은 서비스 내 요금 안내 페이지에 게시하며, 부가가치세는
+                별도입니다.
+              </li>
+              <li>
+                구독 요금은 선택한 주기(월간/연간)에 따라 등록된 결제수단으로 자동 결제됩니다.
+              </li>
+              <li>
+                구독은 해지하지 않는 한 동일 조건으로 자동 갱신됩니다. 가격이 변경되는 경우 갱신일
+                30일 전까지 고지합니다.
+              </li>
+              <li>
+                무료 체험 기간(14일)에는 결제수단 등록 없이 이용할 수 있으며, 체험 종료 후 유료
+                전환은 회원의 명시적 신청으로만 이루어집니다.
+              </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제8조 (면책조항)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (구독 해지와 환불)</h2>
             <ol className="list-decimal list-inside text-slate-600 space-y-2">
-              <li>회사는 AI 플랫폼의 정책 변경이나 기술적 문제로 인한 서비스 제공 중단에 대해 책임지지 않습니다.</li>
-              <li>회사는 이용자가 서비스를 통해 얻은 정보에 기반한 의사결정의 결과에 대해 책임지지 않습니다.</li>
-              <li>서비스에서 제공하는 분석 결과는 참고 자료이며, 최종 의사결정은 이용자의 책임입니다.</li>
+              <li>
+                회원은 언제든지 서비스 내 설정 또는 고객센터를 통해 구독을 해지할 수 있으며,
+                위약금은 없습니다.
+              </li>
+              <li>해지 시 이미 결제된 이용기간 종료일까지 서비스를 이용할 수 있습니다.</li>
+              <li>
+                환불은 별도{' '}
+                <a href="/refund" className="text-indigo-600 hover:text-indigo-700 underline">
+                  「환불규정」
+                </a>
+                에 따릅니다.
+              </li>
             </ol>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제9조 (분쟁해결)</h2>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제7조 (회사의 의무)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+              <li>
+                회사는 안정적인 서비스 제공을 위해 노력하며, 설비 장애 또는 데이터 멸실 시 지체 없이
+                복구합니다.
+              </li>
+              <li>
+                회사는 회원의 개인정보를{' '}
+                <a href="/privacy" className="text-indigo-600 hover:text-indigo-700 underline">
+                  「개인정보처리방침」
+                </a>
+                에 따라 보호합니다.
+              </li>
+              <li>정기 점검 등 서비스 중단이 필요한 경우 사전에 공지합니다.</li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제8조 (회원의 의무)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+              <li>
+                회원은 서비스 이용 시 관련 법령(의료법, 개인정보 보호법 등)을 준수해야 하며, 특히
+                환자 정보 등 제3자의 개인정보를 서비스에 입력·저장하는 경우 해당 정보 처리에 필요한
+                적법한 근거를 갖추어야 합니다.
+              </li>
+              <li>회원은 계정 정보를 제3자에게 공유·양도할 수 없습니다.</li>
+              <li>
+                회원은 서비스를 역설계, 크롤링, 재판매하거나 시스템에 부하를 일으키는 행위를 해서는
+                안 됩니다.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제9조 (데이터의 귀속과 보관)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+              <li>회원이 서비스에 입력한 데이터의 권리는 회원에게 있습니다.</li>
+              <li>
+                계약 종료 후 30일간 데이터를 보관하며, 이 기간 내 회원의 요청 시 내보내기를
+                제공합니다. 기간 경과 후 데이터는 파기됩니다.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제10조 (책임의 제한)</h2>
+            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+              <li>
+                회사는 천재지변, 통신사업자의 귀책 등 불가항력으로 인한 손해에 대해 책임지지
+                않습니다.
+              </li>
+              <li>
+                서비스가 제공하는 분석·예측·추천 결과는 경영 참고 자료이며, 이에 근거한 의사결정의
+                최종 책임은 회원에게 있습니다.
+              </li>
+              <li>
+                회사의 배상 책임은 회원이 최근 12개월간 회사에 지급한 이용요금 총액을 한도로 합니다.
+              </li>
+            </ol>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-slate-800 mb-4">제11조 (분쟁 해결)</h2>
             <p className="text-slate-600 leading-relaxed">
-              서비스 이용과 관련하여 분쟁이 발생한 경우, 회사와 이용자는 원만한 해결을 위해 성실히 협의합니다. 
-              협의가 이루어지지 않는 경우, 관할 법원에 의해 해결합니다.
+              이 약관은 대한민국 법률에 따라 해석되며, 분쟁에 관한 소송은 민사소송법상 관할법원에
+              제기합니다.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
-            <p className="text-slate-600">
-              본 약관은 2024년 1월 1일부터 시행되었으며, 2026년 8월 20일 개정되어 개정일부터 적용됩니다.
-            </p>
+            <p className="text-slate-600">이 약관은 2026년 8월 20일부터 시행합니다.</p>
           </section>
         </div>
 
@@ -115,7 +181,7 @@ export default function TermsPage() {
             ← 메인으로 돌아가기
           </a>
         </div>
-      </div>
+      </main>
       <SiteFooter />
     </div>
   );
