@@ -327,6 +327,21 @@ export class AdminController {
   }
 
   /**
+   * 【크롤 전수 점검】크롤 헬스 체크
+   * GET /api/admin/crawl-health?secret=xxx&days=7
+   */
+  @Public()
+  @Get('crawl-health')
+  async getCrawlHealth(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    return this.adminService.getCrawlHealth(days ? parseInt(days, 10) : 7);
+  }
+
+  /**
    * 【어드민·디버그】Gemini flash-lite grounding 단건 호출 진단
    * GET /api/admin/debug-gemini?secret=xxx&model=gemini-2.5-flash-lite
    *

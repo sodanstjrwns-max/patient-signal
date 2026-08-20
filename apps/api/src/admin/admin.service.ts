@@ -1620,4 +1620,125 @@ export class AdminService {
       nearby,
     };
   }
+  /**
+   * 【크롤 전수 점검】병원별 크롤 상태 감사
+   * - 오늘/최근 7일 잡 상태 분포 (COMPLETED/FAILED/RUNNING/PENDING)
+   * - FAILED 사유 분류: [SKIP] 주기 미도래 / [SKIP] 월 한도 / [ZOMBIE] / 실제 실패
+   * - 병원별 마지막 성공 크롤 경과일 → 대상인데 안 도는 병원 탐지
+   * - 오늘 DailyScore 커버리지
+   */
+  async getCrawlHealth(days = 7) {
+    const now = new Date();
+    const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const todayUTC = new Date();
+    todayUTC.setUTCHours(0, 0, 0, 0);
+
+    // 1) 크롤 대상 병원 (스케줄러와 동일 조건)
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { subscriptionStatus: { in: ['ACTIVE', 'TRIAL'] } },
+      select: {
+        id: true, name: true, planType: true, subscriptionStatus: true, createdAt: true,
+        _count: { select: { prompts: { where: { isActive: true } } } },
+      },
+    });
+
+    // 2) 최근 N일 잡 전체
+    const jobs = await this.prisma.crawlJob.findMany({
+      where: { createdAt: { gte: since } },
+      select: {
+        hospitalId: true, status: true, errorMessage: true,
+        totalPrompts: true, completed: true, failed: true,
+        createdAt: true, completedAt: true, startedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // 3) 병원별 마지막 성공 크롤
+    const lastCompleted = await this.prisma.crawlJob.groupBy({
+      by: ['hospitalId'],
+      where: { status: 'COMPLETED' },
+      _max: { completedAt: true },
+    });
+    const lastMap = new Map(lastCompleted.map((r) => [r.hospitalId, r._max.completedAt]));
+
+    // 4) 오늘 점수 커버리지
+    const scoredToday = await this.prisma.dailyScore.findMany({
+      where: { scoreDate: { gte: todayUTC } },
+      select: { hospitalId: true },
+    });
+    const scoredSet = new Set(scoredToday.map((s) => s.hospitalId));
+
+    // 잡 분류기
+    const classify = (j: { status: string; errorMessage: string | null }) => {
+      if (j.status === 'COMPLETED') return 'completed';
+      if (j.status === 'RUNNING') return 'running';
+      if (j.status === 'PENDING') return 'pending';
+      const msg = j.errorMessage || '';
+      if (msg.includes('크롤 주기 미도래')) return 'skip_interval';
+      if (msg.includes('월간 크롤링 한도')) return 'skip_monthly_limit';
+      if (msg.includes('[ZOMBIE]')) return 'zombie';
+      return 'failed_real';
+    };
+
+    // 오늘 잡 / 기간 잡 분리 집계
+    const todayJobs = jobs.filter((j) => j.createdAt >= todayUTC);
+    const agg = (list: typeof jobs) => {
+      const out: Record<string, number> = {};
+      for (const j of list) out[classify(j)] = (out[classify(j)] || 0) + 1;
+      return out;
+    };
+
+    // 실제 실패 사유 상위
+    const realFailures = jobs.filter((j) => classify(j) === 'failed_real');
+    const failureReasons: Record<string, number> = {};
+    for (const j of realFailures) {
+      const key = (j.errorMessage || '(사유 없음)').slice(0, 80);
+      failureReasons[key] = (failureReasons[key] || 0) + 1;
+    }
+
+    // 병원별 상태표
+    const cutoffEnv = process.env.GRANDFATHER_CUTOFF;
+    const gfCutoff = cutoffEnv === '' ? null : new Date(cutoffEnv || '2026-08-19T15:00:00+09:00');
+    const perHospital = hospitals.map((h) => {
+      const last = lastMap.get(h.id) || null;
+      const daysSince = last ? (now.getTime() - new Date(last).getTime()) / 86400000 : null;
+      const hJobs = jobs.filter((j) => j.hospitalId === h.id);
+      const isGf = h.planType === 'STARTER' && gfCutoff !== null && h.createdAt < gfCutoff;
+      // 기대 주기: 유예/M+ = 매일(1일), 신규 STARTER = 3일, FREE = 7일
+      const expectedDays = isGf ? 1 : h.planType === 'FREE' ? 7 : h.planType === 'STARTER' ? 3 : 1;
+      const overdue = daysSince === null ? true : daysSince > expectedDays + 1.5;
+      return {
+        name: h.name,
+        plan: h.planType,
+        status: h.subscriptionStatus,
+        activePrompts: h._count.prompts,
+        grandfathered: isGf,
+        lastCompletedAt: last,
+        daysSinceLastCrawl: daysSince !== null ? Math.round(daysSince * 10) / 10 : null,
+        scoredToday: scoredSet.has(h.id),
+        jobsInPeriod: hJobs.length,
+        overdue,
+      };
+    });
+
+    const overdueList = perHospital.filter((h) => h.overdue);
+    const noPrompts = perHospital.filter((h) => h.activePrompts === 0);
+
+    return {
+      generatedAt: now.toISOString(),
+      periodDays: days,
+      eligibleHospitals: hospitals.length,
+      grandfathered: perHospital.filter((h) => h.grandfathered).length,
+      today: { jobs: todayJobs.length, byResult: agg(todayJobs), scoredHospitals: scoredSet.size },
+      period: { jobs: jobs.length, byResult: agg(jobs) },
+      topFailureReasons: Object.entries(failureReasons)
+        .sort((a, b) => b[1] - a[1]).slice(0, 10)
+        .map(([reason, count]) => ({ reason, count })),
+      overdueCount: overdueList.length,
+      overdueHospitals: overdueList.slice(0, 30),
+      noPromptHospitals: noPrompts.map((h) => ({ name: h.name, plan: h.plan })),
+      perHospital,
+    };
+  }
+
 }
