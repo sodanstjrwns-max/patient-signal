@@ -21,7 +21,6 @@ import {
   Target,
   ChevronDown,
   Crown,
-  PenTool,
   Search,
   CalendarDays,
   Key,
@@ -77,7 +76,6 @@ const navGroups: NavGroup[] = [
     label: 'GEO 콘텐츠',
     defaultOpen: true,
     items: [
-      { name: 'AI 콘텐츠', href: '/dashboard/geo-content', icon: PenTool },
       { name: '인용 역분석', href: '/dashboard/citation-analysis', icon: Search, badge: 'NEW' },
       { name: '56주 캘린더', href: '/dashboard/content-calendar', icon: CalendarDays, badge: 'NEW' },
     ],

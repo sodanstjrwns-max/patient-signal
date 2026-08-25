@@ -12,7 +12,7 @@ import {
   CalendarDays, Loader2, Plus, Search, Sparkles,
   ChevronDown, ChevronUp, Target, Zap, CheckCircle,
   Clock, FileText, BarChart3, Filter, ArrowRight,
-  AlertTriangle, Eye, PenTool, RefreshCw, Play,
+  AlertTriangle, Eye, RefreshCw, Play,
 } from 'lucide-react';
 import { TermTip } from '@/components/ui/term-tooltip';
 
@@ -341,17 +341,6 @@ export default function ContentCalendarPage() {
                               <Search className="w-3 h-3 mr-1" />
                             )}
                             인용 역분석
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs"
-                            onClick={() => {
-                              window.location.href = `/dashboard/geo-content?generate=true&topic=${encodeURIComponent(item.topic)}&keyword=${encodeURIComponent(item.targetKeyword)}&funnel=${item.funnelStage}&procedure=${encodeURIComponent(item.procedure || '')}`;
-                            }}
-                          >
-                            <PenTool className="w-3 h-3 mr-1" />
-                            GEO 콘텐츠 생성
                           </Button>
                         </div>
 

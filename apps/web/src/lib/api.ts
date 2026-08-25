@@ -279,32 +279,6 @@ export const crawlerApi = {
     api.get(`/ai-crawler/last-analysis/${hospitalId}`),
 };
 
-// GEO Content API
-export const geoContentApi = {
-  list: (params?: { status?: string; funnelStage?: string; limit?: number; offset?: number }) =>
-    api.get('/geo-content', { params }),
-  getStats: () =>
-    api.get('/geo-content/stats'),
-  getOne: (id: string) =>
-    api.get(`/geo-content/${id}`),
-  generate: (data: {
-    topic: string;
-    funnelStage: string;
-    contentTone?: string;
-    targetKeywords?: string[];
-    procedure?: string;
-    relatedPromptIds?: string[];
-    additionalInstructions?: string;
-  }) =>
-    api.post('/geo-content/generate', data, { timeout: 120000 }),
-  update: (id: string, data: any) =>
-    api.patch(`/geo-content/${id}`, data),
-  delete: (id: string) =>
-    api.delete(`/geo-content/${id}`),
-  publish: (id: string, data: { platform: string; publishedUrl?: string; scheduledAt?: string }) =>
-    api.post(`/geo-content/${id}/publish`, data),
-};
-
 // Citation Analysis & Content Calendar API
 export const citationApi = {
   // 인용 역분석

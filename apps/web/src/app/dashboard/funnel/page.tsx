@@ -589,10 +589,7 @@ export default function FunnelPage() {
             </div>
           )}
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link href="/dashboard/geo-content" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">
-              AI 콘텐츠로 바로 실행하기 <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link href="/dashboard/opportunities" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-700">
+            <Link href="/dashboard/opportunities" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand-600 hover:text-brand-700">
               기회 분석 보기 <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

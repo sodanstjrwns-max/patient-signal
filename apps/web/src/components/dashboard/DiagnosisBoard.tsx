@@ -98,7 +98,7 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
         headline: `노출은 시작됐지만 아직 소수입니다 (${sov}%)`,
         cause: `${total.toLocaleString()}번 중 ${(mentioned ?? 0).toLocaleString()}번 언급. 5번에 1번도 못 미칩니다.`,
         action: '이미 언급되는 주제를 더 깊게 파는 편이, 새 주제를 여는 것보다 빠릅니다.',
-        href: '/dashboard/geo-content',
+        href: '/dashboard/citation-analysis',
         cta: '노출 중인 주제 강화',
         term: 'sov',
       });
@@ -131,8 +131,8 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
           headline: `언급은 되는데 "그냥 이름만" 나옵니다`,
           cause: `언급 ${any}건 중 상위 추천(R2·R3)은 ${deep}건(${deepRate}%)뿐입니다. 나머지 ${r1}건은 여러 병원 목록 안에 섞여 스쳐 지나갑니다.`,
           action: '환자가 비교하는 기준(수술실·전문의·장비·사후관리)을 우리 페이지에서 먼저 명시하세요. AI는 근거가 있는 곳을 1순위로 올립니다.',
-          href: '/dashboard/geo-content',
-          cta: '근거 콘텐츠 만들기',
+          href: '/dashboard/citation-analysis',
+          cta: '인용 근거 역분석하기',
           term: 'recommendationDepth',
         });
       } else {

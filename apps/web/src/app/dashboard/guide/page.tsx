@@ -22,7 +22,6 @@ import {
   Target,
   Gauge,
   Lightbulb,
-  PenTool,
   Search,
   CalendarDays,
   Users,
@@ -184,13 +183,6 @@ const MENU_GUIDE: {
   {
     group: 'GEO 콘텐츠',
     items: [
-      {
-        icon: PenTool,
-        name: 'AI 콘텐츠',
-        href: '/dashboard/geo-content',
-        what: 'AI에게 잘 읽히는 구조(GEO)의 콘텐츠 초안을 생성합니다. 주제를 넣으면 제목·소제목·본문 구조를 잡아줍니다.',
-        when: '콘텐츠 작성할 때',
-      },
       {
         icon: Search,
         name: '인용 역분석',
