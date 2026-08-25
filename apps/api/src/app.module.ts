@@ -33,20 +33,23 @@ import { GrowthDiagnosisModule } from './growth-diagnosis/growth-diagnosis.modul
     }),
     // Rate Limiting 설정
     ThrottlerModule.forRoot([
+      // ⚠️ 대시보드는 진입 시 1초 안에 조회 API를 ~14발 동시 발사한다 (react-query 병렬).
+      //    short=10이면 로그인 유저가 대시보드만 열어도 11번째부터 429 → 전 카드 "불러오지 못함".
+      //    (비로그인은 인증 가드 401이 먼저라 외부 재현 불가 — 유저만 밟는 지뢰였음, 2026-08-25 장애)
       {
         name: 'short',
         ttl: 1000, // 1초
-        limit: 10, // 1초에 10요청
+        limit: 30, // 1초에 30요청 (대시보드 초기 로드 14발 + 재시도 여유)
       },
       {
         name: 'medium',
         ttl: 10000, // 10초
-        limit: 50, // 10초에 50요청
+        limit: 100, // 10초에 100요청
       },
       {
         name: 'long',
         ttl: 60000, // 1분
-        limit: 200, // 1분에 200요청
+        limit: 300, // 1분에 300요청 (봇/크롤러 방어선은 유지)
       },
     ]),
     ScheduleModule.forRoot(),
