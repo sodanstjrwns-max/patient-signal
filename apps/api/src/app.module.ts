@@ -24,6 +24,7 @@ import { GeoContentModule } from './geo-content/geo-content.module';
 import { PublicApiModule } from './public-api/public-api.module';
 import { SourceIntelModule } from './source-intel/source-intel.module';
 import { GrowthDiagnosisModule } from './growth-diagnosis/growth-diagnosis.module';
+import { PsOpenApiModule } from './ps-open-api/ps-open-api.module';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { GrowthDiagnosisModule } from './growth-diagnosis/growth-diagnosis.modul
     PublicApiModule,
     SourceIntelModule,
     GrowthDiagnosisModule,
+    PsOpenApiModule,
   ],
   controllers: [AppController],
   providers: [
