@@ -117,6 +117,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? (Array.isArray(message) ? message[0] : message)
       : GENERIC_5XX_MESSAGE;
 
+    // 【PS-통합】Patient Series Open API v1 (/api/v1/*)는 §1 규격 에러 포맷 사용:
+    // { "error": { "code": "...", "message": "..." } }
+    // 가드/서비스가 { error: { code, message } } 형태로 던지면 그대로 보존
+    if (request.url.startsWith('/api/v1/')) {
+      let psCode = errorCode;
+      let psMessage = clientMessage;
+      if (exception instanceof HttpException) {
+        const exResponse = exception.getResponse();
+        const psError = (exResponse as any)?.error;
+        if (psError?.code) {
+          psCode = psError.code;
+          psMessage = psError.message || psMessage;
+        }
+      }
+      response.status(status).json({ error: { code: psCode, message: psMessage } });
+      return;
+    }
+
     response.status(status).json({
       success: false,
       errorCode,
