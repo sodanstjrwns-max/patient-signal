@@ -60,6 +60,7 @@ import { toast } from '@/hooks/useToast';
 import { MetricValue, resolveState } from '@/components/ui/metric-value';
 import { TermTip } from '@/components/ui/term-tooltip';
 import { DiagnosisBoard, buildFindings } from '@/components/dashboard/DiagnosisBoard';
+import { TopMentionedPrompts } from '@/components/dashboard/TopMentionedPrompts';
 
 // ─── 플랫폼 색상/이름 ───
 const PLATFORM_META: Record<string, { name: string; color: string; bg: string; text: string; ringClass: string }> = {
@@ -480,6 +481,12 @@ export default function DashboardPage() {
             진단 → 원인 → 처방 (이 화면의 핵심)
         ═══════════════════════════════════════════ */}
         <DiagnosisBoard findings={findings} loading={abhsLoading || platformLoading} />
+
+        {/* ═══════════════════════════════════════════
+            이번 주 언급된 질문 TOP 5 — 질문 단위 성과를 첫 화면에서 즉답
+            (2026.08.26 "어떤 질문에 노출되는지 어디서 보냐" 고객 문의 → 신설)
+        ═══════════════════════════════════════════ */}
+        <TopMentionedPrompts hospitalId={hospitalId} />
 
         {/* ═══════════════════════════════════════════
             BENTO ROW 2: Platform cards

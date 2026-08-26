@@ -256,6 +256,69 @@ export default function GuidePage() {
           </Card>
         </section>
 
+        {/* ═══ 0.5 가장 먼저 볼 3가지 ═══
+            2026.08.26 신설: 유료 원장이 "어떤 질문에 노출되는지 어디서 보냐"고 문의
+            → 핵심 기능 3개를 가이드 최상단에서 1·2·3으로 즉답 */}
+        <section id="first-three-section">
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <span className="block">처음이라면, 이 3가지부터 보세요</span>
+                  <span className="block text-[11px] font-semibold text-slate-400 mt-0.5">
+                    5분이면 &quot;AI가 우리를 어떻게 보는지&quot; 감이 잡힙니다
+                  </span>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {[
+                {
+                  step: 1,
+                  title: '어떤 질문에 우리가 나오는지 확인',
+                  desc: '환자가 AI에게 이렇게 물으면 우리 병원이 답변에 등장합니다 — 어떤 질문에서, 어느 AI가, 몇 번째로 불렀는지까지 나옵니다. 대시보드 첫 화면의 "이번 주 언급된 질문 TOP 5"가 요약본이고, 전체는 여기서 봅니다.',
+                  href: '/dashboard/responses?filter=mentioned',
+                  cta: 'AI 응답 → "언급됨만" 필터',
+                },
+                {
+                  step: 2,
+                  title: '경쟁 병원만 나오는 질문 확인',
+                  desc: '같은 질문에 경쟁 병원은 나오는데 우리만 빠진 곳 — 여기가 가장 싸게 이길 수 있는 자리입니다. 콘텐츠 방향을 잡을 때 이 화면부터 여세요.',
+                  href: '/dashboard/opportunities',
+                  cta: '기회 분석 열기',
+                },
+                {
+                  step: 3,
+                  title: '궁금한 질문은 그 자리에서 직접 테스트',
+                  desc: '"지금 ○○동 임플란트 물으면 우리 나와?" — 크롤링을 기다릴 필요 없이 직접 입력해서 AI들의 실시간 답변과 언급 여부를 즉시 확인합니다.',
+                  href: '/dashboard/live-query',
+                  cta: '실시간 질문 열기',
+                },
+              ].map(item => (
+                <Link
+                  key={item.step}
+                  href={item.href}
+                  className="flex items-start gap-3.5 rounded-2xl border border-amber-100 bg-white/70 p-4 hover:border-amber-300 hover:shadow-sm transition-all group"
+                >
+                  <span className="w-7 h-7 rounded-xl bg-amber-500 text-white text-sm font-black flex items-center justify-center shrink-0 mt-0.5">
+                    {item.step}
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed mt-1">{item.desc}</p>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 mt-2 group-hover:gap-2 transition-all">
+                      {item.cta} →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        </section>
+
         {/* ═══ 1. 핵심 용어 4총사 ═══ */}
         <section id="core-terms-section">
           <h2 className="text-xl font-black text-slate-900 mb-1">1. 숫자 읽는 법 — 핵심 4총사</h2>

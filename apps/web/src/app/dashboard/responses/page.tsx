@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
@@ -69,10 +70,16 @@ function formatDateTime(dateStr: string) {
 export default function ResponsesPage() {
   const { user } = useAuthStore();
   const hospitalId = user?.hospitalId;
+  const searchParams = useSearchParams();
+  // 【2026.08.26】딥링크 지원: /dashboard/responses?filter=mentioned
+  //  (대시보드 TOP5 위젯·가이드에서 "언급된 질문 보기"로 바로 진입)
+  const initialFilter = searchParams.get('filter');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [mentionFilter, setMentionFilter] = useState<'all' | 'mentioned' | 'not_mentioned'>('all');
+  const [mentionFilter, setMentionFilter] = useState<'all' | 'mentioned' | 'not_mentioned'>(
+    initialFilter === 'mentioned' ? 'mentioned' : initialFilter === 'not_mentioned' ? 'not_mentioned' : 'all',
+  );
 
   // AI 응답 목록 조회
   const { data: responseData, isLoading, error: queryError } = useQuery({
