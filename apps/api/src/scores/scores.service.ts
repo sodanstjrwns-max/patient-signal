@@ -119,9 +119,13 @@ export class ScoresService {
       const staleDays = lastResponseDate
         ? Math.floor((Date.now() - lastResponseDate.getTime()) / 86400000)
         : null;
-      // 3일 이상 새 응답이 없으면 수집이 멈춘 것으로 본다 (정상 크롤은 하루 3세션)
+      // 플랫폼별 무응답 허용일 초과 시 수집이 멈춘 것으로 본다.
+      // 【2026.08.26】GROK은 비용 정책상 주 2회(월·목 KST)만 크롤 → 목→월 간격이 4일이라
+      //  일괄 3일 기준이면 매주 일요일마다 "수집 중단" 오경보가 뜬다. GROK만 6일로 완화.
+      //  (env GROK_CRAWL_DAYS 변경 시 이 임계값도 함께 검토할 것)
+      const staleThreshold = platform === 'GROK' ? 6 : 3;
       const collectionStatus: 'ACTIVE' | 'STALLED' | 'NEVER' =
-        totalQueries === 0 ? 'NEVER' : (staleDays !== null && staleDays >= 3 ? 'STALLED' : 'ACTIVE');
+        totalQueries === 0 ? 'NEVER' : (staleDays !== null && staleDays >= staleThreshold ? 'STALLED' : 'ACTIVE');
 
       // 【0건 원인 규명】같은 "0%"라도 처방이 완전히 다르다.
       //  - 웹을 안 보는 채널(CLOVA X 등)  → 콘텐츠를 늘려도 안 나옴. 학습 데이터/브랜드 인지도 싸움.

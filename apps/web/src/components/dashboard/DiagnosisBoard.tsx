@@ -153,19 +153,23 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
   // ── 2.5 수집 중단 — 모든 소견에 앞선다 (지표가 틀렸을 수 있다는 뜻이므로)
   //   배경: 2026-07-14 xAI 크레딧이 느낌없이 소진돼 Grok 수집이 12일간 멈췄는데
   //   화면엔 그저 "0%"로 보여 아무도 몰랐다. 숫자보다 "이 숫자를 믿지 말라"가 먼저다.
+  //   【2026.08.26 문구 사고 수정】기존 문구가 "API 연동에서 상태를 확인하세요"라며
+  //   /dashboard/api-keys(외부 연동용 키 '발급' 페이지)로 보냈음 → 원장이 자기가 뭘
+  //   고쳐야 하는 줄 알고 혼란 (실사례: "API를 점검하라는데 먼말인지 몰라서요^^;;").
+  //   수집은 전적으로 시그널 운영 몫 — 사용자에게 할 일을 시키지 않는다.
   const stalled = d.platforms.filter(p => p.collectionStatus === 'STALLED');
   if (stalled.length > 0) {
     const worst = Math.max(...stalled.map(p => p.staleDays ?? 0));
     out.push({
       id: 'collection-stalled',
       severity: 'critical',
-      headline: `${stalled.map(p => p.name).join(' · ')} 수집이 멈췄습니다`,
+      headline: `${stalled.map(p => p.name).join(' · ')} 수집이 잠시 멈춰 있습니다`,
       cause: `${stalled.map(p => `${p.name} ${p.staleDays ?? 0}일째 새 응답 없음`).join(', ')}. ` +
         `이 채널의 숫자는 최대 ${worst}일 전 기록입니다. ` +
-        `언급이 안 되고 있는 것이 아니라, 물어보는 것 자체가 안 되고 있습니다 (API 키/크레딧 문제가 가장 흔합니다).`,
-      action: '설정 → API 연동에서 해당 플랫폼 상태를 확인하세요. 복구 전까지 이 채널 수치로는 판단하지 마세요.',
-      href: '/dashboard/api-keys',
-      cta: 'API 연동 상태 확인',
+        `병원에서 노출이 줄어든 것이 아니라, 저희 쪽 수집이 지연된 것입니다.`,
+      action: '원장님이 하실 일은 없습니다. 시그널 운영팀이 자동 감지해 복구합니다. 복구 전까지 이 채널 수치는 참고만 해주세요 — 다른 채널 수치는 정상입니다.',
+      href: '/dashboard/responses',
+      cta: '마지막 수집 응답 보기',
     });
   }
 
