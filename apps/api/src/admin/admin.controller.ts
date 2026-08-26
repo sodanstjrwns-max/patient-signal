@@ -343,7 +343,7 @@ export class AdminController {
 
   /**
    * 【어드민·디버그】Gemini flash-lite grounding 단건 호출 진단
-   * GET /api/admin/debug-gemini?secret=xxx&model=gemini-2.5-flash-lite
+   * GET /api/admin/debug-gemini?secret=xxx&model=gemini-flash-lite-latest
    *
    * 배경: 크롤에서 flash-lite STEP1이 전멸하고 2.5-flash 폴백만 도는 원인 규명용.
    * 프로덕션 환경(실제 GEMINI_API_KEY)에서 flash-lite + google_search를 1회 호출해
@@ -360,7 +360,8 @@ export class AdminController {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
     if (!geminiApiKey) return { success: false, error: 'GEMINI_API_KEY 미설정' };
 
-    const modelName = (model || 'gemini-2.5-flash-lite').replace(/[^a-z0-9.\-]/gi, '');
+    // 【2026.08.26】기본값을 실크롤과 동일한 모델로 수정 — 구모델(gemini-2.5-flash-lite)은 신규 사용자 대상 서빙 종료(404)
+    const modelName = (model || 'gemini-flash-lite-latest').replace(/[^a-z0-9.\-]/gi, '');
     const started = Date.now();
     try {
       const response = await fetch(

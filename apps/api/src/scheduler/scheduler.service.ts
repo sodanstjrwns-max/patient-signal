@@ -867,6 +867,32 @@ export class SchedulerService implements OnModuleInit {
     return 'evening';
   }
 
+  /**
+   * 【2026.08.26】GROK 주 2회 크롤 게이트
+   *
+   * 배경: xAI 실비용이 건당 ~$0.045 (토큰 + web_search 툴 과금 합산, usage.cost_in_usd_ticks 실측).
+   *  매일 크롤 시 그록 단독 월 ~$520 — 8월 크레딧 조기 소진 사고(8/18~25 그록 7일 단절)의 주범.
+   *  더 싼 모델 루트는 막힘: grok-4.1-fast($0.2/$0.5)는 2026-08-20부로 서비스 종료,
+   *  grok-build-0.1($1/$2)은 명목가만 쌀 뿐 서치 3배·컨텍스트 6배로 실비용 2.9배 (실사격 검증).
+   *
+   * 정책: 월·목(KST)만 GROK 크롤 → 월 ~$150으로 압축. 나머지 5개 플랫폼은 기존 주기 유지.
+   *  - env GROK_CRAWL_DAYS로 조정: '1,4' = 월·목 (0=일 ~ 6=토), '*' = 매일(게이트 해제)
+   *  - 티저(STARTER 1프롬프트 맛보기)도 세션 플랫폼과의 교집합이라 그록 없는 날엔 자동 제외
+   *  - 수동/온디맨드 크롤(queryAllPlatforms 직접 호출)은 이 게이트를 타지 않음 — 의도된 동작
+   */
+  private isGrokCrawlDay(): boolean {
+    const daysEnv = (process.env.GROK_CRAWL_DAYS ?? '1,4').trim();
+    if (daysEnv === '*') return true; // 게이트 해제 (매일)
+    const allowedDays = daysEnv
+      .split(',')
+      .map(d => parseInt(d.trim(), 10))
+      .filter(d => !isNaN(d) && d >= 0 && d <= 6);
+    if (allowedDays.length === 0) return true; // 잘못된 설정이면 안전하게 매일 (침묵 단절 방지)
+    // KST 요일 (0=일 ~ 6=토)
+    const kstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCDay();
+    return allowedDays.includes(kstDay);
+  }
+
   private getPlatformsForSession(session: string): any[] {
     // 【2026.05】6대 플랫폼 — GROK(xAI) + CLOVA_X(Naver) 추가
     // 가용성은 AICrawlerService.isPlatformAvailable()이 env 키 유무로 판정
@@ -874,17 +900,27 @@ export class SchedulerService implements OnModuleInit {
       'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X',
     ];
 
+    let sessionPlatforms: any[];
     switch (session) {
       case 'morning':
-        return basePlatforms;
+        sessionPlatforms = basePlatforms;
+        break;
       case 'afternoon':
         // 비용 절감을 위해 일부 세션은 핵심 4종만 (GROK/CLOVA_X는 비교적 비쌈 + 한국 시장 토종)
-        return ['CHATGPT', 'GEMINI', 'GROK', 'CLOVA_X'];
+        sessionPlatforms = ['CHATGPT', 'GEMINI', 'GROK', 'CLOVA_X'];
+        break;
       case 'evening':
-        return basePlatforms;
+        sessionPlatforms = basePlatforms;
+        break;
       default:
-        return basePlatforms;
+        sessionPlatforms = basePlatforms;
     }
+
+    // 【GROK 주 2회】월·목(KST)이 아니면 GROK 제외 — 상세 사유는 isGrokCrawlDay() 주석 참조
+    if (!this.isGrokCrawlDay()) {
+      sessionPlatforms = sessionPlatforms.filter(p => p !== 'GROK');
+    }
+    return sessionPlatforms;
   }
 
   // ==================== V3: Daily Prompt Matrix Engine ====================
