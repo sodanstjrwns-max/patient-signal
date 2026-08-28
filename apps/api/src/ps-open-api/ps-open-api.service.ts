@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 
 /**
@@ -88,6 +88,49 @@ export class PsOpenApiService {
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
 
     return { service: 'signal', signals: filtered };
+  }
+
+  /**
+   * 운영 조회: 이름 매칭 병원들의 최근 14일 크롤 커버리지.
+   * 비식별 집계만 반환 (병원명·건수·마지막 크롤일). 전체 스캔 방지를 위해 q 2자 이상 필수.
+   */
+  async getCrawlCoverage(q?: string) {
+    if (!q || q.trim().length < 2) {
+      throw new BadRequestException({
+        error: { code: 'QUERY_REQUIRED', message: 'q 파라미터(병원명 일부, 2자 이상)가 필요합니다' },
+      });
+    }
+    const since = new Date(Date.now() - 14 * 86400_000);
+    const hospitals = await this.prisma.hospital.findMany({
+      where: { name: { contains: q.trim() } },
+      select: { id: true, name: true, regionSigungu: true },
+      take: 20,
+    });
+
+    const coverage = await Promise.all(
+      hospitals.map(async (h) => {
+        const [scores14d, lastScore, responses14d] = await Promise.all([
+          this.prisma.dailyScore.count({ where: { hospitalId: h.id, scoreDate: { gte: since } } }),
+          this.prisma.dailyScore.findFirst({
+            where: { hospitalId: h.id },
+            orderBy: { scoreDate: 'desc' },
+            select: { scoreDate: true },
+          }),
+          this.prisma.aIResponse.count({ where: { hospitalId: h.id, responseDate: { gte: since } } }),
+        ]);
+        return {
+          hospital_id: h.id,
+          name: h.name,
+          region: h.regionSigungu,
+          daily_scores_14d: scores14d,
+          ai_responses_14d: responses14d,
+          last_score_date: lastScore ? dateKey(lastScore.scoreDate) : null,
+        };
+      }),
+    );
+
+    coverage.sort((a, b) => b.ai_responses_14d - a.ai_responses_14d);
+    return { service: 'signal', coverage };
   }
 
   /**
