@@ -76,3 +76,9 @@ apps/api/scripts/raw-responses*
 apps/api/scripts/*.jsonl
 apps/api/scripts/*.csv
 apps/api/scripts/*.gz
+
+# ── 시크릿 파일 예방 차단 (전 작업창 공용 규칙) ──
+.dev.vars
+.dev.vars.*
+.ps-service-key*
+*.credentials.json

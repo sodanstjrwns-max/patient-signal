@@ -8,6 +8,47 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 
 ---
 
+## 🚀 프로덕션 & 배포 (Source of Truth = 이 GitHub 저장소)
+
+### 프로덕션 URL
+| 구성 | URL | 호스팅 |
+|------|-----|--------|
+| **프론트 (Next.js)** | https://patientsignal.kr | Vercel (autoDeploy) |
+| **API (NestJS)** | https://patient-signal.onrender.com | Render (autoDeploy) |
+
+### 배포 명령
+```bash
+git push origin main
+# → Render(API)와 Vercel(웹)이 main 브랜치를 감지해 자동 배포
+# DB 스키마 변경 시: cd apps/api && npm run db:migrate:deploy (Render 빌드에 포함)
+```
+**규칙: 배포하는 모든 커밋은 반드시 GitHub에 push한다. 샌드박스에만 있는 코드는 존재하지 않는 코드다.**
+
+### 필요한 시크릿 — 이름만 (값은 절대 저장소에 넣지 않는다)
+**Render (API):**
+`DATABASE_URL` `DIRECT_URL` `JWT_SECRET` `OPENAI_API_KEY` `ANTHROPIC_API_KEY` `PERPLEXITY_API_KEY` `GEMINI_API_KEY` `XAI_API_KEY` `CLOVA_X_API_KEY` `REDIS_URL` `FRONTEND_URL` `TOSS_SECRET_KEY` `TOSS_WEBHOOK_SECRET` `RESEND_API_KEY` `EMAIL_FROM` `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `ADMIN_SECRET` `ADMIN_EMAILS` `CRON_SECRET` `PS_SERVICE_KEY` `PS_HOSPITAL_MAP`
+
+**운영 옵션 (env, 시크릿 아님):** `GRANDFATHER_CUTOFF`(기가입 유예 컷오프) · `GROK_CRAWL_DAYS`(그록 크롤 요일, 기본 `1,4`=월·목 KST, `*`=매일) · `GROK_MODEL` · `DB_CONNECTION_LIMIT` · `DB_POOL_TIMEOUT` · `HOSPITAL_CONCURRENCY`
+
+**Vercel (웹):**
+`NEXT_PUBLIC_API_URL` `NEXT_PUBLIC_TOSS_CLIENT_KEY` `NEXT_PUBLIC_GA_ID`
+
+> 로컬 개발용 템플릿: `apps/api/.env.example` / `apps/web/.env.example` (플레이스홀더만 포함)
+
+### PS(Patient Series) 통합 상태
+시그널은 PS 생태계의 **공급자(Provider)** 역할.
+
+| 역할 | 엔드포인트 | 인증 | 소비자 |
+|------|-----------|------|--------|
+| 공급 | `GET /api/v1/signals?since={ISO8601}` | `Authorization: Bearer {PS_SERVICE_KEY}` + `X-PS-Hospital-Id` 헤더 | Patient Sync(회의 안건), Patient Hub(대시보드) |
+
+- 환경변수: `PS_SERVICE_KEY`(서비스 간 인증 키, 미설정 시 503 `PS_NOT_CONFIGURED`) · `PS_HOSPITAL_MAP`(PS 병원 ID ↔ 로컬 병원 ID 매핑 JSON)
+- 소비 엔드포인트: 현재 없음 (시그널은 타 PS 서비스 API를 호출하지 않음)
+- 레이트리밋: 서비스 간 폴링 1분 60회
+- 구현: `apps/api/src/ps-open-api/`
+
+---
+
 ## 2026.07.07 외국인 환자 관점 (Global Patient) 질문 추가 🌍
 **"Best dentist in Seoul for implants" — 의료관광·거주 외국인이 AI에 던지는 외국어 질문 가시성도 추적**
 
