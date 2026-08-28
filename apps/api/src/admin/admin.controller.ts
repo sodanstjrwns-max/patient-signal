@@ -327,6 +327,26 @@ export class AdminController {
   }
 
   /**
+   * 【어드민·진단】언급 급락 포렌식 — 플랫폼×날짜 언급 분해 + 언급되던 질문 추적
+   * GET /api/admin/mention-forensics?secret=xxx&hospitalId=xxx&days=35
+   */
+  @Public()
+  @Get('mention-forensics')
+  async getMentionForensics(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('secret') querySecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret || querySecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    const daysNum = Math.min(Math.max(parseInt(days || '35', 10) || 35, 7), 90);
+    return this.adminService.getMentionForensics(hospitalId, daysNum);
+  }
+
+  /**
    * 【크롤 전수 점검】크롤 헬스 체크
    * GET /api/admin/crawl-health?secret=xxx&days=7
    */

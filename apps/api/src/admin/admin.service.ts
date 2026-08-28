@@ -1547,6 +1547,104 @@ export class AdminService {
   }
 
   /**
+   * 【어드민·진단】언급 급락 포렌식 — 병원 1곳의 플랫폼×날짜 언급 분해
+   *
+   * "특별한 것이 없는데 점수가 갑자기 떨어졌다" 문의 대응용.
+   * 어느 플랫폼이 언제부터 언급을 끊었는지 + 언급되던 질문이 지금은 어떤 답을 주는지 규명.
+   */
+  async getMentionForensics(hospitalId: string, days = 35) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true, planType: true, regionSido: true, regionSigungu: true },
+    });
+    if (!hospital) return { success: false, error: '병원을 찾을 수 없습니다' };
+
+    // 플랫폼×날짜 언급 분해
+    const rows: Array<{ day: Date; platform: string; total: number; mentioned: number }> =
+      await this.prisma.$queryRaw`
+        SELECT DATE(response_date) AS day,
+               ai_platform::text AS platform,
+               COUNT(*)::int AS total,
+               SUM(CASE WHEN is_mentioned THEN 1 ELSE 0 END)::int AS mentioned
+        FROM ai_responses
+        WHERE hospital_id = ${hospitalId} AND response_date >= ${since}
+        GROUP BY DATE(response_date), ai_platform
+        ORDER BY day ASC
+      `;
+
+    // 플랫폼별 요약: 마지막 언급일, 기간 내 언급 총량
+    const byPlatform = new Map<string, { total: number; mentioned: number; lastMentionDate: string | null }>();
+    for (const r of rows) {
+      const key = r.platform;
+      const cur = byPlatform.get(key) ?? { total: 0, mentioned: 0, lastMentionDate: null };
+      cur.total += r.total;
+      cur.mentioned += r.mentioned;
+      if (r.mentioned > 0) cur.lastMentionDate = new Date(r.day).toISOString().slice(0, 10);
+      byPlatform.set(key, cur);
+    }
+
+    // 과거에 언급되던 질문들: 질문별 마지막 언급일 + 최근 응답에서의 상태
+    const promptRows: Array<{
+      prompt_id: string | null;
+      prompt_text: string | null;
+      mention_count: number;
+      last_mention: Date | null;
+      recent_total: number;
+      recent_mentioned: number;
+    }> = await this.prisma.$queryRaw`
+      SELECT r.prompt_id,
+             COALESCE(MAX(r.archived_prompt_text), MAX(p.prompt_text)) AS prompt_text,
+             SUM(CASE WHEN r.is_mentioned THEN 1 ELSE 0 END)::int AS mention_count,
+             MAX(CASE WHEN r.is_mentioned THEN r.response_date END) AS last_mention,
+             SUM(CASE WHEN r.response_date >= NOW() - INTERVAL '7 days' THEN 1 ELSE 0 END)::int AS recent_total,
+             SUM(CASE WHEN r.response_date >= NOW() - INTERVAL '7 days' AND r.is_mentioned THEN 1 ELSE 0 END)::int AS recent_mentioned
+      FROM ai_responses r
+      LEFT JOIN prompts p ON p.id = r.prompt_id
+      WHERE r.hospital_id = ${hospitalId} AND r.response_date >= ${since}
+      GROUP BY r.prompt_id
+      HAVING SUM(CASE WHEN r.is_mentioned THEN 1 ELSE 0 END) > 0
+      ORDER BY mention_count DESC
+    `;
+
+    // 언급이 있던 마지막 날의 경쟁사 vs 최근 7일 경쟁사 (누가 자리를 차지했나)
+    const recentCompetitors: Array<{ name: string; cnt: number }> = await this.prisma.$queryRaw`
+      SELECT comp AS name, COUNT(*)::int AS cnt
+      FROM ai_responses r, UNNEST(r.competitors_mentioned) AS comp
+      WHERE r.hospital_id = ${hospitalId}
+        AND r.response_date >= NOW() - INTERVAL '7 days'
+      GROUP BY comp ORDER BY cnt DESC LIMIT 10
+    `;
+
+    return {
+      success: true,
+      hospital,
+      periodDays: days,
+      platformSummary: [...byPlatform.entries()].map(([platform, v]) => ({
+        platform,
+        totalResponses: v.total,
+        mentioned: v.mentioned,
+        lastMentionDate: v.lastMentionDate,
+      })),
+      dailyByPlatform: rows.map((r) => ({
+        date: new Date(r.day).toISOString().slice(0, 10),
+        platform: r.platform,
+        total: r.total,
+        mentioned: r.mentioned,
+      })),
+      previouslyMentionedPrompts: promptRows.map((p) => ({
+        promptText: (p.prompt_text ?? '(삭제된 질문)').slice(0, 120),
+        mentionCountInPeriod: p.mention_count,
+        lastMentionDate: p.last_mention ? new Date(p.last_mention).toISOString().slice(0, 10) : null,
+        recent7d: { total: p.recent_total, mentioned: p.recent_mentioned },
+      })),
+      recentCompetitorsTop10: recentCompetitors,
+    };
+  }
+
+  /**
    * 【원장용】병원 스코프 대시보드 데이터
    *
    * 전체 랭킹을 집계하되 본인 병원 지표 + 익명화된 주변 경쟁(±3위)만 반환.
