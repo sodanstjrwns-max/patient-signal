@@ -72,6 +72,8 @@ export class PsOpenApiService {
       },
     });
 
+    signals.push(...this.buildStanding(scores));
+
     if (scores.length >= 2) {
       signals.push(...this.detectAeoScoreDrop(scores));
       signals.push(...(await this.detectCitationLost(hospitalId, scores)));
@@ -86,6 +88,49 @@ export class PsOpenApiService {
       .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
 
     return { service: 'signal', signals: filtered };
+  }
+
+  /**
+   * 신호 0: AEO 현황 (info) — 이상 유무와 무관하게 최신 상태를 알린다.
+   * 소비자(허브 카드 등)가 "신호 없음 = 데이터 없음"으로 오해하지 않게 하는 상시 신호.
+   * 최근 7일 내 점수가 있을 때만 생성 (오래된 데이터로 현황 행세 금지).
+   */
+  private buildStanding(
+    scores: Array<{
+      scoreDate: Date;
+      overallScore: number;
+      abhsScore: number | null;
+      mentionCount: number | null;
+      sovPercent: number | null;
+    }>,
+  ): PsSignal[] {
+    const latest = scores[scores.length - 1];
+    if (!latest) return [];
+    if (latest.scoreDate.getTime() < Date.now() - 7 * 86400_000) return [];
+
+    const score = latest.abhsScore ?? latest.overallScore;
+    const lastDate = dateKey(latest.scoreDate);
+    const parts = [`${lastDate} 기준`];
+    if (latest.mentionCount != null) parts.push(`AI 답변 언급 ${latest.mentionCount}회`);
+    if (latest.sovPercent != null) parts.push(`점유율(SOV) ${Math.round(latest.sovPercent)}%`);
+
+    return [
+      {
+        signal_id: `signal:${lastDate}:standing`,
+        type: 'aeo_standing',
+        severity: 'info',
+        title: `AEO 종합 ${Math.round(score)}점`,
+        summary: `${parts.join(' · ')}. AI 검색 노출이 정상 추적되고 있습니다.`,
+        occurred_at: toKstIso(lastDate),
+        data: {
+          metric: 'aeo_score',
+          series: scores.slice(-14).map((s) => ({
+            date: dateKey(s.scoreDate),
+            value: Math.round((s.abhsScore ?? s.overallScore) * 10) / 10,
+          })),
+        },
+      },
+    ];
   }
 
   /**
