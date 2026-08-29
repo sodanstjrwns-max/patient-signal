@@ -167,6 +167,9 @@ model User {
   isPfMember    Boolean   @default(false) @map("is_pf_member") // 페이션트퍼널 수강생 여부
   emailVerified Boolean   @default(false) @map("email_verified")
   lastLoginAt   DateTime? @map("last_login_at")
+  // 허브 SSO로 가입했지만 아직 병원이 없는 유저의 전역 병원 ID(hid) 보관 —
+  // 온보딩에서 병원 생성 시 hospital.psHospitalId로 옮겨진다.
+  pendingPsHospitalId String? @map("pending_ps_hospital_id")
   loginCount    Int       @default(0) @map("login_count")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
@@ -200,6 +203,10 @@ model Hospital {
   hospitalStrengths  String[]           @map("hospital_strengths") // 병원 강점
   planType           PlanType           @default(FREE) @map("plan_type")
   subscriptionStatus SubscriptionStatus @default(ACTIVE) @map("subscription_status")
+  // Patient Hub 전역 병원 ID (ps_hospital_id) — 허브 SSO 합류/매핑용.
+  // 파일럿 고정 매핑(PS_HOSPITAL_MAP env)과 별개 컬럼이며, env 매핑이 다른 전역 ID를
+  // 가리키는 병원에는 가드 로직이 채움을 건너뛴다 (hub-sso.service.ts 참고).
+  psHospitalId       String?            @unique @map("ps_hospital_id")
   createdAt          DateTime           @default(now()) @map("created_at")
   updatedAt          DateTime           @updatedAt @map("updated_at")
 

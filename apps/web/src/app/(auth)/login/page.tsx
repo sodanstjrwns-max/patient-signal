@@ -14,6 +14,10 @@ import { useAuthStore } from '@/stores/auth';
 const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.googleusercontent.com';
 const GOOGLE_REDIRECT_URI = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
+// Patient Hub SSO — API가 허브 authorize로 302 리다이렉트
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
+const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
+
 const ERROR_MESSAGES: Record<string, string> = {
   google_auth_failed: 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
   token_exchange_failed: 'Google 인증 토큰 교환에 실패했습니다. 다시 시도해주세요.',
@@ -22,6 +26,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_data: '인증 데이터가 누락되었습니다. 다시 시도해주세요.',
   parse_error: '인증 데이터 처리 중 오류가 발생했습니다.',
   access_denied: 'Google 로그인이 취소되었습니다.',
+  hub_sso_not_configured: 'Patient Hub 연동이 아직 활성화되지 않았습니다. 관리자에게 문의해주세요.',
+  hub_sso_failed: 'Patient Hub 로그인에 실패했습니다. 다시 시도해주세요.',
 };
 
 function LoginForm() {
@@ -236,6 +242,18 @@ function LoginForm() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 <span className="text-slate-700 font-medium">Google로 로그인</span>
+              </button>
+
+              {/* Patient Hub SSO 로그인 버튼 */}
+              <button
+                type="button"
+                onClick={() => { window.location.href = HUB_SSO_START_URL; }}
+                className="w-full mt-3 flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all bg-white/80 backdrop-blur-sm shadow-sm"
+              >
+                <span className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center text-white text-[10px] font-bold">
+                  PH
+                </span>
+                <span className="text-slate-700 font-medium">Patient Hub 계정으로 로그인</span>
               </button>
 
               <div className="mt-6 text-center text-sm text-slate-500">

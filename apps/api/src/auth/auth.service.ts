@@ -137,7 +137,8 @@ export class AuthService {
     };
   }
 
-  private async generateTokens(
+  // 허브 SSO(HubSsoService)에서도 동일한 토큰을 발급하도록 public
+  async generateTokens(
     userId: string,
     email: string,
     role: string,

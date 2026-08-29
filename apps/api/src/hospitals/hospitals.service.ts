@@ -66,13 +66,34 @@ export class HospitalsService {
     }
 
     // 사용자와 병원 연결
+    // 허브 SSO로 가입한 유저가 보관 중인 전역 병원 ID(pendingPsHospitalId)가 있으면
+    // 새 병원의 psHospitalId로 옮긴다 (가드: unique 충돌 시 스킵)
+    const creator = await this.prisma.user.findUnique({ where: { id: userId } });
     await this.prisma.user.update({
       where: { id: userId },
-      data: { 
+      data: {
         hospitalId: hospital.id,
         role: 'OWNER',
+        pendingPsHospitalId: null,
       },
     });
+
+    if (creator?.pendingPsHospitalId) {
+      try {
+        await this.prisma.hospital.update({
+          where: { id: hospital.id },
+          data: { psHospitalId: creator.pendingPsHospitalId },
+        });
+        this.logger.log(
+          `병원 ${hospital.id} ← Patient Hub 전역 ID(${creator.pendingPsHospitalId}) 연결 (SSO 온보딩)`,
+        );
+      } catch (err) {
+        // 이미 다른 병원이 이 전역 ID를 보유한 경우 등 — 연결만 스킵하고 온보딩은 계속
+        this.logger.warn(
+          `병원 ${hospital.id} 전역 ID(${creator.pendingPsHospitalId}) 연결 실패: ${err?.message}`,
+        );
+      }
+    }
 
     // STARTER 7일 트라이얼 구독 생성
     // 7일 후 자동으로 FREE로 다운그레이드 (Cron에서 처리)
