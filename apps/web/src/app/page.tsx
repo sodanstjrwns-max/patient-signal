@@ -24,6 +24,10 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+// Patient Hub SSO — API가 허브 authorize로 302 리다이렉트 (로그인 페이지와 동일 시작 라우트)
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
+const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
+
 // Static classes for Tailwind detection
 const ABHS_AXES = [
   { axis: 'Voice Share', desc: 'AI 응답에서 우리 병원이 언급되는 비율', icon: Activity, iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
@@ -109,6 +113,16 @@ export default function HomePage() {
                     요금제 보기
                   </Button>
                 </Link>
+              </div>
+
+              {/* Patient Hub SSO 로그인 — 시작화면 노출 */}
+              <div className="mt-4 flex lg:justify-start justify-center">
+                <a href={HUB_SSO_START_URL} className="inline-flex items-center justify-center gap-2.5 px-6 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all bg-white/80 backdrop-blur-sm shadow-sm">
+                  <span className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center text-white text-[10px] font-bold">
+                    PH
+                  </span>
+                  <span className="text-slate-700 font-semibold">Patient Hub 계정으로 로그인</span>
+                </a>
               </div>
             </div>
 
