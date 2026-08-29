@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "prisma generate && (prisma db push || echo 'DB push skipped (non-destructive check failed — review schema change manually)') && node scripts/ensure-sso-columns.js && NODE_OPTIONS=--max-old-space-size=2048 nest build",
+    "build": "prisma generate && (prisma db push || echo 'DB push skipped (non-destructive check failed — review schema change manually)') && (echo '--- schema drift diagnosis (DB -> schema apply script) ---' && prisma migrate diff --from-url \"$DATABASE_URL\" --to-schema-datamodel prisma/schema.prisma --script || true) && node scripts/ensure-sso-columns.js && NODE_OPTIONS=--max-old-space-size=2048 nest build",
     "db:push": "prisma db push",
     "db:push:force": "prisma db push --accept-data-loss",
     "db:migrate:deploy": "prisma migrate deploy",
