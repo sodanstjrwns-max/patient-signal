@@ -187,15 +187,26 @@ export default function SettingsPage() {
 
   const [formData, setFormData] = useState({
     name: '', address: '', websiteUrl: '', naverPlaceId: '',
+    specialtyType: '', regionSido: '', regionSigungu: '', regionDong: '',
   });
   const [nameAliases, setNameAliases] = useState<string[]>([]);
   const [newAlias, setNewAlias] = useState('');
+
+  // 허브 프로필에서 채워 내려온 필드 목록 (API가 빈 필드만 채워서 내려줌 — DB 저장 전 상태)
+  const hubPrefilledFields: string[] = hospital?.hubPrefill?.fields || [];
+  const hubFieldLabels: Record<string, string> = {
+    specialtyType: '진료과목', regionSido: '지역(시/도)', regionSigungu: '지역(시/군/구)',
+    regionDong: '지역(동)', coreTreatments: '주력 진료',
+  };
 
   useEffect(() => {
     if (hospital) {
       setFormData({
         name: hospital.name || '', address: hospital.address || '',
         websiteUrl: hospital.websiteUrl || '', naverPlaceId: hospital.naverPlaceId || '',
+        specialtyType: hospital.specialtyType || '',
+        regionSido: hospital.regionSido || '', regionSigungu: hospital.regionSigungu || '',
+        regionDong: hospital.regionDong || '',
       });
       setNameAliases(hospital.nameAliases || []);
       // keyProcedures 우선, 없으면 coreTreatments fallback
@@ -281,7 +292,23 @@ export default function SettingsPage() {
   };
 
   const handleSave = () => {
-    updateMutation.mutate({ ...formData, nameAliases });
+    // 필수 필드(진료과·지역)는 빈 값으로 덮어쓰지 않도록 비어 있으면 payload에서 제외
+    const payload: any = {
+      name: formData.name,
+      address: formData.address,
+      websiteUrl: formData.websiteUrl,
+      naverPlaceId: formData.naverPlaceId,
+      nameAliases,
+    };
+    if (formData.specialtyType) payload.specialtyType = formData.specialtyType;
+    if (formData.regionSido.trim()) payload.regionSido = formData.regionSido.trim();
+    if (formData.regionSigungu.trim()) payload.regionSigungu = formData.regionSigungu.trim();
+    if (formData.regionDong.trim()) payload.regionDong = formData.regionDong.trim();
+    // 허브에서 가져온 주력 진료가 아직 DB에 없으면 저장 시 함께 반영
+    if (hubPrefilledFields.includes('coreTreatments') && hospital?.coreTreatments?.length > 0) {
+      payload.coreTreatments = hospital.coreTreatments;
+    }
+    updateMutation.mutate(payload);
   };
 
   if (!hospitalId) {
@@ -318,6 +345,23 @@ export default function SettingsPage() {
             <CardDescription>기본 병원 정보를 관리합니다</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* 허브 프로필 프리필 안내 — 빈 필드만 허브 값으로 채워져 있고, 저장해야 DB에 반영 */}
+            {hubPrefilledFields.length > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                <Sparkles className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                <div className="text-sm text-indigo-700">
+                  <p className="font-medium">
+                    Patient Hub 프로필에서 가져온 값이 미리 채워져 있어요
+                    <span className="ml-1 text-xs font-normal text-indigo-500">
+                      ({hubPrefilledFields.map((f) => hubFieldLabels[f] || f).join(', ')})
+                    </span>
+                  </p>
+                  <p className="text-xs text-indigo-600 mt-0.5">
+                    수정할 수 있으며, <strong>저장</strong>을 눌러야 병원 정보에 반영됩니다.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>병원명</Label>
@@ -325,11 +369,31 @@ export default function SettingsPage() {
               </div>
               <div>
                 <Label>진료과목</Label>
-                <Input value={specialtyNames[hospital?.specialtyType] || hospital?.specialtyType || ''} disabled className="bg-slate-50" />
+                {isEditing ? (
+                  <select
+                    value={formData.specialtyType}
+                    onChange={(e) => setFormData({ ...formData, specialtyType: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="" disabled>진료과목 선택</option>
+                    {Object.entries(specialtyNames).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <Input value={specialtyNames[hospital?.specialtyType] || hospital?.specialtyType || ''} disabled className="bg-slate-50" />
+                )}
               </div>
               <div>
                 <Label>지역</Label>
-                <Input value={`${hospital?.regionSido || ''} ${hospital?.regionSigungu || ''}`} disabled className="bg-slate-50" />
+                {isEditing ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input value={formData.regionSido} onChange={(e) => setFormData({ ...formData, regionSido: e.target.value })} placeholder="시/도 (예: 서울특별시)" />
+                    <Input value={formData.regionSigungu} onChange={(e) => setFormData({ ...formData, regionSigungu: e.target.value })} placeholder="시/군/구 (예: 강남구)" />
+                  </div>
+                ) : (
+                  <Input value={`${hospital?.regionSido || ''} ${hospital?.regionSigungu || ''}`.trim()} disabled className="bg-slate-50" />
+                )}
               </div>
               <div>
                 <Label>상세 주소</Label>
@@ -354,7 +418,7 @@ export default function SettingsPage() {
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => { setFormData({ name: hospital?.name || '', address: hospital?.address || '', websiteUrl: hospital?.websiteUrl || '', naverPlaceId: hospital?.naverPlaceId || '' }); setIsEditing(true); }}>
+                <Button onClick={() => { setFormData({ name: hospital?.name || '', address: hospital?.address || '', websiteUrl: hospital?.websiteUrl || '', naverPlaceId: hospital?.naverPlaceId || '', specialtyType: hospital?.specialtyType || '', regionSido: hospital?.regionSido || '', regionSigungu: hospital?.regionSigungu || '', regionDong: hospital?.regionDong || '' }); setIsEditing(true); }}>
                   수정
                 </Button>
               )}

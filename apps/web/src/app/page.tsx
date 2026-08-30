@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import SiteFooter from '@/components/layout/SiteFooter';
+import { useAuthStore } from '@/stores/auth';
 import { 
   Sparkles, 
   ArrowRight, 
@@ -47,6 +48,13 @@ const FEATURES = [
 ];
 
 export default function HomePage() {
+  // 로그인 상태면 "무료로 시작하기" CTA를 "대시보드로 이동"으로 분기
+  // (_hasHydrated 전에는 비로그인과 동일하게 렌더 → SSR/hydration 불일치 방지)
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const loggedIn = _hasHydrated && isAuthenticated;
+  const startHref = loggedIn ? '/dashboard' : '/register';
+  const startLabel = loggedIn ? '대시보드로 이동' : '무료로 시작하기';
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* Header */}
@@ -63,8 +71,8 @@ export default function HomePage() {
               <Link href="/login">
                 <Button variant="ghost" className="font-semibold">로그인</Button>
               </Link>
-              <Link href="/register">
-                <Button className="shadow-md shadow-brand-500/20">무료로 시작하기</Button>
+              <Link href={startHref}>
+                <Button className="shadow-md shadow-brand-500/20">{startLabel}</Button>
               </Link>
             </div>
           </div>
@@ -102,9 +110,9 @@ export default function HomePage() {
               </p>
 
               <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4">
-                <Link href="/register">
+                <Link href={startHref}>
                   <Button size="lg" className="px-10 py-6 text-base bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-xl shadow-brand-500/30 font-bold hover:scale-[1.03] transition-transform">
-                    무료로 시작하기
+                    {startLabel}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </Link>
@@ -488,9 +496,9 @@ export default function HomePage() {
             가입부터 첫 분석까지 3분이면 충분합니다.<br />
             무료 7일 체험으로 시작하세요.
           </p>
-          <Link href="/register">
+          <Link href={startHref}>
             <Button size="lg" className="px-12 py-6 text-base bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 shadow-xl shadow-brand-500/25 font-bold">
-              무료로 시작하기
+              {startLabel}
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SiteFooter from '@/components/layout/SiteFooter';
+import { useAuthStore } from '@/stores/auth';
 
 const PLATFORMS_ALL = 'ChatGPT · Claude · Gemini · Perplexity · Grok · CLOVA X · 네이버 AI 브리핑';
 
@@ -129,6 +130,10 @@ const COMPARE_ROWS: { label: string; free: string; s: string; m: string; l: stri
 ];
 
 export default function PricingPage() {
+  // 로그인 상태면 "무료로 시작" 계열 CTA를 "대시보드로 이동"으로 분기
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const loggedIn = _hasHydrated && isAuthenticated;
+
   return (
     <div className="min-h-screen bg-mesh">
       {/* Header */}
@@ -222,7 +227,7 @@ export default function PricingPage() {
                 </li>
               </ul>
 
-              <Link href={t.cta.href} className="mt-6">
+              <Link href={loggedIn ? '/dashboard' : t.cta.href} className="mt-6">
                 <Button
                   className={`w-full font-bold ${
                     t.highlight
@@ -231,7 +236,7 @@ export default function PricingPage() {
                   }`}
                   variant={t.highlight ? 'default' : 'outline'}
                 >
-                  {t.cta.label}
+                  {loggedIn ? '대시보드로 이동' : t.cta.label}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Button>
               </Link>
@@ -333,9 +338,9 @@ export default function PricingPage() {
           <div className="rounded-2xl bg-gradient-to-r from-brand-600 to-violet-600 p-10 text-white">
             <h2 className="text-2xl font-bold mb-3">광고비를 태우기 전에, AI가 우리를 어떻게 보는지부터.</h2>
             <p className="text-brand-100 mb-6">14일 무료 체험 — 카드 등록 없이 지금 바로 시작하세요.</p>
-            <Link href="/register">
+            <Link href={loggedIn ? '/dashboard' : '/register'}>
               <Button size="lg" className="bg-white text-brand-700 hover:bg-brand-50 font-bold px-10">
-                무료로 시작하기
+                {loggedIn ? '대시보드로 이동' : '무료로 시작하기'}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>

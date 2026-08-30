@@ -229,7 +229,7 @@ export class HospitalsService {
         throw new NotFoundException('병원을 찾을 수 없습니다');
       }
 
-      return hospital;
+      return this.withHubPrefill(hospital);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       // subscriptions 관계 에러 시 subscription 없이 조회
@@ -245,7 +245,91 @@ export class HospitalsService {
         },
       });
       if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
-      return { ...hospital, subscriptions: [] };
+      return this.withHubPrefill({ ...hospital, subscriptions: [] });
+    }
+  }
+
+  /**
+   * 병원의 Patient Hub 전역 ID 결정
+   * psHospitalId 컬럼 → PS_HOSPITAL_MAP env → 소속 유저의 pendingPsHospitalId 순
+   */
+  private async resolveHubGlobalId(hospital: {
+    id: string;
+    psHospitalId?: string | null;
+  }): Promise<string | null> {
+    if (hospital.psHospitalId) return hospital.psHospitalId;
+    const mapped = findGlobalIdFromMap(hospital.id);
+    if (mapped) return mapped;
+    const holder = await this.prisma.user.findFirst({
+      where: { hospitalId: hospital.id, pendingPsHospitalId: { not: null } },
+      select: { pendingPsHospitalId: true },
+    });
+    return holder?.pendingPsHospitalId ?? null;
+  }
+
+  /**
+   * 【설정 화면 프리필】병원 조회 응답에 허브 프로필 값을 "빈 필드만" 채워 내려준다.
+   * - DB에는 쓰지 않음 (사용자가 설정 화면에서 저장할 때만 기존 update 경로로 반영)
+   * - 채운 필드 목록을 hubPrefill.fields로 함께 내려 프론트가 "허브 프로필에서 가져옴" 표시
+   * - HUB_API_KEY 미설정·미연동·허브 404/장애 등 모든 실패는 원본 그대로 반환 (기존 동작 100%)
+   */
+  private async withHubPrefill<T extends { id: string; psHospitalId?: string | null }>(
+    hospital: T,
+  ): Promise<T> {
+    try {
+      if (!this.hubProfileService.isEnabled()) return hospital;
+
+      const h = hospital as Record<string, any>;
+      const isBlank = (v: any) => !(typeof v === 'string' && v.trim());
+      const needsSpecialty = !h.specialtyType;
+      const needsSido = isBlank(h.regionSido);
+      const needsSigungu = isBlank(h.regionSigungu);
+      const needsDong = isBlank(h.regionDong);
+      const needsTreatments = !(Array.isArray(h.coreTreatments) && h.coreTreatments.length > 0);
+
+      // 채울 빈 필드가 없으면 허브 호출 자체를 생략
+      if (!needsSpecialty && !needsSido && !needsSigungu && !needsDong && !needsTreatments) {
+        return hospital;
+      }
+
+      const psId = await this.resolveHubGlobalId(hospital);
+      if (!psId) return hospital;
+
+      const profile = await this.hubProfileService.fetchProfile(psId);
+      if (!profile) return hospital;
+
+      const prefill = this.hubProfileService.buildPrefill(profile);
+      const merged: Record<string, any> = { ...hospital };
+      const fields: string[] = [];
+
+      if (needsSpecialty && prefill.specialtyType) {
+        merged.specialtyType = prefill.specialtyType;
+        fields.push('specialtyType');
+      }
+      if (needsSido && prefill.regionSido) {
+        merged.regionSido = prefill.regionSido;
+        fields.push('regionSido');
+      }
+      if (needsSigungu && prefill.regionSigungu) {
+        merged.regionSigungu = prefill.regionSigungu;
+        fields.push('regionSigungu');
+      }
+      if (needsDong && prefill.regionDong) {
+        merged.regionDong = prefill.regionDong;
+        fields.push('regionDong');
+      }
+      if (needsTreatments && prefill.coreTreatments.length > 0) {
+        merged.coreTreatments = prefill.coreTreatments;
+        fields.push('coreTreatments');
+      }
+
+      if (fields.length === 0) return hospital;
+
+      this.logger.log(`허브 프로필 프리필 적용 (조회 응답): hospital=${hospital.id}, fields=${fields.join(',')}`);
+      return { ...merged, hubPrefill: { source: 'hub', fields } } as unknown as T;
+    } catch (err: any) {
+      this.logger.warn(`withHubPrefill 실패 (무시됨): ${err?.message}`);
+      return hospital;
     }
   }
 
