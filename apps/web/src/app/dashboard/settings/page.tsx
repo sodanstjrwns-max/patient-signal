@@ -251,6 +251,36 @@ export default function SettingsPage() {
     },
   });
 
+  // 허브 프로필에서 다시 가져오기 — 허브 값(병원명·진료과목·지역·주력 진료)으로 폼을 덮어 채움
+  // (폼에만 채워짐 — 사용자가 확인·수정 후 [저장]을 눌러야 DB 반영)
+  const hubRefetchMutation = useMutation({
+    mutationFn: () => hospitalApi.hubPrefill(true).then((res) => res.data),
+    onSuccess: (data: any) => {
+      if (!data?.enabled) { toast.warning('허브 연동이 설정되지 않았습니다.'); return; }
+      const prefill = data?.prefill;
+      if (!prefill) { toast.warning('허브에서 가져올 프로필이 없습니다. Patient Hub 계정 연결 상태를 확인해주세요.'); return; }
+      setFormData((prev) => ({
+        ...prev,
+        name: prefill.name || prev.name,
+        specialtyType: prefill.specialtyType || prev.specialtyType,
+        regionSido: prefill.regionSido || prev.regionSido,
+        regionSigungu: prefill.regionSigungu || prev.regionSigungu,
+        regionDong: prefill.regionDong || prev.regionDong,
+      }));
+      if (prefill.coreTreatments?.length > 0) {
+        setSelectedProcedures(prefill.coreTreatments.slice(0, 3));
+      }
+      setIsEditing(true);
+      toast.success('허브 프로필 값으로 채웠습니다. 확인 후 [저장]을 눌러야 반영됩니다.');
+    },
+    onError: () => toast.error('허브 프로필을 가져오지 못했습니다.'),
+  });
+
+  const handleHubRefetch = () => {
+    if (!window.confirm('Patient Hub 프로필 값으로 병원명·진료과목·지역·주력 진료를 덮어씁니다.\n(폼에만 채워지며, [저장]을 눌러야 실제 반영됩니다)\n계속할까요?')) return;
+    hubRefetchMutation.mutate();
+  };
+
   // 병원 정보 업데이트
   const updateMutation = useMutation({
     mutationFn: (data: any) => hospitalApi.update(hospitalId!, data),
@@ -408,7 +438,22 @@ export default function SettingsPage() {
                 <Input value={isEditing ? formData.naverPlaceId : hospital?.naverPlaceId || ''} onChange={(e) => setFormData({ ...formData, naverPlaceId: e.target.value })} disabled={!isEditing} placeholder="네이버 플레이스 ID" />
               </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-between items-center gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleHubRefetch}
+                disabled={hubRefetchMutation.isPending}
+                title="Patient Hub 프로필 값(병원명·진료과목·지역·주력 진료)으로 폼을 덮어 채웁니다"
+              >
+                {hubRefetchMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                허브 프로필에서 다시 가져오기
+              </Button>
+              <div className="flex gap-2">
               {isEditing ? (
                 <>
                   <Button variant="outline" onClick={() => setIsEditing(false)}>취소</Button>
@@ -422,6 +467,7 @@ export default function SettingsPage() {
                   수정
                 </Button>
               )}
+              </div>
             </div>
           </CardContent>
         </Card>

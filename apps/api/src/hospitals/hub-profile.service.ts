@@ -12,6 +12,8 @@ const HUB_BASE_URL = 'https://hub.patientfunnel.kr';
 const CACHE_TTL_MS = 15 * 60 * 1000;
 
 export interface HubHospitalProfile {
+  name?: string | null;
+  phone?: string | null;
   basic?: {
     clinic_type?: string | null;
     staff_count?: number | null;
@@ -23,6 +25,8 @@ export interface HubHospitalProfile {
 }
 
 export interface HubPrefill {
+  name: string | null;
+  phone: string | null;
   specialtyType: SpecialtyType | null;
   regionSido: string | null;
   regionSigungu: string | null;
@@ -150,6 +154,8 @@ export class HubProfileService {
     }
 
     return {
+      name: typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : null,
+      phone: typeof profile.phone === 'string' && profile.phone.trim() ? profile.phone.trim() : null,
       specialtyType,
       regionSido,
       regionSigungu,

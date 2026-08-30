@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Put, Body, Param, UseGuards, Headers, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Headers, Logger } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { HospitalsService } from './hospitals.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
@@ -54,11 +54,12 @@ export class HospitalsController {
   @ApiOperation({
     summary: '허브 프로필 프리필',
     description:
-      'Patient Hub에 등록된 병원 프로필로 온보딩 폼을 미리 채웁니다. 허브 미연동·키 미설정 시 enabled:false 또는 prefill:null (기존 동작 유지)',
+      'Patient Hub에 등록된 병원 프로필로 온보딩 폼을 미리 채웁니다. 허브 미연동·키 미설정 시 enabled:false 또는 prefill:null (기존 동작 유지). force=1이면 캐시를 무효화하고 신선한 전체 값(병원명 포함)을 반환 — 설정 화면 [허브 프로필에서 다시 가져오기]용',
   })
+  @ApiQuery({ name: 'force', required: false, description: '1이면 허브 캐시 무효화 후 전체 값 강제 조회' })
   @ApiResponse({ status: 200, description: '조회 성공' })
-  async hubPrefill(@CurrentUser('id') userId: string) {
-    return this.hospitalsService.getHubPrefill(userId);
+  async hubPrefill(@CurrentUser('id') userId: string, @Query('force') force?: string) {
+    return this.hospitalsService.getHubPrefill(userId, force === '1' || force === 'true');
   }
 
   @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)

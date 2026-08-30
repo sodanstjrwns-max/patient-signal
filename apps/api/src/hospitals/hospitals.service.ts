@@ -23,8 +23,10 @@ export class HospitalsService {
    * - 유저의 pendingPsHospitalId(SSO 신규 유저) → 소속 병원의 psHospitalId → PS_HOSPITAL_MAP 순으로 전역 ID 결정
    * - HUB_API_KEY env 미설정 시 enabled:false (프리필 비활성 — 기존 온보딩 100% 유지)
    * - 미연동·허브 404·장애 등 모든 실패는 prefill:null
+   * - force: 설정 화면 [허브 프로필에서 다시 가져오기] — 캐시를 무효화해 신선한 전체 값(name 포함)을 pull.
+   *   덮어쓰기는 프론트 폼에서만 일어나고, 실제 저장은 사용자가 [저장]을 눌러야 반영된다.
    */
-  async getHubPrefill(userId: string) {
+  async getHubPrefill(userId: string, force = false) {
     if (!this.hubProfileService.isEnabled()) {
       return { enabled: false, prefill: null };
     }
@@ -39,6 +41,7 @@ export class HospitalsService {
         (user?.hospitalId ? findGlobalIdFromMap(user.hospitalId) : null);
       if (!psId) return { enabled: true, prefill: null };
 
+      if (force) this.hubProfileService.invalidate(psId);
       const profile = await this.hubProfileService.fetchProfile(psId);
       if (!profile) return { enabled: true, prefill: null };
 

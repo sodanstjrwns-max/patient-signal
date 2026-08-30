@@ -173,8 +173,9 @@ export const hospitalApi = {
   create: (data: any) =>
     api.post('/hospitals', data),
   // 허브 프로필 프리필 (온보딩용) — 미연동 시 { enabled, prefill: null }
-  hubPrefill: () =>
-    api.get('/hospitals/hub-prefill'),
+  // force: 설정 화면 [허브 프로필에서 다시 가져오기] — 캐시 무효화 후 전체 값(병원명 포함) 강제 조회
+  hubPrefill: (force?: boolean) =>
+    api.get('/hospitals/hub-prefill', force ? { params: { force: 1 } } : undefined),
   get: (id: string) =>
     api.get(`/hospitals/${id}`),
   update: (id: string, data: any) =>
