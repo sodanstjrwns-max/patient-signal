@@ -1,9 +1,21 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Query,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
 import { PsServiceKeyGuard } from './guards/ps-service-key.guard';
 import { PsOpenApiService } from './ps-open-api.service';
+import { HubProfileService } from '../hospitals/hub-profile.service';
 
 /**
  * 【PS-통합】Patient Series Open API v1
@@ -17,7 +29,34 @@ import { PsOpenApiService } from './ps-open-api.service';
 @Controller('v1')
 @Throttle({ default: { limit: 60, ttl: 60000 } }) // 서비스 간 폴링용: 1분 60회
 export class PsOpenApiController {
-  constructor(private readonly psOpenApiService: PsOpenApiService) {}
+  constructor(
+    private readonly psOpenApiService: PsOpenApiService,
+    private readonly hubProfileService: HubProfileService,
+  ) {}
+
+  /**
+   * POST /api/v1/hub-events — 허브 → 시그널 push 캐시 무효화 웹훅
+   * 허브가 병원 프로필 변경 시 호출. 해당 병원의 메모리 캐시를 지워
+   * 다음 조회 때 신선한 프로필을 pull 하게 한다.
+   * 인증: Authorization: Bearer {PS_SSO_SECRET} (허브 SSO 공유 시크릿 — 자체 검증)
+   */
+  @Public() // JWT 스킵 — 아래에서 PS_SSO_SECRET Bearer를 직접 검증
+  @Post('hub-events')
+  hubEvents(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: { type?: string; ps_hospital_id?: string } | undefined,
+  ) {
+    const secret = process.env.PS_SSO_SECRET?.trim();
+    const header = authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if (!secret || !token || token !== secret) {
+      throw new UnauthorizedException('유효하지 않은 인증입니다.');
+    }
+    const psId = typeof body?.ps_hospital_id === 'string' ? body.ps_hospital_id.trim() : '';
+    if (!psId) throw new BadRequestException('ps_hospital_id가 필요합니다.');
+    this.hubProfileService.invalidate(psId);
+    return { ok: true };
+  }
 
   /**
    * GET /api/v1/signals?since={ISO8601, 선택}

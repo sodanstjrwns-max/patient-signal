@@ -8,6 +8,6 @@ import { SchedulerModule } from '../scheduler/scheduler.module';
   imports: [SchedulerModule], // 【Day 0 아하모먼트】온보딩 직후 첫 즉시 크롤용
   controllers: [HospitalsController],
   providers: [HospitalsService, HubProfileService],
-  exports: [HospitalsService],
+  exports: [HospitalsService, HubProfileService], // HubProfileService: PS Open API의 hub-events 캐시 무효화용
 })
 export class HospitalsModule {}

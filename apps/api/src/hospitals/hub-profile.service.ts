@@ -68,6 +68,14 @@ export class HubProfileService {
     return !!process.env.HUB_API_KEY?.trim();
   }
 
+  /** 허브 push 무효화 (POST /api/v1/hub-events) — 해당 병원 캐시를 지워 다음 조회 때 신선한 프로필을 pull */
+  invalidate(psHospitalId: string): void {
+    if (!psHospitalId) return;
+    if (this.cache.delete(psHospitalId)) {
+      this.logger.log(`Hub profile cache invalidated: ${psHospitalId}`);
+    }
+  }
+
   /** 허브 병원 프로필 조회 (실패 시 null — 호출부 기능 저하 없음) */
   async fetchProfile(psHospitalId: string): Promise<HubHospitalProfile | null> {
     const key = process.env.HUB_API_KEY?.trim();
