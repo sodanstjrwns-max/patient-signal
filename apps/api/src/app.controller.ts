@@ -10,30 +10,6 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('debug/env')
-  getEnvStatus(): Record<string, any> {
-    const openaiKey = process.env.OPENAI_API_KEY?.trim();
-    const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
-    const geminiKey = process.env.GEMINI_API_KEY?.trim();
-    
-    return {
-      timestamp: new Date().toISOString(),
-      node_env: process.env.NODE_ENV || 'unknown',
-      openai: {
-        exists: !!openaiKey,
-        length: openaiKey?.length || 0,
-        prefix: openaiKey?.substring(0, 7) || 'EMPTY',
-        valid: openaiKey?.startsWith('sk-') || false,
-        hasWhitespace: openaiKey !== process.env.OPENAI_API_KEY,
-      },
-      anthropic: {
-        exists: !!anthropicKey,
-        length: anthropicKey?.length || 0,
-      },
-      gemini: {
-        exists: !!geminiKey,
-        length: geminiKey?.length || 0,
-      },
-    };
-  }
+  // 【보안】GET /debug/env 제거 — 인증 없이 OPENAI_API_KEY 앞 7자·각 키 길이/존재 여부를
+  // 익명 호출자에게 노출하던 진단 라우트였음. 키 설정 점검은 Render 환경변수 콘솔에서 수행할 것.
 }

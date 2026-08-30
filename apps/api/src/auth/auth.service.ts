@@ -23,7 +23,7 @@ export class AuthService {
     const clientId = this.configService.get('GOOGLE_CLIENT_ID') || process.env.GOOGLE_CLIENT_ID;
     const clientSecret = this.configService.get('GOOGLE_CLIENT_SECRET') || process.env.GOOGLE_CLIENT_SECRET;
     
-    this.logger.log(`Google OAuth init: clientId=${clientId?.substring(0, 20)}..., hasSecret=${!!clientSecret}, secretLen=${clientSecret?.length}`);
+    this.logger.log(`Google OAuth init: hasClientId=${!!clientId}, hasSecret=${!!clientSecret}`);
     
     this.googleClient = new OAuth2Client(clientId, clientSecret);
   }
@@ -253,7 +253,7 @@ export class AuthService {
     const redirectUri = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
     this.logger.log(`Google callback: starting token exchange`);
-    this.logger.log(`Google callback: clientId=${clientId?.substring(0, 20)}..., secretLen=${clientSecret?.length}, redirectUri=${redirectUri}`);
+    this.logger.log(`Google callback: hasClientId=${!!clientId}, hasSecret=${!!clientSecret}, redirectUri=${redirectUri}`);
 
     try {
       // Step 1: Authorization Code → Token 교환 (직접 fetch)

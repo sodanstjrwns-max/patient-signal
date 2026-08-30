@@ -63,51 +63,9 @@ export class AuthController {
     return this.authService.googleLogin(idToken);
   }
 
-  @Public()
-  @SkipThrottle()
-  @Get('google/debug')
-  @ApiOperation({ summary: 'Google OAuth 디버깅', description: '현재 Google OAuth 설정 상태를 확인합니다' })
-  async googleDebug() {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const frontendUrl = process.env.FRONTEND_URL;
-    
-    // 실제 Google token endpoint에 가짜 코드로 테스트 → client_id/secret 유효성 확인
-    let tokenEndpointTest = 'not tested';
-    try {
-      const testParams = new URLSearchParams({
-        code: 'test_invalid_code',
-        client_id: clientId || '',
-        client_secret: clientSecret || '',
-        redirect_uri: 'https://patient-signal.onrender.com/api/auth/google/callback',
-        grant_type: 'authorization_code',
-      });
-      const testRes = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: testParams.toString(),
-      });
-      const testData = await testRes.json();
-      // invalid_grant = client credentials are OK, code is invalid (expected)
-      // invalid_client = client credentials are WRONG
-      tokenEndpointTest = `${testData.error}: ${testData.error_description || 'no description'}`;
-    } catch (e) {
-      tokenEndpointTest = `fetch error: ${e.message}`;
-    }
-
-    return {
-      hasClientId: !!clientId,
-      clientIdPreview: clientId ? clientId.substring(0, 20) + '...' : 'NOT SET',
-      hasClientSecret: !!clientSecret,
-      clientSecretPreview: clientSecret ? clientSecret.substring(0, 8) + '...' : 'NOT SET',
-      clientSecretLength: clientSecret?.length || 0,
-      frontendUrl: frontendUrl || 'NOT SET (using fallback: patientsignal.kr)',
-      redirectUri: 'https://patient-signal.onrender.com/api/auth/google/callback',
-      tokenEndpointTest,
-      tokenEndpointTestNote: 'invalid_grant = credentials OK (expected with fake code), invalid_client = credentials WRONG',
-      timestamp: new Date().toISOString(),
-    };
-  }
+  // 【보안】GET /auth/google/debug 제거 — 인증 없이 GOOGLE_CLIENT_SECRET 앞 8자·길이를
+  // 익명 호출자에게 노출하고 실제 구글 토큰 엔드포인트를 매 호출 프로빙하던 진단 라우트였음.
+  // 설정 점검은 서버 로그/Render 환경변수 콘솔에서 수행할 것.
 
   @Public()
   @SkipThrottle() // Google 콜백은 Rate Limit 제외

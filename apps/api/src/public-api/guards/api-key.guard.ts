@@ -30,7 +30,7 @@ export class ApiKeyGuard implements CanActivate {
     });
 
     if (!keyRecord) {
-      this.logger.warn(`[API Key] 유효하지 않은 키 시도: ${apiKey.substring(0, 16)}...`);
+      this.logger.warn(`[API Key] 유효하지 않은 키 시도 (해시 앞 8자): ${keyHash.substring(0, 8)}`);
       throw new UnauthorizedException('유효하지 않은 API Key입니다');
     }
 
