@@ -21,7 +21,36 @@ export interface HubHospitalProfile {
     opened_year?: number | null;
     key_treatments?: string[];
   };
+  // 미션·비전·핵심가치 (patient-inside/src/lib/hub-profile.ts와 동일 스키마)
+  mvv?: {
+    status?: string | null;
+    mission?: string | null;
+    vision?: string | null;
+    core_values?: Array<{ value?: string; description?: string; behavior_example?: string } | string>;
+    slogan?: string | null;
+    confirmed_at?: string | null;
+  };
+  // 진료별 환자 페인포인트 (quote = 환자 실제 목소리)
+  pain_points?: Array<{
+    treatment?: string;
+    points?: Array<{ point?: string; type?: string; quote?: string }>;
+  }>;
+  scan_summary?: {
+    report_id?: string;
+    imported_at?: string;
+    facts?: Array<{ key?: string; label?: string; value?: string }>;
+  } | null;
   updated_at?: string;
+}
+
+/** 질문 제안(LLM)용으로 추린 병원 재료 — 없으면 각 필드 비움 */
+export interface HubQuestionMaterials {
+  mission: string | null;
+  keyTreatments: string[];
+  /** [{ treatment, points: ["환자 목소리/페인포인트", ...] }] */
+  painPoints: Array<{ treatment: string; points: string[] }>;
+  /** 타겟 환자층 관련 스캔 팩트 (label: value) */
+  targetPatients: string[];
 }
 
 export interface HubPrefill {
@@ -113,6 +142,57 @@ export class HubProfileService {
       this.logger.warn(`Hub profile fetch failed (${psHospitalId}): ${err?.message}`);
       return cached?.profile ?? null;
     }
+  }
+
+  /**
+   * 허브 프로필 → 질문 제안(LLM) 재료 추출
+   * - 미션: 확정(confirmed)된 MVV만 신뢰
+   * - 페인포인트: 진료별 point/quote를 환자 목소리 그대로 수집
+   * - 타겟 환자층: 스캔 문진 팩트 중 타겟/환자층 관련 항목만 선별
+   */
+  buildQuestionMaterials(profile: HubHospitalProfile | null): HubQuestionMaterials {
+    const empty: HubQuestionMaterials = { mission: null, keyTreatments: [], painPoints: [], targetPatients: [] };
+    if (!profile) return empty;
+
+    const mvv = profile.mvv;
+    const mission =
+      mvv && mvv.status === 'confirmed' && typeof mvv.mission === 'string' && mvv.mission.trim()
+        ? mvv.mission.trim()
+        : null;
+
+    const keyTreatments = Array.isArray(profile.basic?.key_treatments)
+      ? profile.basic.key_treatments.filter((t) => typeof t === 'string' && t.trim()).slice(0, 10)
+      : [];
+
+    const painPoints: Array<{ treatment: string; points: string[] }> = [];
+    for (const pp of profile.pain_points || []) {
+      if (!pp || typeof pp !== 'object') continue;
+      const points = (pp.points || [])
+        .map((p) => {
+          if (!p) return '';
+          const quote = typeof p.quote === 'string' ? p.quote.trim() : '';
+          const point = typeof p.point === 'string' ? p.point.trim() : '';
+          return quote ? `"${quote}"` : point;
+        })
+        .filter(Boolean)
+        .slice(0, 4);
+      if (points.length) {
+        painPoints.push({ treatment: (pp.treatment || '공통').trim() || '공통', points });
+      }
+      if (painPoints.length >= 5) break;
+    }
+
+    const TARGET_KEY_HINTS = ['target', 'patient', '타겟', '환자층', '주요환자', '연령'];
+    const targetPatients = (profile.scan_summary?.facts || [])
+      .filter((f) => {
+        if (!f || !f.value) return false;
+        const kw = `${f.key || ''} ${f.label || ''}`.toLowerCase();
+        return TARGET_KEY_HINTS.some((h) => kw.includes(h));
+      })
+      .map((f) => `${f.label || f.key}: ${f.value}`)
+      .slice(0, 4);
+
+    return { mission, keyTreatments, painPoints, targetPatients };
   }
 
   /** 허브 프로필 → 온보딩 프리필 필드 매핑 (매핑 불가 필드는 null — 강제하지 않음) */

@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
+import OpenAI from 'openai';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SpecialtyType, QueryIntent, AIPlatform } from '@prisma/client';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HubProfileService, HubQuestionMaterials } from '../hospitals/hub-profile.service';
+import { findGlobalIdFromMap } from '../auth/hub-sso.util';
+import { isDongConsistentWithSigungu } from '../common/utils/region-consistency';
 
 // ==================== 7개 진료과 프리셋 시술 DB ====================
 
@@ -208,11 +212,86 @@ export const SPECIALTY_NAMES: Record<string, string> = {
   OTHER: '기타',
 };
 
+// ==================== 질문 제안 (LLM) ====================
+
+export interface QuestionSuggestion {
+  query: string;
+  category: string;
+  intent: string;
+}
+
+export const SUGGESTION_CATEGORIES = ['추천', '비교', '가격', '증상', '후기', '불안해소', '강점'] as const;
+const SUGGESTION_INTENTS = ['RESERVATION', 'COMPARISON', 'INFORMATION', 'REVIEW', 'FEAR'] as const;
+const CATEGORY_DEFAULT_INTENT: Record<string, string> = {
+  추천: 'RESERVATION',
+  비교: 'COMPARISON',
+  가격: 'INFORMATION',
+  증상: 'INFORMATION',
+  후기: 'REVIEW',
+  불안해소: 'FEAR',
+  강점: 'RESERVATION',
+};
+
+/**
+ * LLM 응답(JSON 문자열) → 검증된 제안 목록 (순수 함수 — 유닛 테스트 대상)
+ * - 카테고리/인텐트 허용값 검증 (벗어나면 기본값 보정)
+ * - 병원 이름이 들어간 질문 제거 (모니터링 질문에 자기 병원명이 들어가면 측정이 오염됨)
+ * - 지나치게 짧거나 긴 질문·중복 제거
+ */
+export function parseLlmSuggestions(
+  content: string,
+  opts: { hospitalName?: string; maxCount?: number } = {},
+): QuestionSuggestion[] {
+  let parsed: any;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return [];
+  }
+  const rawList: any[] = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.suggestions) ? parsed.suggestions : [];
+  const hospitalName = (opts.hospitalName || '').trim();
+  const maxCount = opts.maxCount ?? 30;
+
+  const seen = new Set<string>();
+  const result: QuestionSuggestion[] = [];
+  for (const item of rawList) {
+    if (!item || typeof item !== 'object') continue;
+    const query = typeof item.query === 'string' ? item.query.trim() : '';
+    if (query.length < 8 || query.length > 150) continue;
+    if (hospitalName && query.includes(hospitalName)) continue;
+    const key = query.replace(/\s+/g, '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const category = SUGGESTION_CATEGORIES.includes(item.category) ? item.category : '추천';
+    const intent = SUGGESTION_INTENTS.includes(item.intent)
+      ? item.intent
+      : CATEGORY_DEFAULT_INTENT[category] || 'RESERVATION';
+
+    result.push({ query, category, intent });
+    if (result.length >= maxCount) break;
+  }
+  return result;
+}
+
 @Injectable()
 export class QueryTemplatesService {
   private readonly logger = new Logger(QueryTemplatesService.name);
+  private openai: OpenAI | null = null;
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private hubProfileService: HubProfileService,
+  ) {
+    // 이 저장소가 이미 쓰는 OpenAI 경로 재사용 (source-analyzer.service.ts와 동일 패턴)
+    // 키 미설정 시 LLM 제안은 건너뛰고 템플릿 폴백으로 동작 (우아한 저하)
+    const key = process.env.OPENAI_API_KEY?.trim();
+    if (key && key.length > 20) {
+      this.openai = new OpenAI({ apiKey: key, timeout: 30_000, maxRetries: 1 });
+    } else {
+      this.logger.warn('OPENAI_API_KEY not set — 질문 제안은 템플릿 폴백으로 동작합니다');
+    }
+  }
 
   /**
    * 진료과별 프리셋 시술 목록 조회
@@ -259,6 +338,12 @@ export class QueryTemplatesService {
     }
 
     const region = `${hospital.regionSido} ${hospital.regionSigungu}`;
+    // 동이 현재 시군구 소속이 아니면(이전 등으로 남은 옛 동) 지역 키워드에서 제외
+    const validDong =
+      hospital.regionDong &&
+      isDongConsistentWithSigungu(hospital.regionSido, hospital.regionSigungu, hospital.regionDong)
+        ? hospital.regionDong
+        : null;
     const specialty = SPECIALTY_NAMES[hospital.specialtyType] || hospital.specialtyType;
     // keyProcedures → coreTreatments → 프리셋 순서로 fallback
     const procedures = hospital.keyProcedures?.length > 0
@@ -351,7 +436,7 @@ export class QueryTemplatesService {
           promptText: queryText,
           promptType: 'AUTO_GENERATED',
           specialtyCategory: procedure,
-          regionKeywords: [hospital.regionSido, hospital.regionSigungu, ...(hospital.regionDong ? [hospital.regionDong] : [])],
+          regionKeywords: [hospital.regionSido, hospital.regionSigungu, ...(validDong ? [validDong] : [])],
           isActive: true,
         });
       }
@@ -406,12 +491,20 @@ export class QueryTemplatesService {
 
   /**
    * 병원 맞춤 질문 제안 (저장 없이, 이미 등록된 질문 제외)
-   * 핵심 진료 + 지역 + 진료과 + 병원 강점 기반으로 다양한 패턴의 질문을 제안
+   *
+   * 1순위: LLM(OpenAI) — 허브 프로필(타겟 환자층·핵심진료·페인포인트·미션)을 재료로
+   *        실제 환자가 AI에게 물을 법한 자연스러운 질문 생성
+   * 폴백: 기존 템플릿 조합 (LLM 실패/키 미설정 시)
+   *
+   * 지역 원칙: 병원의 "현재" regionSido/regionSigungu/regionDong만 사용.
+   * - 동이 현재 시군구 소속이 아니면(이전 등으로 남은 옛 동) 무시
+   * - targetRegions는 옛 지역이 캐시로 남는 경로라 제안 지역 소스에서 제외
    */
   async suggestQuestionsForHospital(hospitalId: string): Promise<{
     total: number;
-    suggestions: Array<{ query: string; category: string; intent: string }>;
+    suggestions: QuestionSuggestion[];
     hospital: { name: string; specialty: string; region: string; procedures: string[] };
+    source?: string;
   }> {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
@@ -422,9 +515,20 @@ export class QueryTemplatesService {
 
     const region = `${hospital.regionSido} ${hospital.regionSigungu}`;
     const shortRegion = hospital.regionSigungu.replace(/[시군구]$/, '');
-    const dong = hospital.regionDong || '';
+    // 【지역 버그 수정】동이 현재 시군구와 불일치하면 무시 (예: 송파구 병원 + 옛 당산동)
+    const dongConsistent = isDongConsistentWithSigungu(
+      hospital.regionSido,
+      hospital.regionSigungu,
+      hospital.regionDong,
+    );
+    const dong = dongConsistent ? hospital.regionDong || '' : '';
+    if (!dongConsistent) {
+      this.logger.warn(
+        `병원 ${hospitalId}: regionDong '${hospital.regionDong}'이 ${hospital.regionSigungu} 소속이 아니라 제안에서 무시합니다`,
+      );
+    }
     const specialty = SPECIALTY_NAMES[hospital.specialtyType] || hospital.specialtyType;
-    
+
     // keyProcedures → coreTreatments → 프리셋 순서로 fallback
     const procedures = hospital.keyProcedures?.length > 0
       ? hospital.keyProcedures
@@ -435,12 +539,183 @@ export class QueryTemplatesService {
             .slice(0, 3)
             .map(p => p.name));
 
-    const strengths = (hospital as any).hospitalStrengths || [];
-    const targetRegions = (hospital as any).targetRegions || [];
-    const regions = [...new Set([shortRegion, ...(dong ? [dong] : []), ...targetRegions.slice(0, 2)])];
+    const strengths: string[] = (hospital as any).hospitalStrengths || [];
+
+    // 이미 등록된 질문 텍스트 (두 경로 공통으로 제외)
+    const existingPrompts = await this.prisma.prompt.findMany({
+      where: { hospitalId },
+      select: { promptText: true },
+    });
+    const existingSet = new Set(existingPrompts.map(p => p.promptText.trim()));
+
+    const hospitalMeta = { name: hospital.name, specialty, region, procedures };
+
+    // ── 1순위: LLM 제안 ──
+    if (this.openai) {
+      try {
+        const llmSuggestions = await this.generateLlmSuggestions(hospital, {
+          specialty,
+          shortRegion,
+          dong,
+          procedures,
+          strengths,
+        });
+        const filtered = llmSuggestions.filter(s => !existingSet.has(s.query.trim()));
+        if (filtered.length >= 8) {
+          this.logger.log(`병원 ${hospital.name}: LLM 질문 제안 ${filtered.length}개 (기존 ${existingSet.size}개 제외)`);
+          return { total: filtered.length, suggestions: filtered, hospital: hospitalMeta, source: 'llm' };
+        }
+        this.logger.warn(`병원 ${hospital.name}: LLM 제안 부족(${filtered.length}개) — 템플릿 폴백`);
+      } catch (e: any) {
+        this.logger.warn(`병원 ${hospital.name}: LLM 질문 제안 실패 — 템플릿 폴백 (${e?.message})`);
+      }
+    }
+
+    // ── 폴백: 템플릿 조합 (지역 버그 수정 반영) ──
+    const suggestions = this.buildTemplateSuggestions({
+      specialtyType: hospital.specialtyType,
+      specialty,
+      shortRegion,
+      dong,
+      procedures,
+      strengths,
+    });
+
+    // 중복 제거 (이미 등록된 질문 + 자체 중복)
+    const seen = new Set<string>();
+    const filtered = suggestions.filter(s => {
+      const text = s.query.trim();
+      if (existingSet.has(text) || seen.has(text)) return false;
+      seen.add(text);
+      return true;
+    });
+
+    this.logger.log(`병원 ${hospital.name}: 템플릿 질문 제안 ${filtered.length}개 (후보 ${suggestions.length}개, 기존 ${existingSet.size}개 제외)`);
+
+    return { total: filtered.length, suggestions: filtered, hospital: hospitalMeta, source: 'template' };
+  }
+
+  /**
+   * LLM 기반 질문 제안 생성
+   * 허브 프로필(타겟 환자층·핵심진료·페인포인트·미션)이 있으면 재료로 활용
+   */
+  private async generateLlmSuggestions(
+    hospital: { id: string; name: string; psHospitalId?: string | null },
+    ctx: { specialty: string; shortRegion: string; dong: string; procedures: string[]; strengths: string[] },
+  ): Promise<QuestionSuggestion[]> {
+    if (!this.openai) return [];
+
+    // 허브 프로필 재료 (실패해도 제안은 계속)
+    let materials: HubQuestionMaterials = { mission: null, keyTreatments: [], painPoints: [], targetPatients: [] };
+    try {
+      if (this.hubProfileService.isEnabled()) {
+        const psId = await this.resolveHubGlobalId(hospital);
+        if (psId) {
+          const profile = await this.hubProfileService.fetchProfile(psId);
+          materials = this.hubProfileService.buildQuestionMaterials(profile);
+        }
+      }
+    } catch (e: any) {
+      this.logger.warn(`허브 프로필 재료 조회 실패 (무시): ${e?.message}`);
+    }
+
+    const allowedRegions = [ctx.shortRegion, ...(ctx.dong ? [ctx.dong, ctx.dong.replace(/동$/, '')] : [])];
+    const procedureList = [...new Set([...ctx.procedures, ...materials.keyTreatments])].slice(0, 8);
+
+    const materialLines: string[] = [];
+    if (materials.targetPatients.length) {
+      materialLines.push(`- 타겟 환자층: ${materials.targetPatients.join(' / ')}`);
+    }
+    if (materials.painPoints.length) {
+      const ppText = materials.painPoints
+        .map(pp => `  · ${pp.treatment}: ${pp.points.join(' | ')}`)
+        .join('\n');
+      materialLines.push(`- 진료별 환자 페인포인트(환자 실제 목소리):\n${ppText}`);
+    }
+    if (materials.mission) {
+      materialLines.push(`- 병원 미션: ${materials.mission}`);
+    }
+    if (ctx.strengths.length) {
+      materialLines.push(`- 병원 강점: ${ctx.strengths.slice(0, 5).join(', ')}`);
+    }
+
+    const systemPrompt = `너는 한국 환자들이 ChatGPT 같은 AI에게 병원을 찾으며 실제로 묻는 질문을 만드는 전문가다.
+아래 병원의 AI 검색 가시성을 모니터링할 질문 후보를 만든다.
+
+반드시 지킬 것:
+1. 실제 환자의 검색 언어로 쓴다 — 상황 서술, 걱정, 가족 대리 검색, 구어체가 섞인 자연스러운 문장.
+   좋은 예: "임플란트 하려는데 비용이 병원마다 왜 이렇게 달라? {지역} 쪽에서 설명 잘해주는 곳 있어?"
+   좋은 예: "70대 어머니가 임플란트를 무서워하시는데 안 아프게 해주는 치과가 {지역}에 있을까?"
+   나쁜 예: "{지역}에서 X 잘하는 치과 추천해줘" 같은 동일 문형의 시술명만 바꾼 복붙.
+2. 같은 문형(어미·구조)을 반복하지 않는다. 질문마다 길이·어투·상황을 다르게 한다.
+3. 지역 표현은 반드시 아래 [허용 지역] 목록에 있는 것만 쓴다. 다른 동네·지역 이름은 절대 쓰지 않는다.
+   지역이 안 들어가는 질문도 30% 정도 섞는다 (순수 증상/불안/정보 질문).
+4. 특정 병원 이름을 질문에 넣지 않는다 (모니터링 질문이므로).
+5. 페인포인트(환자 목소리)가 주어지면 그 고민이 묻어나는 질문을 우선 만든다.
+6. 의학적으로 위험하거나 과장된 표현은 쓰지 않는다.
+
+category는 추천/비교/가격/증상/후기/불안해소/강점 중 하나.
+intent는 RESERVATION/COMPARISON/INFORMATION/REVIEW/FEAR 중 하나.
+카테고리가 고루 분포되게 한다 (한 카테고리 최대 5개).
+
+출력은 반드시 valid JSON: {"suggestions":[{"query":"...","category":"...","intent":"..."}]}`;
+
+    const userPrompt = `[병원 정보]
+- 진료과: ${ctx.specialty}
+- 핵심 진료/시술: ${procedureList.join(', ') || '(미설정)'}
+${materialLines.length ? materialLines.join('\n') + '\n' : ''}
+[허용 지역]
+${allowedRegions.join(', ')}
+
+위 병원을 찾을 법한 실제 환자가 AI에게 물을 자연스러운 질문 20개를 만들어줘.`;
+
+    const completion = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.9,
+      max_tokens: 3000,
+    });
+
+    const content = completion.choices[0]?.message?.content || '';
+    return parseLlmSuggestions(content, { hospitalName: hospital.name, maxCount: 24 });
+  }
+
+  /**
+   * 전역 병원 ID 해석: psHospitalId 컬럼 → PS_HOSPITAL_MAP env → 소속 유저의 pendingPsHospitalId
+   * (hospitals.service.ts의 resolveHubGlobalId와 동일 규칙)
+   */
+  private async resolveHubGlobalId(hospital: { id: string; psHospitalId?: string | null }): Promise<string | null> {
+    if (hospital.psHospitalId) return hospital.psHospitalId;
+    const mapped = findGlobalIdFromMap(hospital.id);
+    if (mapped) return mapped;
+    const holder = await this.prisma.user.findFirst({
+      where: { hospitalId: hospital.id, pendingPsHospitalId: { not: null } },
+      select: { pendingPsHospitalId: true },
+    });
+    return holder?.pendingPsHospitalId ?? null;
+  }
+
+  /**
+   * 템플릿 기반 질문 제안 (LLM 폴백)
+   * 지역 소스는 현재 시군구(shortRegion) + 검증된 동(dong)만 사용
+   */
+  private buildTemplateSuggestions(ctx: {
+    specialtyType: string;
+    specialty: string;
+    shortRegion: string;
+    dong: string;
+    procedures: string[];
+    strengths: string[];
+  }): QuestionSuggestion[] {
+    const { specialtyType, specialty, shortRegion, dong, procedures, strengths } = ctx;
+    const regions = [...new Set([shortRegion, ...(dong ? [dong] : [])])];
 
     // 다양한 카테고리의 질문 생성
-    const suggestions: Array<{ query: string; category: string; intent: string }> = [];
+    const suggestions: QuestionSuggestion[] = [];
 
     // ① 추천 탐색 질문
     for (const proc of procedures) {
@@ -467,7 +742,7 @@ export class QueryTemplatesService {
     }
 
     // ④ 증상/상황 기반
-    const symptomQ = this.getSuggestSymptoms(hospital.specialtyType, shortRegion, specialty, procedures);
+    const symptomQ = this.getSuggestSymptoms(specialtyType, shortRegion, specialty, procedures);
     suggestions.push(...symptomQ);
 
     // ⑤ 후기/리뷰
@@ -491,11 +766,11 @@ export class QueryTemplatesService {
       }
     }
 
-    // ⑧ 지역 특화
-    for (const r of targetRegions.slice(0, 2)) {
-      suggestions.push({ query: `${r} 근처 ${specialty} 추천해줘`, category: '지역', intent: 'RESERVATION' });
+    // ⑧ 지역 특화 (동이 검증된 경우에만 — 옛 지역(targetRegions)은 제안 소스에서 제외)
+    if (dong) {
+      suggestions.push({ query: `${dong} 근처 ${specialty} 추천해줘`, category: '추천', intent: 'RESERVATION' });
       if (procedures.length > 0) {
-        suggestions.push({ query: `${r}에서 ${procedures[0]} 잘하는 ${specialty} 있어?`, category: '지역', intent: 'RESERVATION' });
+        suggestions.push({ query: `${dong}에서 ${procedures[0]} 잘하는 ${specialty} 있어?`, category: '추천', intent: 'RESERVATION' });
       }
     }
 
@@ -505,34 +780,7 @@ export class QueryTemplatesService {
       suggestions.push({ query: `${shortRegion} ${proc} {specialty} 검색하면 어디가 나와?`.replace('{specialty}', specialty), category: '플랫폼', intent: 'INFORMATION' });
     }
 
-    // 이미 등록된 질문 텍스트 가져오기
-    const existingPrompts = await this.prisma.prompt.findMany({
-      where: { hospitalId },
-      select: { promptText: true },
-    });
-    const existingSet = new Set(existingPrompts.map(p => p.promptText.trim()));
-
-    // 중복 제거 (이미 등록된 질문 + 자체 중복)
-    const seen = new Set<string>();
-    const filtered = suggestions.filter(s => {
-      const text = s.query.trim();
-      if (existingSet.has(text) || seen.has(text)) return false;
-      seen.add(text);
-      return true;
-    });
-
-    this.logger.log(`병원 ${hospital.name}: 질문 제안 ${filtered.length}개 (후보 ${suggestions.length}개, 기존 ${existingSet.size}개 제외)`);
-
-    return {
-      total: filtered.length,
-      suggestions: filtered,
-      hospital: {
-        name: hospital.name,
-        specialty,
-        region,
-        procedures,
-      },
-    };
+    return suggestions;
   }
 
   /**
