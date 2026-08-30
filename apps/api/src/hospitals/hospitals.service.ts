@@ -302,6 +302,11 @@ export class HospitalsService {
       const merged: Record<string, any> = { ...hospital };
       const fields: string[] = [];
 
+      const hubName = (profile as Record<string, unknown>).name;
+      if ((!merged.name || !String(merged.name).trim()) && typeof hubName === 'string' && hubName.trim()) {
+        merged.name = hubName.trim();
+        fields.push('name');
+      }
       if (needsSpecialty && prefill.specialtyType) {
         merged.specialtyType = prefill.specialtyType;
         fields.push('specialtyType');
