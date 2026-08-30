@@ -6,20 +6,23 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { PrismaService } from '../../common/prisma/prisma.service';
 
 /**
  * 【PS-통합】Patient Series Open API v1 인증 가드
  *
  * - Authorization: Bearer {PS_SERVICE_KEY} 검증
  * - X-PS-Hospital-Id: 병원 전역 ID(ps_hospital_id) → 로컬 hospitalId 매핑
- *   파일럿 기간: 환경변수 PS_HOSPITAL_MAP="bdd-001=로컬uuid,bdd-002=로컬uuid2" 고정 매핑
- *   (마스터는 추후 Patient Hub가 담당)
+ *   ① hospital.psHospitalId 컬럼 조회 (허브 SSO 자동 연결분)
+ *   ② 환경변수 PS_HOSPITAL_MAP="bdd-001=로컬uuid,bdd-002=로컬uuid2" 폴백
  *
  * PS_SERVICE_KEY 미설정 시 503 — 기능 자체가 비활성 상태임을 명시 (거짓 200 금지)
  */
 @Injectable()
 export class PsServiceKeyGuard implements CanActivate {
-  canActivate(context: ExecutionContext): boolean {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
 
     const serviceKey = process.env.PS_SERVICE_KEY;
@@ -46,7 +49,7 @@ export class PsServiceKeyGuard implements CanActivate {
       });
     }
 
-    const localHospitalId = resolveHospitalId(psHospitalId);
+    const localHospitalId = await this.resolveHospitalId(psHospitalId);
     if (!localHospitalId) {
       throw new NotFoundException({
         error: { code: 'HOSPITAL_NOT_MAPPED', message: `매핑되지 않은 병원 ID: ${psHospitalId}` },
@@ -57,12 +60,29 @@ export class PsServiceKeyGuard implements CanActivate {
     req.psHospital = { psHospitalId, localHospitalId };
     return true;
   }
+
+  /**
+   * 전역 ID → 로컬 hospitalId 해석
+   * ① hospital.psHospitalId 컬럼 (허브 SSO 자동 연결) → ② PS_HOSPITAL_MAP env 폴백
+   */
+  private async resolveHospitalId(psHospitalId: string): Promise<string | null> {
+    try {
+      const hospital = await this.prisma.hospital.findUnique({
+        where: { psHospitalId },
+        select: { id: true },
+      });
+      if (hospital) return hospital.id;
+    } catch {
+      // DB 조회 실패 시 env 폴백으로 진행 (공급 API 가용성 우선)
+    }
+    return resolveHospitalIdFromEnv(psHospitalId);
+  }
 }
 
 /**
  * PS_HOSPITAL_MAP 파싱: "전역id=로컬id,전역id2=로컬id2"
  */
-function resolveHospitalId(psHospitalId: string): string | null {
+function resolveHospitalIdFromEnv(psHospitalId: string): string | null {
   const map = process.env.PS_HOSPITAL_MAP || '';
   for (const pair of map.split(',')) {
     const idx = pair.indexOf('=');
