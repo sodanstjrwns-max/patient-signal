@@ -94,7 +94,8 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [analyzingAnimation, setAnalyzingAnimation] = useState(false);
-  
+  const [hubPrefilled, setHubPrefilled] = useState(false); // 허브 프로필 프리필 적용 여부
+
   const [formData, setFormData] = useState({
     name: '',
     specialtyType: '',
@@ -111,6 +112,70 @@ export default function OnboardingPage() {
     competitorNames: [] as string[],
     hospitalStrengths: [] as string[],
   });
+
+  // ─── 허브 프로필 프리필 ───
+  // Patient Hub에 이미 입력된 병원 정보(병원명·진료과·지역·주력진료)를 받아
+  // "빈 필드만" 미리 채운다. 미연동·키 미설정·실패 시 아무것도 하지 않음 (기존 흐름 100%).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      // 1) SSO로 넘어온 허브 병원명 (콜백에서 보관)
+      let pendingName: string | null = null;
+      try {
+        pendingName = localStorage.getItem('hub_pending_hospital_name');
+      } catch {}
+
+      // 2) 허브 프로필 (서버 프록시 — 키는 서버에만)
+      let prefill: any = null;
+      try {
+        const { data } = await hospitalApi.hubPrefill();
+        if (data?.enabled && data?.prefill) prefill = data.prefill;
+      } catch {}
+
+      if (cancelled || (!pendingName && !prefill)) return;
+
+      setFormData((prev) => {
+        const next = { ...prev };
+        let filled = false;
+        if (!prev.name && pendingName) {
+          next.name = pendingName;
+          filled = true;
+        }
+        if (prefill) {
+          if (!prev.specialtyType && prefill.specialtyType) {
+            next.specialtyType = prefill.specialtyType;
+            filled = true;
+          }
+          if (!prev.regionSido && prefill.regionSido) {
+            next.regionSido = prefill.regionSido;
+            filled = true;
+          }
+          if (!prev.regionSigungu && prefill.regionSigungu) {
+            next.regionSigungu = prefill.regionSigungu;
+            filled = true;
+          }
+          if (!prev.regionDong && prefill.regionDong) {
+            next.regionDong = prefill.regionDong;
+            filled = true;
+          }
+          if (
+            prev.coreTreatments.length === 0 &&
+            Array.isArray(prefill.coreTreatments) &&
+            prefill.coreTreatments.length > 0
+          ) {
+            next.coreTreatments = prefill.coreTreatments.slice(0, 10);
+            filled = true;
+          }
+        }
+        if (filled) setHubPrefilled(true);
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // 주력 진료 토글
   const [customTreatment, setCustomTreatment] = useState('');
@@ -170,7 +235,12 @@ export default function OnboardingPage() {
       };
       const { data } = await hospitalApi.create(cleanData);
       updateUser({ hospitalId: data.id, hospital: data });
-      
+
+      // 병원 생성 완료 → 보관해 둔 허브 병원명 제거
+      try {
+        localStorage.removeItem('hub_pending_hospital_name');
+      } catch {}
+
       // 분석 시작 애니메이션 (2초)
       await new Promise(resolve => setTimeout(resolve, 2000));
       router.push('/dashboard');
@@ -286,6 +356,15 @@ export default function OnboardingPage() {
           {/* ═══ Step 1: 기본 정보 (병원명 + 진료과 + 위치) ═══ */}
           {step === 1 && (
             <div className="space-y-4">
+              {/* 허브 프리필 안내 — 빈 필드만 채웠고 모두 수정 가능 */}
+              {hubPrefilled && (
+                <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                  <Sparkles className="h-4 w-4 text-indigo-500 shrink-0" />
+                  <p className="text-xs text-indigo-700">
+                    Patient Hub 프로필에서 가져와 미리 채웠어요. 수정할 수 있어요.
+                  </p>
+                </div>
+              )}
               {/* 병원명 */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">

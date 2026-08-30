@@ -6,7 +6,7 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Clock, Mail
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
 const ADMIN_SECRET = 'pf-admin-2026';
 
 interface DashboardStats {

@@ -150,6 +150,8 @@ export class HubSsoService {
       },
       ...tokens,
       redirect: user.hospitalId ? '/dashboard' : '/onboarding',
+      // 병원 미보유 유저(→온보딩행)에게 허브 병원명을 전달 → 온보딩 병원명 프리필
+      pendingHospitalName: user.hospitalId ? undefined : claims.hname || undefined,
     };
   }
 

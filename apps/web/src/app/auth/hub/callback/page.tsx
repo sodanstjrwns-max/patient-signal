@@ -39,7 +39,14 @@ function HubCallbackHandler() {
     (async () => {
       try {
         const { data } = await api.post('/auth/hub/callback', { ssoToken });
-        const { user, accessToken, refreshToken, redirect } = data;
+        const { user, accessToken, refreshToken, redirect, pendingHospitalName } = data;
+
+        // 병원 미보유 유저: 허브 병원명을 보관 → 온보딩 병원명 프리필 (생성 완료 시 제거)
+        if (pendingHospitalName) {
+          try {
+            localStorage.setItem('hub_pending_hospital_name', pendingHospitalName);
+          } catch {}
+        }
 
         // localStorage에 직접 저장 (기존 /auth/callback과 동일한 방식)
         localStorage.setItem('accessToken', accessToken);

@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from '@/hooks/useToast';
 
 // API URL — 환경변수 우선, 미설정 시 프로덕션 기본값
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -172,6 +172,9 @@ export const authApi = {
 export const hospitalApi = {
   create: (data: any) =>
     api.post('/hospitals', data),
+  // 허브 프로필 프리필 (온보딩용) — 미연동 시 { enabled, prefill: null }
+  hubPrefill: () =>
+    api.get('/hospitals/hub-prefill'),
   get: (id: string) =>
     api.get(`/hospitals/${id}`),
   update: (id: string, data: any) =>

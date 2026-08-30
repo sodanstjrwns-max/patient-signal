@@ -47,6 +47,20 @@ export class HospitalsController {
     }
   }
 
+  // NOTE: @Get(':id')보다 먼저 선언해야 'hub-prefill'이 :id로 매칭되지 않는다
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('hub-prefill')
+  @ApiOperation({
+    summary: '허브 프로필 프리필',
+    description:
+      'Patient Hub에 등록된 병원 프로필로 온보딩 폼을 미리 채웁니다. 허브 미연동·키 미설정 시 enabled:false 또는 prefill:null (기존 동작 유지)',
+  })
+  @ApiResponse({ status: 200, description: '조회 성공' })
+  async hubPrefill(@CurrentUser('id') userId: string) {
+    return this.hospitalsService.getHubPrefill(userId);
+  }
+
   @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @HospitalParam('id')
   @ApiBearerAuth()

@@ -5,6 +5,8 @@ import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { buildGlobalPatientQuestions } from '../common/utils/global-patient';
+import { HubProfileService } from './hub-profile.service';
+import { findGlobalIdFromMap } from '../auth/hub-sso.util';
 
 @Injectable()
 export class HospitalsService {
@@ -13,7 +15,39 @@ export class HospitalsService {
   constructor(
     private prisma: PrismaService,
     private schedulerService: SchedulerService,
+    private hubProfileService: HubProfileService,
   ) {}
+
+  /**
+   * 허브 프로필 프리필 (온보딩·설정 화면용)
+   * - 유저의 pendingPsHospitalId(SSO 신규 유저) → 소속 병원의 psHospitalId → PS_HOSPITAL_MAP 순으로 전역 ID 결정
+   * - HUB_API_KEY env 미설정 시 enabled:false (프리필 비활성 — 기존 온보딩 100% 유지)
+   * - 미연동·허브 404·장애 등 모든 실패는 prefill:null
+   */
+  async getHubPrefill(userId: string) {
+    if (!this.hubProfileService.isEnabled()) {
+      return { enabled: false, prefill: null };
+    }
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { hospital: true },
+      });
+      const psId =
+        user?.pendingPsHospitalId ||
+        user?.hospital?.psHospitalId ||
+        (user?.hospitalId ? findGlobalIdFromMap(user.hospitalId) : null);
+      if (!psId) return { enabled: true, prefill: null };
+
+      const profile = await this.hubProfileService.fetchProfile(psId);
+      if (!profile) return { enabled: true, prefill: null };
+
+      return { enabled: true, prefill: this.hubProfileService.buildPrefill(profile) };
+    } catch (err: any) {
+      this.logger.warn(`getHubPrefill failed: ${err?.message}`);
+      return { enabled: true, prefill: null };
+    }
+  }
 
   async create(userId: string, dto: CreateHospitalDto) {
     // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)

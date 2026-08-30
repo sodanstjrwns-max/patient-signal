@@ -15,7 +15,7 @@ const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.goo
 const GOOGLE_REDIRECT_URI = 'https://patient-signal.onrender.com/api/auth/google/callback';
 
 // Patient Hub SSO — API가 허브 authorize로 302 리다이렉트
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
 const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -165,6 +165,28 @@ function LoginForm() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
+              {/* 1순위 CTA: Patient Hub 계정으로 시작하기 (가장 크고 눈에 띄게) */}
+              <button
+                type="button"
+                onClick={() => { window.location.href = HUB_SSO_START_URL; }}
+                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white text-lg font-bold shadow-lg shadow-brand-500/30 transition-all"
+              >
+                <span className="w-7 h-7 rounded-md bg-white/20 flex items-center justify-center text-white text-xs font-bold">
+                  PH
+                </span>
+                Patient Hub 계정으로 시작하기
+              </button>
+
+              {/* 구분선 */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white/80 backdrop-blur-sm text-slate-500">또는</span>
+                </div>
+              </div>
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
                   <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
@@ -242,18 +264,6 @@ function LoginForm() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
                 <span className="text-slate-700 font-medium">Google로 로그인</span>
-              </button>
-
-              {/* Patient Hub SSO 로그인 버튼 */}
-              <button
-                type="button"
-                onClick={() => { window.location.href = HUB_SSO_START_URL; }}
-                className="w-full mt-3 flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all bg-white/80 backdrop-blur-sm shadow-sm"
-              >
-                <span className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center text-white text-[10px] font-bold">
-                  PH
-                </span>
-                <span className="text-slate-700 font-medium">Patient Hub 계정으로 로그인</span>
               </button>
 
               <div className="mt-6 text-center text-sm text-slate-500">
