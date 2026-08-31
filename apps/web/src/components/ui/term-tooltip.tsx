@@ -139,7 +139,7 @@ export const TERMS: Record<string, { title: string; desc: string }> = {
   },
   regionLeverage: {
     title: '지역 단위 배율',
-    desc: '"역삼동 치과"처럼 좁은 지역 질문이 "서울 치과"처럼 넓은 질문보다 몇 배 유리한지. 실측 벤치마크는 동 단위가 시/구 단위보다 1.7배, Gemini에서는 3.0배 유리합니다.',
+    desc: '"역삼동 병원"처럼 좁은 지역 질문이 "서울 병원"처럼 넓은 질문보다 몇 배 유리한지. 실측 벤치마크는 동 단위가 시/구 단위보다 1.7배, Gemini에서는 3.0배 유리합니다.',
   },
   directorBranding: {
     title: '원장 실명 브랜딩률',

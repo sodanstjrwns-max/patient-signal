@@ -58,7 +58,7 @@ const CORE_TERMS = [
     color: 'text-rose-600 bg-rose-50',
     name: '추천 깊이 (R0~R3)',
     oneLiner: '추천의 온도',
-    desc: 'R0 미언급 → R1 스치듯 언급("~치과 등이 있습니다") → R2 목록 내 추천 → R3 단독/최상위 추천("이곳을 추천합니다"). AI가 얼마나 세게 밀어줬는지 4단계입니다.',
+    desc: 'R0 미언급 → R1 스치듯 언급("~병원 등이 있습니다") → R2 목록 내 추천 → R3 단독/최상위 추천("이곳을 추천합니다"). AI가 얼마나 세게 밀어줬는지 4단계입니다.',
     caution: 'R1 백 번보다 R3 열 번이 환자를 움직입니다. 그래서 점수 계산에서 같은 1건으로 세지 않습니다.',
   },
   {
@@ -245,7 +245,7 @@ export default function GuidePage() {
                     Patient Signal은 &quot;AI 검색 시대의 건강검진&quot;입니다
                   </h2>
                   <p className="text-sm text-slate-600 leading-relaxed">
-                    이제 환자들은 네이버 대신 ChatGPT·Gemini에게 &quot;○○동 임플란트 잘하는 치과&quot;를 묻습니다.
+                    이제 환자들은 네이버 대신 ChatGPT·Gemini에게 &quot;○○동 임플란트 잘하는 병원&quot;을 묻습니다.
                     Patient Signal은 AI 7개 플랫폼(ChatGPT·Claude·Gemini·Perplexity·Grok·CLOVA X·네이버 AI 브리핑)에 등록된 질문을 자동으로 던지고,
                     <strong className="text-slate-900"> 우리 병원이 등판하는지 · 몇 번째로 불리는지 · 어떤 톤으로 소개되는지</strong>를
                     추적해 점수로 보여줍니다. 광고비를 태우기 전에, AI가 우리를 어떻게 보고 있는지부터 아는 것이 순서입니다.

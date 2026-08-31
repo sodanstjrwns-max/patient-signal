@@ -84,11 +84,11 @@ const categoryConfig: Record<string, { name: string; icon: any; color: string; b
 };
 
 const exampleQuestions = [
-  '강남역 임플란트 잘하는 치과 추천해줘',
+  '강남역 임플란트 잘하는 병원 추천해줘',
   '서울에서 치아교정 잘하는 곳 알려줘',
-  '임플란트 가격 저렴한 치과 추천',
-  '무서운데 친절한 치과 어디야',
-  '라미네이트 후기 좋은 치과',
+  '임플란트 가격 저렴한 병원 추천',
+  '무서운데 친절한 병원 어디야',
+  '라미네이트 후기 좋은 병원',
 ];
 
 const getSentimentIcon = (label: string) => {
@@ -306,7 +306,7 @@ export default function LiveQueryPage() {
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-400" />
-                    <Input ref={inputRef} placeholder="예: 강남역 임플란트 잘하는 치과 추천해줘"
+                    <Input ref={inputRef} placeholder="예: 강남역 임플란트 잘하는 병원 추천해줘"
                       value={question} onChange={e => setQuestion(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !isLimitReached && handleQuery()}
                       className="pl-10 pr-4 h-12 text-sm border-purple-200 focus:border-purple-400 focus:ring-purple-400"

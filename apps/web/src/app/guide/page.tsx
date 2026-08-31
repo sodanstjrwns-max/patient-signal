@@ -74,7 +74,7 @@ export default function GuidePage() {
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
                 <p className="text-brand-800 font-medium mb-2">💡 왜 중요한가요?</p>
                 <p className="text-brand-700 text-sm">
-                  이제 환자들은 &quot;강남 치과 추천해줘&quot;라고 AI에게 물어봅니다.
+                  이제 환자들은 &quot;강남 병원 추천해줘&quot;라고 AI에게 물어봅니다.
                   AI가 추천하는 병원이 곧 환자가 선택하는 병원이 됩니다.
                   기존 SEO가 구글 검색이었다면, 이제는 AI 가시성이 핵심입니다.
                 </p>
@@ -166,9 +166,9 @@ export default function GuidePage() {
                     AI에게 물어볼 질문을 설정합니다. 예시:
                   </p>
                   <ul className="mt-2 space-y-1 text-sm text-slate-500">
-                    <li>• &quot;강남역 근처 임플란트 잘하는 치과 추천해줘&quot;</li>
-                    <li>• &quot;서울 교정 치과 어디가 좋아?&quot;</li>
-                    <li>• &quot;00동 치과 후기 알려줘&quot;</li>
+                    <li>• &quot;강남역 근처 임플란트 잘하는 병원 추천해줘&quot;</li>
+                    <li>• &quot;서울 교정 병원 어디가 좋아?&quot;</li>
+                    <li>• &quot;00동 병원 후기 알려줘&quot;</li>
                   </ul>
                 </div>
               </div>

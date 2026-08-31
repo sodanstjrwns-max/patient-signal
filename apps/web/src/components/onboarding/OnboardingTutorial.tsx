@@ -25,7 +25,7 @@ const slides = [
     title: 'Patient Signal에 오신 것을 환영합니다!',
     subtitle: 'AI 시대, 병원 마케팅의 새로운 기준',
     description: 'ChatGPT, Perplexity 등 AI 검색에서 우리 병원이 얼마나 추천되는지 실시간으로 추적하세요.',
-    highlight: '이제 환자들은 "강남 치과 추천해줘"라고 AI에게 물어봅니다.',
+    highlight: '이제 환자들은 "강남 병원 추천해줘"라고 AI에게 물어봅니다.',
   },
   {
     icon: Search,
@@ -42,9 +42,9 @@ const slides = [
     subtitle: '자동화된 AI 모니터링',
     description: 'Patient Signal이 AI에게 다양한 질문을 자동으로 던지고, 응답에서 우리 병원이 언급되는지 분석합니다.',
     bullets: [
-      '"강남역 근처 임플란트 잘하는 치과"',
-      '"서울 교정 치과 추천"',
-      '"00동 치과 어디가 좋아요"',
+      '"강남역 근처 임플란트 잘하는 병원"',
+      '"서울 교정 병원 추천"',
+      '"00동 병원 어디가 좋아요"',
     ],
   },
   {

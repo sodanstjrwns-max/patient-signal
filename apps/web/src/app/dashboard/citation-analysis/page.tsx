@@ -176,7 +176,7 @@ export default function CitationAnalysisPage() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
-                placeholder="예: 강남 임플란트 잘하는 치과 추천해줘"
+                placeholder="예: 강남 임플란트 잘하는 병원 추천해줘"
                 className="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
               />
               <Button
