@@ -1609,6 +1609,18 @@ export class AdminService {
       ORDER BY mention_count DESC
     `;
 
+    // 추천 깊이 분포 (R0 비추천 ~ R3 단독추천) + 평균 언급 순번 — "언급의 질" 진단
+    const depthRows: Array<{ depth: string | null; cnt: number; avg_pos: number | null }> =
+      await this.prisma.$queryRaw`
+        SELECT recommendation_depth::text AS depth,
+               COUNT(*)::int AS cnt,
+               AVG(mention_position)::float AS avg_pos
+        FROM ai_responses
+        WHERE hospital_id = ${hospitalId} AND response_date >= ${since} AND is_mentioned = true
+        GROUP BY recommendation_depth
+        ORDER BY recommendation_depth
+      `;
+
     // 언급이 있던 마지막 날의 경쟁사 vs 최근 7일 경쟁사 (누가 자리를 차지했나)
     const recentCompetitors: Array<{ name: string; cnt: number }> = await this.prisma.$queryRaw`
       SELECT comp AS name, COUNT(*)::int AS cnt
@@ -1641,6 +1653,11 @@ export class AdminService {
         recent7d: { total: p.recent_total, mentioned: p.recent_mentioned },
       })),
       recentCompetitorsTop10: recentCompetitors,
+      mentionDepthBreakdown: depthRows.map((r) => ({
+        depth: r.depth ?? 'UNKNOWN',
+        count: r.cnt,
+        avgMentionPosition: r.avg_pos ? Math.round(r.avg_pos * 100) / 100 : null,
+      })),
     };
   }
 
