@@ -376,9 +376,11 @@ export class SchedulerService implements OnModuleInit {
       session: 'morning' | 'afternoon' | 'evening';
       includeCompetitors: boolean;
       includeContentGap: boolean;
+      // 【어드민 구조 크롤】주기/월간 게이트 우회 — Day-0 첫 크롤 실패 병원 수동 복구용 (admin/force-crawl 전용)
+      bypassGates?: boolean;
     },
   ): Promise<any> {
-    const { session, includeCompetitors, includeContentGap } = options;
+    const { session, includeCompetitors, includeContentGap, bypassGates } = options;
 
     // 큐 모드에서는 hospitalId만 넘어오므로 관계 포함 재조회
     const hospital =
@@ -473,7 +475,7 @@ export class SchedulerService implements OnModuleInit {
       hospital.createdAt &&
       new Date(hospital.createdAt) < grandfatherCutoff;
 
-    const minDays = isGrandfathered ? 0 : (planLimits as any).minDaysBetweenCrawls || 0;
+    const minDays = (isGrandfathered || bypassGates) ? 0 : (planLimits as any).minDaysBetweenCrawls || 0;
     // 유예 대상은 월간 한도도 매일 페이스(30회)로 상향
     const effectiveCrawlsPerMonth = isGrandfathered ? 30 : planLimits.crawlsPerMonth;
     if (isGrandfathered) {
@@ -509,8 +511,8 @@ export class SchedulerService implements OnModuleInit {
       }
     }
 
-    // 월간 크롤링 횟수 체크 (기가입 유예 대상은 매일 페이스 30회로 상향)
-    if (effectiveCrawlsPerMonth !== -1) {
+    // 월간 크롤링 횟수 체크 (기가입 유예 대상은 매일 페이스 30회로 상향, 어드민 구조 크롤은 우회)
+    if (effectiveCrawlsPerMonth !== -1 && !bypassGates) {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const crawlCount = await this.prisma.crawlJob.count({

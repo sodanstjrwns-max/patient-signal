@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
+import { SchedulerService } from '../scheduler/scheduler.service';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('관리자')
@@ -11,7 +12,10 @@ import { Public } from '../auth/decorators/public.decorator';
 export class AdminController {
   private readonly logger = new Logger(AdminController.name);
 
-  constructor(private adminService: AdminService) {}
+  constructor(
+    private adminService: AdminService,
+    private schedulerService: SchedulerService,
+  ) {}
 
   /**
    * 관리자 대시보드 통계
@@ -328,6 +332,54 @@ export class AdminController {
     }
     const daysNum = Math.min(Math.max(parseInt(days || '35', 10) || 35, 7), 90);
     return this.adminService.getMentionForensics(hospitalId, daysNum);
+  }
+
+  /**
+   * 【크롤잡 부검】특정 병원 크롤잡 원본 기록 + 분 단위 응답 타임라인
+   * GET /api/admin/crawl-jobs?hospitalId=xxx&limit=20 (x-admin-secret 헤더)
+   */
+  @Public()
+  @Get('crawl-jobs')
+  async getCrawlJobs(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('limit') limit?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    return this.adminService.getCrawlJobs(hospitalId, parseInt(limit || '20', 10) || 20);
+  }
+
+  /**
+   * 【어드민 구조 크롤】주기/월간 게이트 우회 강제 크롤 — Day-0 첫 크롤 실패 병원 복구용
+   * POST /api/admin/force-crawl?hospitalId=xxx (x-admin-secret 헤더)
+   * fire-and-forget: 즉시 202 응답, 크롤은 백그라운드 진행 → crawl-jobs로 결과 확인
+   */
+  @Public()
+  @Post('force-crawl')
+  async forceCrawl(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (!hospitalId) {
+      return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
+    }
+    this.logger.warn(`[어드민 구조 크롤] 강제 크롤 시작: ${hospitalId} (게이트 우회)`);
+    this.schedulerService
+      .crawlSingleHospital(hospitalId, {
+        session: 'morning',
+        includeCompetitors: false,
+        includeContentGap: false,
+        bypassGates: true,
+      })
+      .then((r: any) =>
+        this.logger.log(`[어드민 구조 크롤] 완료: ${hospitalId} — ${JSON.stringify({ completed: r?.completed, failed: r?.failed, skipped: r?.skipped, reason: r?.reason })}`),
+      )
+      .catch((e: any) => this.logger.error(`[어드민 구조 크롤] 실패: ${hospitalId} — ${e?.message}`));
+    return { success: true, message: '강제 크롤을 백그라운드에서 시작했습니다. /api/admin/crawl-jobs로 진행 상황을 확인하세요.', hospitalId };
   }
 
   /**

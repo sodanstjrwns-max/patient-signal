@@ -4,9 +4,10 @@ import { AdminService } from './admin.service';
 import { WeightsController } from './weights.controller';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { ScoresModule } from '../scores/scores.module';
+import { SchedulerModule } from '../scheduler/scheduler.module';
 
 @Module({
-  imports: [PrismaModule, ScoresModule],
+  imports: [PrismaModule, ScoresModule, SchedulerModule],
   controllers: [AdminController, WeightsController],
   providers: [AdminService],
 })

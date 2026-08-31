@@ -1742,6 +1742,44 @@ export class AdminService {
    * - 병원별 마지막 성공 크롤 경과일 → 대상인데 안 도는 병원 탐지
    * - 오늘 DailyScore 커버리지
    */
+  /**
+   * 【크롤잡 부검】특정 병원의 크롤잡 원본 기록 조회
+   * — Day-0 첫 크롤이 왜 부분 실패했는지 errorMessage/completed/failed를 그대로 노출
+   */
+  async getCrawlJobs(hospitalId: string, limit = 20) {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { id: true, name: true, planType: true, subscriptionStatus: true, createdAt: true },
+    });
+    if (!hospital) return { success: false, error: '병원을 찾을 수 없습니다' };
+
+    const jobs = await this.prisma.crawlJob.findMany({
+      where: { hospitalId },
+      orderBy: { createdAt: 'desc' },
+      take: Math.min(Math.max(limit, 1), 100),
+      select: {
+        id: true, status: true, errorMessage: true,
+        totalPrompts: true, completed: true, failed: true,
+        createdAt: true, startedAt: true, completedAt: true,
+      },
+    });
+
+    // 분 단위 응답 저장 타임라인 (플랫폼별) — "잡은 COMPLETED인데 응답이 왜 2건뿐?"용
+    const respByDay: Array<{ platform: string; day: string; cnt: number }> =
+      await this.prisma.$queryRaw`
+        SELECT ai_platform::text AS platform,
+               TO_CHAR(created_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') AS day,
+               COUNT(*)::int AS cnt
+        FROM ai_responses
+        WHERE hospital_id = ${hospitalId}
+        GROUP BY 1, 2
+        ORDER BY 2 DESC
+        LIMIT 200
+      `;
+
+    return { hospital, jobs, responsesByMinute: respByDay };
+  }
+
   async getCrawlHealth(days = 7) {
     const now = new Date();
     const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
