@@ -82,10 +82,12 @@ api.interceptors.response.use(
           throw new Error('No refresh token');
         }
 
-        // Refresh Token으로 새 Access Token 발급
-        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-          refreshToken,
-        });
+        // Refresh Token으로 새 Access Token 발급 (전역 인스턴스 미사용 — 인터셉터 재귀 방지)
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          { refreshToken },
+          { timeout: 20000 },
+        );
 
         const newAccessToken = data.accessToken;
         const newRefreshToken = data.refreshToken || refreshToken;
@@ -111,18 +113,28 @@ api.interceptors.response.use(
         // 원래 요청 재시도
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh도 실패 → 로그아웃
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
 
+        // 진짜 세션 만료(401/403)일 때만 로그아웃.
+        // 타임아웃·네트워크 오류·서버 5xx는 세션 문제가 아니므로 토큰을 지우지 않는다.
+        // (아침 크롤 시간대 서버 과부하로 리프레시가 타임아웃 → 멀쩡한 세션이
+        //  강제 로그아웃되고 재로그인마저 실패하는 루프 사고 방지 — 2026.08.31)
+        const refreshStatus = refreshError?.response?.status;
+        const isRealExpiry = refreshStatus === 401 || refreshStatus === 403;
+
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('auth-storage');
-          toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 1500);
+          if (isRealExpiry) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('auth-storage');
+            toast.error('세션이 만료되었습니다. 다시 로그인해주세요.');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 1500);
+          } else {
+            toast.error('서버 응답이 지연되고 있습니다. 잠시 후 새로고침해주세요.');
+          }
         }
 
         return Promise.reject(refreshError);
