@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Query, Param, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../auth/decorators/public.decorator';
@@ -263,9 +264,12 @@ export class WeightsController {
   // ============ Helpers ============
 
   private validateSecret(secret: string) {
-    // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
+    // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단. 상수시간 비교.
     const validSecret = process.env.ADMIN_SECRET;
-    if (!validSecret || secret !== validSecret) {
+    if (!validSecret || !secret) throw new UnauthorizedException('Unauthorized');
+    const a = Buffer.from(String(secret), 'utf8');
+    const b = Buffer.from(String(validSecret), 'utf8');
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
       throw new UnauthorizedException('Unauthorized');
     }
   }

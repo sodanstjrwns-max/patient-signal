@@ -152,7 +152,7 @@ export default function HomePage() {
                   {/* User question */}
                   <div className="flex justify-end mb-4 chat-bubble-in" style={{ animationDelay: '0.2s' }}>
                     <div className="bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-medium px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%] shadow-lg shadow-brand-500/20">
-                      강남에서 임플란트 잘하는 치과 추천해줘
+                      강남에서 임플란트 잘하는 병원 추천해줘
                     </div>
                   </div>
 
@@ -162,10 +162,10 @@ export default function HomePage() {
                       <Sparkles className="w-3.5 h-3.5 text-white" />
                     </div>
                     <div className="bg-white/90 border border-slate-100 text-sm text-slate-700 px-4 py-3 rounded-2xl rounded-tl-md max-w-[88%] shadow-sm leading-relaxed">
-                      강남 지역에서 평가가 좋은 치과를 추천드릴게요:<br />
-                      <span className="font-bold">1. <span className="highlight-sweep text-brand-700">OO치과의원</span></span> — 임플란트 전문의, 환자 만족도 높음 ⭐<br />
-                      <span className="text-slate-400">2. △△치과 — 교정 중심</span><br />
-                      <span className="text-slate-400">3. □□치과 — 일반 진료</span>
+                      강남 지역에서 평가가 좋은 병원을 추천드릴게요:<br />
+                      <span className="font-bold">1. <span className="highlight-sweep text-brand-700">OO병원</span></span> — 임플란트 전문의, 환자 만족도 높음 ⭐<br />
+                      <span className="text-slate-400">2. △△병원 — 교정 중심</span><br />
+                      <span className="text-slate-400">3. □□병원 — 일반 진료</span>
                     </div>
                   </div>
 

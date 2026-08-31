@@ -6,7 +6,16 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+
+// 상수시간 문자열 비교 (서비스 키 타이밍 사이드채널 완화)
+function constantTimeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(String(a || ''), 'utf8');
+  const bb = Buffer.from(String(b || ''), 'utf8');
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 /**
  * 【PS-통합】Patient Series Open API v1 인증 가드
@@ -35,7 +44,7 @@ export class PsServiceKeyGuard implements CanActivate {
     // 1. Bearer 토큰 검증
     const authHeader: string = req.headers['authorization'] || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
-    if (!token || token !== serviceKey) {
+    if (!token || !constantTimeEqual(token, serviceKey)) {
       throw new UnauthorizedException({
         error: { code: 'INVALID_SERVICE_KEY', message: '유효하지 않은 서비스 키입니다' },
       });

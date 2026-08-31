@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Query, Headers, Logger, UnauthorizedException } from '@nestjs/common';
+import { timingSafeEqual } from 'crypto';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
@@ -20,9 +21,8 @@ export class AdminController {
   @Get('dashboard')
   async getDashboard(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getDashboard();
   }
 
@@ -34,10 +34,9 @@ export class AdminController {
   @Get('llm-costs')
   async getLlmCosts(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getLlmCosts(parseInt(days || '30'));
   }
 
@@ -49,9 +48,8 @@ export class AdminController {
   @Get('users')
   async getUsers(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getUsers();
   }
 
@@ -63,9 +61,8 @@ export class AdminController {
   @Get('hospitals')
   async getHospitals(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getHospitals();
   }
 
@@ -77,9 +74,8 @@ export class AdminController {
   @Get('coupons')
   async getCoupons(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getCoupons();
   }
 
@@ -91,10 +87,9 @@ export class AdminController {
   @Get('activity')
   async getActivity(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('sort') sort: string = 'lastLogin',
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getUserActivity(sort);
   }
 
@@ -106,9 +101,8 @@ export class AdminController {
   @Post('grant-trials')
   async grantTrialsToFreeUsers(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.grantStarterTrialToFreeUsers();
   }
 
@@ -125,10 +119,9 @@ export class AdminController {
   @Get('live-query/insights')
   async getLiveQueryInsights(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const daysNum = parseInt(days || '30', 10);
     this.logger.log(`[Admin] 실시간 질문 인사이트 조회 (최근 ${daysNum}일)`);
     return this.adminService.getLiveQueryInsights(daysNum);
@@ -142,7 +135,6 @@ export class AdminController {
   @Get('live-query/logs')
   async getLiveQueryLogs(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('hospitalId') hospitalId?: string,
@@ -150,7 +142,7 @@ export class AdminController {
     @Query('days') days?: string,
     @Query('search') search?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     this.logger.log(`[Admin] 실시간 질문 로그 조회`);
     return this.adminService.getLiveQueryLogs({
       page: parseInt(page || '1', 10),
@@ -173,10 +165,9 @@ export class AdminController {
   @Post('migrate-to-trial')
   async migrateUnpaidToTrial(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const trialDays = parseInt(days || '7', 10);
     this.logger.log(`[Admin] 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작`);
     return this.adminService.migrateUnpaidSubscriptionsToTrial(trialDays);
@@ -193,10 +184,9 @@ export class AdminController {
   @Get('sov-ranking')
   async getSovRanking(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 365);
     return this.adminService.getSovRanking(daysNum);
   }
@@ -212,11 +202,10 @@ export class AdminController {
   @Get('sov-daily')
   async getSovDaily(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
     @Query('hospitalId') hospitalId?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 90);
     return this.adminService.getSovDaily(daysNum, hospitalId || undefined);
   }
@@ -232,10 +221,9 @@ export class AdminController {
   @Post('seed-foreigner-prompts')
   async seedForeignerPrompts(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     if (!hospitalId) {
       return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
     }
@@ -251,10 +239,9 @@ export class AdminController {
   @Get('citation-domains')
   async getCitationDomains(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 1), 365);
     return this.adminService.getCitationDomains(daysNum);
   }
@@ -267,11 +254,10 @@ export class AdminController {
   @Get('trust-diagnosis')
   async getTrustDiagnosis(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('hospitalId') hospitalId: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     if (!hospitalId) {
       return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
     }
@@ -296,7 +282,7 @@ export class AdminController {
   ) {
     const expected = this.adminService.boardCodeFor(hospitalId);
     const provided = headerCode || queryCode;
-    if (!hospitalId || !expected || !provided || provided !== expected) {
+    if (!hospitalId || !expected || !provided || !constantTimeEqual(provided, expected)) {
       throw new UnauthorizedException('Unauthorized');
     }
     const daysNum = Math.min(Math.max(parseInt(days || '30', 10) || 30, 7), 90);
@@ -311,10 +297,9 @@ export class AdminController {
   @Get('board-code')
   async getBoardCode(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('hospitalId') hospitalId: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     if (!hospitalId) {
       return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
     }
@@ -334,11 +319,10 @@ export class AdminController {
   @Get('mention-forensics')
   async getMentionForensics(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('hospitalId') hospitalId: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     if (!hospitalId) {
       return { success: false, error: 'hospitalId 쿼리 파라미터가 필요합니다' };
     }
@@ -354,10 +338,9 @@ export class AdminController {
   @Get('crawl-health')
   async getCrawlHealth(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('days') days?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     return this.adminService.getCrawlHealth(days ? parseInt(days, 10) : 7);
   }
 
@@ -373,10 +356,9 @@ export class AdminController {
   @Get('debug-gemini')
   async debugGemini(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('model') model?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
     if (!geminiApiKey) return { success: false, error: 'GEMINI_API_KEY 미설정' };
 
@@ -428,10 +410,9 @@ export class AdminController {
   @Get('debug-grok')
   async debugGrok(
     @Headers('x-admin-secret') headerSecret: string,
-    @Query('secret') querySecret: string,
     @Query('model') model?: string,
   ) {
-    this.validateSecret(headerSecret || querySecret);
+    this.validateSecret(headerSecret);
     const xaiApiKey = process.env.XAI_API_KEY?.trim();
     if (!xaiApiKey) return { success: false, error: 'XAI_API_KEY 미설정' };
 
@@ -488,10 +469,18 @@ export class AdminController {
 
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
-    // 권장: x-admin-secret 헤더 사용 (쿼리파라미터는 액세스 로그 유출 위험 — 하위호환용)
+    // 어드민 시크릿은 x-admin-secret 헤더 전용 (쿼리파라미터 ?secret= 는 액세스 로그 유출 위험으로 제거됨)
     const validSecret = process.env.ADMIN_SECRET;
-    if (!validSecret || !secret || secret !== validSecret) {
+    if (!validSecret || !secret || !constantTimeEqual(secret, validSecret)) {
       throw new UnauthorizedException('Unauthorized');
     }
   }
+}
+
+// 상수시간 문자열 비교 (어드민 시크릿/보드코드 타이밍 사이드채널 완화)
+function constantTimeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(String(a || ''), 'utf8');
+  const bb = Buffer.from(String(b || ''), 'utf8');
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
 }
