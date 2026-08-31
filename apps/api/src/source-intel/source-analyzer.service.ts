@@ -24,7 +24,7 @@ export interface HospitalAnalysis {
 }
 
 const SYSTEM_PROMPT = `당신은 의료 마케팅 전문가이자 데이터 분석가입니다.
-주어진 웹페이지 본문을 분석하여, 특정 치과 병원이 이 페이지에서 어떻게 묘사되는지 정확히 평가합니다.
+주어진 웹페이지 본문을 분석하여, 특정 병원이 이 페이지에서 어떻게 묘사되는지 정확히 평가합니다.
 
 규칙:
 1. 본문에 해당 병원 이름(또는 약칭/대표원장/주소)이 명시적으로 언급되지 않으면 mentionsUs=false 로 표기.
@@ -48,7 +48,7 @@ const SYSTEM_PROMPT = `당신은 의료 마케팅 전문가이자 데이터 분�
    - UNVERIFIABLE: 검증 불가
 5. extractedQuote: 우리 병원에 대한 가장 인상적인 본문 1문장 (50~150자, 본문에서 직접 발췌)
 6. signalKeywords: 본문에서 우리 병원과 함께 나타난 의료 키워드 (최대 8개)
-7. mentionedCompetitors: 본문에 함께 언급된 다른 치과 이름 (최대 10개, 진짜 병원명만)
+7. mentionedCompetitors: 본문에 함께 언급된 다른 병원 이름 (최대 10개, 진짜 병원명만)
 8. recommendedAction: 이 페이지에 대한 우리 병원의 액션 추천 (한국어, 30자 내외)
 9. confidence: 분석 신뢰도 (본문 길이/명확성 기반, 0~1)
 

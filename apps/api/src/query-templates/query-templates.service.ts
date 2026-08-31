@@ -7,7 +7,7 @@ import { HubProfileService, HubQuestionMaterials } from '../hospitals/hub-profil
 import { findGlobalIdFromMap } from '../auth/hub-sso.util';
 import { isDongConsistentWithSigungu } from '../common/utils/region-consistency';
 
-// ==================== 7개 진료과 프리셋 시술 DB ====================
+// ==================== 진료과별 프리셋 시술 DB (13개 진료과) ====================
 
 export interface ProcedurePreset {
   name: string;
@@ -38,6 +38,8 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '기미치료', alias: ['기미', '색소', '잡티'], category: 'core', isPopular: false },
     { name: '탈모치료', alias: ['탈모', '모발이식', 'PRP'], category: 'core', isPopular: true },
     { name: '피부관리', alias: ['피부관리', '스킨케어', '물광주사'], category: 'cosmetic', isPopular: false },
+    { name: '제모', alias: ['레이저제모', '왁싱', '영구제모'], category: 'cosmetic', isPopular: false },
+    { name: '흉터치료', alias: ['흉터', '여드름흉터', '수술흉터'], category: 'core', isPopular: false },
   ],
   ORTHOPEDICS: [
     { name: '무릎관절', alias: ['무릎', '관절', '인공관절', '슬관절'], category: 'core', isPopular: true },
@@ -46,6 +48,9 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '도수치료', alias: ['도수', '물리치료', '재활'], category: 'general', isPopular: false },
     { name: '관절내시경', alias: ['내시경', '관절수술'], category: 'core', isPopular: false },
     { name: '체외충격파', alias: ['충격파', 'ESWT'], category: 'general', isPopular: false },
+    { name: '관절주사', alias: ['주사치료', '연골주사', '무릎주사'], category: 'general', isPopular: false },
+    { name: '골절치료', alias: ['골절', '깁스', '외상'], category: 'general', isPopular: false },
+    { name: '스포츠손상', alias: ['스포츠재활', '인대손상', '스포츠의학'], category: 'core', isPopular: false },
   ],
   KOREAN_MEDICINE: [
     { name: '추나요법', alias: ['추나', '교정추나', '도수추나'], category: 'core', isPopular: true },
@@ -54,6 +59,9 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '허리디스크한방', alias: ['허리한방', '디스크한방', '한방척추'], category: 'core', isPopular: false },
     { name: '교통사고한방', alias: ['교통사고', '자동차보험한방'], category: 'general', isPopular: false },
     { name: '보약처방', alias: ['보약', '한약', '경옥고'], category: 'general', isPopular: false },
+    { name: '약침', alias: ['약침치료', '봉약침'], category: 'core', isPopular: false },
+    { name: '한방비염', alias: ['비염', '알레르기비염한방', '코질환한방'], category: 'core', isPopular: false },
+    { name: '한방불면', alias: ['불면', '불면증한방', '수면장애한방'], category: 'general', isPopular: false },
   ],
   OPHTHALMOLOGY: [
     { name: '라식', alias: ['LASIK', '라식수술'], category: 'core', isPopular: true },
@@ -62,6 +70,7 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '백내장', alias: ['백내장수술', '다초점렌즈'], category: 'core', isPopular: true },
     { name: '녹내장', alias: ['녹내장치료', '안압'], category: 'core', isPopular: false },
     { name: '드림렌즈', alias: ['드림', '야간렌즈', '소아근시'], category: 'general', isPopular: false },
+    { name: '노안치료', alias: ['노안', '노안수술', '다초점'], category: 'core', isPopular: false },
   ],
   INTERNAL_MEDICINE: [
     { name: '건강검진', alias: ['종합검진', '국가검진', '인간독'], category: 'core', isPopular: true },
@@ -69,6 +78,8 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '만성질환관리', alias: ['고혈압', '당뇨', '고지혈증'], category: 'core', isPopular: false },
     { name: '감기진료', alias: ['감기', '독감', '코로나'], category: 'general', isPopular: false },
     { name: '영양수액', alias: ['수액', '비타민주사', '면역주사'], category: 'general', isPopular: false },
+    { name: '갑상선', alias: ['갑상선질환', '갑상선결절', '갑상선기능'], category: 'core', isPopular: false },
+    { name: '역류성식도염', alias: ['역류성', '식도염', '위식도역류'], category: 'general', isPopular: false },
   ],
   UROLOGY: [
     { name: '전립선', alias: ['전립선비대증', '전립선염', 'PSA'], category: 'core', isPopular: true },
@@ -112,6 +123,7 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '자궁질환', alias: ['자궁근종', '자궁내막', '자궁경부'], category: 'core', isPopular: false },
     { name: '피임상담', alias: ['피임', '루프', '임플라논'], category: 'general', isPopular: false },
     { name: '요실금치료', alias: ['요실금', '방광', '골반근육'], category: 'general', isPopular: false },
+    { name: '생리불순', alias: ['생리불순', '월경불순', '생리통'], category: 'general', isPopular: false },
   ],
   PEDIATRICS: [
     { name: '예방접종', alias: ['접종', '백신', 'BCG'], category: 'core', isPopular: true },
@@ -121,6 +133,7 @@ export const SPECIALTY_PROCEDURES: Record<string, ProcedurePreset[]> = {
     { name: '성장클리닉', alias: ['성장', '키성장', '성장호르몬'], category: 'core', isPopular: true },
     { name: '소아천식', alias: ['천식', '소아호흡기', '기관지'], category: 'core', isPopular: false },
     { name: '소아비만', alias: ['비만', '소아체중', '식이관리'], category: 'general', isPopular: false },
+    { name: '소아알레르기', alias: ['알레르기', '알러지', '식품알레르기'], category: 'core', isPopular: false },
   ],
   OTHER: [
     { name: '일반진료', alias: ['진료', '진찰', '상담'], category: 'general', isPopular: true },
