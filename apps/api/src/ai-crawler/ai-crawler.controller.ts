@@ -3813,7 +3813,7 @@ export class AICrawlerController {
   @PlanLimit({ feature: 'contentGap' })
   @ApiOperation({ 
     summary: '【개선5-2】콘텐츠 갭 → 블로그 초안 자동 생성',
-    description: 'Claude 4 Sonnet을 사용하여 콘텐츠 갭을 해소할 치과 전문 블로그 글을 자동 생성합니다. PRO 플랜 전용.' 
+    description: 'Claude 4 Sonnet을 사용하여 콘텐츠 갭을 해소할 병원 전문 블로그 글을 자동 생성합니다. PRO 플랜 전용.' 
   })
   async generateBlogDraft(
     @Param('hospitalId') hospitalId: string,

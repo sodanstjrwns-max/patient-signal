@@ -113,7 +113,7 @@ ${body}
   "extractedQuote": "우리 병원에 대한 핵심 1문장 발췌 (50~150자), 없으면 null",
   "claimType": "FACT | OPINION | COMPARISON | COMPLAINT | RECOMMENDATION | NONE",
   "claimAccuracy": "ACCURATE | OUTDATED | INCORRECT | UNVERIFIABLE | null (언급 없으면 null)",
-  "mentionedCompetitors": ["함께 언급된 다른 치과명 배열"],
+  "mentionedCompetitors": ["함께 언급된 다른 병원명 배열"],
   "topicSummary": "이 페이지가 무엇에 대한 글인지 한 문장",
   "signalKeywords": ["임플란트", "야간진료", "강남" 등 최대 8개],
   "recommendedAction": "이 페이지에 대한 액션 추천 (정정요청/PR접촉/콘텐츠벤치마크/평판관리 등)",

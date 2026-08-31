@@ -299,7 +299,7 @@ export class CitationAnalyzerService {
     }
 
     // AI로 56주 캘린더 생성
-    const prompt = `당신은 대한민국 치과/병원 콘텐츠 마케팅 전략가입니다.
+    const prompt = `당신은 대한민국 병원 콘텐츠 마케팅 전략가입니다.
 
 ## 병원 정보
 - 병원명: ${hospital.name}
@@ -312,7 +312,7 @@ export class CitationAnalyzerService {
 
 1. **퍼널 비율**: AWARENESS 35% / CONSIDERATION 30% / DECISION 20% / RETENTION 10% / ADVOCACY 5%
 2. **시술 커버리지**: 각 핵심 시술별 최소 8편 (퍼널 전 단계 커버)
-3. **계절성 반영**: 여름(미백/교정), 겨울(임플란트), 봄가을(검진/스케일링), 방학(학생 교정)
+3. **계절성 반영**: 위 진료과(specialtyType)와 핵심 시술의 특성에 맞는 시즌별 환자 수요 변화를 반영(예: 방학·연휴·명절, 계절성 증상·질환, 시술별 성수기)
 4. **콘텐츠 유형 믹스**: BLOG 60% / COMPARISON 15% / FAQ 10% / GUIDE 10% / CASE_STUDY 5%
 5. **AI 인용 최적화 키워드**: 환자가 ChatGPT/Perplexity에 물어볼 법한 질문형 키워드
 6. **주 1편 원칙**: 총 56편 (1년+4주 버퍼)

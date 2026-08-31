@@ -1304,7 +1304,7 @@ JSON 형식으로만 답변:
 
   /**
    * 【개선5-2】콘텐츠 갭 기반 블로그 초안 생성
-   * Claude 4 Sonnet을 사용하여 치과 전문 블로그 글을 생성합니다.
+   * Claude 4 Sonnet을 사용하여 병원 전문 블로그 글을 생성합니다.
    */
   async generateBlogDraft(hospitalId: string, gapId: string): Promise<any> {
     if (!this.anthropic) {
@@ -1331,7 +1331,7 @@ JSON 형식으로만 답변:
 
     const regionFull = [hospital.regionSido, hospital.regionSigungu, hospital.regionDong]
       .filter(Boolean).join(' ');
-    const specialties = (hospital.subSpecialties as string[] || []).join(', ') || '일반 치과';
+    const specialties = (hospital.subSpecialties as string[] || []).join(', ') || '일반 진료';
     const procedures = (hospital.keyProcedures as string[] || []).join(', ') || '';
     const competitorNames = (contentGap.competitorNames as string[] || []).join(', ') || '경쟁사';
 
@@ -1344,7 +1344,7 @@ JSON 형식으로만 답변:
         messages: [
           {
             role: 'user',
-            content: `당신은 한국 치과 마케팅 전문 블로그 작가입니다. 10년 이상 의료 콘텐츠를 작성해온 전문가로서, SEO에 최적화되면서도 환자가 읽기 쉽고 신뢰할 수 있는 글을 작성합니다.
+            content: `당신은 한국 병원 마케팅 전문 블로그 작가입니다. 10년 이상 의료 콘텐츠를 작성해온 전문가로서, SEO에 최적화되면서도 환자가 읽기 쉽고 신뢰할 수 있는 글을 작성합니다.
 
 ## 배경 상황
 환자들이 AI(ChatGPT, Claude, Perplexity, Gemini)에게 "${contentGap.topic}" 라고 질문하면,

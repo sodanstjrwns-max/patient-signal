@@ -341,7 +341,7 @@ D.I.A+ 알고리즘은 다음 7가지를 평가합니다:
 ### 2-1. E-E-A-T 신호 강화
 - **Experience**: "진료실에서 자주 듣는 질문인데요", "실제 환자분들의 회복 과정을 보면" 등 1인칭 경험
 - **Expertise**: 의학 용어 사용 후 "(= 쉬운 설명)" 병기. 학술 근거 인용 시 "2024년 대한OO학회지에 따르면" 형태
-- **Authoritativeness**: 건강보험심사평가원, 대한치과의사협회, PubMed, Cochrane 등 권위 출처
+- **Authoritativeness**: 건강보험심사평가원, 대한의사협회·관련 전문 학회, PubMed, Cochrane 등 권위 출처
 - **Trustworthiness**: 면책조항, 개인차 언급, "일반적으로", "통상적으로" 한정어
 
 ### 2-2. Featured Snippet & AI Overview 타겟
