@@ -21,7 +21,7 @@ import {
 // ⚠️ 어드민 전용: ADMIN_SECRET이 설정된 Render 서비스는 patient-signal-1이다.
 // (Render에 patient-signal / patient-signal-1 두 서비스가 공존 — 시크릿은 -1에만 있음)
 // 일반 앱의 NEXT_PUBLIC_API_URL과 분리해 하드 지정한다.
-const API_URL = 'https://patient-signal-1.onrender.com/api';
+const API_URL = 'https://api.patientsignal.kr/api';
 
 interface PlatformStat {
   total: number;

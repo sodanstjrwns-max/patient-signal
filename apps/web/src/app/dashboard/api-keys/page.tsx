@@ -357,10 +357,10 @@ export default function ApiKeysPage() {
                 <h4 className="text-sm font-semibold text-slate-800 mb-2">📡 Base URL</h4>
                 <div className="flex items-center gap-2 p-3 bg-slate-900 rounded-xl">
                   <code className="text-sm font-mono text-green-400 flex-1">
-                    https://patient-signal-1.onrender.com/api/public/v1
+                    https://api.patientsignal.kr/api/public/v1
                   </code>
                   <button
-                    onClick={() => copyToClipboard('https://patient-signal-1.onrender.com/api/public/v1', 'base')}
+                    onClick={() => copyToClipboard('https://api.patientsignal.kr/api/public/v1', 'base')}
                     className="text-slate-400 hover:text-white"
                   >
                     {copiedKeyId === 'base' ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
@@ -378,7 +378,7 @@ export default function ApiKeysPage() {
                 <div className="p-3 bg-slate-900 rounded-xl overflow-x-auto">
                   <pre className="text-sm font-mono text-slate-300">
 {`curl -H "X-API-Key: YOUR_API_KEY" \\
-  https://patient-signal-1.onrender.com/api/public/v1/my/aeo-status`}
+  https://api.patientsignal.kr/api/public/v1/my/aeo-status`}
                   </pre>
                 </div>
               </div>

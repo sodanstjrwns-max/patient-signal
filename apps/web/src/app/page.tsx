@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 // Patient Hub SSO — API가 허브 authorize로 302 리다이렉트 (로그인 페이지와 동일 시작 라우트)
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
 const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
 
 // Static classes for Tailwind detection

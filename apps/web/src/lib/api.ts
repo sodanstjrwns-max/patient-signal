@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from '@/hooks/useToast';
 
 // API URL — 환경변수 우선, 미설정 시 프로덕션 기본값
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

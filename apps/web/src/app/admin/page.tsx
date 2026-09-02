@@ -6,7 +6,7 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Clock, Mail
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
 // 보안: 하드코딩 시크릿 상수 제거 — 인증은 사용자 입력 secretInput만 사용 (x-admin-secret 헤더)
 
 interface DashboardStats {

@@ -16,7 +16,7 @@ import { useAuthStore } from '@/stores/auth';
 // 발급했는데, 대시보드 API는 신서버(-1)라 토큰이 거부돼 무한 로그아웃 루프가
 // 났다(구/신 서버 JWT_SECRET 불일치, 구서버는 다른 계정 소유라 손댈 수 없음).
 // 허브 구글 로그인은 -1에서 검증되므로 문제가 없다 — 그래서 허브로 federate 한다.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
 const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
 
 const ERROR_MESSAGES: Record<string, string> = {

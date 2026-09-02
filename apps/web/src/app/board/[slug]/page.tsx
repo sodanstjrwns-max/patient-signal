@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 
 // ⚠️ ADMIN_SECRET이 설정된 Render 서비스는 patient-signal-1이다 (admin/sov와 동일 사유로 하드 지정)
-const API_URL = 'https://patient-signal-1.onrender.com/api';
+const API_URL = 'https://api.patientsignal.kr/api';
 
 // 예쁜 URL 별칭 → 병원 UUID (신규 병원은 여기에 한 줄 추가)
 const SLUG_MAP: Record<string, string> = {
