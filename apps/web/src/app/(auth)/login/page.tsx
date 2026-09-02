@@ -10,11 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
-// Google OAuth 설정
-const GOOGLE_CLIENT_ID = '141234552582-lijncuv1nn302n1d4en6ascei76ugakp.apps.googleusercontent.com';
-const GOOGLE_REDIRECT_URI = 'https://patient-signal.onrender.com/api/auth/google/callback';
-
 // Patient Hub SSO — API가 허브 authorize로 302 리다이렉트
+// 모든 로그인(구글 포함)은 이 경로로 일원화한다. 예전 "직접 구글 로그인"은
+// 구서버(patient-signal.onrender.com)로 콜백해 구서버 JWT_SECRET로 토큰을
+// 발급했는데, 대시보드 API는 신서버(-1)라 토큰이 거부돼 무한 로그아웃 루프가
+// 났다(구/신 서버 JWT_SECRET 불일치, 구서버는 다른 계정 소유라 손댈 수 없음).
+// 허브 구글 로그인은 -1에서 검증되므로 문제가 없다 — 그래서 허브로 federate 한다.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://patient-signal-1.onrender.com/api';
 const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
 
@@ -70,17 +71,10 @@ function LoginForm() {
     }
   };
 
-  // Google OAuth 로그인 (리다이렉트 방식)
+  // Google 로그인 — 허브 SSO로 federate (구글 계정은 Patient Hub에서 인증).
+  // 구서버 직접 콜백을 쓰지 않아 JWT_SECRET 불일치 루프가 발생하지 않는다.
   const handleGoogleLogin = () => {
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
-      `client_id=${GOOGLE_CLIENT_ID}` +
-      `&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI)}` +
-      `&response_type=code` +
-      `&scope=${encodeURIComponent('openid email profile')}` +
-      `&access_type=offline` +
-      `&prompt=consent`;
-    
-    window.location.href = googleAuthUrl;
+    window.location.href = HUB_SSO_START_URL;
   };
 
   return (
