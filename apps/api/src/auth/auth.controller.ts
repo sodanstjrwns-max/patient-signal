@@ -1,7 +1,6 @@
-import { Controller, Post, Body, Get, Query, Res, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
-import type { Response } from 'express';
+import { Controller, Post, Body, Get, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Throttle, SkipThrottle } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -53,65 +52,9 @@ export class AuthController {
     return this.authService.refreshToken(refreshToken);
   }
 
-  @Public()
-  @Post('google')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Google 로그인', description: 'Google ID 토큰으로 로그인합니다' })
-  @ApiResponse({ status: 200, description: '로그인 성공' })
-  @ApiResponse({ status: 401, description: 'Google 인증 실패' })
-  async googleLogin(@Body('idToken') idToken: string) {
-    return this.authService.googleLogin(idToken);
-  }
-
-  // 【보안】GET /auth/google/debug 제거 — 인증 없이 GOOGLE_CLIENT_SECRET 앞 8자·길이를
-  // 익명 호출자에게 노출하고 실제 구글 토큰 엔드포인트를 매 호출 프로빙하던 진단 라우트였음.
-  // 설정 점검은 서버 로그/Render 환경변수 콘솔에서 수행할 것.
-
-  @Public()
-  @SkipThrottle() // Google 콜백은 Rate Limit 제외
-  @Get('google/callback')
-  @ApiOperation({ summary: 'Google OAuth 콜백', description: 'Google OAuth 인증 후 콜백 처리' })
-  async googleCallback(
-    @Query('code') code: string,
-    @Query('error') error: string,
-    @Res() res: Response,
-  ) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://patientsignal.kr';
-    
-    if (error) {
-      return res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error)}`);
-    }
-
-    if (!code) {
-      return res.redirect(`${frontendUrl}/login?error=missing_code`);
-    }
-
-    try {
-      const result = await this.authService.googleCallbackLogin(code);
-      
-      // 프론트엔드로 토큰과 함께 리다이렉트
-      const redirectUrl = result.user.hospitalId ? '/dashboard' : '/onboarding';
-      const params = new URLSearchParams({
-        accessToken: result.accessToken,
-        refreshToken: result.refreshToken,
-        user: JSON.stringify(result.user),
-        redirect: redirectUrl,
-      });
-      
-      return res.redirect(`${frontendUrl}/auth/callback?${params.toString()}`);
-    } catch (err) {
-      console.error('Google callback error:', err?.message || err);
-      // 에러 메시지를 상세히 URL로 전달
-      const errorMsg = err?.message || 'google_auth_failed';
-      let errorCode = 'google_auth_failed';
-      if (errorMsg.includes('invalid_client')) errorCode = 'invalid_client';
-      else if (errorMsg.includes('invalid_grant')) errorCode = 'invalid_grant';
-      else if (errorMsg.includes('redirect_uri_mismatch')) errorCode = 'redirect_uri_mismatch';
-      else if (errorMsg.includes('token')) errorCode = 'token_exchange_failed';
-      else if (errorMsg.includes('verified')) errorCode = 'email_not_verified';
-      return res.redirect(`${frontendUrl}/login?error=${errorCode}&detail=${encodeURIComponent(errorMsg.substring(0, 300))}`);
-    }
-  }
+  // 【정리】직접 Google 로그인 라우트(POST /auth/google, GET /auth/google/callback) 제거(2026-09-03).
+  // 콜백이 구서버(patient-signal.onrender.com)로 하드코딩돼 JWT_SECRET 불일치 무한 401 루프를
+  // 유발했던 젠스파크 레거시 — 구글 로그인은 Patient Hub SSO(/auth/hub) 경유로 일원화됐다.
 
   @Public()
   @Post('forgot-password')
