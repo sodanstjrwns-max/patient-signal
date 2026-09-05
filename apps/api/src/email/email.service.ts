@@ -43,7 +43,9 @@ export class EmailService {
     }
     const to = process.env.OPS_ALERT_EMAIL || 'sodanstjrwns@gmail.com';
     try {
-      await this.resend.emails.send({
+      // Resend SDK는 API 에러를 throw 하지 않고 반환값의 error에 담는다 —
+      // error를 확인하지 않으면 발송 실패가 조용히 성공으로 둔갑한다.
+      const result = await this.resend.emails.send({
         from: `Patient Series 모니터 <${this.fromEmail}>`,
         to: [to],
         subject,
@@ -51,7 +53,11 @@ export class EmailService {
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')}</pre>`,
       });
-      this.logger.log(`운영 알림 발송: ${subject}`);
+      if (result?.error) {
+        this.logger.error(`운영 알림 발송 실패(Resend): ${JSON.stringify(result.error)}`);
+        return false;
+      }
+      this.logger.log(`운영 알림 발송: ${subject} (id=${result?.data?.id})`);
       return true;
     } catch (error) {
       this.logger.error(`운영 알림 발송 실패: ${error.message}`);
