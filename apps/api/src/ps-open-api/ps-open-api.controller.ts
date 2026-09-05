@@ -16,6 +16,7 @@ import { Public } from '../auth/decorators/public.decorator';
 import { PsServiceKeyGuard } from './guards/ps-service-key.guard';
 import { PsOpenApiService } from './ps-open-api.service';
 import { HubProfileService } from '../hospitals/hub-profile.service';
+import { EmailService } from '../email/email.service';
 
 /**
  * 【PS-통합】Patient Series Open API v1
@@ -32,7 +33,33 @@ export class PsOpenApiController {
   constructor(
     private readonly psOpenApiService: PsOpenApiService,
     private readonly hubProfileService: HubProfileService,
+    private readonly emailService: EmailService,
   ) {}
+
+  /**
+   * POST /api/v1/ops/alert — 운영 알림 중계 (ps-monitor 워커 → 이메일)
+   * 전 서비스 헬스 모니터가 장애/복구를 감지하면 이 엔드포인트로 보내고,
+   * 시그널의 Resend로 운영자에게 발송한다. 인증: Bearer {PS_SERVICE_KEY}.
+   * (주의: 시그널 자체가 죽으면 이 경로도 죽는다 — 모니터의 알려진 한계, v2에서 이중화)
+   */
+  @Public() // JWT 스킵 — 아래에서 PS_SERVICE_KEY Bearer를 직접 검증
+  @Post('ops/alert')
+  async opsAlert(
+    @Headers('authorization') authorization: string | undefined,
+    @Body() body: { subject?: string; text?: string } | undefined,
+  ) {
+    const secret = process.env.PS_SERVICE_KEY?.trim();
+    const header = authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if (!secret || !token || token !== secret) {
+      throw new UnauthorizedException('유효하지 않은 인증입니다.');
+    }
+    const subject = (body?.subject || '').toString().slice(0, 200);
+    const text = (body?.text || '').toString().slice(0, 5000);
+    if (!subject || !text) throw new BadRequestException('subject와 text가 필요합니다.');
+    const sent = await this.emailService.sendOpsAlert(subject, text);
+    return { ok: sent };
+  }
 
   /**
    * POST /api/v1/hub-events — 허브 → 시그널 push 캐시 무효화 웹훅

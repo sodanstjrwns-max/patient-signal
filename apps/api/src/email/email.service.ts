@@ -32,6 +32,34 @@ export class EmailService {
   }
 
   /**
+   * 【PS-운영】운영 알림 메일 — ps-monitor 워커가 /api/v1/ops/alert 로 중계.
+   * 수신자는 OPS_ALERT_EMAIL(기본: 운영자 지메일). 서비스 장애/복구 통지용이라
+   * 템플릿 없이 본문 그대로 보낸다.
+   */
+  async sendOpsAlert(subject: string, text: string): Promise<boolean> {
+    if (!this.resend) {
+      this.logger.warn('운영 알림 발송 건너뜀 (Resend 비활성)');
+      return false;
+    }
+    const to = process.env.OPS_ALERT_EMAIL || 'sodanstjrwns@gmail.com';
+    try {
+      await this.resend.emails.send({
+        from: `Patient Series 모니터 <${this.fromEmail}>`,
+        to: [to],
+        subject,
+        html: `<pre style="font-family:monospace;font-size:14px;white-space:pre-wrap">${text
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')}</pre>`,
+      });
+      this.logger.log(`운영 알림 발송: ${subject}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`운영 알림 발송 실패: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
    * 이메일 인증 코드 발송
    */
   async sendVerificationEmail(to: string, code: string, name: string): Promise<boolean> {
