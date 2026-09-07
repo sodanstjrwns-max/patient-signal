@@ -133,8 +133,8 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-slate-800 mb-4">8. 개인정보 보호책임자</h2>
             <div className="text-slate-600 bg-mesh rounded-lg p-4">
               <p>성명: 문석준 (대표)</p>
-              <p>이메일: sodanstjrwns@naver.com</p>
-              <p>연락처: 010-5832-3372</p>
+              <p>이메일: patientsfunnel@gmail.com</p>
+              <p>연락처: 010-4445-1873</p>
             </div>
             <p className="text-slate-600 mt-4">
               기타 개인정보 침해 신고·상담: 개인정보침해신고센터 (privacy.kisa.or.kr / 국번없이 118)

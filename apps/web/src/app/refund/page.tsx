@@ -47,12 +47,12 @@ export default function RefundPage() {
               <li>
                 고객센터(이메일{' '}
                 <a
-                  href="mailto:sodanstjrwns@naver.com"
+                  href="mailto:patientsfunnel@gmail.com"
                   className="text-indigo-600 hover:text-indigo-700"
                 >
                   sodanstjrwns@naver.com
                 </a>{' '}
-                / 010-5832-3372)로 환불 요청
+                / 010-4445-1873)로 환불 요청
               </li>
               <li>회사는 요청일로부터 3영업일 이내에 환불 가능 여부와 금액을 안내</li>
               <li>
