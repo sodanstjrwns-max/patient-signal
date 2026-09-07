@@ -50,7 +50,7 @@ export default function RefundPage() {
                   href="mailto:patientsfunnel@gmail.com"
                   className="text-indigo-600 hover:text-indigo-700"
                 >
-                  sodanstjrwns@naver.com
+                  patientsfunnel@gmail.com
                 </a>{' '}
                 / 010-4445-1873)로 환불 요청
               </li>
