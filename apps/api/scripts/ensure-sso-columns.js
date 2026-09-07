@@ -9,6 +9,9 @@ async function main() {
     await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "ps_hospital_id" TEXT')
     await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "hospitals_ps_hospital_id_key" ON "hospitals"("ps_hospital_id")')
     await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "pending_ps_hospital_id" TEXT')
+    await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hub_user_id" TEXT')
+    await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hub_email" TEXT')
+    await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "users_hub_user_id_key" ON "users"("hub_user_id")')
     console.log('[ensure-sso-columns] OK — hospitals.ps_hospital_id, users.pending_ps_hospital_id ready')
   } finally {
     await prisma.$disconnect()

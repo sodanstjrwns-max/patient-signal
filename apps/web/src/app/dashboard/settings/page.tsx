@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { hospitalApi, queryTemplatesApi } from '@/lib/api';
+import { api, hospitalApi, queryTemplatesApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
   Settings,
@@ -769,6 +769,9 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* ==================== Patient Hub 계정 연결 ==================== */}
+        <HubLinkCard />
+
         {/* ==================== 계정 보안 ==================== */}
         <Card>
           <CardHeader>
@@ -796,5 +799,61 @@ export default function SettingsPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+
+// Patient Hub 계정 연결 카드 — 다른 이메일로 만든 기존 시그널 계정을 허브 계정에 붙인다.
+// 연결 후엔 허브 [Patient Hub 계정으로 시작하기] 로그인이 이메일과 무관하게 이 계정으로 들어온다.
+function HubLinkCard() {
+  const queryClient = useQueryClient();
+  const [notice, setNotice] = useState<string>('');
+  const profileQ = useQuery({ queryKey: ['auth-profile-hub'], queryFn: () => api.get('/auth/profile').then((r) => r.data) });
+  const unlinkM = useMutation({
+    mutationFn: () => api.delete('/auth/hub/link'),
+    onSuccess: () => { setNotice('연결을 해제했습니다.'); queryClient.invalidateQueries({ queryKey: ['auth-profile-hub'] }); },
+  });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const q = new URLSearchParams(window.location.search);
+    if (q.get('hub_linked') === '1') {
+      setNotice(`Patient Hub 계정(${q.get('hub_email') || ''})과 연결됐습니다. 이제 허브에서 시그널로 바로 들어올 수 있어요.`);
+      window.history.replaceState({}, '', '/dashboard/settings');
+      queryClient.invalidateQueries({ queryKey: ['auth-profile-hub'] });
+    }
+  }, [queryClient]);
+  const linked = !!profileQ.data?.hubLinked;
+  const hubEmail = profileQ.data?.hubEmail as string | null | undefined;
+  const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api').replace(/\/+$/, '');
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Globe className="h-5 w-5" /> Patient Hub 계정 연결</CardTitle>
+        <CardDescription>
+          허브(hub.patientfunnel.kr) 계정 하나로 페이션트 시리즈 전체를 씁니다. 시그널을 다른 이메일로 가입했어도 여기서 연결하면 허브 로그인이 이 계정으로 들어옵니다.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {notice && <p className="mb-3 text-sm text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">{notice}</p>}
+        <div className="flex items-center justify-between p-3 border rounded-2xl">
+          <div>
+            <p className="font-medium">{linked ? '연결됨' : '연결 안 됨'}</p>
+            <p className="text-sm text-slate-500">
+              {profileQ.isLoading ? '확인 중…' : linked ? `허브 계정: ${hubEmail || ''}` : '허브 계정이 없으면 hub.patientfunnel.kr에서 먼저 만들어 주세요.'}
+            </p>
+          </div>
+          {linked ? (
+            <Button variant="outline" size="sm" disabled={unlinkM.isPending} onClick={() => { if (confirm('허브 연결을 해제할까요? 해제해도 시그널 데이터는 그대로입니다.')) unlinkM.mutate(); }}>
+              연결 해제
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => { window.location.href = `${apiBase}/auth/hub?mode=link`; }}>
+              Patient Hub 계정 연결
+            </Button>
+          )}
+        </div>
+        <p className="mt-2 text-xs text-slate-400">연결 중 허브 로그인 화면이 뜨면 허브 계정으로 로그인하세요. 시그널 데이터(리포트·설정·구독)는 그대로 유지됩니다.</p>
+      </CardContent>
+    </Card>
   );
 }

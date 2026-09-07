@@ -125,6 +125,8 @@ export class AuthService {
       hospital: user.hospital,
       isPfMember: user.isPfMember,
       createdAt: user.createdAt,
+      hubLinked: !!user.hubUserId,
+      hubEmail: user.hubEmail ?? null,
     };
   }
 

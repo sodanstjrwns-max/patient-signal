@@ -36,6 +36,26 @@ function HubCallbackHandler() {
       return;
     }
 
+    // state=link: 설정 화면의 [Patient Hub 계정 연결] — 로그인 상태의 기존 계정에 허브 계정을 붙인다
+    if (searchParams.get('state') === 'link') {
+      (async () => {
+        try {
+          const { data } = await api.post('/auth/hub/link', { ssoToken });
+          setStatus('success');
+          setTimeout(() => {
+            window.location.href = `/dashboard/settings?hub_linked=1&hub_email=${encodeURIComponent(data?.hubEmail || '')}`;
+          }, 500);
+        } catch (err: any) {
+          const st = err?.response?.status;
+          let msg = err?.response?.data?.error?.message || err?.response?.data?.message || 'Patient Hub 계정 연결에 실패했습니다.';
+          if (st === 401 && !localStorage.getItem('accessToken')) msg = '시그널에 로그인된 상태에서 연결해야 합니다. 로그인 후 설정에서 다시 시도해 주세요.';
+          setStatus('error');
+          setErrorMessage(msg);
+        }
+      })();
+      return;
+    }
+
     (async () => {
       try {
         const { data } = await api.post('/auth/hub/callback', { ssoToken });

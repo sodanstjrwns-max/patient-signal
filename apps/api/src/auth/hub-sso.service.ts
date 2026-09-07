@@ -1,4 +1,4 @@
-import { Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthService } from './auth.service';
@@ -55,13 +55,52 @@ export class HubSsoService {
   }
 
   /** 허브 authorize URL 생성 (시작 라우트에서 302) */
-  buildAuthorizeUrl(): string {
+  buildAuthorizeUrl(state?: string): string {
     const frontendUrl = (process.env.FRONTEND_URL || DEFAULT_CALLBACK_ORIGIN).replace(/\/+$/, '');
     const origin = ALLOWED_CALLBACK_ORIGINS.includes(frontendUrl)
       ? frontendUrl
       : DEFAULT_CALLBACK_ORIGIN;
     const redirectUri = `${origin}/auth/hub/callback`;
-    return `${HUB_AUTHORIZE_URL}?service=${HUB_SSO_SERVICE_SLUG}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    const stateQs = state ? `&state=${encodeURIComponent(state)}` : '';
+    return `${HUB_AUTHORIZE_URL}?service=${HUB_SSO_SERVICE_SLUG}&redirect_uri=${encodeURIComponent(redirectUri)}${stateQs}`;
+  }
+
+  /**
+   * 기존 시그널 계정 ↔ 허브 계정 자가 연결 (이메일이 달라도 됨).
+   * 로그인된 유저가 설정에서 [허브 계정 연결] → 허브 authorize(state=link) → 콜백이
+   * 이 메서드를 호출. 허브 sub 를 users.hub_user_id 에 저장하면 이후 허브 SSO 로그인은
+   * 이메일과 무관하게 이 계정으로 들어온다.
+   */
+  async linkWithToken(userId: string, ssoToken: string) {
+    const secret = this.assertConfigured();
+    const claims = verifyHubSsoToken(secret, ssoToken, HUB_SSO_SERVICE_SLUG);
+    if (!claims) throw new UnauthorizedException('유효하지 않은 Patient Hub SSO 토큰입니다');
+
+    const me = await this.prisma.user.findUnique({ where: { id: userId }, include: { hospital: true } });
+    if (!me) throw new UnauthorizedException('사용자를 찾을 수 없습니다');
+
+    // 같은 허브 계정이 이미 다른 시그널 계정에 붙어 있으면 거부 (계정 탈취·중복 방지)
+    const taken = await this.prisma.user.findFirst({ where: { hubUserId: String(claims.sub), NOT: { id: userId } } });
+    if (taken) {
+      throw new ConflictException({
+        error: { code: 'HUB_ALREADY_LINKED', message: '이 Patient Hub 계정은 이미 다른 시그널 계정에 연결되어 있습니다. 허브에서 로그아웃한 뒤 다른 허브 계정으로 시도하거나 고객센터에 문의해 주세요.' },
+      });
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { hubUserId: String(claims.sub), hubEmail: claims.email.trim().toLowerCase() },
+    });
+    await this.fillHospitalGlobalIdGuarded(me.hospitalId, claims.hid);
+    this.logger.log(`Hub SSO: user ${userId} linked to hub sub=${claims.sub} (hid=${claims.hid})`);
+
+    return { linked: true, hubEmail: claims.email, hubHospitalName: claims.hname || null };
+  }
+
+  /** 허브 연결 해제 — 이후 허브 SSO 로그인은 다시 이메일 매칭으로 돌아간다 */
+  async unlink(userId: string) {
+    await this.prisma.user.update({ where: { id: userId }, data: { hubUserId: null, hubEmail: null } });
+    return { linked: false };
   }
 
   /** 콜백: sso_token 검증 → 로그인/합류/생성 → 시그널 정상 토큰 발급 */
@@ -78,14 +117,30 @@ export class HubSsoService {
   private async loginWithClaims(claims: HubSsoClaims) {
     const email = claims.email.trim().toLowerCase();
 
-    // 1) 기존 유저 (이메일 대소문자 무시 매칭)
-    let user = await this.prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' } },
+    // 0) 자가 연결된 계정 (users.hub_user_id = 허브 sub) — 이메일과 무관하게 최우선
+    let user: Awaited<ReturnType<typeof this.findUserWithHospital>> = await this.prisma.user.findFirst({
+      where: { hubUserId: String(claims.sub) },
       include: { hospital: true },
     });
 
+    // 1) 기존 유저 (이메일 대소문자 무시 매칭)
+    if (!user) {
+      user = await this.prisma.user.findFirst({
+        where: { email: { equals: email, mode: 'insensitive' } },
+        include: { hospital: true },
+      });
+    }
+
     if (user) {
       await this.fillHospitalGlobalIdGuarded(user.hospitalId, claims.hid);
+      // 이메일로 붙은 기존 계정에 허브 키를 기록해 두면 이후 이메일이 바뀌어도 연결이 유지된다
+      if (!user.hubUserId) {
+        try {
+          await this.prisma.user.update({ where: { id: user.id }, data: { hubUserId: String(claims.sub), hubEmail: email } });
+        } catch (err) {
+          this.logger.warn(`Hub SSO: could not record hub link for ${user.id}: ${err?.message}`);
+        }
+      }
     } else {
       // 2) 신규 유저 — hid로 병원 합류 (psHospitalId 컬럼 → PS_HOSPITAL_MAP env 순)
       let hospital = await this.prisma.hospital.findUnique({
@@ -113,6 +168,8 @@ export class HubSsoService {
           hospitalId: hospital?.id ?? null,
           // 병원이 없으면 hid를 보관 → 온보딩 병원 생성 시 psHospitalId로 이전
           pendingPsHospitalId: hospital ? null : claims.hid,
+          hubUserId: String(claims.sub),
+          hubEmail: email,
         },
         include: { hospital: true },
       });
@@ -153,6 +210,11 @@ export class HubSsoService {
       // 병원 미보유 유저(→온보딩행)에게 허브 병원명을 전달 → 온보딩 병원명 프리필
       pendingHospitalName: user.hospitalId ? undefined : claims.hname || undefined,
     };
+  }
+
+  /** 타입 앵커 — loginWithClaims 의 user 변수 타입(include hospital) 고정용 */
+  private findUserWithHospital(id: string) {
+    return this.prisma.user.findFirst({ where: { id }, include: { hospital: true } });
   }
 
   /**
