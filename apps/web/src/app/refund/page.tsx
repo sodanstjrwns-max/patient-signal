@@ -51,8 +51,8 @@ export default function RefundPage() {
                   className="text-indigo-600 hover:text-indigo-700"
                 >
                   sodanstjrwns@naver.com
-                </a>
-                )로 환불 요청
+                </a>{' '}
+                / 010-4445-1873)로 환불 요청
               </li>
               <li>회사는 요청일로부터 3영업일 이내에 환불 가능 여부와 금액을 안내</li>
               <li>

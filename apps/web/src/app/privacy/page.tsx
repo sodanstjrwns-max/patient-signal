@@ -134,6 +134,7 @@ export default function PrivacyPage() {
             <div className="text-slate-600 bg-mesh rounded-lg p-4">
               <p>성명: 문석준 (대표)</p>
               <p>이메일: sodanstjrwns@naver.com</p>
+              <p>연락처: 010-4445-1873</p>
             </div>
             <p className="text-slate-600 mt-4">
               기타 개인정보 침해 신고·상담: 개인정보침해신고센터 (privacy.kisa.or.kr / 국번없이 118)
