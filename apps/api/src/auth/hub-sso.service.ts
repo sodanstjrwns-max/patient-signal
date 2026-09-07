@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AuthService } from './auth.service';
@@ -79,12 +79,13 @@ export class HubSsoService {
     const me = await this.prisma.user.findUnique({ where: { id: userId }, include: { hospital: true } });
     if (!me) throw new UnauthorizedException('사용자를 찾을 수 없습니다');
 
-    // 같은 허브 계정이 이미 다른 시그널 계정에 붙어 있으면 거부 (계정 탈취·중복 방지)
+    // 같은 허브 계정이 이미 다른 시그널 계정에 붙어 있으면 연결을 이쪽으로 옮긴다.
+    // (허브 로그인 + 시그널 로그인을 둘 다 증명한 본인이므로 안전. 전형적 사례: 이메일이 달라
+    //  허브 버튼으로 먼저 들어와 빈 계정이 생긴 뒤, 원래 계정으로 로그인해 여기서 연결하는 경우)
     const taken = await this.prisma.user.findFirst({ where: { hubUserId: String(claims.sub), NOT: { id: userId } } });
     if (taken) {
-      throw new ConflictException({
-        error: { code: 'HUB_ALREADY_LINKED', message: '이 Patient Hub 계정은 이미 다른 시그널 계정에 연결되어 있습니다. 허브에서 로그아웃한 뒤 다른 허브 계정으로 시도하거나 고객센터에 문의해 주세요.' },
-      });
+      await this.prisma.user.update({ where: { id: taken.id }, data: { hubUserId: null, hubEmail: null } });
+      this.logger.warn(`Hub SSO: moved hub link sub=${claims.sub} from user ${taken.id} to ${userId}`);
     }
 
     await this.prisma.user.update({
