@@ -53,7 +53,6 @@ export default function SiteFooter() {
           </p>
           <p>
             주소: 서울특별시 강남구 영동대로 602, 6층 z208 (삼성동, 삼성동 미켈란 107)
-            <span className="mx-1.5 text-slate-300">|</span> 연락처: 010-5832-3372
             <span className="mx-1.5 text-slate-300">|</span> 이메일: sodanstjrwns@naver.com
           </p>
           <p>
