@@ -1339,7 +1339,7 @@ JSON 형식으로만 답변:
 
     try {
       const message = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5',
         max_tokens: 4000,
         messages: [
           {
@@ -1418,7 +1418,7 @@ JSON 형식으로만 답변:
       blogDraft.gapId = gapId;
       blogDraft.gapTopic = contentGap.topic;
       blogDraft.hospitalName = hospital.name;
-      blogDraft.model = 'claude-sonnet-4-20250514';
+      blogDraft.model = 'claude-haiku-4-5';
       blogDraft.generatedAt = new Date().toISOString();
       blogDraft.competitors = contentGap.competitorNames;
       blogDraft.priorityScore = contentGap.priorityScore;

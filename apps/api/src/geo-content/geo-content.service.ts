@@ -238,7 +238,7 @@ export class GeoContentService {
         relatedPromptIds: params.relatedPromptIds || [],
         procedure: params.procedure,
         status: 'GENERATING',
-        aiModel: 'claude-sonnet-4-20250514-v4-2step',
+        aiModel: 'claude-haiku-4-5-v4-2step',
         generationPrompt: params.topic,
         generationParams: {
           funnelStage: params.funnelStage,
@@ -552,7 +552,7 @@ D.I.A+ 알고리즘은 다음 7가지를 평가합니다:
       this.logger.log(`[${contentId}] STEP 1: 1차 콘텐츠 생성 시작...`);
 
       const response = await this.anthropic!.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5',
         max_tokens: 16000,
         temperature: 0.7,
         system: systemPrompt,
@@ -647,7 +647,7 @@ ${JSON.stringify(draft, null, 0).substring(0, 30000)}
 </instructions>`;
 
       const critiqueResponse = await this.anthropic!.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-haiku-4-5',
         max_tokens: 16000,
         temperature: 0.4,
         system: `당신은 의료 SEO 콘텐츠 최종 편집장입니다. 초안을 검수하고 보강하여 출판 수준의 최종본을 만듭니다. 반드시 JSON으로만 응답하세요.`,
