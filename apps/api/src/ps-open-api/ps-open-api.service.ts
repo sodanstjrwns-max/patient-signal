@@ -134,6 +134,71 @@ export class PsOpenApiService {
   }
 
   /**
+   * GET /api/v1/ops/measurement-summary?days=N
+   * 운영용: 최근 N일 일별 측정 건수(DailyScore·AIResponse) + 활성 병원 수.
+   * 용도: ps-monitor가 "어제 측정 0건" 같은 조용한 장애를 아침에 잡는다 (2026-09 사고 재발 방지).
+   */
+  async getMeasurementSummary(days = 7) {
+    const n = Math.max(1, Math.min(60, Number(days) || 7));
+    const since = new Date(Date.now() - n * 86400_000);
+    since.setUTCHours(0, 0, 0, 0);
+    const [activeHospitals, scores, responses] = await Promise.all([
+      this.prisma.hospital.count(),
+      this.prisma.dailyScore.findMany({ where: { scoreDate: { gte: since } }, select: { scoreDate: true, hospitalId: true } }),
+      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since } }, select: { responseDate: true } }),
+    ]);
+    const byDay: Record<string, { hospitals: Set<string>; scores: number; responses: number }> = {};
+    for (const s of scores) {
+      const k = dateKey(s.scoreDate); byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0 };
+      byDay[k].scores++; byDay[k].hospitals.add(s.hospitalId);
+    }
+    for (const r of responses) {
+      const k = dateKey(r.responseDate); byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0 };
+      byDay[k].responses++;
+    }
+    const daysOut = Object.keys(byDay).sort().map((k) => ({ date: k, hospitals_scored: byDay[k].hospitals.size, daily_scores: byDay[k].scores, ai_responses: byDay[k].responses }));
+    return { service: 'signal', active_hospitals: activeHospitals, days: daysOut, generated_at: new Date().toISOString() };
+  }
+
+  /**
+   * GET /api/v1/ops/crawl-gap?since=YYYY-MM-DD&until=YYYY-MM-DD
+   * 운영용: 기간 내 병원별로 점수가 기록된 날/빠진 날 목록 (비식별 — 병원명·플랜·날짜만).
+   * 용도: 측정 중단 사고의 피해 범위 산출·고객 안내 근거.
+   */
+  async getCrawlGap(sinceStr?: string, untilStr?: string) {
+    const since = sinceStr ? new Date(sinceStr + 'T00:00:00Z') : new Date(Date.now() - 7 * 86400_000);
+    const until = untilStr ? new Date(untilStr + 'T00:00:00Z') : new Date();
+    if (isNaN(since.getTime()) || isNaN(until.getTime()) || since > until) {
+      throw new BadRequestException({ error: { code: 'BAD_RANGE', message: 'since/until 은 YYYY-MM-DD, since <= until' } });
+    }
+    const allDays: string[] = [];
+    for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86400_000)) allDays.push(d.toISOString().slice(0, 10));
+    const hospitals = await this.prisma.hospital.findMany({
+      select: { id: true, name: true, planType: true, createdAt: true },
+      orderBy: { name: 'asc' },
+    });
+    const scores = await this.prisma.dailyScore.findMany({
+      where: { scoreDate: { gte: since, lte: new Date(until.getTime() + 86400_000) } },
+      select: { hospitalId: true, scoreDate: true },
+    });
+    const have: Record<string, Set<string>> = {};
+    for (const s of scores) { (have[s.hospitalId] = have[s.hospitalId] || new Set()).add(dateKey(s.scoreDate)); }
+    const rows = hospitals.map((h) => {
+      const got = have[h.id] || new Set<string>();
+      const days = allDays.filter((d) => d >= h.createdAt.toISOString().slice(0, 10));
+      const missing = days.filter((d) => !got.has(d));
+      return { hospital_id: h.id, name: h.name, plan: h.planType, days_expected: days.length, days_measured: days.length - missing.length, missing_days: missing };
+    });
+    const affected = rows.filter((r) => r.missing_days.length > 0);
+    return {
+      service: 'signal', since: allDays[0], until: allDays[allDays.length - 1],
+      hospitals_total: rows.length, hospitals_affected: affected.length,
+      per_day: allDays.map((d) => ({ date: d, hospitals_scored: rows.filter((r) => !r.missing_days.includes(d) && r.days_expected > 0 && d >= (allDays[0])).length })),
+      hospitals: rows,
+    };
+  }
+
+  /**
    * 신호 0: AEO 현황 (info) — 이상 유무와 무관하게 최신 상태를 알린다.
    * 소비자(허브 카드 등)가 "신호 없음 = 데이터 없음"으로 오해하지 않게 하는 상시 신호.
    * 최근 7일 내 점수가 있을 때만 생성 (오래된 데이터로 현황 행세 금지).

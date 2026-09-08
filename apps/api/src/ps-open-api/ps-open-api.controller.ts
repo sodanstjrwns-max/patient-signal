@@ -109,4 +109,20 @@ export class PsOpenApiController {
   async crawlCoverage(@Query('q') q?: string) {
     return this.psOpenApiService.getCrawlCoverage(q);
   }
+
+  /** GET /api/v1/ops/measurement-summary?days=7 — 일별 측정 건수 (ps-monitor 조용한 장애 감시용) */
+  @Public()
+  @UseGuards(PsServiceKeyGuard)
+  @Get('ops/measurement-summary')
+  async measurementSummary(@Query('days') days?: string) {
+    return this.psOpenApiService.getMeasurementSummary(Number(days) || 7);
+  }
+
+  /** GET /api/v1/ops/crawl-gap?since=YYYY-MM-DD&until=YYYY-MM-DD — 병원별 측정 공백 (사고 피해 범위) */
+  @Public()
+  @UseGuards(PsServiceKeyGuard)
+  @Get('ops/crawl-gap')
+  async crawlGap(@Query('since') since?: string, @Query('until') until?: string) {
+    return this.psOpenApiService.getCrawlGap(since, until);
+  }
 }
