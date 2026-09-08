@@ -1,6 +1,7 @@
 import { AIPlatform } from '@prisma/client';
 import { AIQueryResult, SourceItem } from '../types';
 import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.interface';
+import { pickModels, markUnavailable } from '../model-registry';
 
 /**
  * 【2026.07 마이그레이션】Grok (xAI) 질의 전략 — Responses API + Agent Tools
@@ -34,7 +35,8 @@ export class GrokStrategy implements PlatformStrategy {
 
     // 【2026.08.15 실측】grok-4.3이 서빙 중인 최저가 텍스트 모델 — env 오버라이드 > 4.3
     const envModel = process.env.GROK_MODEL?.trim();
-    const candidates = envModel ? [envModel, 'grok-4.3'] : ['grok-4.3'];
+    const ladder = pickModels('GROK'); // 모델 사다리(grok-4.3 → 4.20 → 4.5), 폐기 시 자동 전환
+    const candidates = envModel ? [envModel, ...ladder.filter((m) => m !== envModel)] : ladder;
 
     let data: any = null;
     let modelName = candidates[0];
@@ -73,6 +75,7 @@ export class GrokStrategy implements PlatformStrategy {
         lastError = new Error(`Grok 에러 (${modelName}): ${errStr}`);
         if (isModelIssue && candidate !== candidates[candidates.length - 1]) {
           this.ctx.logger.warn(`[Grok] ${modelName} 실패(모델 이슈 추정) → 다음 후보 폴백: ${errStr.slice(0, 200)}`);
+          if (ladder.includes(candidate)) await markUnavailable('GROK', candidate, errStr);
           data = null;
           continue;
         }

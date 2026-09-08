@@ -1,4 +1,6 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { EmailService } from '../email/email.service';
+import { setRegistryHooks, startRegistryRefresh } from './model-registry';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
@@ -71,6 +73,7 @@ export class AICrawlerService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    @Optional() private readonly emailService?: EmailService,
   ) {
     this.initializeApis();
     this.initializeStrategies();
@@ -83,6 +86,13 @@ export class AICrawlerService implements OnModuleInit {
    * 아무 경고 없이 중단된 사고 재발 방지.
    */
   onModuleInit(): void {
+    // 【모델 사다리】모델 폐기 시 자동 전환 + 운영 메일. 부팅 시 공급사 모델 목록 조회, 6시간마다 갱신
+    setRegistryHooks({
+      alert: async (subject, text) => this.emailService?.sendOpsAlert(subject, text),
+      log: (msg, level) => (level === 'warn' ? this.logger.warn(msg) : this.logger.log(msg)),
+    });
+    startRegistryRefresh();
+
     const ALL_PLATFORMS: AIPlatform[] = [
       'CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING',
     ];

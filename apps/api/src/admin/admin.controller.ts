@@ -5,6 +5,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { Public } from '../auth/decorators/public.decorator';
+import { registrySnapshot, refreshAvailability } from '../ai-crawler/model-registry';
 
 @ApiTags('관리자')
 @Controller('admin')
@@ -458,6 +459,20 @@ export class AdminController {
    * → grok-4.1-fast가 미서빙명이라 코드가 4.3으로 자동 폴백 중인 것으로 추정.
    * 실제 서빙 모델명을 실측해 최저가 모델명을 확정한다.
    */
+  /**
+   * GET /api/admin/model-registry?refresh=1 → 플랫폼별 모델 사다리·가용성·현재 사용 모델 (x-admin-secret)
+   */
+  @Public()
+  @Get('model-registry')
+  async modelRegistry(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('refresh') refresh?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (refresh === '1') await refreshAvailability();
+    return registrySnapshot();
+  }
+
   @Public()
   @Get('debug-grok')
   async debugGrok(

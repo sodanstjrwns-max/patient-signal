@@ -27,6 +27,7 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   { prefix: 'gpt-5-search-api', pricing: { input: 1.25, output: 10 } },
   { prefix: 'gpt-5-nano', pricing: { input: 0.05, output: 0.4 } },
   { prefix: 'gpt-5-mini', pricing: { input: 0.25, output: 2 } },
+  { prefix: 'gpt-5.4-mini', pricing: { input: 0.4, output: 2 } }, // 사다리 3순위 (단가 추정)
   { prefix: 'gpt-4.1-nano', pricing: { input: 0.1, output: 0.4 } },
   { prefix: 'gpt-4.1-mini', pricing: { input: 0.4, output: 1.6 } },
   // OpenAI (구 검색 모델 — 2026-09 폐기, 이력 단가 유지)
@@ -36,6 +37,7 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   { prefix: 'gpt-4o', pricing: { input: 2.5, output: 10 } },
   // Anthropic
   { prefix: 'claude-haiku-4-5', pricing: { input: 1, output: 5 } },
+  { prefix: 'claude-sonnet-5', pricing: { input: 2, output: 10 } },
   { prefix: 'claude-sonnet-4', pricing: { input: 3, output: 15 } },
   { prefix: 'claude-3-5-haiku', pricing: { input: 0.8, output: 4 } },
   // Perplexity
@@ -48,6 +50,7 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   // 2026-09-09 재점검: flash-lite-latest 별칭은 현재 gemini-3.5-flash-lite($0.30/$2.50). 3.1-flash-lite가 서빙 중 최저가.
   { prefix: 'gemini-3.1-flash-lite', pricing: { input: 0.25, output: 1.5 } },
   { prefix: 'gemini-3.5-flash-lite', pricing: { input: 0.3, output: 2.5 } },
+  { prefix: 'gemini-3.8-flash', pricing: { input: 0.75, output: 3.75 } },
   { prefix: 'gemini-flash-lite-latest', pricing: { input: 0.3, output: 2.5 } },
   // xAI Grok (2026.08 갱신 — 구체적 prefix를 grok-4보다 앞에! prefix 매칭 순서 주의)
   { prefix: 'grok-4.1-fast', pricing: { input: 0.2, output: 0.5 } },
@@ -59,6 +62,7 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   { prefix: 'grok-3-mini', pricing: { input: 0.3, output: 0.5 } },
   { prefix: 'grok-3', pricing: { input: 3, output: 15 } },
   // Naver CLOVA X (KRW→USD 환산 근사: HCX-005 약 ₩0.005/token 수준 가정)
+  { prefix: 'HCX-DASH', pricing: { input: 0.5, output: 0.5 } }, // 경량 모델(단가 미확인, 사다리 최종 후보)
   { prefix: 'HCX-005', pricing: { input: 1.5, output: 1.5 } },
   { prefix: 'HCX', pricing: { input: 1.5, output: 1.5 } },
 ];

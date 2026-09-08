@@ -1,6 +1,8 @@
 import { AIPlatform } from '@prisma/client';
 import { AIQueryResult, SourceItem } from '../types';
 import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.interface';
+import { pickModels, markUnavailable, isModelIssue } from '../model-registry';
+
 
 /**
  * 【개선1+2+8】Gemini 질의 전략 - gemini-flash-lite-latest + Google Search grounding
@@ -13,8 +15,6 @@ import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.inte
  *  → STEP1을 3.1-flash-lite 고정으로 교체 (로컬 실측 grounding 소스 12개 정상).
  * 3단계 폴백: 3.1-flash-lite grounding → flash-lite-latest grounding → 일반 flash-lite-latest
  */
-const PRIMARY_MODEL = 'gemini-3.1-flash-lite';
-
 export class GeminiStrategy implements PlatformStrategy {
   readonly platform: AIPlatform = 'GEMINI';
   readonly displayName = 'Gemini';
@@ -24,69 +24,83 @@ export class GeminiStrategy implements PlatformStrategy {
   async query(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 
-    this.ctx.logger.log(`[Gemini] API 호출 시작 (${PRIMARY_MODEL}, Google Search grounding)`);
 
     let text = '';
     let isWebSearch = false;
     const geminiSources: SourceItem[] = [];
     let geminiUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
-    let geminiModel = PRIMARY_MODEL;
+    let geminiModel = pickModels('GEMINI')[0];
 
-    try {
-      // STEP 1: 3.1-flash-lite + Google Search grounding (서빙 중 최저가 flash-lite)
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${PRIMARY_MODEL}:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { maxOutputTokens: 2000 },
-            tools: [{ google_search: {} }],
-          }),
-        },
-      );
+    let groundingError: any = null;
+    for (const candidate of pickModels('GEMINI')) {
+      geminiModel = candidate;
+      geminiSources.length = 0;
+      try {
+          // STEP 1: 모델 사다리(3.1-flash-lite → 3.5-flash-lite → …) + Google Search grounding
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: { maxOutputTokens: 2000 },
+              tools: [{ google_search: {} }],
+            }),
+          },
+        );
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (data.error) {
-        throw new Error(`[${data.error.code}] ${data.error.message}`);
-      }
-
-      // 2.5-flash는 parts가 여러개일 수 있음 (thinking + response)
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
-      isWebSearch = true;
-      geminiUsage = {
-        inputTokens: data.usageMetadata?.promptTokenCount ?? null,
-        outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
-      };
-
-      // 【소스 트래킹】grounding metadata에서 인용 소스 추출
-      const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
-
-      if (groundingMetadata?.groundingChunks) {
-        for (const chunk of groundingMetadata.groundingChunks) {
-          if (chunk.web?.uri) {
-            geminiSources.push({
-              url: chunk.web.uri,
-              title: chunk.web.title || undefined,
-              type: 'grounding',
-              platform: 'GEMINI',
-              domain: this.ctx.extractDomain(chunk.web.uri),
-            });
-          }
+        if (data.error) {
+          throw new Error(`[${data.error.code}] ${data.error.message}`);
         }
-        this.ctx.logger.log(`[Gemini] grounding 소스 ${geminiSources.length}개 추출`);
-      }
 
-      if (groundingMetadata?.searchEntryPoint?.renderedContent) {
-        this.ctx.logger.log(`[Gemini] Google Search grounding 활성 확인`);
-      }
+        // 2.5-flash는 parts가 여러개일 수 있음 (thinking + response)
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
+        isWebSearch = true;
+        geminiUsage = {
+          inputTokens: data.usageMetadata?.promptTokenCount ?? null,
+          outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
+        };
 
-    } catch (groundingError) {
+        // 【소스 트래킹】grounding metadata에서 인용 소스 추출
+        const groundingMetadata = data.candidates?.[0]?.groundingMetadata;
+
+        if (groundingMetadata?.groundingChunks) {
+          for (const chunk of groundingMetadata.groundingChunks) {
+            if (chunk.web?.uri) {
+              geminiSources.push({
+                url: chunk.web.uri,
+                title: chunk.web.title || undefined,
+                type: 'grounding',
+                platform: 'GEMINI',
+                domain: this.ctx.extractDomain(chunk.web.uri),
+              });
+            }
+          }
+          this.ctx.logger.log(`[Gemini] grounding 소스 ${geminiSources.length}개 추출`);
+        }
+
+        if (groundingMetadata?.searchEntryPoint?.renderedContent) {
+          this.ctx.logger.log(`[Gemini] Google Search grounding 활성 확인`);
+        }
+        groundingError = null;
+        break;
+      } catch (e: any) {
+        groundingError = e;
+        if (isModelIssue(e)) {
+          await markUnavailable('GEMINI', candidate, e?.message || String(e));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (groundingError) {
       // STEP 2: 3.1-flash-lite grounding 실패 → flash-lite-latest(현재 3.5-lite) grounding 폴백 (검색 유지 우선)
-      this.ctx.logger.warn(`[Gemini] 3.1-flash-lite grounding 실패: ${groundingError.message}, flash-lite-latest grounding 시도`);
+      this.ctx.logger.warn(`[Gemini] ${geminiModel} grounding 실패: ${groundingError.message}, flash-lite-latest grounding 시도`);
 
       try {
         const response = await fetch(

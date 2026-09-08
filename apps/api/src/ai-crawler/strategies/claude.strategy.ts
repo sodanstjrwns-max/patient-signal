@@ -1,6 +1,8 @@
 import { AIPlatform } from '@prisma/client';
 import { AIQueryResult, SourceItem } from '../types';
 import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.interface';
+import { pickModels, markUnavailable, isModelIssue } from '../model-registry';
+
 
 /**
  * Claude 질의 전략 - 최저가 모델 + 웹 검색 도구 (web_search_20250305)
@@ -66,69 +68,78 @@ export class ClaudeStrategy implements PlatformStrategy {
     const anthropic = this.ctx.getAnthropic();
     if (!anthropic) throw new Error('Anthropic API가 초기화되지 않았습니다');
 
-    this.ctx.logger.log(`[Claude] API 호출 시작 (claude-haiku-4-5 + 웹검색 max_uses:1)`);
-
+    const candidates = pickModels('CLAUDE');
     let responseText = '';
-    let model = 'claude-haiku-4-5';
+    let model = candidates[0];
     let isWebSearch = false;
     let claudeUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
     let citedSources: SourceItem[] = [];
     let searchedSources: SourceItem[] = [];
+    let webSearchError: any = null;
 
-    try {
-      // 1순위: Claude Haiku 4.5 + 웹 검색 (max_uses:1 — 검색결과 input 토큰 폭증 차단)
-      const message = await anthropic.messages.create({
-        model: 'claude-haiku-4-5',
-        max_tokens: 2000,
-        tools: [
-          {
-            type: 'web_search_20250305' as any,
-            name: 'web_search',
-            max_uses: 1,
-          } as any,
-        ],
-        messages: [{ role: 'user', content: promptText }],
-      });
-
-      // 응답에서 텍스트 블록 추출 (웹 검색 결과 포함)
-      for (const block of message.content) {
-        if (block.type === 'text') {
-          responseText += block.text;
-        }
-      }
-
-      // 웹 검색이 사용되었는지 확인
-      isWebSearch = message.content.some((block: any) =>
-        block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
-      );
-      claudeUsage = {
-        inputTokens: message.usage?.input_tokens ?? null,
-        outputTokens: message.usage?.output_tokens ?? null,
-      };
-      ({ cited: citedSources, searched: searchedSources } = this.extractClaudeCitations(message.content as any[]));
-
-      this.ctx.logger.log(
-        `[Claude] Haiku 4.5 웹 검색 응답 받음 (검색 사용: ${isWebSearch}, 인용 ${citedSources.length}개 + 검색결과 ${searchedSources.length}개)`,
-      );
-    } catch (webSearchError) {
-      this.ctx.logger.warn(`[Claude] Haiku 4.5 웹검색 실패, 일반 모드 폴백: ${webSearchError.message}`);
-
-      // 최종 폴백: Claude Haiku 4.5 웹검색 없이
+    // 1순위: 모델 사다리(haiku-4-5 → …) + 웹 검색 (max_uses:1 — 검색결과 input 토큰 폭증 차단)
+    //  모델 폐기/미존재 오류면 자동으로 다음 후보, 그 외 오류면 같은 모델의 검색 없는 모드로 폴백
+    for (const candidate of candidates) {
+      model = candidate;
+      this.ctx.logger.log(`[Claude] API 호출 시작 (${candidate} + 웹검색 max_uses:1)`);
       try {
         const message = await anthropic.messages.create({
-          model: 'claude-haiku-4-5',
+          model: candidate,
           max_tokens: 2000,
-          temperature: 0,
+          tools: [
+            {
+              type: 'web_search_20250305' as any,
+              name: 'web_search',
+              max_uses: 1,
+            } as any,
+          ],
           messages: [{ role: 'user', content: promptText }],
         });
 
-        responseText = message.content[0].type === 'text' ? message.content[0].text : '';
-        model = 'claude-haiku-4-5-no-search';
+        responseText = '';
+        for (const block of message.content) {
+          if (block.type === 'text') responseText += block.text;
+        }
+        isWebSearch = message.content.some((block: any) =>
+          block.type === 'tool_use' || block.type === 'web_search_tool_result' || block.type === 'server_tool_use'
+        );
         claudeUsage = {
           inputTokens: message.usage?.input_tokens ?? null,
           outputTokens: message.usage?.output_tokens ?? null,
         };
-      } catch (fallbackError) {
+        ({ cited: citedSources, searched: searchedSources } = this.extractClaudeCitations(message.content as any[]));
+        this.ctx.logger.log(
+          `[Claude] ${candidate} 웹 검색 응답 받음 (검색 사용: ${isWebSearch}, 인용 ${citedSources.length}개 + 검색결과 ${searchedSources.length}개)`,
+        );
+        webSearchError = null;
+        break;
+      } catch (e: any) {
+        webSearchError = e;
+        if (isModelIssue(e)) {
+          await markUnavailable('CLAUDE', candidate, e?.message || String(e));
+          continue;
+        }
+        break;
+      }
+    }
+
+    if (webSearchError) {
+      this.ctx.logger.warn(`[Claude] ${model} 웹검색 실패, 일반 모드 폴백: ${webSearchError.message}`);
+      try {
+        const message = await anthropic.messages.create({
+          model,
+          max_tokens: 2000,
+          temperature: 0,
+          messages: [{ role: 'user', content: promptText }],
+        });
+        responseText = message.content[0].type === 'text' ? message.content[0].text : '';
+        claudeUsage = {
+          inputTokens: message.usage?.input_tokens ?? null,
+          outputTokens: message.usage?.output_tokens ?? null,
+        };
+        model = `${model}-no-search`;
+        isWebSearch = false;
+      } catch (fallbackError: any) {
         this.ctx.logger.error(`[Claude] 모든 모드 실패: ${fallbackError.message}`);
         throw fallbackError;
       }
