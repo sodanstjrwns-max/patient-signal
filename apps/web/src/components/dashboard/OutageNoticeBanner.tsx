@@ -11,10 +11,10 @@ import { AlertTriangle, X } from 'lucide-react';
 
 const OUTAGES: { from: string; to: string; reason: string; hideAfter: string }[] = [
   {
-    from: '2026-09-02',
-    to: '2026-09-08',
+    from: '2026-09-03',
+    to: '2026-09-07',
     reason: '서버 이전 과정의 설정 누락으로 ChatGPT·Claude·Perplexity·Gemini 측정이 빠진 채 CLOVA X 결과만으로 점수가 계산됐습니다. 9월 8일 밤 복구해 당일 전 플랫폼을 다시 측정했고, 9월 9일 오전 9시 정기 측정부터 정상입니다.',
-    hideAfter: '2026-10-08',
+    hideAfter: '2026-10-07',
   },
 ];
 
