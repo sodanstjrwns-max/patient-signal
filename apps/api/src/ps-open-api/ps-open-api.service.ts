@@ -27,6 +27,8 @@ export interface PsSignal {
 const KST_OFFSET = '+09:00';
 
 /** Date(UTC 자정 저장) → 'YYYY-MM-DD' */
+const CORE_PLATFORMS = ['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI'] as const;
+
 function dateKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -145,25 +147,28 @@ export class PsOpenApiService {
     const [activeHospitals, scores, responses] = await Promise.all([
       this.prisma.hospital.count(),
       this.prisma.dailyScore.findMany({ where: { scoreDate: { gte: since } }, select: { scoreDate: true, hospitalId: true } }),
-      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since } }, select: { responseDate: true } }),
+      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since } }, select: { responseDate: true, aiPlatform: true } }),
     ]);
-    const byDay: Record<string, { hospitals: Set<string>; scores: number; responses: number }> = {};
-    for (const s of scores) {
-      const k = dateKey(s.scoreDate); byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0 };
-      byDay[k].scores++; byDay[k].hospitals.add(s.hospitalId);
-    }
-    for (const r of responses) {
-      const k = dateKey(r.responseDate); byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0 };
-      byDay[k].responses++;
-    }
-    const daysOut = Object.keys(byDay).sort().map((k) => ({ date: k, hospitals_scored: byDay[k].hospitals.size, daily_scores: byDay[k].scores, ai_responses: byDay[k].responses }));
-    return { service: 'signal', active_hospitals: activeHospitals, days: daysOut, generated_at: new Date().toISOString() };
+    type Day = { hospitals: Set<string>; scores: number; responses: number; platforms: Record<string, number> };
+    const byDay: Record<string, Day> = {};
+    const mk = (k: string) => (byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0, platforms: {} });
+    for (const s of scores) { const d = mk(dateKey(s.scoreDate)); d.scores++; d.hospitals.add(s.hospitalId); }
+    for (const r of responses) { const d = mk(dateKey(r.responseDate)); d.responses++; d.platforms[r.aiPlatform] = (d.platforms[r.aiPlatform] || 0) + 1; }
+    const daysOut = Object.keys(byDay).sort().map((k) => ({
+      date: k,
+      hospitals_scored: byDay[k].hospitals.size,
+      daily_scores: byDay[k].scores,
+      ai_responses: byDay[k].responses,
+      platforms: byDay[k].platforms,
+      // 핵심 4플랫폼(ChatGPT·Claude·Perplexity·Gemini) 중 응답이 1건이라도 있는 수 — 2026-09 사고는 이 값이 0이었는데 점수는 매일 기록됨
+      core_platforms_active: CORE_PLATFORMS.filter((pf) => (byDay[k].platforms[pf] || 0) > 0).length,
+    }));
+    return { service: 'signal', active_hospitals: activeHospitals, core_platforms: CORE_PLATFORMS, days: daysOut, generated_at: new Date().toISOString() };
   }
 
   /**
-   * GET /api/v1/ops/crawl-gap?since=YYYY-MM-DD&until=YYYY-MM-DD
-   * 운영용: 기간 내 병원별로 점수가 기록된 날/빠진 날 목록 (비식별 — 병원명·플랜·날짜만).
-   * 용도: 측정 중단 사고의 피해 범위 산출·고객 안내 근거.
+   * 병원별 측정 공백 — missing_days(점수 자체가 없음) + degraded_days(점수는 있으나 핵심 4플랫폼 응답이 빠짐).
+   * 2026-09-02~08 사고는 CLOVA X(·월/목 Grok)만으로 점수가 계산돼 "누락"이 아니라 "왜곡"으로 남았다 → degraded 로 잡는다.
    */
   async getCrawlGap(sinceStr?: string, untilStr?: string) {
     const since = sinceStr ? new Date(sinceStr + 'T00:00:00Z') : new Date(Date.now() - 7 * 86400_000);
@@ -173,30 +178,57 @@ export class PsOpenApiService {
     }
     const allDays: string[] = [];
     for (let d = new Date(since); d <= until; d = new Date(d.getTime() + 86400_000)) allDays.push(d.toISOString().slice(0, 10));
-    const hospitals = await this.prisma.hospital.findMany({
-      select: { id: true, name: true, planType: true, createdAt: true },
-      orderBy: { name: 'asc' },
-    });
-    const scores = await this.prisma.dailyScore.findMany({
-      where: { scoreDate: { gte: since, lte: new Date(until.getTime() + 86400_000) } },
-      select: { hospitalId: true, scoreDate: true },
-    });
+    const untilEnd = new Date(until.getTime() + 86400_000);
+    const [hospitals, scores, responses] = await Promise.all([
+      this.prisma.hospital.findMany({ select: { id: true, name: true, planType: true, createdAt: true }, orderBy: { name: 'asc' } }),
+      this.prisma.dailyScore.findMany({ where: { scoreDate: { gte: since, lte: untilEnd } }, select: { hospitalId: true, scoreDate: true } }),
+      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since, lt: untilEnd } }, select: { hospitalId: true, responseDate: true, aiPlatform: true } }),
+    ]);
     const have: Record<string, Set<string>> = {};
     for (const s of scores) { (have[s.hospitalId] = have[s.hospitalId] || new Set()).add(dateKey(s.scoreDate)); }
+    const plat: Record<string, Record<string, Set<string>>> = {};
+    for (const r of responses) {
+      const k = dateKey(r.responseDate);
+      const h = (plat[r.hospitalId] = plat[r.hospitalId] || {});
+      (h[k] = h[k] || new Set()).add(r.aiPlatform);
+    }
     const rows = hospitals.map((h) => {
       const got = have[h.id] || new Set<string>();
       const days = allDays.filter((d) => d >= h.createdAt.toISOString().slice(0, 10));
       const missing = days.filter((d) => !got.has(d));
-      return { hospital_id: h.id, name: h.name, plan: h.planType, days_expected: days.length, days_measured: days.length - missing.length, missing_days: missing };
+      const degraded = days
+        .filter((d) => got.has(d))
+        .map((d) => {
+          const present = CORE_PLATFORMS.filter((pf) => plat[h.id]?.[d]?.has(pf));
+          return { date: d, core_present: present, core_missing: CORE_PLATFORMS.filter((pf) => !present.includes(pf)) };
+        })
+        .filter((x) => x.core_missing.length > 0);
+      return {
+        hospital_id: h.id, name: h.name, plan: h.planType,
+        days_expected: days.length, days_measured: days.length - missing.length,
+        missing_days: missing,
+        degraded_days: degraded,
+        // 실제 피해 일수 = 점수 없음 + 왜곡 (보상 산정용)
+        impacted_days: missing.length + degraded.length,
+      };
     });
-    const affected = rows.filter((r) => r.missing_days.length > 0);
+    const affected = rows.filter((r) => r.impacted_days > 0);
     return {
-      service: 'signal', since: allDays[0], until: allDays[allDays.length - 1],
-      hospitals_total: rows.length, hospitals_affected: affected.length,
-      per_day: allDays.map((d) => ({ date: d, hospitals_scored: rows.filter((r) => !r.missing_days.includes(d) && r.days_expected > 0 && d >= (allDays[0])).length })),
+      service: 'signal', since: allDays[0], until: allDays[allDays.length - 1], core_platforms: CORE_PLATFORMS,
+      hospitals_total: rows.length,
+      hospitals_affected: affected.length,
+      hospitals_missing: rows.filter((r) => r.missing_days.length > 0).length,
+      hospitals_degraded: rows.filter((r) => r.degraded_days.length > 0).length,
+      per_day: allDays.map((d) => ({
+        date: d,
+        hospitals_scored: rows.filter((r) => r.days_expected > 0 && !r.missing_days.includes(d) && d >= (r.days_expected ? allDays[0] : d)).length,
+        hospitals_degraded: rows.filter((r) => r.degraded_days.some((x) => x.date === d)).length,
+      })),
       hospitals: rows,
+      generated_at: new Date().toISOString(),
     };
   }
+
 
   /**
    * 신호 0: AEO 현황 (info) — 이상 유무와 무관하게 최신 상태를 알린다.
