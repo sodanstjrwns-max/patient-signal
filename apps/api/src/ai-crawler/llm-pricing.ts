@@ -23,7 +23,13 @@ interface ModelPricing {
 
 /** 모델명 prefix 매칭 단가표 (구체적인 prefix를 먼저 배치) */
 const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
-  // OpenAI
+  // OpenAI — 2026-09-08 검색 경로 교체분 (OpenAI 공표가 2025-08 기준, USD/1M tokens; web_search 도구 호출비는 별도)
+  { prefix: 'gpt-5-search-api', pricing: { input: 1.25, output: 10 } },
+  { prefix: 'gpt-5-nano', pricing: { input: 0.05, output: 0.4 } },
+  { prefix: 'gpt-5-mini', pricing: { input: 0.25, output: 2 } },
+  { prefix: 'gpt-4.1-nano', pricing: { input: 0.1, output: 0.4 } },
+  { prefix: 'gpt-4.1-mini', pricing: { input: 0.4, output: 1.6 } },
+  // OpenAI (구 검색 모델 — 2026-09 폐기, 이력 단가 유지)
   { prefix: 'gpt-4o-mini-search-preview', pricing: { input: 0.15, output: 0.6 } },
   { prefix: 'gpt-4o-search-preview', pricing: { input: 2.5, output: 10 } },
   { prefix: 'gpt-4o-mini', pricing: { input: 0.15, output: 0.6 } },

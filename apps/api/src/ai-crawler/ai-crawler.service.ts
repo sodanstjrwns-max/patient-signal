@@ -2371,7 +2371,7 @@ JSON 형식으로만 답변:
   private getPlatformReliability(platform: AIPlatform, isWebSearch?: boolean): number {
     const baseReliability: Record<string, number> = {
       PERPLEXITY: 0.85,   // 항상 웹검색 + 출처 인용
-      CHATGPT: 0.70,      // gpt-4o-search-preview 사용 시 높음
+      CHATGPT: 0.70,      // gpt-5-nano + web_search 사용 시 높음 (2026-09 교체)
       GEMINI: 0.65,       // Google 검색 통합 가능
       GROK: 0.70,         // X 실시간 + 웹검색, Perplexity와 ChatGPT 중간
       CLAUDE: 0.55,       // 웹검색 없음, 학습 데이터 기반
