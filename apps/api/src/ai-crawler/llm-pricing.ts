@@ -45,7 +45,10 @@ const PRICING_TABLE: Array<{ prefix: string; pricing: ModelPricing }> = [
   { prefix: 'gemini-2.5-flash-lite', pricing: { input: 0.1, output: 0.4 } },
   { prefix: 'gemini-2.5-flash', pricing: { input: 0.3, output: 2.5 } },
   // 별칭 모델 (2026.08.15 — 2.5-flash-lite 신규폐기로 교체, 현행 flash-lite 단가로 근사)
-  { prefix: 'gemini-flash-lite-latest', pricing: { input: 0.1, output: 0.4 } },
+  // 2026-09-09 재점검: flash-lite-latest 별칭은 현재 gemini-3.5-flash-lite($0.30/$2.50). 3.1-flash-lite가 서빙 중 최저가.
+  { prefix: 'gemini-3.1-flash-lite', pricing: { input: 0.25, output: 1.5 } },
+  { prefix: 'gemini-3.5-flash-lite', pricing: { input: 0.3, output: 2.5 } },
+  { prefix: 'gemini-flash-lite-latest', pricing: { input: 0.3, output: 2.5 } },
   // xAI Grok (2026.08 갱신 — 구체적 prefix를 grok-4보다 앞에! prefix 매칭 순서 주의)
   { prefix: 'grok-4.1-fast', pricing: { input: 0.2, output: 0.5 } },
   { prefix: 'grok-4.3', pricing: { input: 1.25, output: 2.5 } },

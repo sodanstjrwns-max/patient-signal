@@ -8,8 +8,13 @@ import { PlatformStrategy, PlatformQueryContext } from './platform-strategy.inte
  *  "no longer available to new users") → STEP1 전멸하고 비싼 2.5-flash 폴백만 돌았음.
  *  gemini-flash-lite-latest(별칭, 현재 최신 flash-lite로 자동 매핑)로 교체 —
  *  프로덕션 단건 테스트에서 grounding 6개 정상 반환 확인.
- * 3단계 폴백: flash-lite-latest grounding → 2.5-flash grounding → 일반 flash-lite-latest
+ * 【2026.09.09 최저가 재점검】flash-lite-latest 별칭이 gemini-3.5-flash-lite($0.30/$2.50)로 올라감.
+ *  서빙 중인 flash-lite 중 최저가는 gemini-3.1-flash-lite($0.25/$1.50, grounding 동일 $14/1k·월 5,000건 무료)
+ *  → STEP1을 3.1-flash-lite 고정으로 교체 (로컬 실측 grounding 소스 12개 정상).
+ * 3단계 폴백: 3.1-flash-lite grounding → flash-lite-latest grounding → 일반 flash-lite-latest
  */
+const PRIMARY_MODEL = 'gemini-3.1-flash-lite';
+
 export class GeminiStrategy implements PlatformStrategy {
   readonly platform: AIPlatform = 'GEMINI';
   readonly displayName = 'Gemini';
@@ -19,18 +24,18 @@ export class GeminiStrategy implements PlatformStrategy {
   async query(promptText: string, hospitalName: string): Promise<AIQueryResult> {
     const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
 
-    this.ctx.logger.log(`[Gemini] API 호출 시작 (gemini-flash-lite-latest, Google Search grounding)`);
+    this.ctx.logger.log(`[Gemini] API 호출 시작 (${PRIMARY_MODEL}, Google Search grounding)`);
 
     let text = '';
     let isWebSearch = false;
     const geminiSources: SourceItem[] = [];
     let geminiUsage: { inputTokens?: number | null; outputTokens?: number | null } | null = null;
-    let geminiModel = 'gemini-flash-lite-latest';
+    let geminiModel = PRIMARY_MODEL;
 
     try {
-      // STEP 1: flash-lite-latest + Google Search grounding (최저가)
+      // STEP 1: 3.1-flash-lite + Google Search grounding (서빙 중 최저가 flash-lite)
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${geminiApiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${PRIMARY_MODEL}:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -80,12 +85,12 @@ export class GeminiStrategy implements PlatformStrategy {
       }
 
     } catch (groundingError) {
-      // STEP 2: flash-lite grounding 실패 → 2.5-flash grounding 폴백 (검색 유지 우선)
-      this.ctx.logger.warn(`[Gemini] flash-lite grounding 실패: ${groundingError.message}, 2.5-flash grounding 시도`);
+      // STEP 2: 3.1-flash-lite grounding 실패 → flash-lite-latest(현재 3.5-lite) grounding 폴백 (검색 유지 우선)
+      this.ctx.logger.warn(`[Gemini] 3.1-flash-lite grounding 실패: ${groundingError.message}, flash-lite-latest grounding 시도`);
 
       try {
         const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${geminiApiKey}`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -102,7 +107,7 @@ export class GeminiStrategy implements PlatformStrategy {
         const parts = data.candidates?.[0]?.content?.parts || [];
         text = parts.filter((p: any) => p.text).map((p: any) => p.text).join('') || '';
         isWebSearch = true;
-        geminiModel = 'gemini-2.5-flash';
+        geminiModel = 'gemini-flash-lite-latest';
         geminiUsage = {
           inputTokens: data.usageMetadata?.promptTokenCount ?? null,
           outputTokens: data.usageMetadata?.candidatesTokenCount ?? null,
@@ -124,7 +129,7 @@ export class GeminiStrategy implements PlatformStrategy {
         }
       } catch (fallbackError) {
         // STEP 3: grounding 전체 실패 → flash-lite-latest 일반 모드 최종 폴백 (검색 없음)
-        this.ctx.logger.warn(`[Gemini] 2.5-flash grounding 실패: ${fallbackError.message}, flash-lite-latest 일반 모드 시도`);
+        this.ctx.logger.warn(`[Gemini] flash-lite-latest grounding 실패: ${fallbackError.message}, flash-lite-latest 일반 모드 시도`);
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=${geminiApiKey}`,
