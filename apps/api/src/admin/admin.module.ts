@@ -5,9 +5,10 @@ import { WeightsController } from './weights.controller';
 import { PrismaModule } from '../common/prisma/prisma.module';
 import { ScoresModule } from '../scores/scores.module';
 import { SchedulerModule } from '../scheduler/scheduler.module';
+import { PsOpenApiModule } from '../ps-open-api/ps-open-api.module';
 
 @Module({
-  imports: [PrismaModule, ScoresModule, SchedulerModule],
+  imports: [PrismaModule, ScoresModule, SchedulerModule, PsOpenApiModule],
   controllers: [AdminController, WeightsController],
   providers: [AdminService],
 })

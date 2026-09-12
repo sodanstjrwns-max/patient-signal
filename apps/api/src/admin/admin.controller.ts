@@ -534,6 +534,30 @@ export class AdminController {
     }
   }
 
+  /**
+   * 【측정 중단 보상】피해 일수 × multiplier 만큼 유료 구독 기간 연장
+   * POST /api/admin/compensate-outage?since=2026-09-01&until=2026-09-08&multiplier=2&apply=1 (x-admin-secret)
+   * apply=1 이 없으면 dry-run(계산만). 한 번 적용된 병원은 notifications 마커로 재적용 방지.
+   */
+  @Public()
+  @Post('compensate-outage')
+  async compensateOutage(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('since') since?: string,
+    @Query('until') until?: string,
+    @Query('multiplier') multiplier?: string,
+    @Query('apply') apply?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    const m = Math.max(1, Math.min(10, parseInt(multiplier || '1', 10) || 1));
+    return this.adminService.compensateOutage({
+      since: since || '2026-09-01',
+      until: until || '2026-09-08',
+      multiplier: m,
+      dryRun: apply !== '1',
+    });
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 어드민 시크릿은 x-admin-secret 헤더 전용 (쿼리파라미터 ?secret= 는 액세스 로그 유출 위험으로 제거됨)

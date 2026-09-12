@@ -12,5 +12,6 @@ import { HospitalsModule } from '../hospitals/hospitals.module';
   imports: [HospitalsModule], // HubProfileService (hub-events 캐시 무효화)
   controllers: [PsOpenApiController],
   providers: [PsOpenApiService],
+  exports: [PsOpenApiService], // 어드민 보상 산정(crawl-gap 재사용)
 })
 export class PsOpenApiModule {}

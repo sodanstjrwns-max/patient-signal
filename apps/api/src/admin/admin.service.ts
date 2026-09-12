@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { PsOpenApiService } from '../ps-open-api/ps-open-api.service';
 
 @Injectable()
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private psOpenApi: PsOpenApiService,
+  ) {}
 
   // ==================== 실시간 질문 인사이트 분석 ====================
 
@@ -1894,4 +1898,66 @@ export class AdminService {
     };
   }
 
+
+  // ==================== 측정 중단 사고 보상 (이용 기간 연장) ====================
+
+  /**
+   * 【2026-09 측정 중단 보상】피해 일수(점수 없음 + 왜곡) × multiplier 만큼 유료 구독의 currentPeriodEnd(및 nextBillingDate)를 뒤로 민다.
+   * - 대상: 구독이 있고 status TRIAL|ACTIVE, 병원 planType FREE 제외, 무기한(5년 초과) 구독 제외
+   * - 멱동: notifications 에 '[측정 중단 보상]' 제목이 이미 있으면 건너뜀(같은 since~until 태그)
+   * - dryRun=true 면 계산만 반환, DB 변경 없음
+   */
+  async compensateOutage(opts: { since: string; until: string; multiplier: number; dryRun: boolean }) {
+    const { since, until, multiplier, dryRun } = opts;
+    const tag = `[측정 중단 보상 ${since}~${until}]`;
+    const gap = await this.psOpenApi.getCrawlGap(since, until);
+    const impacted = gap.hospitals.filter((h: any) => h.impacted_days > 0);
+    const ids = impacted.map((h: any) => h.hospital_id);
+    const [subs, marks] = await Promise.all([
+      this.prisma.subscription.findMany({ where: { hospitalId: { in: ids } } }),
+      this.prisma.notification.findMany({ where: { hospitalId: { in: ids }, title: { startsWith: tag } }, select: { hospitalId: true } }),
+    ]);
+    const subBy = new Map(subs.map((s) => [s.hospitalId, s]));
+    const done = new Set(marks.map((m) => m.hospitalId));
+    const now = Date.now();
+    const UNLIMITED = 365 * 5 * 86400_000;
+    const rows: any[] = [];
+    let applied = 0, skipped = 0;
+    for (const h of impacted) {
+      const sub = subBy.get(h.hospital_id);
+      const days = h.impacted_days * multiplier;
+      const base = { hospital_id: h.hospital_id, name: h.name, plan: h.plan, impacted_days: h.impacted_days, extend_days: days };
+      let skip: string | null = null;
+      if (!sub) skip = 'no_subscription';
+      else if (h.plan === 'FREE') skip = 'free_plan';
+      else if (!['TRIAL', 'ACTIVE'].includes(sub.status)) skip = `status_${sub.status}`;
+      else if (sub.currentPeriodEnd.getTime() - now > UNLIMITED) skip = 'unlimited_period';
+      else if (done.has(h.hospital_id)) skip = 'already_compensated';
+      if (skip) { skipped++; rows.push({ ...base, skipped: skip }); continue; }
+      const before = sub!.currentPeriodEnd;
+      const after = new Date(before.getTime() + days * 86400_000);
+      const nextBilling = sub!.nextBillingDate ? new Date(sub!.nextBillingDate.getTime() + days * 86400_000) : null;
+      if (!dryRun) {
+        await this.prisma.$transaction([
+          this.prisma.subscription.update({
+            where: { id: sub!.id },
+            data: { currentPeriodEnd: after, ...(nextBilling ? { nextBillingDate: nextBilling } : {}) },
+          }),
+          this.prisma.notification.create({
+            data: {
+              hospitalId: h.hospital_id,
+              notificationType: 'WEEKLY_REPORT',
+              channel: 'EMAIL',
+              title: `${tag} 이용 기간 ${days}일 연장`,
+              message: `측정 공백/왜곡 ${h.impacted_days}일 × ${multiplier} = ${days}일 연장. 종료일 ${before.toISOString().slice(0, 10)} → ${after.toISOString().slice(0, 10)}`,
+            },
+          }),
+        ]);
+      }
+      applied++;
+      rows.push({ ...base, status: sub!.status, period_end_before: before.toISOString().slice(0, 10), period_end_after: after.toISOString().slice(0, 10), next_billing_after: nextBilling ? nextBilling.toISOString().slice(0, 10) : null });
+    }
+    this.logger.warn(`[측정 중단 보상] ${dryRun ? 'DRY-RUN' : 'APPLIED'} since=${since} until=${until} x${multiplier} — 적용 ${applied}, 건너뜀 ${skipped}`);
+    return { dry_run: dryRun, since, until, multiplier, hospitals_impacted: impacted.length, applied, skipped, rows };
+  }
 }
