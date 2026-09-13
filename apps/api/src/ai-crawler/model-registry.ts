@@ -10,6 +10,8 @@
  * 새 최저가 모델이 출시되면 사다리 맨 앞에 추가하면 된다(단가는 llm-pricing.ts 에도 함께).
  */
 
+import { GEMINI_FREE_TIER_MODEL, geminiGroundingBudgetSnapshot } from './gemini-grounding-budget';
+
 export type RegistryPlatform = 'CHATGPT' | 'CLAUDE' | 'GEMINI' | 'GROK' | 'PERPLEXITY' | 'CLOVA_X';
 
 export interface ModelCandidate {
@@ -32,11 +34,12 @@ export const MODEL_LADDERS: Record<RegistryPlatform, ModelCandidate[]> = {
     { model: 'claude-sonnet-5', input: 2, output: 10 },
     { model: 'claude-sonnet-4-6', input: 3, output: 15 },
   ],
+  // 【2026.09.13 비용】유료 사다리(그라운딩 $14/1k). gemini-2.5-flash 는 여기서 제외 — 하루 1,500건 무료 한도 안에서만
+  //  gemini-grounding-budget.ts 가 우선 사용하고, 초과분은 $35/1k 라 유료 폴백으로는 쓰지 않는다.
   GEMINI: [
-    { model: 'gemini-3.1-flash-lite', input: 0.25, output: 1.5, note: 'google_search grounding' },
+    { model: 'gemini-3.1-flash-lite', input: 0.25, output: 1.5, note: 'google_search grounding $14/1k' },
     { model: 'gemini-3.5-flash-lite', input: 0.3, output: 2.5 },
     { model: 'gemini-flash-lite-latest', input: 0.3, output: 2.5, note: '별칭(현재 3.5-lite)' },
-    { model: 'gemini-2.5-flash', input: 0.3, output: 2.5 },
     { model: 'gemini-3.8-flash', input: 0.75, output: 3.75 },
   ],
   GROK: [
@@ -107,6 +110,13 @@ export function pickModels(platform: RegistryPlatform): string[] {
     out.push(c.model);
   }
   return out.length > 0 ? out : MODEL_LADDERS[platform].map((c) => c.model);
+}
+
+/** 사다리 밖 모델(예: 무료 한도용 gemini-2.5-flash)이 지금 호출 가능한지 — 비가용 마크 + 공급사 목록 기준 */
+export function isModelAvailable(platform: RegistryPlatform, model: string): boolean {
+  const u = unavailable.get(`${platform}:${model}`);
+  if (u && u.until > Date.now()) return false;
+  return isListed(platform, model);
 }
 
 /** 첫 번째 사용 가능 후보 */
@@ -198,6 +208,10 @@ export function registrySnapshot() {
   const now = Date.now();
   return {
     lastRefreshAt,
+    geminiGroundingBudget: {
+      ...geminiGroundingBudgetSnapshot(),
+      available: isModelAvailable('GEMINI', GEMINI_FREE_TIER_MODEL),
+    },
     platforms: (Object.keys(MODEL_LADDERS) as RegistryPlatform[]).map((p) => ({
       platform: p,
       inUse: primaryModel(p),

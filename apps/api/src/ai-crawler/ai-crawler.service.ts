@@ -51,7 +51,9 @@ export class AICrawlerService implements OnModuleInit {
   // 로컬에서 각각 다시 수행한다.
   //  - 적용 범위: 배치 크롤(queryAllPlatforms)만. 라이브 쿼리는 신선도
   //    우선이라 공유하지 않음 (allowShared 플래그로 제어).
-  //  - TTL 90분: 같은 크롤 세션 내 재사용, 세션 간(아침/저녁)은 새로 측정.
+  //  - TTL 기본 1,200분(20h) 【2026.09.13 비용】: 아침에 산 응답을 오후·저녁 세션이 재사용하되,
+  //    다음날 아침 크롤(24h 뒤)은 반드시 새로 산다(24h 로 두면 다음날 초반 병원이 전날 응답을 받을 수 있음).
+  //    (종전 90분 = 세션마다 새로 구매 → Gemini 검색 그라운딩 과금 3배). SHARED_CRAWL_TTL_MIN 으로 조정.
   //  - 공유 히트 응답은 estimatedCostUsd=0 (실제 API 비용이 발생 안 했으므로).
   //  - in-flight dedup: 동시 크롤 중인 병원들이 같은 질문을 동시에 쏘면
   //    Promise 자체를 공유해 중복 호출 차단.
@@ -60,8 +62,8 @@ export class AICrawlerService implements OnModuleInit {
   private sharedCrawlCache = new Map<string, { promise: Promise<AIQueryResult | null>; expiresAt: number }>();
   private sharedCrawlStats = { hits: 0, misses: 0 };
   private get sharedCrawlTtlMs(): number {
-    const min = parseInt(process.env.SHARED_CRAWL_TTL_MIN || '90', 10);
-    return (Number.isFinite(min) && min > 0 ? min : 90) * 60 * 1000;
+    const min = parseInt(process.env.SHARED_CRAWL_TTL_MIN || '1200', 10);
+    return (Number.isFinite(min) && min > 0 ? min : 1200) * 60 * 1000;
   }
   private get sharedCrawlEnabled(): boolean {
     return process.env.SHARED_CRAWL_DISABLED?.trim().toLowerCase() !== 'true';
@@ -786,7 +788,9 @@ export class AICrawlerService implements OnModuleInit {
     }
     // 【2026.07】Grok(grok-4)은 reasoning + web_search tool 실행으로 응답이 느림 → 90초 타임아웃
     const timeoutMs = platform === 'GROK' ? 90000 : 30000;
-    return this.withRetry(() => strategy.query(promptText, hospitalName), strategy.displayName, 2, 3000, timeoutMs);
+    // 【2026.09.13 비용】Gemini 는 재시도 1회만 — 검색 그라운딩은 실패(타임아웃)한 호출도 검색 쿼리가 과금됨
+    const maxRetries = platform === 'GEMINI' ? 1 : 2;
+    return this.withRetry(() => strategy.query(promptText, hospitalName), strategy.displayName, maxRetries, 3000, timeoutMs);
   }
 
 
@@ -1088,7 +1092,9 @@ JSON만 답변:
     for (const prompt of prompts) {
       for (const platform of availablePlatforms) {
         try {
-          const result = await this.queryPlatform(platform, prompt.promptText, competitorName);
+          // 【2026.09.13 비용】경쟁사 측정도 공유 크롤 사용 — 같은 병원의 경쟁사 N곳은 같은 질문을 던지므로
+          //  원본 응답 1회 구매 후 경쟁사 이름으로 재채점만 (종전: 경쟁사마다 재구매 = N배 과금)
+          const result = await this.queryPlatformWithSharing(platform, prompt.promptText, competitorName);
           
           if (!platformResults[platform]) {
             platformResults[platform] = { mentioned: 0, total: 0 };

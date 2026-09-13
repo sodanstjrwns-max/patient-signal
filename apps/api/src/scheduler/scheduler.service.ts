@@ -120,11 +120,15 @@ export class SchedulerService implements OnModuleInit {
     results: any[];
   }> {
     const session = options?.session || this.getCurrentSession();
-    const includeCompetitors = options?.includeCompetitors ?? (session === 'evening');
+    // 【2026.09.13 비용】경쟁사 AEO 측정은 주 2회(기본 월·목 KST)만 — 병원당 프롬프트 10 × 플랫폼 5 × 경쟁사 최대 5 = 최대 250회 호출로
+    //  Gemini 검색 그라운딩(쿼리당 $14/1k) 비용의 주범이었음. COMPETITOR_CRAWL_DAYS 로 조정('*' = 매일)
+    const competitorRequested = options?.includeCompetitors ?? (session === 'evening');
+    const competitorDayOk = this.isCompetitorCrawlDay();
+    const includeCompetitors = competitorRequested && competitorDayOk;
     const includeContentGap = options?.includeContentGap ?? (session === 'evening');
 
     this.logger.log(`=== 자동 크롤링 시작 (세션: ${session}) ===`);
-    this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}, ContentGap=${includeContentGap}`);
+    this.logger.log(`옵션: 경쟁사분석=${includeCompetitors}${competitorRequested && !competitorDayOk ? ' (요청됐으나 경쟁사 측정일 아님 — COMPETITOR_CRAWL_DAYS)' : ''}, ContentGap=${includeContentGap}`);
 
     // ============================================================
     // 【A안 #1】실행 시작 전 좀비 잡 자동 청소
@@ -883,7 +887,20 @@ export class SchedulerService implements OnModuleInit {
    *  - 수동/온디맨드 크롤(queryAllPlatforms 직접 호출)은 이 게이트를 타지 않음 — 의도된 동작
    */
   private isGrokCrawlDay(): boolean {
-    const daysEnv = (process.env.GROK_CRAWL_DAYS ?? '1,4').trim();
+    return this.isAllowedKstDay(process.env.GROK_CRAWL_DAYS);
+  }
+
+  /**
+   * 【2026.09.13 비용】경쟁사 AEO 측정일 게이트 — 기본 월·목(KST). COMPETITOR_CRAWL_DAYS='*' 로 매일.
+   *  Grok 게이트와 같은 규칙(요일 번호 0=일~6=토, 콤마 구분).
+   */
+  private isCompetitorCrawlDay(): boolean {
+    return this.isAllowedKstDay(process.env.COMPETITOR_CRAWL_DAYS);
+  }
+
+  /** 요일 게이트 공통 — 미설정/기본 '1,4'(월·목), '*' = 매일, 잘못된 값이면 안전하게 매일(침묵 단절 방지) */
+  private isAllowedKstDay(daysEnvRaw: string | undefined, fallback = '1,4'): boolean {
+    const daysEnv = (daysEnvRaw ?? fallback).trim();
     if (daysEnv === '*') return true; // 게이트 해제 (매일)
     const allowedDays = daysEnv
       .split(',')
@@ -893,6 +910,17 @@ export class SchedulerService implements OnModuleInit {
     // KST 요일 (0=일 ~ 6=토)
     const kstDay = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCDay();
     return allowedDays.includes(kstDay);
+  }
+
+  /**
+   * 【2026.09.13 비용】Gemini 는 하루 1세션만(기본 morning). GEMINI_SESSIONS='morning,evening' 처럼 콤마 구분, '*' = 전 세션.
+   *  Gemini 검색 그라운딩은 쿼리당 과금($14/1k)이라 세션 수가 곧 비용 — 9/8~9/11 일 ₩9만 원의 직접 원인.
+   */
+  private isGeminiSession(session: string): boolean {
+    const raw = (process.env.GEMINI_SESSIONS ?? 'morning').trim();
+    if (raw === '*') return true;
+    const allowed = raw.split(',').map(s => s.trim()).filter(Boolean);
+    return allowed.length === 0 ? session === 'morning' : allowed.includes(session);
   }
 
   private getPlatformsForSession(session: string): any[] {
@@ -908,8 +936,9 @@ export class SchedulerService implements OnModuleInit {
         sessionPlatforms = basePlatforms;
         break;
       case 'afternoon':
-        // 비용 절감을 위해 일부 세션은 핵심 4종만 (GROK/CLOVA_X는 비교적 비쌈 + 한국 시장 토종)
-        sessionPlatforms = ['CHATGPT', 'GEMINI', 'GROK', 'CLOVA_X'];
+        // 비용 절감을 위해 일부 세션은 핵심만 (GROK/CLOVA_X는 비교적 비쌈 + 한국 시장 토종)
+        // 【2026.09.13】GEMINI 제거 — Gemini 는 아래 isGeminiSession() 게이트로 하루 1세션만
+        sessionPlatforms = ['CHATGPT', 'GROK', 'CLOVA_X'];
         break;
       case 'evening':
         sessionPlatforms = basePlatforms;
@@ -921,6 +950,10 @@ export class SchedulerService implements OnModuleInit {
     // 【GROK 주 2회】월·목(KST)이 아니면 GROK 제외 — 상세 사유는 isGrokCrawlDay() 주석 참조
     if (!this.isGrokCrawlDay()) {
       sessionPlatforms = sessionPlatforms.filter(p => p !== 'GROK');
+    }
+    // 【2026.09.13 비용】Gemini 하루 1세션 게이트 (GEMINI_SESSIONS, 기본 morning)
+    if (!this.isGeminiSession(session)) {
+      sessionPlatforms = sessionPlatforms.filter(p => p !== 'GEMINI');
     }
     return sessionPlatforms;
   }
