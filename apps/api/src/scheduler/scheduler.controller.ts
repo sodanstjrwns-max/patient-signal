@@ -8,6 +8,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { ActionTrackerService } from '../scores/action-tracker.service';
 import { BenchmarkService } from '../scores/benchmark.service';
 import { CompetitorsService } from '../competitors/competitors.service';
+import { AdminService } from '../admin/admin.service';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -24,6 +25,7 @@ export class SchedulerController {
     private actionTracker: ActionTrackerService,
     private benchmarkService: BenchmarkService,
     private competitorsService: CompetitorsService,
+    private adminService: AdminService,
   ) {}
 
   /**
@@ -264,6 +266,16 @@ export class SchedulerController {
     // 집계 후 캐시 워밍 (days<=7 인 일일 갱신에서만 — 백필 때는 생략)
     const warm = n <= 7 ? await this.competitorsService.warmTrendingCache().catch(() => null) : null;
     return { success: true, ...r, warm, ms: Date.now() - started };
+  }
+
+  /** 【2026-09-14】만료된 임시 업그레이드 원복 — 매일 10:00 KST(ps-monitor 대행) */
+  @Post('temp-upgrade-revert')
+  @ApiOperation({ summary: '임시 업그레이드 만료분 원복' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async tempUpgradeRevert(@Headers('x-cron-secret') cronSecret: string) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
+    return { success: true, ...(await this.adminService.revertExpiredTempUpgrades()) };
   }
 
   @Post('cleanup-zombies')

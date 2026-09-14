@@ -11,5 +11,6 @@ import { PsOpenApiModule } from '../ps-open-api/ps-open-api.module';
   imports: [PrismaModule, ScoresModule, SchedulerModule, PsOpenApiModule],
   controllers: [AdminController, WeightsController],
   providers: [AdminService],
+  exports: [AdminService],
 })
 export class AdminModule {}

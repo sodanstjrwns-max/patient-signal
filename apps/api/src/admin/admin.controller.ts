@@ -558,6 +558,24 @@ export class AdminController {
     });
   }
 
+  /**
+   * 【임시 업그레이드】POST /api/admin/temp-upgrade?hospitalId=&plan=STANDARD&days=21&apply=1 (x-admin-secret)
+   * hospital.planType 만 기한부로 상향 — 결제 영향 없음. apply 없으면 dry-run. 만료 원복은 /api/scheduler/temp-upgrade-revert.
+   */
+  @Public()
+  @Post('temp-upgrade')
+  async tempUpgrade(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('plan') plan?: string,
+    @Query('days') days?: string,
+    @Query('apply') apply?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (!hospitalId) return { success: false, error: 'hospitalId 필요' };
+    return this.adminService.tempUpgrade({ hospitalId, plan: (plan || 'STANDARD').toUpperCase(), days: parseInt(days || '21', 10) || 21, dryRun: apply !== '1' });
+  }
+
   private validateSecret(secret: string) {
     // 보안: 하드코딩 fallback 제거 — ADMIN_SECRET 미설정 시 무조건 차단
     // 어드민 시크릿은 x-admin-secret 헤더 전용 (쿼리파라미터 ?secret= 는 액세스 로그 유출 위험으로 제거됨)
