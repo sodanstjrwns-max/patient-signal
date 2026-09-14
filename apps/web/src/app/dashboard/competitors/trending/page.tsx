@@ -32,6 +32,7 @@ export default function TrendingPage() {
     queryKey: ['competitors-trending', specialty, sido, days, sort],
     queryFn: async () => (await competitorsApi.trending({ specialty: specialty || undefined, sido: sido || undefined, days, limit: 50, sort })).data,
     staleTime: 10 * 60 * 1000,
+    retry: 1,
   });
 
   const myKey = (user?.hospital?.name || '').replace(/\s+/g, '');
@@ -68,7 +69,7 @@ export default function TrendingPage() {
           </CardContent>
         </Card>
 
-        {isLoading && <div className="flex items-center gap-2 text-slate-500 text-sm p-6"><Loader2 className="w-4 h-4 animate-spin" />전국 응답을 합산하는 중…</div>}
+        {isLoading && <div className="flex items-center gap-2 text-slate-500 text-sm p-6"><Loader2 className="w-4 h-4 animate-spin" />전국 응답을 합산하는 중… (처음 한 번은 수십 초 걸릴 수 있어요)</div>}
         {isError && <div className="text-sm text-rose-600 p-6">불러오지 못했습니다. 새로고침을 눌러주세요.</div>}
 
         {data && data.risers.length > 0 && (

@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, UseInterceptors } from '@nestjs/common';
+import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CompetitorsService } from './competitors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,6 +19,8 @@ export class CompetitorsController {
 
   /** 【2026-09-14】요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 (내 경쟁사가 아니어도) */
   @Get('trending')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(6 * 3600) // 전국 합산은 무거우므로 6시간 캐시 (하루 1회 크롤 데이터)
   @ApiOperation({ summary: 'AI가 자주 추천하는 병원 리더보드 (진료과·지역·기간 필터)' })
   async getTrending(
     @Query('specialty') specialty?: string,

@@ -326,6 +326,7 @@ model AIResponse {
   @@index([hospitalId, responseDate])
   @@index([promptId, aiPlatform])
   @@index([hospitalId, isMentioned, responseDate])
+  @@index([responseDate]) // 【2026-09-14】전국 리더보드(trending) — 병원 무관 기간 스캔용
   @@index([hospitalId, createdAt])
   @@index([answerPositionType, hospitalId])
   @@map("ai_responses")
