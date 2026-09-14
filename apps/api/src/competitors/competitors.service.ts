@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { CacheService } from '../common/cache/cache.service';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
 
 export interface CompetitorSuggestion {
@@ -17,7 +18,7 @@ export interface CompetitorSuggestion {
 @Injectable()
 export class CompetitorsService {
   private readonly logger = new Logger(CompetitorsService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private cache: CacheService) {}
 
   // ===== 한국어 치과명 정규화 및 유사도 매칭 =====
 
@@ -759,6 +760,24 @@ export class CompetitorsService {
       try { rows += (await this.rebuildMentionDay(key)).rows; } catch (e) { const msg = (e as Error).message; this.logger.warn(`mention_daily rebuild ${key} 실패: ${msg}`); if (errors.length < 3) errors.push(`${key}: ${msg.slice(0, 160)}`); }
     }
     return { days: n, rows, from, to: today.toISOString().slice(0, 10), errors };
+  }
+
+
+  /** 【2026-09-14】등장률 캐시 워밍 — 집계 갱신 직후 자주 보는 조합을 HTTP 캐시 키에 미리 채워 첫 화면도 즉시 뜨게 (키 형식은 HttpCacheInterceptor 와 동일) */
+  async warmTrendingCache(): Promise<{ warmed: string[]; ms: number }> {
+    const started = Date.now();
+    const rows = await this.prisma.hospital.groupBy({ by: ['specialtyType'], where: { subscriptionStatus: 'ACTIVE' }, _count: { _all: true } }).catch(() => [] as any[]);
+    const specialties = (rows as any[]).filter((r) => r._count._all >= 2).map((r) => String(r.specialtyType));
+    const warmed: string[] = [];
+    for (const sp of specialties) for (const days of [30, 90]) {
+      try {
+        const data = await this.getTrending({ specialty: sp, days, limit: 50, sort: 'rate' });
+        const key = `ps:http:/api/competitors/trending?specialty=${sp}&days=${days}&limit=50&sort=rate`;
+        await this.cache.set(key, data, 26 * 3600);
+        warmed.push(`${sp}/${days}`);
+      } catch (e) { this.logger.warn(`trending warm ${sp}/${days} 실패: ${(e as Error).message}`); }
+    }
+    return { warmed, ms: Date.now() - started };
   }
 
   // ===== 【2026-09-14】 요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 =====

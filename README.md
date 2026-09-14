@@ -14,7 +14,7 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 | 구성 | URL | 호스팅 |
 |------|-----|--------|
 | **프론트 (Next.js)** | https://patientsignal.kr | Vercel (autoDeploy) |
-| **API (NestJS)** | https://patient-signal.onrender.com | Render (autoDeploy) |
+| **API (NestJS)** | https://api.patientsignal.kr (Render 서비스 `patient-signal-1`, 구 `patient-signal` 은 2026-09-09 Suspend) | Render (autoDeploy) |
 
 ### 배포 명령
 ```bash

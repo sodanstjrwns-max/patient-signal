@@ -261,7 +261,9 @@ export class SchedulerController {
     const n = parseInt(days || '2', 10) || 2;
     const started = Date.now();
     const r = await this.competitorsService.rebuildMentionRange(n);
-    return { success: true, ...r, ms: Date.now() - started };
+    // 집계 후 캐시 워밍 (days<=7 인 일일 갱신에서만 — 백필 때는 생략)
+    const warm = n <= 7 ? await this.competitorsService.warmTrendingCache().catch(() => null) : null;
+    return { success: true, ...r, warm, ms: Date.now() - started };
   }
 
   @Post('cleanup-zombies')
