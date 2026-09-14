@@ -721,6 +721,41 @@ export class CompetitorsService {
     });
   }
 
+
+  // ===== 【2026-09-14】 mention_daily 일별 집계 (전국 등장률의 원천) =====
+  /** 하루치 재집계: 그날 응답의 언급 병원명 × 질문 병원 × 플랫폼 건수 + 전체 응답 수('*'). 멱등(해당일 삭제 후 삽입). */
+  async rebuildMentionDay(day: string): Promise<{ day: string; rows: number }> {
+    const d = new Date(day + 'T00:00:00Z');
+    const next = new Date(d); next.setUTCDate(next.getUTCDate() + 1);
+    await this.prisma.$executeRaw`DELETE FROM mention_daily WHERE day = ${d}::date`;
+    const r1: number = await this.prisma.$executeRaw`
+      INSERT INTO mention_daily (day, hospital_id, name, platform, cnt)
+      SELECT ${d}::date, r.hospital_id, unnest(r.competitors_mentioned) AS name, r.ai_platform::text, 1
+      FROM ai_responses r
+      WHERE r.response_date >= ${d} AND r.response_date < ${next}
+        AND r.competitors_mentioned IS NOT NULL AND array_length(r.competitors_mentioned, 1) > 0
+      ON CONFLICT (day, hospital_id, name, platform) DO UPDATE SET cnt = mention_daily.cnt + 1`;
+    const r2: number = await this.prisma.$executeRaw`
+      INSERT INTO mention_daily (day, hospital_id, name, platform, cnt)
+      SELECT ${d}::date, r.hospital_id, '*', r.ai_platform::text, COUNT(*)::int
+      FROM ai_responses r WHERE r.response_date >= ${d} AND r.response_date < ${next}
+      GROUP BY r.hospital_id, r.ai_platform
+      ON CONFLICT (day, hospital_id, name, platform) DO UPDATE SET cnt = EXCLUDED.cnt`;
+    return { day, rows: Number(r1) + Number(r2) };
+  }
+  /** 최근 N일 재집계 (오래된 날부터). 크론은 2일(어제·오늘), 최초 1회는 120일 백필. */
+  async rebuildMentionRange(days: number): Promise<{ days: number; rows: number; from: string; to: string }> {
+    const n = Math.max(1, Math.min(400, days));
+    const today = new Date(); today.setUTCHours(0, 0, 0, 0);
+    let rows = 0; let from = '';
+    for (let i = n - 1; i >= 0; i--) {
+      const d = new Date(today); d.setUTCDate(d.getUTCDate() - i);
+      const key = d.toISOString().slice(0, 10); if (!from) from = key;
+      try { rows += (await this.rebuildMentionDay(key)).rows; } catch (e) { this.logger.warn(`mention_daily rebuild ${key} 실패: ${(e as Error).message}`); }
+    }
+    return { days: n, rows, from, to: today.toISOString().slice(0, 10) };
+  }
+
   // ===== 【2026-09-14】 요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 =====
   /**
    * 모든 고객 병원의 AI 응답에 등장한 병원명(competitors_mentioned)을 진료과·기간 단위로 합산한다.
@@ -741,7 +776,23 @@ export class CompetitorsService {
     // "평균 등장률" = 각 질문 병원의 응답 중 이 병원명이 나온 비율을 구해 질문 병원 수로 평균 (질문 병원마다 가중치 동일)
     type Row = { name: string; hospital_id: string; mentions: number; top_platform: string | null; region_sido: string | null };
     type Tot = { hospital_id: string; total: number };
-    const query = (from: Date, to: Date | null) => this.prisma.$queryRaw<Row[]>`
+    // 읽기 경로: mention_daily 집계 테이블(매일 10:00 KST 갱신). 집계가 비어 있으면(백필 전) 원본 실시간 쿼리로 폴백.
+    const aggQuery = (from: Date, to: Date | null) => this.prisma.$queryRaw<Row[]>`
+      SELECT m.name, m.hospital_id, SUM(m.cnt)::int AS mentions,
+             (array_agg(m.platform ORDER BY m.cnt DESC))[1] AS top_platform, MAX(h.region_sido) AS region_sido
+      FROM mention_daily m JOIN hospitals h ON h.id = m.hospital_id
+      WHERE m.day >= ${from}::date AND (${to}::date IS NULL OR m.day < ${to}::date) AND m.name <> '*'
+        AND (${specialty}::text IS NULL OR h.specialty_type::text = ${specialty})
+        AND (${sido}::text IS NULL OR h.region_sido = ${sido})
+      GROUP BY m.name, m.hospital_id ORDER BY mentions DESC LIMIT 20000`;
+    const aggTotals = (from: Date, to: Date | null) => this.prisma.$queryRaw<Tot[]>`
+      SELECT m.hospital_id, SUM(m.cnt)::int AS total
+      FROM mention_daily m JOIN hospitals h ON h.id = m.hospital_id
+      WHERE m.day >= ${from}::date AND (${to}::date IS NULL OR m.day < ${to}::date) AND m.name = '*'
+        AND (${specialty}::text IS NULL OR h.specialty_type::text = ${specialty})
+        AND (${sido}::text IS NULL OR h.region_sido = ${sido})
+      GROUP BY m.hospital_id`;
+    const liveQuery = (from: Date, to: Date | null) => this.prisma.$queryRaw<Row[]>`
       WITH cur AS (
         SELECT unnest(r.competitors_mentioned) AS name, r.ai_platform::text AS ai_platform, h.region_sido, r.hospital_id
         FROM ai_responses r JOIN hospitals h ON h.id = r.hospital_id
@@ -754,7 +805,7 @@ export class CompetitorsService {
       SELECT name, hospital_id, COUNT(*)::int AS mentions,
              MODE() WITHIN GROUP (ORDER BY ai_platform) AS top_platform, MAX(region_sido) AS region_sido
       FROM cur GROUP BY name, hospital_id ORDER BY mentions DESC LIMIT 20000`;
-    const totals = (from: Date, to: Date | null) => this.prisma.$queryRaw<Tot[]>`
+    const liveTotals = (from: Date, to: Date | null) => this.prisma.$queryRaw<Tot[]>`
       SELECT r.hospital_id, COUNT(*)::int AS total
       FROM ai_responses r JOIN hospitals h ON h.id = r.hospital_id
       WHERE r.response_date >= ${from}
@@ -762,8 +813,12 @@ export class CompetitorsService {
         AND (${specialty}::text IS NULL OR h.specialty_type::text = ${specialty})
         AND (${sido}::text IS NULL OR h.region_sido = ${sido})
       GROUP BY r.hospital_id`;
+    let source: 'aggregate' | 'live' = 'aggregate';
+    let curTotPre = await aggTotals(since, null).catch(() => [] as Tot[]);
+    let query = aggQuery, totals = aggTotals;
+    if (!curTotPre.length) { source = 'live'; query = liveQuery; totals = liveTotals; }
     const [curRows, prevRows, curTot, prevTot, customers] = await Promise.all([
-      query(since, null), query(prevSince, since), totals(since, null), totals(prevSince, since),
+      query(since, null), query(prevSince, since), source === 'aggregate' ? Promise.resolve(curTotPre) : totals(since, null), totals(prevSince, since),
       this.prisma.hospital.findMany({ where: { subscriptionStatus: 'ACTIVE' }, select: { id: true, name: true, nameAliases: true, regionSido: true, regionSigungu: true } }),
     ]);
 
@@ -834,7 +889,7 @@ export class CompetitorsService {
     const askingHospitals = askingCur, responsesTotal = allCur;
     return {
       period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
-      filters: { specialty, sido, sort: sortKey }, totalNames: cur.size, totalMentions, askingHospitals, responsesTotal,
+      filters: { specialty, sido, sort: sortKey }, source, totalNames: cur.size, totalMentions, askingHospitals, responsesTotal,
       list, risers,
       method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산한 관찰 통계(표기 정규화·일반명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
     };

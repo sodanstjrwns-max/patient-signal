@@ -7,6 +7,7 @@ import { CrawlQueueService } from './crawl-queue.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { ActionTrackerService } from '../scores/action-tracker.service';
 import { BenchmarkService } from '../scores/benchmark.service';
+import { CompetitorsService } from '../competitors/competitors.service';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -22,6 +23,7 @@ export class SchedulerController {
     private prisma: PrismaService,
     private actionTracker: ActionTrackerService,
     private benchmarkService: BenchmarkService,
+    private competitorsService: CompetitorsService,
   ) {}
 
   /**
@@ -246,6 +248,22 @@ export class SchedulerController {
    *   curl -X POST https://<api>/scheduler/cleanup-zombies \
    *        -H "x-cron-secret: $CRON_SECRET"
    */
+  /**
+   * 【2026-09-14】AI 답변 등장률 일별 집계 갱신 — 매일 10:00 KST(ps-monitor 대행), ?days=120 으로 백필
+   * curl -X POST https://<api>/api/scheduler/mention-daily?days=2 -H "x-cron-secret: $CRON_SECRET"
+   */
+  @Post('mention-daily')
+  @ApiOperation({ summary: 'mention_daily 집계 갱신 (기본 최근 2일, days= 로 백필)' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async rebuildMentionDaily(@Headers('x-cron-secret') cronSecret: string, @Query('days') days?: string) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
+    const n = parseInt(days || '2', 10) || 2;
+    const started = Date.now();
+    const r = await this.competitorsService.rebuildMentionRange(n);
+    return { success: true, ...r, ms: Date.now() - started };
+  }
+
   @Post('cleanup-zombies')
   @ApiOperation({ summary: '좀비 잡 수동 청소 (30분+ RUNNING → FAILED)' })
   @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
