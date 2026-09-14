@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { CompetitorsService } from './competitors.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,6 +15,18 @@ export class CompetitorsController {
   constructor(private competitorsService: CompetitorsService) {}
 
   // ===== 구체적인 서브 경로를 먼저 선언 (NestJS 라우트 매칭 순서 중요) =====
+
+  /** 【2026-09-14】요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 (내 경쟁사가 아니어도) */
+  @Get('trending')
+  @ApiOperation({ summary: 'AI가 자주 추천하는 병원 리더보드 (진료과·지역·기간 필터)' })
+  async getTrending(
+    @Query('specialty') specialty?: string,
+    @Query('sido') sido?: string,
+    @Query('days') days?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.competitorsService.getTrending({ specialty, sido, days: parseInt(days || '30', 10), limit: parseInt(limit || '50', 10) });
+  }
 
   @Get(':hospitalId/inactive')
   @ApiOperation({ summary: '비활성(삭제된) 경쟁사 목록 조회' })

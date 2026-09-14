@@ -378,6 +378,9 @@ export const competitorsApi = {
     api.post(`/competitors/${hospitalId}/restore-all`),
   restoreOne: (hospitalId: string, competitorId: string) =>
     api.post(`/competitors/${hospitalId}/restore/${competitorId}`),
+  // 【2026-09-14】요즘 AI가 좋아하는 병원 (전국 리더보드)
+  trending: (params: { specialty?: string; sido?: string; days?: number; limit?: number }) =>
+    api.get('/competitors/trending', { params }),
 };
 
 // Query Templates API (쿼리 템플릿 & 진료과 프리셋)

@@ -720,4 +720,84 @@ export class CompetitorsService {
       },
     });
   }
+
+  // ===== 【2026-09-14】 요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 =====
+  /**
+   * 모든 고객 병원의 AI 응답에 등장한 병원명(competitors_mentioned)을 진료과·기간 단위로 합산한다.
+   * "내 경쟁사"가 아니어도 AI가 전국적으로 자주 추천하는 병원을 볼 수 있다.
+   *  - 표기 정규화(공백·지역 접두·접미사)로 같은 병원을 합침
+   *  - 접미사만 남는 일반명(치과의원·병원 등)은 제외
+   *  - 직전 같은 기간과 비교해 증감, 우리 고객 병원이면 표시
+   */
+  async getTrending(opts: { specialty?: string; sido?: string; days: number; limit: number }) {
+    const days = Math.max(7, Math.min(180, opts.days || 30));
+    const limit = Math.max(10, Math.min(200, opts.limit || 50));
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const prevSince = new Date(since); prevSince.setDate(prevSince.getDate() - days);
+    const specialty = opts.specialty && /^[A-Z_]+$/.test(opts.specialty) ? opts.specialty : null;
+    const sido = opts.sido ? String(opts.sido).trim().slice(0, 20) : null;
+
+    type Row = { name: string; mentions: number; asked_by: number; platforms: number; top_platform: string | null; top_sido: string | null };
+    const query = (from: Date, to: Date | null) => this.prisma.$queryRaw<Row[]>`
+      WITH cur AS (
+        SELECT unnest(r.competitors_mentioned) AS name, r.ai_platform::text AS ai_platform, h.region_sido, r.hospital_id
+        FROM ai_responses r JOIN hospitals h ON h.id = r.hospital_id
+        WHERE r.response_date >= ${from}
+          AND (${to}::timestamp IS NULL OR r.response_date < ${to})
+          AND (${specialty}::text IS NULL OR h.specialty_type::text = ${specialty})
+          AND (${sido}::text IS NULL OR h.region_sido = ${sido})
+          AND r.competitors_mentioned IS NOT NULL AND array_length(r.competitors_mentioned, 1) > 0
+      )
+      SELECT name, COUNT(*)::int AS mentions, COUNT(DISTINCT hospital_id)::int AS asked_by, COUNT(DISTINCT ai_platform)::int AS platforms,
+             MODE() WITHIN GROUP (ORDER BY ai_platform) AS top_platform, MODE() WITHIN GROUP (ORDER BY region_sido) AS top_sido
+      FROM cur GROUP BY name ORDER BY mentions DESC LIMIT 600`;
+    const [curRows, prevRows, customers] = await Promise.all([
+      query(since, null),
+      query(prevSince, since),
+      this.prisma.hospital.findMany({ where: { subscriptionStatus: 'ACTIVE' }, select: { id: true, name: true, nameAliases: true, regionSido: true, regionSigungu: true } }),
+    ]);
+
+    const GENERIC = new Set(['치과', '치과의원', '치과병원', '병원', '의원', '한의원', '한방병원', '피부과', '성형외과', '정형외과', '안과', '내과', '이비인후과', '산부인과', '소아과', '클리닉', '센터', '대학병원', '종합병원']);
+    const norm = (n: string) => {
+      const x = this.normalizeDentalName(n).replace(/(의원|병원|클리닉|센터)$/, '');
+      return x;
+    };
+    const merge = (rows: Row[]) => {
+      const m = new Map<string, { name: string; mentions: number; askedBy: number; platforms: number; topPlatform: string | null; topSido: string | null; variants: Set<string> }>();
+      for (const r of rows) {
+        const raw = String(r.name || '').trim();
+        if (raw.length < 2) continue;
+        const key = norm(raw);
+        if (!key || key.length < 2 || GENERIC.has(raw.replace(/\s+/g, '')) || GENERIC.has(key)) continue;
+        const cur = m.get(key);
+        if (cur) { cur.mentions += r.mentions; cur.askedBy = Math.max(cur.askedBy, r.asked_by); cur.platforms = Math.max(cur.platforms, r.platforms); cur.variants.add(raw); if (r.mentions > (cur as any)._top) { (cur as any)._top = r.mentions; cur.name = raw; cur.topPlatform = r.top_platform; cur.topSido = r.top_sido; } }
+        else m.set(key, Object.assign({ name: raw, mentions: r.mentions, askedBy: r.asked_by, platforms: r.platforms, topPlatform: r.top_platform, topSido: r.top_sido, variants: new Set([raw]) }, { _top: r.mentions }));
+      }
+      return m;
+    };
+    const cur = merge(curRows), prev = merge(prevRows);
+    const customerKeys = new Map<string, { id: string; name: string; sido: string; sigungu: string }>();
+    for (const c of customers) for (const n of [c.name, ...(c.nameAliases || [])]) { const k = norm(n); if (k) customerKeys.set(k, { id: c.id, name: c.name, sido: c.regionSido, sigungu: c.regionSigungu }); }
+
+    const totalMentions = [...cur.values()].reduce((a, b) => a + b.mentions, 0);
+    const list = [...cur.entries()].sort((a, b) => b[1].mentions - a[1].mentions).slice(0, limit).map(([key, v], i) => {
+      const p = prev.get(key);
+      const customer = customerKeys.get(key);
+      return {
+        rank: i + 1, name: v.name, mentions: v.mentions, share: totalMentions ? Math.round(v.mentions / totalMentions * 1000) / 10 : 0,
+        prevMentions: p ? p.mentions : 0, deltaPct: p && p.mentions > 0 ? Math.round((v.mentions - p.mentions) / p.mentions * 100) : (p ? 0 : null),
+        askedBy: v.askedBy, platforms: v.platforms, topPlatform: v.topPlatform, topSido: v.topSido,
+        variants: [...v.variants].slice(0, 4), isCustomer: !!customer, customerRegion: customer ? `${customer.sido} ${customer.sigungu}` : null,
+      };
+    });
+    // 새로 뜬 병원: 직전 기간 없음 + 이번 기간 상위
+    const risers = list.filter((x) => x.prevMentions === 0 && x.mentions >= 5).slice(0, 10);
+    return {
+      period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
+      filters: { specialty, sido }, totalNames: cur.size, totalMentions,
+      list, risers,
+      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산(표기 정규화·일반명 제외). 언급 수 = 응답 건수 기준. 우리 고객은 배지로 표시.',
+    };
+  }
+
 }
