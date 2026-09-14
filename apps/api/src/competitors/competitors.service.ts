@@ -836,7 +836,7 @@ export class CompetitorsService {
       period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
       filters: { specialty, sido, sort: sortKey }, totalNames: cur.size, totalMentions, askingHospitals, responsesTotal,
       list, risers,
-      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산(표기 정규화·일반명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
+      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산한 관찰 통계(표기 정규화·일반명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
     };
   }
 

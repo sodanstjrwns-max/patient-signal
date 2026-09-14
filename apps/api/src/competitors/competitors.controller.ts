@@ -17,11 +17,11 @@ export class CompetitorsController {
 
   // ===== 구체적인 서브 경로를 먼저 선언 (NestJS 라우트 매칭 순서 중요) =====
 
-  /** 【2026-09-14】요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 (내 경쟁사가 아니어도) */
+  /** 【2026-09-14】AI 답변 등장률 — 전국 관찰 통계 (내 경쟁사가 아니어도). 품질 순위 아님 · 광고 인용 금지 고지 */
   @Get('trending')
   @UseInterceptors(HttpCacheInterceptor)
   @CacheTTL(6 * 3600) // 전국 합산은 무거우므로 6시간 캐시 (하루 1회 크롤 데이터)
-  @ApiOperation({ summary: 'AI가 자주 추천하는 병원 리더보드 (진료과·지역·기간 필터)' })
+  @ApiOperation({ summary: 'AI 답변 등장률 통계 (진료과·지역·기간 필터, 관찰 통계)' })
   async getTrending(
     @Query('specialty') specialty?: string,
     @Query('sido') sido?: string,

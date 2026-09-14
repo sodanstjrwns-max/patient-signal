@@ -85,7 +85,7 @@ const navGroups: NavGroup[] = [
     defaultOpen: true,
     items: [
       { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
-      { name: 'AI가 좋아하는 병원', href: '/dashboard/competitors/trending', icon: Sparkles, badge: 'NEW' },
+      { name: 'AI 답변 등장률', href: '/dashboard/competitors/trending', icon: Sparkles, badge: 'NEW' },
     ],
   },
   {

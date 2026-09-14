@@ -8,7 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { Card, CardContent } from '@/components/ui/card';
 import { competitorsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
-import { Sparkles, TrendingUp, TrendingDown, Minus, Flame, MapPin, Info, Loader2 } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Minus, Flame, MapPin, Info, Loader2, Shield } from 'lucide-react';
 
 const SPECIALTIES: Array<[string, string]> = [
   ['DENTAL', '치과'], ['DERMATOLOGY', '피부과'], ['PLASTIC_SURGERY', '성형외과'], ['ORTHOPEDICS', '정형외과'], ['KOREAN_MEDICINE', '한의원'],
@@ -45,7 +45,7 @@ export default function TrendingPage() {
 
   return (
     <div className="flex-1 min-h-screen">
-      <Header title="AI가 좋아하는 병원" description="전국 고객 병원의 AI 답변에서 자주 추천된 병원 — 내 경쟁사가 아니어도 보입니다" onRefresh={() => refetch()} refreshing={isRefetching} />
+      <Header title="AI 답변 등장률" description="전국 고객 병원의 AI 답변에 어떤 병원명이 얼마나 자주 나오는지 관찰한 통계 — 품질 순위가 아닙니다" onRefresh={() => refetch()} refreshing={isRefetching} />
       <main className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-4 flex flex-wrap items-end gap-3">
@@ -88,14 +88,14 @@ export default function TrendingPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">
-                  <tr><th className="text-left px-4 py-2.5 w-12">순위</th><th className="text-left px-3 py-2.5">병원</th><th className="text-right px-3 py-2.5" title="질문 병원별 등장 비율의 평균">등장률</th><th className="text-right px-3 py-2.5" title="전체 응답 중 이 병원명이 나온 비율">전체 비율</th><th className="text-right px-3 py-2.5">언급</th><th className="text-left px-3 py-2.5">직전 대비</th><th className="text-right px-3 py-2.5">물어본 병원</th><th className="text-left px-3 py-2.5">주 플랫폼</th><th className="text-left px-3 py-2.5">주 지역</th></tr>
+                  <tr><th className="text-left px-4 py-2.5 w-12">No.</th><th className="text-left px-3 py-2.5">병원</th><th className="text-right px-3 py-2.5" title="질문 병원별 등장 비율의 평균">등장률</th><th className="text-right px-3 py-2.5" title="전체 응답 중 이 병원명이 나온 비율">전체 비율</th><th className="text-right px-3 py-2.5">언급</th><th className="text-left px-3 py-2.5">직전 대비</th><th className="text-right px-3 py-2.5">물어본 병원</th><th className="text-left px-3 py-2.5">주 플랫폼</th><th className="text-left px-3 py-2.5">주 지역</th></tr>
                 </thead>
                 <tbody>
                   {data.list.map((r) => {
                     const mine = myKey && r.name.replace(/\s+/g, '').includes(myKey.replace(/(치과|의원|병원)$/, '').slice(0, 4));
                     return (
                       <tr key={r.name} className={`border-t border-slate-100 ${mine ? 'bg-brand-50/60' : ''}`}>
-                        <td className="px-4 py-2.5 font-black text-slate-400">{r.rank <= 3 ? <span className="text-amber-500">#{r.rank}</span> : `#${r.rank}`}</td>
+                        <td className="px-4 py-2.5 tabular-nums text-slate-400">{r.rank}</td>
                         <td className="px-3 py-2.5">
                           <div className="font-semibold text-slate-900 flex items-center gap-2">{r.name}
                             {r.isCustomer && <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 font-bold" title={r.customerRegion || ''}>시그널 고객</span>}
@@ -117,10 +117,13 @@ export default function TrendingPage() {
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-[11px] text-slate-500 flex items-start gap-2 border-t border-slate-100"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{data.method} 등장률 예: 3.2% = 질문 병원들의 AI 답변 100건 중 평균 3.2건에 이 병원이 나옴. 지역은 "질문한 병원"의 시·도라서 답변 속 병원의 실제 소재지와 다를 수 있습니다. 광고·홍보 목적의 순위가 아니라 AI 답변 관찰 통계입니다.</span></div>
+            <div className="px-4 py-3 text-[11px] text-slate-500 space-y-1.5 border-t border-slate-100">
+              <div className="flex items-start gap-2"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{data.method} 등장률 예: 3.2% = 질문 병원들의 AI 답변 100건 중 평균 3.2건에 이 병원이 나옴. 지역은 "질문한 병원"의 시·도라서 답변 속 병원의 실제 소재지와 다를 수 있습니다.</span></div>
+              <div className="flex items-start gap-2 text-slate-600"><Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span><b>이 통계는 의료 품질·실력 순위가 아니라 AI 답변 관찰 결과입니다.</b> 의료광고·홍보에 인용하는 것은 병원의 책임이며 의료법상 의료광고 심의 대상이 될 수 있습니다. 화면 캡처·외부 게시를 금합니다. 계약 병원의 내부 경영 참고용으로만 제공됩니다.</span></div>
+            </div>
           </Card>
         )}
-        {!isLoading && !data && !isError && <div className="text-sm text-slate-500 p-6 flex items-center gap-2"><Sparkles className="w-4 h-4" />조건을 고르면 리더보드가 나옵니다.</div>}
+        {!isLoading && !data && !isError && <div className="text-sm text-slate-500 p-6 flex items-center gap-2"><Sparkles className="w-4 h-4" />조건을 고르면 등장률 표가 나옵니다.</div>}
       </main>
     </div>
   );
