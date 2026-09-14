@@ -5,12 +5,12 @@ import { CrawlQueueService } from './crawl-queue.service';
 import { AICrawlerModule } from '../ai-crawler/ai-crawler.module';
 import { ScoresModule } from '../scores/scores.module';
 import { CompetitorsModule } from '../competitors/competitors.module';
-import { AdminModule } from '../admin/admin.module';
+import { TempUpgradeService } from './temp-upgrade.service';
 
 @Module({
-  imports: [AICrawlerModule, ScoresModule, CompetitorsModule, AdminModule],
+  imports: [AICrawlerModule, ScoresModule, CompetitorsModule],
   controllers: [SchedulerController],
-  providers: [SchedulerService, CrawlQueueService],
-  exports: [SchedulerService, CrawlQueueService],
+  providers: [SchedulerService, CrawlQueueService, TempUpgradeService],
+  exports: [SchedulerService, CrawlQueueService, TempUpgradeService],
 })
 export class SchedulerModule {}

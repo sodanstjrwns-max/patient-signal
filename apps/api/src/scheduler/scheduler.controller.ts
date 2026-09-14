@@ -8,7 +8,7 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { ActionTrackerService } from '../scores/action-tracker.service';
 import { BenchmarkService } from '../scores/benchmark.service';
 import { CompetitorsService } from '../competitors/competitors.service';
-import { AdminService } from '../admin/admin.service';
+import { TempUpgradeService } from './temp-upgrade.service';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -25,7 +25,7 @@ export class SchedulerController {
     private actionTracker: ActionTrackerService,
     private benchmarkService: BenchmarkService,
     private competitorsService: CompetitorsService,
-    private adminService: AdminService,
+    private tempUpgrade: TempUpgradeService,
   ) {}
 
   /**
@@ -275,7 +275,7 @@ export class SchedulerController {
   async tempUpgradeRevert(@Headers('x-cron-secret') cronSecret: string) {
     const expectedSecret = process.env.CRON_SECRET;
     if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
-    return { success: true, ...(await this.adminService.revertExpiredTempUpgrades()) };
+    return { success: true, ...(await this.tempUpgrade.revertExpiredTempUpgrades()) };
   }
 
   @Post('cleanup-zombies')

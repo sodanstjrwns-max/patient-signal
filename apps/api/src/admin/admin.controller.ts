@@ -4,6 +4,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { SchedulerService } from '../scheduler/scheduler.service';
+import { TempUpgradeService } from '../scheduler/temp-upgrade.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { registrySnapshot, refreshAvailability } from '../ai-crawler/model-registry';
 
@@ -16,6 +17,7 @@ export class AdminController {
   constructor(
     private adminService: AdminService,
     private schedulerService: SchedulerService,
+    private tempUpgradeService: TempUpgradeService,
   ) {}
 
   /**
@@ -573,7 +575,7 @@ export class AdminController {
   ) {
     this.validateSecret(headerSecret);
     if (!hospitalId) return { success: false, error: 'hospitalId 필요' };
-    return this.adminService.tempUpgrade({ hospitalId, plan: (plan || 'STANDARD').toUpperCase(), days: parseInt(days || '21', 10) || 21, dryRun: apply !== '1' });
+    return this.tempUpgradeService.tempUpgrade({ hospitalId, plan: (plan || 'STANDARD').toUpperCase(), days: parseInt(days || '21', 10) || 21, dryRun: apply !== '1' });
   }
 
   private validateSecret(secret: string) {
