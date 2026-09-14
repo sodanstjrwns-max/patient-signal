@@ -728,13 +728,18 @@ export class CompetitorsService {
     const d = new Date(day + 'T00:00:00Z');
     const next = new Date(d); next.setUTCDate(next.getUTCDate() + 1);
     await this.prisma.$executeRaw`DELETE FROM mention_daily WHERE day = ${d}::date`;
+    // 같은 키가 한 INSERT 안에 여러 번 나오면 ON CONFLICT DO UPDATE 가 실패하므로(“cannot affect row a second time”) SELECT 단계에서 미리 GROUP BY 한다.
     const r1: number = await this.prisma.$executeRaw`
       INSERT INTO mention_daily (day, hospital_id, name, platform, cnt)
-      SELECT ${d}::date, r.hospital_id, unnest(r.competitors_mentioned) AS name, r.ai_platform::text, 1
-      FROM ai_responses r
-      WHERE r.response_date >= ${d} AND r.response_date < ${next}
-        AND r.competitors_mentioned IS NOT NULL AND array_length(r.competitors_mentioned, 1) > 0
-      ON CONFLICT (day, hospital_id, name, platform) DO UPDATE SET cnt = mention_daily.cnt + 1`;
+      SELECT ${d}::date, x.hospital_id, x.name, x.platform, COUNT(*)::int
+      FROM (
+        SELECT r.hospital_id, unnest(r.competitors_mentioned) AS name, r.ai_platform::text AS platform
+        FROM ai_responses r
+        WHERE r.response_date >= ${d} AND r.response_date < ${next}
+          AND r.competitors_mentioned IS NOT NULL AND array_length(r.competitors_mentioned, 1) > 0
+      ) x
+      GROUP BY x.hospital_id, x.name, x.platform
+      ON CONFLICT (day, hospital_id, name, platform) DO UPDATE SET cnt = EXCLUDED.cnt`;
     const r2: number = await this.prisma.$executeRaw`
       INSERT INTO mention_daily (day, hospital_id, name, platform, cnt)
       SELECT ${d}::date, r.hospital_id, '*', r.ai_platform::text, COUNT(*)::int
@@ -744,16 +749,16 @@ export class CompetitorsService {
     return { day, rows: Number(r1) + Number(r2) };
   }
   /** 최근 N일 재집계 (오래된 날부터). 크론은 2일(어제·오늘), 최초 1회는 120일 백필. */
-  async rebuildMentionRange(days: number): Promise<{ days: number; rows: number; from: string; to: string }> {
+  async rebuildMentionRange(days: number): Promise<{ days: number; rows: number; from: string; to: string; errors: string[] }> {
     const n = Math.max(1, Math.min(400, days));
     const today = new Date(); today.setUTCHours(0, 0, 0, 0);
-    let rows = 0; let from = '';
+    let rows = 0; let from = ''; const errors: string[] = [];
     for (let i = n - 1; i >= 0; i--) {
       const d = new Date(today); d.setUTCDate(d.getUTCDate() - i);
       const key = d.toISOString().slice(0, 10); if (!from) from = key;
-      try { rows += (await this.rebuildMentionDay(key)).rows; } catch (e) { this.logger.warn(`mention_daily rebuild ${key} 실패: ${(e as Error).message}`); }
+      try { rows += (await this.rebuildMentionDay(key)).rows; } catch (e) { const msg = (e as Error).message; this.logger.warn(`mention_daily rebuild ${key} 실패: ${msg}`); if (errors.length < 3) errors.push(`${key}: ${msg.slice(0, 160)}`); }
     }
-    return { days: n, rows, from, to: today.toISOString().slice(0, 10) };
+    return { days: n, rows, from, to: today.toISOString().slice(0, 10), errors };
   }
 
   // ===== 【2026-09-14】 요즘 AI가 좋아하는 병원 — 전국 언급 리더보드 =====
