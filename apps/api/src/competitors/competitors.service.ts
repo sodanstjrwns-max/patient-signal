@@ -850,7 +850,13 @@ export class CompetitorsService {
       return m;
     };
     const cur = merge(curRows), prev = merge(prevRows);
-    const totCur = new Map(curTot.map((t) => [t.hospital_id, t.total])), totPrev = new Map(prevTot.map((t) => [t.hospital_id, t.total]));
+    // 표본 규칙: 응답이 MIN_TOTAL 건 미만인 질문 병원은 분모·분자에서 제외(2건짜리 병원의 1건 언급이 50%로 튀는 것 방지)
+    const MIN_TOTAL = 30, MIN_MENTIONS = 5, MIN_ASKED = 2;
+    const totCur = new Map(curTot.filter((t) => t.total >= MIN_TOTAL).map((t) => [t.hospital_id, t.total]));
+    const totPrev = new Map(prevTot.filter((t) => t.total >= MIN_TOTAL).map((t) => [t.hospital_id, t.total]));
+    for (const agg of [...cur.values(), ...prev.values()]) {
+      for (const hid of [...agg.perHospital.keys()]) if (!totCur.has(hid) && !totPrev.has(hid)) agg.perHospital.delete(hid);
+    }
     const askingCur = totCur.size || 1, askingPrev = totPrev.size || 1;
     const allCur = [...totCur.values()].reduce((a, b) => a + b, 0), allPrev = [...totPrev.values()].reduce((a, b) => a + b, 0);
     // 평균 등장률(%) = Σ_h (이 병원명이 나온 h의 응답 수 / h의 전체 응답 수) / 질문 병원 수
@@ -865,7 +871,9 @@ export class CompetitorsService {
     const totalMentions = [...cur.values()].reduce((a, b) => a + b.mentions, 0);
     // 정렬: rate(평균 등장률, 기본) · mentions(언급 수) · hospitals(물어본 병원 수)
     const sortKey = opts.sort === 'mentions' ? 'mentions' : opts.sort === 'hospitals' ? 'hospitals' : 'rate';
-    const scored = [...cur.entries()].map(([key, v]) => ({ key, v, rate: meanRate(v, totCur, askingCur) }));
+    const scored = [...cur.entries()]
+      .filter(([, v]) => v.mentions >= MIN_MENTIONS && v.perHospital.size >= MIN_ASKED)
+      .map(([key, v]) => ({ key, v, rate: meanRate(v, totCur, askingCur) }));
     scored.sort((a, b) => sortKey === 'rate' ? (b.rate - a.rate) || (b.v.mentions - a.v.mentions)
       : sortKey === 'hospitals' ? (b.v.perHospital.size - a.v.perHospital.size) || (b.v.mentions - a.v.mentions)
       : b.v.mentions - a.v.mentions);
@@ -891,7 +899,7 @@ export class CompetitorsService {
       period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
       filters: { specialty, sido, sort: sortKey }, source, totalNames: cur.size, totalMentions, askingHospitals, responsesTotal,
       list, risers,
-      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산한 관찰 통계(표기 정규화·일반명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
+      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산한 관찰 통계(표기 정규화·일반명 제외, 응답 30건 미만 병원과 언급 5건·2곳 미만 병원명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
     };
   }
 
