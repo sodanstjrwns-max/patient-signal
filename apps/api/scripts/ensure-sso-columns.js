@@ -12,6 +12,8 @@ async function main() {
     await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hub_user_id" TEXT')
     await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "hub_email" TEXT')
     await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "users_hub_user_id_key" ON "users"("hub_user_id")')
+    // 【2026-09-14】전국 리더보드(trending) — 병원 무관 기간 스캔용. CONCURRENTLY 로 크롤 쓰기 잠금 없이 생성(멱등)
+    await prisma.$executeRawUnsafe('CREATE INDEX CONCURRENTLY IF NOT EXISTS "ai_responses_response_date_idx" ON "ai_responses"("response_date")')
     console.log('[ensure-sso-columns] OK — hospitals.ps_hospital_id, users.pending_ps_hospital_id ready')
   } finally {
     await prisma.$disconnect()
