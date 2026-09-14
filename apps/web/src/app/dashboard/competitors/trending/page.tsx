@@ -26,10 +26,11 @@ export default function TrendingPage() {
   const [specialty, setSpecialty] = useState<string>(user?.hospital?.specialtyType || 'DENTAL');
   const [sido, setSido] = useState<string>('');
   const [days, setDays] = useState<number>(30);
+  const [sort, setSort] = useState<'mentions' | 'hospitals'>('mentions');
 
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<TrendData>({
-    queryKey: ['competitors-trending', specialty, sido, days],
-    queryFn: async () => (await competitorsApi.trending({ specialty: specialty || undefined, sido: sido || undefined, days, limit: 50 })).data,
+    queryKey: ['competitors-trending', specialty, sido, days, sort],
+    queryFn: async () => (await competitorsApi.trending({ specialty: specialty || undefined, sido: sido || undefined, days, limit: 50, sort })).data,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -57,6 +58,11 @@ export default function TrendingPage() {
             <div className="text-xs font-semibold text-slate-600">기간
               <div className="mt-1 inline-flex rounded-lg border border-slate-200 overflow-hidden">
                 {[30, 90].map((d) => <button key={d} onClick={() => setDays(d)} className={`px-3 py-2 text-sm font-semibold ${days === d ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>{d}일</button>)}
+              </div></div>
+            <div className="text-xs font-semibold text-slate-600">순위 기준
+              <div className="mt-1 inline-flex rounded-lg border border-slate-200 overflow-hidden">
+                <button onClick={() => setSort('mentions')} className={`px-3 py-2 text-sm font-semibold ${sort === 'mentions' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>언급 수</button>
+                <button onClick={() => setSort('hospitals')} title="한 병원의 질문량에 쏠리지 않게, 몇 곳의 질문에서 나왔는지로 정렬" className={`px-3 py-2 text-sm font-semibold ${sort === 'hospitals' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>물어본 병원 수</button>
               </div></div>
             {data && <div className="ml-auto text-xs text-slate-500">{data.period.since} ~ {data.period.until} · 병원명 {data.totalNames.toLocaleString()}개 · 언급 {data.totalMentions.toLocaleString()}건</div>}
           </CardContent>

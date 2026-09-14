@@ -24,8 +24,9 @@ export class CompetitorsController {
     @Query('sido') sido?: string,
     @Query('days') days?: string,
     @Query('limit') limit?: string,
+    @Query('sort') sort?: string,
   ) {
-    return this.competitorsService.getTrending({ specialty, sido, days: parseInt(days || '30', 10), limit: parseInt(limit || '50', 10) });
+    return this.competitorsService.getTrending({ specialty, sido, days: parseInt(days || '30', 10), limit: parseInt(limit || '50', 10), sort });
   }
 
   @Get(':hospitalId/inactive')

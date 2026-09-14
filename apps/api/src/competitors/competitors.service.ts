@@ -729,7 +729,7 @@ export class CompetitorsService {
    *  - 접미사만 남는 일반명(치과의원·병원 등)은 제외
    *  - 직전 같은 기간과 비교해 증감, 우리 고객 병원이면 표시
    */
-  async getTrending(opts: { specialty?: string; sido?: string; days: number; limit: number }) {
+  async getTrending(opts: { specialty?: string; sido?: string; days: number; limit: number; sort?: string }) {
     const days = Math.max(7, Math.min(180, opts.days || 30));
     const limit = Math.max(10, Math.min(200, opts.limit || 50));
     const since = new Date(); since.setDate(since.getDate() - days);
@@ -758,17 +758,20 @@ export class CompetitorsService {
     ]);
 
     const GENERIC = new Set(['치과', '치과의원', '치과병원', '병원', '의원', '한의원', '한방병원', '피부과', '성형외과', '정형외과', '안과', '내과', '이비인후과', '산부인과', '소아과', '클리닉', '센터', '대학병원', '종합병원']);
+    // 진료 종류 자체가 이름인 것(소아치과·교정치과·임플란트치과 …)은 특정 병원이 아니라 카테고리 → 제외
+    const CATEGORY_CORE = /^(소아|교정|치과교정|임플란트|구강외과|보철|치주|심미|통합|일반|네트워크|전문|동네|근처|주변|추천|유명|24시|야간|치과교정과|구강내과|턱관절|사랑니|소아청소년|미용|성형)(치과|한의원|병원|의원)?$/;
     const norm = (n: string) => {
       const x = this.normalizeDentalName(n).replace(/(의원|병원|클리닉|센터)$/, '');
       return x;
     };
+    const isCategory = (raw: string) => CATEGORY_CORE.test(raw.replace(/\s+/g, '')) || CATEGORY_CORE.test(norm(raw));
     const merge = (rows: Row[]) => {
       const m = new Map<string, { name: string; mentions: number; askedBy: number; platforms: number; topPlatform: string | null; topSido: string | null; variants: Set<string> }>();
       for (const r of rows) {
         const raw = String(r.name || '').trim();
         if (raw.length < 2) continue;
         const key = norm(raw);
-        if (!key || key.length < 2 || GENERIC.has(raw.replace(/\s+/g, '')) || GENERIC.has(key)) continue;
+        if (!key || key.length < 2 || GENERIC.has(raw.replace(/\s+/g, '')) || GENERIC.has(key) || isCategory(raw)) continue;
         const cur = m.get(key);
         if (cur) { cur.mentions += r.mentions; cur.askedBy = Math.max(cur.askedBy, r.asked_by); cur.platforms = Math.max(cur.platforms, r.platforms); cur.variants.add(raw); if (r.mentions > (cur as any)._top) { (cur as any)._top = r.mentions; cur.name = raw; cur.topPlatform = r.top_platform; cur.topSido = r.top_sido; } }
         else m.set(key, Object.assign({ name: raw, mentions: r.mentions, askedBy: r.asked_by, platforms: r.platforms, topPlatform: r.top_platform, topSido: r.top_sido, variants: new Set([raw]) }, { _top: r.mentions }));
@@ -780,7 +783,9 @@ export class CompetitorsService {
     for (const c of customers) for (const n of [c.name, ...(c.nameAliases || [])]) { const k = norm(n); if (k) customerKeys.set(k, { id: c.id, name: c.name, sido: c.regionSido, sigungu: c.regionSigungu }); }
 
     const totalMentions = [...cur.values()].reduce((a, b) => a + b.mentions, 0);
-    const list = [...cur.entries()].sort((a, b) => b[1].mentions - a[1].mentions).slice(0, limit).map(([key, v], i) => {
+    // 정렬: mentions(응답 건수) 또는 hospitals(물어본 병원 수 → 특정 병원의 질문량 편중을 줄인 지표)
+    const sortKey = opts.sort === 'hospitals' ? 'hospitals' : 'mentions';
+    const list = [...cur.entries()].sort((a, b) => sortKey === 'hospitals' ? (b[1].askedBy - a[1].askedBy) || (b[1].mentions - a[1].mentions) : b[1].mentions - a[1].mentions).slice(0, limit).map(([key, v], i) => {
       const p = prev.get(key);
       const customer = customerKeys.get(key);
       return {
@@ -794,7 +799,7 @@ export class CompetitorsService {
     const risers = list.filter((x) => x.prevMentions === 0 && x.mentions >= 5).slice(0, 10);
     return {
       period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
-      filters: { specialty, sido }, totalNames: cur.size, totalMentions,
+      filters: { specialty, sido, sort: sortKey }, totalNames: cur.size, totalMentions,
       list, risers,
       method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산(표기 정규화·일반명 제외). 언급 수 = 응답 건수 기준. 우리 고객은 배지로 표시.',
     };
