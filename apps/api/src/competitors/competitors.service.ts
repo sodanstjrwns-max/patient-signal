@@ -737,7 +737,10 @@ export class CompetitorsService {
     const specialty = opts.specialty && /^[A-Z_]+$/.test(opts.specialty) ? opts.specialty : null;
     const sido = opts.sido ? String(opts.sido).trim().slice(0, 20) : null;
 
-    type Row = { name: string; mentions: number; asked_by: number; platforms: number; top_platform: string | null; top_sido: string | null };
+    // 병원명 × 질문한 병원 단위로 집계 → 질문량이 많은 병원(예: 프롬프트 300개짜리)이 순위를 지배하지 않게
+    // "평균 등장률" = 각 질문 병원의 응답 중 이 병원명이 나온 비율을 구해 질문 병원 수로 평균 (질문 병원마다 가중치 동일)
+    type Row = { name: string; hospital_id: string; mentions: number; top_platform: string | null; region_sido: string | null };
+    type Tot = { hospital_id: string; total: number };
     const query = (from: Date, to: Date | null) => this.prisma.$queryRaw<Row[]>`
       WITH cur AS (
         SELECT unnest(r.competitors_mentioned) AS name, r.ai_platform::text AS ai_platform, h.region_sido, r.hospital_id
@@ -748,12 +751,19 @@ export class CompetitorsService {
           AND (${sido}::text IS NULL OR h.region_sido = ${sido})
           AND r.competitors_mentioned IS NOT NULL AND array_length(r.competitors_mentioned, 1) > 0
       )
-      SELECT name, COUNT(*)::int AS mentions, COUNT(DISTINCT hospital_id)::int AS asked_by, COUNT(DISTINCT ai_platform)::int AS platforms,
-             MODE() WITHIN GROUP (ORDER BY ai_platform) AS top_platform, MODE() WITHIN GROUP (ORDER BY region_sido) AS top_sido
-      FROM cur GROUP BY name ORDER BY mentions DESC LIMIT 600`;
-    const [curRows, prevRows, customers] = await Promise.all([
-      query(since, null),
-      query(prevSince, since),
+      SELECT name, hospital_id, COUNT(*)::int AS mentions,
+             MODE() WITHIN GROUP (ORDER BY ai_platform) AS top_platform, MAX(region_sido) AS region_sido
+      FROM cur GROUP BY name, hospital_id ORDER BY mentions DESC LIMIT 20000`;
+    const totals = (from: Date, to: Date | null) => this.prisma.$queryRaw<Tot[]>`
+      SELECT r.hospital_id, COUNT(*)::int AS total
+      FROM ai_responses r JOIN hospitals h ON h.id = r.hospital_id
+      WHERE r.response_date >= ${from}
+        AND (${to}::timestamp IS NULL OR r.response_date < ${to})
+        AND (${specialty}::text IS NULL OR h.specialty_type::text = ${specialty})
+        AND (${sido}::text IS NULL OR h.region_sido = ${sido})
+      GROUP BY r.hospital_id`;
+    const [curRows, prevRows, curTot, prevTot, customers] = await Promise.all([
+      query(since, null), query(prevSince, since), totals(since, null), totals(prevSince, since),
       this.prisma.hospital.findMany({ where: { subscriptionStatus: 'ACTIVE' }, select: { id: true, name: true, nameAliases: true, regionSido: true, regionSigungu: true } }),
     ]);
 
@@ -765,43 +775,68 @@ export class CompetitorsService {
       return x;
     };
     const isCategory = (raw: string) => CATEGORY_CORE.test(raw.replace(/\s+/g, '')) || CATEGORY_CORE.test(norm(raw));
+    type Agg = { name: string; mentions: number; perHospital: Map<string, number>; platforms: Map<string, number>; sidos: Map<string, number>; variants: Set<string>; _top: number };
     const merge = (rows: Row[]) => {
-      const m = new Map<string, { name: string; mentions: number; askedBy: number; platforms: number; topPlatform: string | null; topSido: string | null; variants: Set<string> }>();
+      const m = new Map<string, Agg>();
       for (const r of rows) {
         const raw = String(r.name || '').trim();
         if (raw.length < 2) continue;
         const key = norm(raw);
         if (!key || key.length < 2 || GENERIC.has(raw.replace(/\s+/g, '')) || GENERIC.has(key) || isCategory(raw)) continue;
-        const cur = m.get(key);
-        if (cur) { cur.mentions += r.mentions; cur.askedBy = Math.max(cur.askedBy, r.asked_by); cur.platforms = Math.max(cur.platforms, r.platforms); cur.variants.add(raw); if (r.mentions > (cur as any)._top) { (cur as any)._top = r.mentions; cur.name = raw; cur.topPlatform = r.top_platform; cur.topSido = r.top_sido; } }
-        else m.set(key, Object.assign({ name: raw, mentions: r.mentions, askedBy: r.asked_by, platforms: r.platforms, topPlatform: r.top_platform, topSido: r.top_sido, variants: new Set([raw]) }, { _top: r.mentions }));
+        let cur = m.get(key);
+        if (!cur) { cur = { name: raw, mentions: 0, perHospital: new Map(), platforms: new Map(), sidos: new Map(), variants: new Set(), _top: 0 }; m.set(key, cur); }
+        cur.mentions += r.mentions;
+        cur.perHospital.set(r.hospital_id, (cur.perHospital.get(r.hospital_id) || 0) + r.mentions);
+        if (r.top_platform) cur.platforms.set(r.top_platform, (cur.platforms.get(r.top_platform) || 0) + r.mentions);
+        if (r.region_sido) cur.sidos.set(r.region_sido, (cur.sidos.get(r.region_sido) || 0) + r.mentions);
+        cur.variants.add(raw);
+        if (r.mentions > cur._top) { cur._top = r.mentions; cur.name = raw; }
       }
       return m;
     };
     const cur = merge(curRows), prev = merge(prevRows);
+    const totCur = new Map(curTot.map((t) => [t.hospital_id, t.total])), totPrev = new Map(prevTot.map((t) => [t.hospital_id, t.total]));
+    const askingCur = totCur.size || 1, askingPrev = totPrev.size || 1;
+    const allCur = [...totCur.values()].reduce((a, b) => a + b, 0), allPrev = [...totPrev.values()].reduce((a, b) => a + b, 0);
+    // 평균 등장률(%) = Σ_h (이 병원명이 나온 h의 응답 수 / h의 전체 응답 수) / 질문 병원 수
+    const meanRate = (agg: Agg, tot: Map<string, number>, asking: number) => {
+      let sum = 0; for (const [hid, n] of agg.perHospital) { const t = tot.get(hid) || 0; if (t > 0) sum += Math.min(1, n / t); }
+      return (sum / asking) * 100;
+    };
+    const topOf = (mm: Map<string, number>) => { let best: string | null = null, bv = -1; for (const [k, v] of mm) if (v > bv) { bv = v; best = k; } return best; };
     const customerKeys = new Map<string, { id: string; name: string; sido: string; sigungu: string }>();
     for (const c of customers) for (const n of [c.name, ...(c.nameAliases || [])]) { const k = norm(n); if (k) customerKeys.set(k, { id: c.id, name: c.name, sido: c.regionSido, sigungu: c.regionSigungu }); }
 
     const totalMentions = [...cur.values()].reduce((a, b) => a + b.mentions, 0);
-    // 정렬: mentions(응답 건수) 또는 hospitals(물어본 병원 수 → 특정 병원의 질문량 편중을 줄인 지표)
-    const sortKey = opts.sort === 'hospitals' ? 'hospitals' : 'mentions';
-    const list = [...cur.entries()].sort((a, b) => sortKey === 'hospitals' ? (b[1].askedBy - a[1].askedBy) || (b[1].mentions - a[1].mentions) : b[1].mentions - a[1].mentions).slice(0, limit).map(([key, v], i) => {
+    // 정렬: rate(평균 등장률, 기본) · mentions(언급 수) · hospitals(물어본 병원 수)
+    const sortKey = opts.sort === 'mentions' ? 'mentions' : opts.sort === 'hospitals' ? 'hospitals' : 'rate';
+    const scored = [...cur.entries()].map(([key, v]) => ({ key, v, rate: meanRate(v, totCur, askingCur) }));
+    scored.sort((a, b) => sortKey === 'rate' ? (b.rate - a.rate) || (b.v.mentions - a.v.mentions)
+      : sortKey === 'hospitals' ? (b.v.perHospital.size - a.v.perHospital.size) || (b.v.mentions - a.v.mentions)
+      : b.v.mentions - a.v.mentions);
+    const list = scored.slice(0, limit).map(({ key, v, rate }, i) => {
       const p = prev.get(key);
+      const prevRate = p ? meanRate(p, totPrev, askingPrev) : null;
       const customer = customerKeys.get(key);
       return {
-        rank: i + 1, name: v.name, mentions: v.mentions, share: totalMentions ? Math.round(v.mentions / totalMentions * 1000) / 10 : 0,
-        prevMentions: p ? p.mentions : 0, deltaPct: p && p.mentions > 0 ? Math.round((v.mentions - p.mentions) / p.mentions * 100) : (p ? 0 : null),
-        askedBy: v.askedBy, platforms: v.platforms, topPlatform: v.topPlatform, topSido: v.topSido,
+        rank: i + 1, name: v.name, mentions: v.mentions,
+        rate: Math.round(rate * 100) / 100,                                   // 평균 등장률 %
+        share: allCur ? Math.round(v.mentions / allCur * 1000) / 10 : 0,     // 전체 응답 중 등장 비율 %
+        prevMentions: p ? p.mentions : 0, prevRate: prevRate === null ? null : Math.round(prevRate * 100) / 100,
+        deltaRate: prevRate === null ? null : Math.round((rate - prevRate) * 100) / 100,
+        deltaPct: p && p.mentions > 0 ? Math.round((v.mentions - p.mentions) / p.mentions * 100) : (p ? 0 : null),
+        askedBy: v.perHospital.size, platforms: v.platforms.size, topPlatform: topOf(v.platforms), topSido: topOf(v.sidos),
         variants: [...v.variants].slice(0, 4), isCustomer: !!customer, customerRegion: customer ? `${customer.sido} ${customer.sigungu}` : null,
       };
     });
     // 새로 뜬 병원: 직전 기간 없음 + 이번 기간 상위
     const risers = list.filter((x) => x.prevMentions === 0 && x.mentions >= 5).slice(0, 10);
+    const askingHospitals = askingCur, responsesTotal = allCur;
     return {
       period: { days, since: since.toISOString().slice(0, 10), until: new Date().toISOString().slice(0, 10) },
-      filters: { specialty, sido, sort: sortKey }, totalNames: cur.size, totalMentions,
+      filters: { specialty, sido, sort: sortKey }, totalNames: cur.size, totalMentions, askingHospitals, responsesTotal,
       list, risers,
-      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산(표기 정규화·일반명 제외). 언급 수 = 응답 건수 기준. 우리 고객은 배지로 표시.',
+      method: '전 고객 병원의 AI 응답에서 언급된 병원명을 합산(표기 정규화·일반명 제외). 등장률 = 질문한 병원마다 "그 병원 응답 중 이 병원명이 나온 비율"을 구해 질문 병원 수로 평균 — 질문량이 많은 병원 하나가 순위를 좌우하지 않게 한 지표. 우리 고객은 배지로 표시.',
     };
   }
 
