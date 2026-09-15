@@ -37,7 +37,7 @@ export interface DiagnosisInput {
     staleDays?: number | null;
     /** 백엔드 판정: 0건의 원인. 웹을 안 보는 채널인가, 출처에 우리가 없는 것인가 */
     zeroReason?: 'NO_WEB_SEARCH' | 'SOURCE_GAP' | null;
-    /** 이 채널이 원당 불러오는 경쟁 변원 수 */
+    /** 이 채널이 응답당 불러오는 경쟁 병원 수 */
     competitorsPerResponse?: number | null;
   }>;
   negativeRate: number | null;
@@ -186,10 +186,10 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
       id: 'platform-no-web',
       severity: 'warn',
       headline: `${noWeb.map(p => p.name).join(' · ')}은 웹을 보지 않는 채널입니다`,
-      cause: `${noWeb.map(p => `${p.name} ${p.totalQueries}번 질문 전부 웹상 검상 없이 답변`).join(', ')}. ` +
-        `이 채널은 학습된 지식으로만 답하고, 경쟁 변원 이름도 거의 안 가를킵니다. ` +
-        `우리가 뭐를 하든 단기에는 반식되지 않습니다.`,
-      action: '이 채널에 상당을 쓰지 마세요. 웹을 보는 채널(ChatGPT·Perplexity·Grok)에 자원을 몰아주십시오.',
+      cause: `${noWeb.map(p => `${p.name} ${p.totalQueries}번 질문 전부 웹 검색 없이 답변`).join(', ')}. ` +
+        `이 채널은 학습된 지식으로만 답하고, 경쟁 병원 이름도 거의 안 가리킵니다. ` +
+        `우리가 뭘 하든 단기에는 반영되지 않습니다.`,
+      action: '이 채널에 시간을 쓰지 마세요. 웹을 보는 채널(ChatGPT·Perplexity·Grok)에 자원을 몰아주십시오.',
       href: '/dashboard/insights?tab=sources',
       cta: '웹 기반 채널 집중 확인',
     });
@@ -205,11 +205,11 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
       headline: `${dead.map(p => p.name).join(' · ')}에서는 한 번도 안 나옵니다`,
       cause: `${dead.map(p => `${p.name} ${p.totalQueries}번 질문 중 0번`).join(', ')}. ` +
         (withComp.length > 0
-          ? `그런데 이 채널은 한 번 답할 때마다 경쟁 변원을 ` +
-            `${withComp.map(p => `${p.name} ${p.competitorsPerResponse}개`).join(', ')}썯 생색합니다. ` +
-            `모릅다는 것이 아니라, 이 채널이 읽는 출처에 우리만 없는 것입니다.`
+          ? `그런데 이 채널은 한 번 답할 때마다 경쟁 병원을 ` +
+            `${withComp.map(p => `${p.name} ${p.competitorsPerResponse}개`).join(', ')}씩 언급합니다. ` +
+            `모른다는 것이 아니라, 이 채널이 읽는 출처에 우리만 없는 것입니다.`
           : `이 채널이 참고하는 출처에 우리가 없다는 뜻입니다.`),
-      action: '경쟁 변원이 인용되는 바로 그 출처를 먼저 확인하고, 거기에 우리 근거 문서를 심으십시오.',
+      action: '경쟁 병원이 인용되는 바로 그 출처를 먼저 확인하고, 거기에 우리 근거 문서를 심으십시오.',
       href: '/dashboard/insights?tab=sources',
       cta: '인용 출처 점검',
       term: 'citedSources',

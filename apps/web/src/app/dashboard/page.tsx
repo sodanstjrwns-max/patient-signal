@@ -575,7 +575,7 @@ export default function DashboardPage() {
                       한 번도 안 나옵니다
                       {(p.competitorsPerResponse ?? 0) >= 1 && (
                         <span className="block font-semibold text-slate-500 mt-0.5">
-                          그러나 경쟁 변원은 한 번에 {p.competitorsPerResponse}개썯 나옵니다
+                          그러나 경쟁 병원은 한 번에 {p.competitorsPerResponse}개씩 나옵니다
                         </span>
                       )}
                     </p>
