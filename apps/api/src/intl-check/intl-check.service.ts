@@ -74,6 +74,14 @@ export class IntlCheckService implements OnModuleInit {
   private get staleAfterMs(): number {
     return this.deadlineMs + this.envInt('INTL_CHECK_STALE_MARGIN_MS', 120_000);
   }
+  /** An interrupted run this young is re-run at boot (the visitor is still waiting). */
+  private get resumeWindowMs(): number {
+    return this.envInt('INTL_CHECK_RESUME_WINDOW_MS', 30 * 60_000);
+  }
+  /** Hard cap on runs resumed per boot, so a restart loop cannot multiply LLM spend. */
+  private get resumeMax(): number {
+    return Math.max(0, this.envInt('INTL_CHECK_RESUME_MAX', 3));
+  }
   private get platformFailCap(): number {
     return Math.max(1, this.envInt('INTL_CHECK_PLATFORM_FAIL_CAP', 3));
   }
@@ -124,10 +132,27 @@ export class IntlCheckService implements OnModuleInit {
    */
   async onModuleInit(): Promise<void> {
     try {
+      const now = Date.now();
+      // Recent enough that the visitor is still waiting for the e-mail they
+      // asked for → resume it. Older than that → give up and mark it failed.
+      const resumable = await this.prisma.intlCheck.findMany({
+        where: {
+          status: { in: ['PENDING', 'RUNNING'] },
+          createdAt: {
+            lt: new Date(now - this.staleAfterMs),
+            gte: new Date(now - this.resumeWindowMs),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: this.resumeMax,
+        select: { id: true },
+      });
+
       const { count } = await this.prisma.intlCheck.updateMany({
         where: {
           status: { in: ['PENDING', 'RUNNING'] },
-          createdAt: { lt: new Date(Date.now() - this.staleAfterMs) },
+          createdAt: { lt: new Date(now - this.staleAfterMs) },
+          id: { notIn: resumable.map((r) => r.id) },
         },
         data: {
           status: 'FAILED',
@@ -138,6 +163,18 @@ export class IntlCheckService implements OnModuleInit {
         this.logger.warn(
           `[intl-check] boot sweep: ${count} interrupted run(s) marked FAILED`,
         );
+      }
+
+      if (resumable.length > 0) {
+        // Reset to PENDING so run() (which refuses to touch a RUNNING row) restarts them.
+        await this.prisma.intlCheck.updateMany({
+          where: { id: { in: resumable.map((r) => r.id) } },
+          data: { status: 'PENDING', errorMessage: null },
+        });
+        this.logger.warn(
+          `[intl-check] boot sweep: resuming ${resumable.length} interrupted run(s)`,
+        );
+        for (const r of resumable) this.schedule(r.id);
       }
     } catch (err: unknown) {
       this.logger.warn(
