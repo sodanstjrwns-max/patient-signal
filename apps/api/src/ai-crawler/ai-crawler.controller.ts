@@ -886,7 +886,7 @@ export class AICrawlerController {
   }
 
   @UseInterceptors(HttpCacheInterceptor)
-  @CacheTTL(600)
+  @CacheTTL(1800) // 【2026-09-15】크롤 완료 시 invalidateHospital 로 무효화되므로 30분
   @Get('insights/sources/:hospitalId')
   @ApiOperation({ summary: 'AI 응답 출처 분석 - 출처별 빈도, 채널 분석 (Gemini grounding-redirect 디코딩 포함)' })
   async getSourceAnalysis(
@@ -925,7 +925,7 @@ export class AICrawlerController {
     let totalResponsesWithSources = 0;
     let totalResponses = 0;
 
-    const CHUNK = 2000;
+    const CHUNK = 5000; // 2GB 인스턴스 기준. 512MB 시절 2,000
     let cursorId: string | null = null;
     for (;;) {
       const chunk: Array<{ id: string; citedSources: string[]; citedUrl: string | null; aiPlatform: string; isMentioned: boolean; sourceHints: unknown }> =
