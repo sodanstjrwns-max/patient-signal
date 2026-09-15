@@ -1284,3 +1284,29 @@ model WeightCalibrationRun {
   @@index([createdAt])
   @@map("weight_calibration_runs")
 }
+
+// ==================== 해외판 AI 가시성 체크 (리드 마그넷) ====================
+// thepatientfunnel.com/en/check · /jp/check 에서 익명 원장이 신청 → 20문항 × 최대 4플랫폼 즉석 측정 → 결과 메일.
+// 국내 고객용 테이블(hospitals/prompts/ai_responses …)과 완전히 분리된 독립 테이블. 관계 없음.
+model IntlCheck {
+  id         String    @id @default(uuid())
+  createdAt  DateTime  @default(now()) @map("created_at")
+  email      String
+  clinicName String    @map("clinic_name")
+  city       String
+  country    String // ISO 2자리 (US/UK/AU/CA/JP …), 그 외 자유 코드
+  language   String    @default("en") // en | ja
+  website    String?
+  specialty  String    @default("dental")
+  ipHash     String?   @map("ip_hash") // 일일 IP 제한용 SHA-256 앞 32자 (원문 IP 저장 안 함)
+  status     String    @default("PENDING") // PENDING | RUNNING | DONE | FAILED
+  resultJson Json?     @map("result_json")
+  emailedAt  DateTime? @map("emailed_at")
+  waitlist   Boolean   @default(false) // "Reply YES" 회신 시 운영자가 수동 체크
+  errorMessage String? @map("error_message")
+
+  @@index([email, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([createdAt])
+  @@map("intl_checks")
+}

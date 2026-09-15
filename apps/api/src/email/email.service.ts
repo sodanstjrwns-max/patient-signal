@@ -66,6 +66,42 @@ export class EmailService {
   }
 
   /**
+   * 【범용】미리 렌더링된 HTML 메일 발송 — 해외판 AI 가시성 체크 리포트 등
+   * 템플릿을 호출측이 만드는 경우에 사용. Resend 반환값의 error 를 반드시 확인한다
+   * (sendOpsAlert 와 동일 — 미확인 시 발송 실패가 성공으로 둔갑).
+   */
+  async sendHtmlEmail(opts: {
+    to: string;
+    subject: string;
+    html: string;
+    fromName?: string;
+    replyTo?: string;
+  }): Promise<{ ok: boolean; id?: string; error?: string }> {
+    if (!this.resend) {
+      this.logger.warn(`HTML 메일 발송 건너뜀 (Resend 비활성): ${opts.to}`);
+      return { ok: false, error: 'RESEND_API_KEY not configured' };
+    }
+    try {
+      const result = await this.resend.emails.send({
+        from: `${opts.fromName || this.appName} <${this.fromEmail}>`,
+        to: [opts.to],
+        subject: opts.subject,
+        html: opts.html,
+        ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+      });
+      if (result?.error) {
+        this.logger.error(`HTML 메일 발송 실패(Resend): ${JSON.stringify(result.error)}`);
+        return { ok: false, error: JSON.stringify(result.error) };
+      }
+      this.logger.log(`HTML 메일 발송: ${opts.subject} → ${opts.to} (id=${result?.data?.id})`);
+      return { ok: true, id: result?.data?.id };
+    } catch (error) {
+      this.logger.error(`HTML 메일 발송 실패: ${error.message}`);
+      return { ok: false, error: String(error?.message || error) };
+    }
+  }
+
+  /**
    * 이메일 인증 코드 발송
    */
   async sendVerificationEmail(to: string, code: string, name: string): Promise<boolean> {

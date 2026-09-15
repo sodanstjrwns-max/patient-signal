@@ -56,6 +56,9 @@ async function bootstrap() {
       ...(process.env.PATIENT_PULSE_URL ? [process.env.PATIENT_PULSE_URL] : []),
       'https://patientpulse.kr',
       'https://www.patientpulse.kr',
+      // 해외판 AI 가시성 체크 (POST/GET /api/public/intl-check) — thepatientfunnel.com/en|jp/check
+      'https://thepatientfunnel.com',
+      'https://www.thepatientfunnel.com',
     ],
     credentials: true,
   });

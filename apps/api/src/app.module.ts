@@ -25,6 +25,7 @@ import { PublicApiModule } from './public-api/public-api.module';
 import { SourceIntelModule } from './source-intel/source-intel.module';
 import { GrowthDiagnosisModule } from './growth-diagnosis/growth-diagnosis.module';
 import { PsOpenApiModule } from './ps-open-api/ps-open-api.module';
+import { IntlCheckModule } from './intl-check/intl-check.module';
 
 @Module({
   imports: [
@@ -74,6 +75,8 @@ import { PsOpenApiModule } from './ps-open-api/ps-open-api.module';
     SourceIntelModule,
     GrowthDiagnosisModule,
     PsOpenApiModule,
+    // 해외판 AI 가시성 체크 (공개·익명, thepatientfunnel.com 리드 마그넷) — 국내 고객 모듈과 독립
+    IntlCheckModule,
   ],
   controllers: [AppController],
   providers: [
