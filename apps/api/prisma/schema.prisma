@@ -1310,3 +1310,22 @@ model IntlCheck {
   @@index([createdAt])
   @@map("intl_checks")
 }
+
+/// 해외판 무료 프리뷰 리드(랜딩 자체 수집) — 메일 시퀀스는 자체 발송(Resend)
+model LeadMagnet {
+  id             String    @id @default(uuid())
+  createdAt      DateTime  @default(now()) @map("created_at")
+  email          String
+  language       String    @default("en")
+  source         String?
+  ipHash         String?   @map("ip_hash")
+  token          String    @unique
+  step           Int       @default(0)
+  lastSentAt     DateTime? @map("last_sent_at")
+  unsubscribedAt DateTime? @map("unsubscribed_at")
+
+  @@index([email, language])
+  @@index([createdAt])
+  @@index([ipHash, createdAt])
+  @@map("lead_magnets")
+}

@@ -56,6 +56,17 @@ async function main() {
     } catch (e4) {
       console.error('[ensure-sso-columns] intl_checks 생성 실패(해외판 체크 API 가 DATABASE_ERROR 를 냄):', e4.message)
     }
+    // 【2026-09-15】해외판 무료 프리뷰 리드(lead_magnets) — 같은 이유로 멱등 적용
+    try {
+      await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "lead_magnets" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "source" TEXT, "ip_hash" TEXT, "token" TEXT NOT NULL, "step" INTEGER NOT NULL DEFAULT 0, "last_sent_at" TIMESTAMP(3), "unsubscribed_at" TIMESTAMP(3), CONSTRAINT "lead_magnets_pkey" PRIMARY KEY ("id"))')
+      await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "lead_magnets_token_key" ON "lead_magnets"("token")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_email_language_idx" ON "lead_magnets"("email", "language")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_created_at_idx" ON "lead_magnets"("created_at")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_ip_hash_created_at_idx" ON "lead_magnets"("ip_hash", "created_at")')
+      console.log('[ensure-sso-columns] lead_magnets ready')
+    } catch (e5) {
+      console.error('[ensure-sso-columns] lead_magnets 생성 실패(무료 프리뷰 신청이 DATABASE_ERROR 를 냄):', e5.message)
+    }
     console.log('[ensure-sso-columns] OK — hospitals.ps_hospital_id, users.pending_ps_hospital_id ready')
   } finally {
     await prisma.$disconnect()
