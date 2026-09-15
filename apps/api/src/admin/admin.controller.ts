@@ -400,6 +400,21 @@ export class AdminController {
   }
 
   /**
+   * 【어드민·DB 진단】느린 대시보드 원인 추적 — 활성 쿼리·테이블/인덱스 상태·대표 쿼리 EXPLAIN (읽기 전용)
+   * GET /api/admin/db-diag?hospitalId=xxx (x-admin-secret 헤더)
+   */
+  @Public()
+  @Get('db-diag')
+  async getDbDiag(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId?: string,
+    @Query('explain') explain?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    return this.adminService.getDbDiag(hospitalId, explain === '1');
+  }
+
+  /**
    * 【어드민·디버그】Gemini flash-lite grounding 단건 호출 진단
    * GET /api/admin/debug-gemini?secret=xxx&model=gemini-flash-lite-latest
    *

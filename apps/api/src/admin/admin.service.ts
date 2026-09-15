@@ -1784,6 +1784,90 @@ export class AdminService {
     return { hospital, jobs, responsesByMinute: respByDay };
   }
 
+  /**
+   * 【2026-09-15】DB 진단(읽기 전용) — 대시보드 API 25~40s 지연 원인 추적용.
+   * 각 항목은 개별 try/catch: 권한/확장 미설치로 일부가 실패해도 나머지는 반환한다.
+   */
+  async getDbDiag(hospitalId?: string, explain = false) {
+    const out: Record<string, unknown> = { generatedAt: new Date().toISOString() };
+    const step = async (key: string, fn: () => Promise<unknown>) => {
+      const t0 = Date.now();
+      try {
+        out[key] = await fn();
+      } catch (e) {
+        out[key] = { error: (e as Error).message?.slice(0, 300) };
+      }
+      out[`${key}Ms`] = Date.now() - t0;
+    };
+
+    await step('server', () => this.prisma.$queryRawUnsafe(
+      `SELECT version() AS version, current_database() AS db, current_user AS usr,
+              (SELECT count(*)::int FROM pg_stat_activity) AS connections,
+              (SELECT setting FROM pg_settings WHERE name='max_connections') AS max_connections,
+              pg_size_pretty(pg_database_size(current_database())) AS db_size`,
+    ));
+    await step('activity', () => this.prisma.$queryRawUnsafe(
+      `SELECT pid, state, wait_event_type, wait_event,
+              EXTRACT(EPOCH FROM (now() - query_start))::int AS running_s,
+              EXTRACT(EPOCH FROM (now() - xact_start))::int AS xact_s,
+              left(regexp_replace(query, '\s+', ' ', 'g'), 220) AS query
+       FROM pg_stat_activity
+       WHERE datname = current_database() AND pid <> pg_backend_pid() AND state <> 'idle'
+       ORDER BY query_start NULLS LAST LIMIT 40`,
+    ));
+    await step('locks', () => this.prisma.$queryRawUnsafe(
+      `SELECT l.locktype, l.mode, l.granted, l.relation::regclass::text AS relation, a.pid,
+              EXTRACT(EPOCH FROM (now() - a.query_start))::int AS running_s,
+              left(a.query, 120) AS query
+       FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid
+       WHERE NOT l.granted OR l.mode IN ('AccessExclusiveLock','ShareLock','ShareUpdateExclusiveLock')
+       LIMIT 40`,
+    ));
+    await step('tables', () => this.prisma.$queryRawUnsafe(
+      `SELECT relname, n_live_tup::int AS live, n_dead_tup::int AS dead,
+              seq_scan::int, idx_scan::int, n_tup_ins::int AS ins, n_tup_upd::int AS upd, n_tup_del::int AS del,
+              last_vacuum, last_autovacuum, last_analyze, last_autoanalyze,
+              pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
+              pg_size_pretty(pg_relation_size(relid)) AS table_size
+       FROM pg_stat_user_tables
+       ORDER BY pg_total_relation_size(relid) DESC LIMIT 25`,
+    ));
+    await step('indexes', () => this.prisma.$queryRawUnsafe(
+      `SELECT t.relname AS table, i.relname AS index, ix.indisvalid AS valid, ix.indisready AS ready,
+              pg_size_pretty(pg_relation_size(i.oid)) AS size, s.idx_scan::int AS scans,
+              pg_get_indexdef(i.oid) AS def
+       FROM pg_index ix
+       JOIN pg_class i ON i.oid = ix.indexrelid
+       JOIN pg_class t ON t.oid = ix.indrelid
+       LEFT JOIN pg_stat_user_indexes s ON s.indexrelid = i.oid
+       WHERE t.relname IN ('ai_responses','crawl_jobs','daily_scores','prompts','competitors','competitor_scores','mention_daily','hospitals')
+       ORDER BY t.relname, i.relname`,
+    ));
+    await step('statements', () => this.prisma.$queryRawUnsafe(
+      `SELECT calls::int, round(total_exec_time)::int AS total_ms, round(mean_exec_time)::int AS mean_ms,
+              round(max_exec_time)::int AS max_ms, rows::int,
+              left(regexp_replace(query, '\s+', ' ', 'g'), 200) AS query
+       FROM pg_stat_statements
+       WHERE dbid = (SELECT oid FROM pg_database WHERE datname = current_database())
+       ORDER BY total_exec_time DESC LIMIT 20`,
+    ));
+    if (hospitalId) {
+      const hid = hospitalId.replace(/[^0-9a-f-]/gi, '');
+      await step('dashboardCount', () => this.prisma.$queryRawUnsafe(
+        `SELECT count(*)::int AS c FROM ai_responses WHERE hospital_id = '${hid}' AND response_date >= now() - interval '7 days'`,
+      ));
+      if (explain) {
+        await step('explainDashboard', () => this.prisma.$queryRawUnsafe(
+          `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) SELECT count(*) FROM ai_responses WHERE hospital_id = '${hid}' AND response_date >= now() - interval '7 days'`,
+        ));
+        await step('explainComparison', () => this.prisma.$queryRawUnsafe(
+          `EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) SELECT competitors_mentioned, is_mentioned FROM ai_responses WHERE hospital_id = '${hid}' AND response_date >= now() - interval '30 days' AND cardinality(competitors_mentioned) > 0`,
+        ));
+      }
+    }
+    return out;
+  }
+
   async getCrawlHealth(days = 7) {
     const now = new Date();
     const since = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
