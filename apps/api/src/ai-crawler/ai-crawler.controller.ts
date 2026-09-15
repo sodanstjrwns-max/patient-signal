@@ -932,7 +932,8 @@ export class AICrawlerController {
         await this.prisma.aIResponse.findMany({
           where: { hospitalId, createdAt: { gte: since } },
           select: { id: true, citedSources: true, citedUrl: true, aiPlatform: true, isMentioned: true, sourceHints: true },
-          orderBy: { id: 'asc' },
+          // (hospital_id, created_at) 인덱스를 타도록 created_at 순으로 키셋 페이징 — id 단독 정렬은 매 청크마다 전체 정렬을 유발
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
           take: CHUNK,
           ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
         });

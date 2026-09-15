@@ -3,7 +3,7 @@
  * 행 수만 행을 한꺼번에 메모리에 올려 OOM(Render "Ran out of memory") → 재시작 → 502 가 났다.
  * 같은 프로세스 안에서 무거운 핸들러를 최대 N개까지만 동시에 돌린다(나머지는 대기).
  */
-const MAX = Math.max(1, parseInt(process.env.HEAVY_QUERY_CONCURRENCY || '1', 10) || 1);
+const MAX = Math.max(1, parseInt(process.env.HEAVY_QUERY_CONCURRENCY || '2', 10) || 2);
 let running = 0;
 const waiters: Array<() => void> = [];
 
