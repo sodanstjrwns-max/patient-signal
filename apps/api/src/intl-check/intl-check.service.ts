@@ -485,6 +485,9 @@ export class IntlCheckService implements OnModuleInit {
       subject,
       html,
       fromName: 'The Patient Funnel',
+      // Own domain once INTL_FROM_EMAIL is set (after the provider verifies it);
+      // unset falls back to the account default so mail never stops.
+      fromEmail: process.env.INTL_FROM_EMAIL?.trim() || undefined,
       replyTo: this.replyTo,
     });
     if (sent.ok) {

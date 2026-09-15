@@ -48,6 +48,15 @@ export class LeadMagnetService {
       process.env.LEAD_MAGNET_API_URL?.trim() || 'https://api.patientsignal.kr'
     );
   }
+  /**
+   * The international book should send from its own domain so its reputation is
+   * not mixed with the Korean SaaS transactional mail on patientsignal.kr.
+   * Set INTL_FROM_EMAIL once that domain is verified with the provider; while it
+   * is unset, EmailService falls back to the account default so mail never stops.
+   */
+  private get fromEmail(): string | undefined {
+    return process.env.INTL_FROM_EMAIL?.trim() || undefined;
+  }
   private get batchSize(): number {
     const n = parseInt(process.env.LEAD_MAGNET_BATCH ?? '', 10);
     return Number.isFinite(n) && n > 0 ? n : 100;
@@ -217,6 +226,7 @@ export class LeadMagnetService {
       subject: tpl.subject,
       html,
       fromName: 'The Patient Funnel',
+      fromEmail: this.fromEmail,
       replyTo:
         process.env.INTL_CHECK_REPLY_TO?.trim() || 'patientsfunnel@gmail.com',
     });

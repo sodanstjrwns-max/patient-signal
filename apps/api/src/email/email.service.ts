@@ -11,13 +11,15 @@ export class EmailService {
 
   constructor() {
     const apiKey = process.env.RESEND_API_KEY;
-    
+
     if (apiKey && apiKey.length > 10) {
       this.resend = new Resend(apiKey);
       this.logger.log('✅ Resend 이메일 서비스 초기화 완료');
     } else {
       this.resend = null;
-      this.logger.warn('⚠️ RESEND_API_KEY가 설정되지 않았습니다. 이메일 발송이 비활성화됩니다.');
+      this.logger.warn(
+        '⚠️ RESEND_API_KEY가 설정되지 않았습니다. 이메일 발송이 비활성화됩니다.',
+      );
     }
 
     this.fromEmail = process.env.EMAIL_FROM || 'noreply@patientsignal.kr';
@@ -54,7 +56,9 @@ export class EmailService {
           .replace(/</g, '&lt;')}</pre>`,
       });
       if (result?.error) {
-        this.logger.error(`운영 알림 발송 실패(Resend): ${JSON.stringify(result.error)}`);
+        this.logger.error(
+          `운영 알림 발송 실패(Resend): ${JSON.stringify(result.error)}`,
+        );
         return false;
       }
       this.logger.log(`운영 알림 발송: ${subject} (id=${result?.data?.id})`);
@@ -75,6 +79,8 @@ export class EmailService {
     subject: string;
     html: string;
     fromName?: string;
+    /** Override the sending address (e.g. the international book's own domain). */
+    fromEmail?: string;
     replyTo?: string;
   }): Promise<{ ok: boolean; id?: string; error?: string }> {
     if (!this.resend) {
@@ -83,17 +89,21 @@ export class EmailService {
     }
     try {
       const result = await this.resend.emails.send({
-        from: `${opts.fromName || this.appName} <${this.fromEmail}>`,
+        from: `${opts.fromName || this.appName} <${opts.fromEmail || this.fromEmail}>`,
         to: [opts.to],
         subject: opts.subject,
         html: opts.html,
         ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
       });
       if (result?.error) {
-        this.logger.error(`HTML 메일 발송 실패(Resend): ${JSON.stringify(result.error)}`);
+        this.logger.error(
+          `HTML 메일 발송 실패(Resend): ${JSON.stringify(result.error)}`,
+        );
         return { ok: false, error: JSON.stringify(result.error) };
       }
-      this.logger.log(`HTML 메일 발송: ${opts.subject} → ${opts.to} (id=${result?.data?.id})`);
+      this.logger.log(
+        `HTML 메일 발송: ${opts.subject} → ${opts.to} (id=${result?.data?.id})`,
+      );
       return { ok: true, id: result?.data?.id };
     } catch (error) {
       this.logger.error(`HTML 메일 발송 실패: ${error.message}`);
@@ -104,7 +114,11 @@ export class EmailService {
   /**
    * 이메일 인증 코드 발송
    */
-  async sendVerificationEmail(to: string, code: string, name: string): Promise<boolean> {
+  async sendVerificationEmail(
+    to: string,
+    code: string,
+    name: string,
+  ): Promise<boolean> {
     if (!this.resend) {
       this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
       return false;
@@ -172,7 +186,11 @@ export class EmailService {
   /**
    * 비밀번호 재설정 이메일 발송
    */
-  async sendPasswordResetEmail(to: string, token: string, name: string): Promise<boolean> {
+  async sendPasswordResetEmail(
+    to: string,
+    token: string,
+    name: string,
+  ): Promise<boolean> {
     if (!this.resend) {
       this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
       return false;
@@ -325,7 +343,12 @@ export class EmailService {
   /**
    * 구독 만료 예정 알림 이메일
    */
-  async sendSubscriptionExpiringEmail(to: string, name: string, daysRemaining: number, hospitalName: string): Promise<boolean> {
+  async sendSubscriptionExpiringEmail(
+    to: string,
+    name: string,
+    daysRemaining: number,
+    hospitalName: string,
+  ): Promise<boolean> {
     if (!this.resend) {
       this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
       return false;
@@ -403,9 +426,9 @@ export class EmailService {
    * 결제 완료 이메일
    */
   async sendPaymentConfirmationEmail(
-    to: string, 
-    name: string, 
-    data: { amount: number; planType: string; receiptUrl?: string }
+    to: string,
+    name: string,
+    data: { amount: number; planType: string; receiptUrl?: string },
   ): Promise<boolean> {
     if (!this.resend) {
       this.logger.warn(`이메일 발송 건너뜀 (서비스 비활성화): ${to}`);
@@ -457,11 +480,15 @@ export class EmailService {
       <p><strong>결제 일시:</strong> ${new Date().toLocaleDateString('ko-KR')} ${new Date().toLocaleTimeString('ko-KR')}</p>
     </div>
     
-    ${data.receiptUrl ? `
+    ${
+      data.receiptUrl
+        ? `
     <div style="text-align: center;">
       <a href="${data.receiptUrl}" class="button">영수증 확인</a>
     </div>
-    ` : ''}
+    `
+        : ''
+    }
     
     <p>결제해 주셔서 감사합니다. 앞으로도 좋은 서비스로 보답하겠습니다!</p>
     
@@ -512,13 +539,22 @@ export class EmailService {
       return false;
     }
 
-    const urgencyColor = data.daysRemaining <= 0 ? '#EF4444' : data.daysRemaining <= 1 ? '#F59E0B' : '#3B82F6';
-    const urgencyText = data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
-    const subject = data.daysRemaining <= 0
-      ? `[Patient Signal] 체험 기간이 오늘 종료됩니다 ⏰`
-      : `[Patient Signal] 체험 기간 만료 ${data.daysRemaining}일 전 안내`;
+    const urgencyColor =
+      data.daysRemaining <= 0
+        ? '#EF4444'
+        : data.daysRemaining <= 1
+          ? '#F59E0B'
+          : '#3B82F6';
+    const urgencyText =
+      data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
+    const subject =
+      data.daysRemaining <= 0
+        ? `[Patient Signal] 체험 기간이 오늘 종료됩니다 ⏰`
+        : `[Patient Signal] 체험 기간 만료 ${data.daysRemaining}일 전 안내`;
 
-    const statsSection = (data.mentionRate || data.totalQueries || data.abhsScore) ? `
+    const statsSection =
+      data.mentionRate || data.totalQueries || data.abhsScore
+        ? `
     <div style="background:#F0F9FF;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #3B82F6;">
       <p style="font-weight:bold;color:#1E40AF;margin-bottom:12px;">📊 체험 기간 동안의 ${data.hospitalName} 성과</p>
       ${data.mentionRate !== undefined ? `<p>🎯 AI 언급률: <strong>${data.mentionRate}%</strong></p>` : ''}
@@ -526,7 +562,8 @@ export class EmailService {
       ${data.totalQueries !== undefined ? `<p>🔍 총 AI 분석: <strong>${data.totalQueries}회</strong></p>` : ''}
       ${data.topPlatform ? `<p>🏆 최고 성과 플랫폼: <strong>${data.topPlatform}</strong></p>` : ''}
       <p style="color:#6B7280;font-size:13px;margin-top:12px;">유료 전환하면 매일 자동 추적하여 경쟁사 대비 변화를 실시간으로 확인할 수 있습니다.</p>
-    </div>` : '';
+    </div>`
+        : '';
 
     const html = `
 <!DOCTYPE html>
@@ -572,7 +609,9 @@ export class EmailService {
         subject,
         html,
       });
-      this.logger.log(`[A1] 트라이얼 전환 이메일 발송 완료: ${to} (D-${data.daysRemaining})`);
+      this.logger.log(
+        `[A1] 트라이얼 전환 이메일 발송 완료: ${to} (D-${data.daysRemaining})`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`이메일 발송 실패: ${error.message}`);
@@ -613,13 +652,17 @@ export class EmailService {
   <div class="header"><div class="logo">🏥 Patient Signal</div></div>
   <h2>${name} 원장님, ${data.daysSinceLogin}일째 안 오셨어요! 😢</h2>
   <p><strong>${data.hospitalName}</strong>의 AI 가시성은 계속 추적되고 있습니다.</p>
-  ${data.recentMentionRate !== undefined ? `
+  ${
+    data.recentMentionRate !== undefined
+      ? `
   <div class="highlight">
     <p>📊 지금 확인 안 하고 계신 데이터:</p>
     <p>🎯 최근 AI 언급률: <strong>${data.recentMentionRate}%</strong></p>
     ${data.scoreChange !== undefined ? `<p>${data.scoreChange >= 0 ? '📈' : '📉'} 점수 변화: <strong>${data.scoreChange >= 0 ? '+' : ''}${data.scoreChange}점</strong></p>` : ''}
     <p style="color:#6B7280;font-size:13px;">경쟁사들은 매일 확인하고 있을지도 몰라요...</p>
-  </div>` : ''}
+  </div>`
+      : ''
+  }
   <div style="text-align:center;margin:30px 0;">
     <a href="${this.appUrl}/dashboard" class="button">대시보드 확인하기 →</a>
   </div>
@@ -633,7 +676,9 @@ export class EmailService {
         subject: `[Patient Signal] ${name} 원장님, ${data.hospitalName}의 AI 성과가 변했어요`,
         html,
       });
-      this.logger.log(`[A3] 이탈 리마인드 이메일 발송: ${to} (${data.daysSinceLogin}일 미접속)`);
+      this.logger.log(
+        `[A3] 이탈 리마인드 이메일 발송: ${to} (${data.daysSinceLogin}일 미접속)`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`이메일 발송 실패: ${error.message}`);
@@ -667,8 +712,10 @@ export class EmailService {
   ): Promise<boolean> {
     if (!this.resend) return false;
 
-    const trendIcon = (change: number) => change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
-    const trendColor = (change: number) => change > 0 ? '#059669' : change < 0 ? '#DC2626' : '#6B7280';
+    const trendIcon = (change: number) =>
+      change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
+    const trendColor = (change: number) =>
+      change > 0 ? '#059669' : change < 0 ? '#DC2626' : '#6B7280';
 
     const html = `
 <!DOCTYPE html>
@@ -715,10 +762,14 @@ export class EmailService {
   <div style="background:#FEF2F2;border-radius:8px;padding:12px 16px;margin:12px 0;">
     ⚠️ <strong>개선 필요:</strong> ${data.weakPlatform} (${data.weakPlatformRate}%)
   </div>
-  ${data.competitorAlert ? `
+  ${
+    data.competitorAlert
+      ? `
   <div class="alert-box">
     🔔 <strong>경쟁사 알림:</strong> ${data.competitorAlert}
-  </div>` : ''}
+  </div>`
+      : ''
+  }
   
   <p style="color:#6B7280;font-size:13px;">이번 주 총 ${data.totalCrawls}회 AI 분석 완료</p>
   
@@ -773,23 +824,42 @@ export class EmailService {
       ENTERPRISE: '엔터프라이즈',
     };
 
-    const urgencyColor = data.daysRemaining <= 1 ? '#EF4444' : data.daysRemaining <= 3 ? '#F59E0B' : data.daysRemaining <= 7 ? '#F97316' : '#3B82F6';
-    const urgencyBg = data.daysRemaining <= 1 ? '#FEF2F2' : data.daysRemaining <= 3 ? '#FFFBEB' : data.daysRemaining <= 7 ? '#FFF7ED' : '#EFF6FF';
-    const urgencyText = data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
+    const urgencyColor =
+      data.daysRemaining <= 1
+        ? '#EF4444'
+        : data.daysRemaining <= 3
+          ? '#F59E0B'
+          : data.daysRemaining <= 7
+            ? '#F97316'
+            : '#3B82F6';
+    const urgencyBg =
+      data.daysRemaining <= 1
+        ? '#FEF2F2'
+        : data.daysRemaining <= 3
+          ? '#FFFBEB'
+          : data.daysRemaining <= 7
+            ? '#FFF7ED'
+            : '#EFF6FF';
+    const urgencyText =
+      data.daysRemaining <= 0 ? '오늘 만료' : `${data.daysRemaining}일 남음`;
 
-    const subject = data.daysRemaining <= 0
-      ? `[Patient Signal] ${data.couponName} 혜택이 오늘 만료됩니다 ⏰`
-      : data.daysRemaining <= 3
-        ? `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 ⚠️`
-        : `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 안내`;
+    const subject =
+      data.daysRemaining <= 0
+        ? `[Patient Signal] ${data.couponName} 혜택이 오늘 만료됩니다 ⏰`
+        : data.daysRemaining <= 3
+          ? `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 ⚠️`
+          : `[Patient Signal] ${data.couponName} 만료 ${data.daysRemaining}일 전 안내`;
 
-    const statsSection = (data.mentionRate !== undefined || data.abhsScore !== undefined) ? `
+    const statsSection =
+      data.mentionRate !== undefined || data.abhsScore !== undefined
+        ? `
     <div style="background:#F0F9FF;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #3B82F6;">
       <p style="font-weight:bold;color:#1E40AF;margin-bottom:12px;">📊 ${data.hospitalName}의 현재 AI 성과</p>
       ${data.abhsScore !== undefined ? `<p>📈 ABHS 종합점수: <strong>${data.abhsScore}점</strong></p>` : ''}
       ${data.mentionRate !== undefined ? `<p>🎯 AI 언급률: <strong>${data.mentionRate}%</strong></p>` : ''}
       <p style="color:#6B7280;font-size:13px;margin-top:12px;">쿠폰 만료 후에도 유료 결제하시면 이 성과를 계속 추적할 수 있습니다.</p>
-    </div>` : '';
+    </div>`
+        : '';
 
     const html = `
 <!DOCTYPE html>
@@ -851,7 +921,9 @@ export class EmailService {
         subject,
         html,
       });
-      this.logger.log(`[쿠폰 만료] 이메일 발송 완료: ${to} (D-${data.daysRemaining}, ${data.couponName})`);
+      this.logger.log(
+        `[쿠폰 만료] 이메일 발송 완료: ${to} (D-${data.daysRemaining}, ${data.couponName})`,
+      );
       return true;
     } catch (error) {
       this.logger.error(`이메일 발송 실패: ${error.message}`);
@@ -879,16 +951,18 @@ export class EmailService {
   ): Promise<boolean> {
     if (!this.resend) return false;
 
-    const changesHtml = data.changes.map(c => {
-      const icon = c.change > 0 ? '📈' : '📉';
-      const color = c.change > 0 ? '#DC2626' : '#059669'; // 경쟁사 올라가면 빨간색(위험), 내려가면 초록(기회)
-      return `<tr>
+    const changesHtml = data.changes
+      .map((c) => {
+        const icon = c.change > 0 ? '📈' : '📉';
+        const color = c.change > 0 ? '#DC2626' : '#059669'; // 경쟁사 올라가면 빨간색(위험), 내려가면 초록(기회)
+        return `<tr>
         <td style="padding:8px 12px;">${c.competitorName}</td>
         <td style="padding:8px 12px;text-align:center;">${c.oldScore}</td>
         <td style="padding:8px 12px;text-align:center;">${c.newScore}</td>
         <td style="padding:8px 12px;text-align:center;color:${color};font-weight:bold;">${icon} ${c.change >= 0 ? '+' : ''}${c.change}</td>
       </tr>`;
-    }).join('');
+      })
+      .join('');
 
     const html = `
 <!DOCTYPE html>
