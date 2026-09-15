@@ -7,7 +7,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { createHash } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -457,6 +457,43 @@ export class IntlCheckService implements OnModuleInit {
     );
 
     await this.sendReport(id, row.email, result);
+    await this.enrolInSequence(row.email, language);
+  }
+
+  /**
+   * Someone who typed their address to get a report is a warm lead, and the
+   * form's consent line covers follow-up mail. Put them on the same sequence as
+   * the free-audit signups — but starting at step 2, because the report they
+   * just received already carries the audit link, and two mails at once reads
+   * as spam. Never revives an unsubscribed address, never duplicates.
+   */
+  private async enrolInSequence(
+    email: string,
+    language: IntlLanguage,
+  ): Promise<void> {
+    try {
+      const existing = await this.prisma.leadMagnet.findFirst({
+        where: { email, language },
+        select: { id: true },
+      });
+      if (existing) return;
+      await this.prisma.leadMagnet.create({
+        data: {
+          email,
+          language,
+          source: 'intl-check',
+          token: randomUUID(),
+          step: 1,
+          lastSentAt: new Date(),
+        },
+      });
+      this.logger.log(`[intl-check] ${email} enrolled in the nurture sequence`);
+    } catch (err: unknown) {
+      // Never let list-building break the report the person actually asked for.
+      this.logger.warn(
+        `[intl-check] enrol skipped: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
   }
 
   private skipped(platform: IntlPlatform, reason: string): IntlObservation {

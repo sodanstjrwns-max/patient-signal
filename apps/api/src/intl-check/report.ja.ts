@@ -62,6 +62,11 @@ export const JA_STRINGS: ReportStrings = {
   siteUrl: JA_SITE_URL,
   gumroadLinkLabel: 'The Patient Funnel（日本語版）',
   gumroadUrl: JA_GUMROAD_URL,
+  auditHeading: '本の前に、自院を採点する',
+  auditBody:
+    'このレポートが見たのは第一段階「認知」だけです。無料の診断票は10段階すべてを扱います。「はい・いいえ」で答える30行、30点満点。終えたときには、どの段階が漏れているかが分かります。10段階のうち二つは本文まるごと付いています。無料です。',
+  auditButton: '無料の診断票を受け取る',
+  auditUrl: 'https://thepatientfunnel.com/jp/preview/',
   signatureIntro: 'ご質問はこのメールにそのまま返信してください。',
   signatureName: 'Suokjoon Moon',
   signatureRole: 'The Patient Funnel · Patient Signal',

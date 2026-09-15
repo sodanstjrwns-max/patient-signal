@@ -41,6 +41,11 @@ export interface ReportStrings {
   siteUrl: string;
   gumroadLinkLabel: string;
   gumroadUrl: string;
+  /** The free audit PDF — the same offer the landing page makes. */
+  auditHeading: string;
+  auditBody: string;
+  auditButton: string;
+  auditUrl: string;
   signatureIntro: string;
   signatureName: string;
   signatureRole: string;
@@ -199,6 +204,12 @@ export function renderReport(r: IntlCheckResult, s: ReportStrings): string {
         <a href="${e(s.siteUrl)}" style="color:#4338ca;font-weight:600">${e(s.siteLinkLabel)}</a><br>
         <a href="${e(s.gumroadUrl)}" style="color:#4338ca;font-weight:600">${e(s.gumroadLinkLabel)}</a>
       </p>
+    </div>
+
+    <div style="margin:22px 0 0;padding:18px 20px;border:1px solid #d7dedb;border-radius:10px;background:#f4f7f5">
+      <h2 style="font-size:16px;margin:0 0 8px;color:#0b6b5e">${e(s.auditHeading)}</h2>
+      <p style="margin:0 0 14px;font-size:15px;line-height:1.55;color:#1f2937">${e(s.auditBody)}</p>
+      <a href="${e(s.auditUrl)}" style="display:inline-block;background:#0b6b5e;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;font-weight:700;font-size:15px">${e(s.auditButton)}</a>
     </div>
 
     <h2 style="font-size:15px;margin:32px 0 6px;color:#374151">${e(s.questionsHeading)}</h2>

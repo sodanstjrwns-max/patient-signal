@@ -61,6 +61,11 @@ export const EN_STRINGS: ReportStrings = {
   siteUrl: EN_SITE_URL,
   gumroadLinkLabel: 'The Patient Funnel playbook (English edition)',
   gumroadUrl: EN_GUMROAD_URL,
+  auditHeading: 'Before the book: score your own practice',
+  auditBody:
+    'This report covers stage one, Awareness. The free audit covers all ten: thirty yes-or-no lines about your practice, scored out of thirty, so you finish knowing which stage is leaking. It comes with two of the ten stages in full. No cost.',
+  auditButton: 'Get the free audit',
+  auditUrl: 'https://thepatientfunnel.com/en/preview/',
   signatureIntro: 'Questions? Just reply to this email.',
   signatureName: 'Suokjoon Moon',
   signatureRole: 'The Patient Funnel · Patient Signal',
