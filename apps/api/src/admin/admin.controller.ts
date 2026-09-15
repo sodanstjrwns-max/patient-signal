@@ -594,6 +594,32 @@ export class AdminController {
   }
 
   /**
+   * 【어드민·응답 원문 조회】GET /api/admin/responses?hospitalId=&platform=GEMINI&days=7&search=백세&limit=10 (x-admin-secret)
+   * 읽기 전용 — "실제로는 나오는데 0%로 잡힌다" 유형 진단용. search 로 원문 내 문자열 존재 여부를 확인해
+   * 언급 감지 누락(병원명 변형 미스매치)인지, 진짜 미언급인지 가른다.
+   */
+  @Public()
+  @Get('responses')
+  async getAdminResponses(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('platform') platform?: string,
+    @Query('days') days?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (!hospitalId) return { success: false, error: 'hospitalId 필요' };
+    return this.adminService.getAdminResponses({
+      hospitalId,
+      platform: platform?.toUpperCase(),
+      days: Math.min(parseInt(days || '7', 10) || 7, 90),
+      search,
+      limit: Math.min(parseInt(limit || '10', 10) || 10, 50),
+    });
+  }
+
+  /**
    * 【임시 업그레이드·상태 조회】GET /api/admin/temp-upgrade-status?hospitalId= (x-admin-secret)
    * 읽기 전용 — 마커 존재·만료일·원복 대상 검증용. apply=1 재호출 검증은 마커 오염 위험이 있어 금지.
    */

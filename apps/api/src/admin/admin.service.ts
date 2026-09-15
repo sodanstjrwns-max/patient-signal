@@ -1785,6 +1785,42 @@ export class AdminService {
   }
 
   /**
+   * 【2026-09-15】어드민 응답 원문 조회(읽기 전용) — 언급 감지 누락 진단용.
+   * search 를 주면 원문에 그 문자열이 포함된 응답만 필터해, "AI는 언급했는데 isMentioned=false" 케이스를 잡는다.
+   */
+  async getAdminResponses(opts: { hospitalId: string; platform?: string; days: number; search?: string; limit: number }) {
+    const { hospitalId, platform, days, search, limit } = opts;
+    const since = new Date(); since.setDate(since.getDate() - days);
+    const where: any = { hospitalId, responseDate: { gte: since } };
+    if (platform) where.aiPlatform = platform;
+    if (search) where.responseText = { contains: search };
+    const [total, rows] = await Promise.all([
+      this.prisma.aIResponse.count({ where }),
+      this.prisma.aIResponse.findMany({
+        where,
+        orderBy: { responseDate: 'desc' },
+        take: limit,
+        select: {
+          id: true, aiPlatform: true, aiModelVersion: true, responseDate: true,
+          isMentioned: true, mentionPosition: true, isWebSearch: true, isVerified: true,
+          competitorsMentioned: true, citedSources: true, responseText: true,
+          archivedPromptText: true, prompt: { select: { promptText: true } },
+        },
+      }),
+    ]);
+    return {
+      total,
+      search: search || null,
+      rows: rows.map((r) => ({
+        ...r,
+        promptText: r.prompt?.promptText || r.archivedPromptText,
+        prompt: undefined,
+        responseText: (r.responseText || '').slice(0, 1200),
+      })),
+    };
+  }
+
+  /**
    * 【2026-09-15】DB 진단(읽기 전용) — 대시보드 API 25~40s 지연 원인 추적용.
    * 각 항목은 개별 try/catch: 권한/확장 미설치로 일부가 실패해도 나머지는 반환한다.
    */
