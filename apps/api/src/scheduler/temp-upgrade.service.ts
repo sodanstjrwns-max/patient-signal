@@ -37,6 +37,28 @@ export class TempUpgradeService {
     return result;
   }
 
+  /**
+   * 【2026-09-15】임시 업그레이드 상태 조회 — 읽기 전용. 마커 존재 여부·만료일·원복 대상 플랜을 확인한다.
+   * apply=1 재호출로 확인하면 마커 부재 시 동일 플랜 마커가 새로 생겨 원복 체계가 오염되므로, 검증은 반드시 이걸로.
+   */
+  async tempUpgradeStatus(hospitalId: string) {
+    const h = await this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { id: true, name: true, planType: true } });
+    if (!h) return { error: 'HOSPITAL_NOT_FOUND' };
+    const marks = await this.prisma.notification.findMany({
+      where: { hospitalId, title: { startsWith: '[임시 업그레이드' } },
+      orderBy: { sentAt: 'desc' },
+      take: 10,
+      select: { id: true, title: true, message: true, sentAt: true },
+    });
+    const active = marks.find((m) => m.title.startsWith('[임시 업그레이드 until'));
+    let parsed: Record<string, string> | null = null;
+    if (active) {
+      const mt = active.title.match(/^\[임시 업그레이드 until (\d{4}-\d{2}-\d{2}) revert ([A-Z_]+)\] ([A-Z_]+)/);
+      if (mt) parsed = { until: mt[1], revertTo: mt[2], upgradedTo: mt[3] };
+    }
+    return { hospital: h, active: active ? { title: active.title, sentAt: active.sentAt, parsed } : null, history: marks.map((m) => ({ title: m.title, sentAt: m.sentAt })) };
+  }
+
   /** 만료된 임시 업그레이드 원복 (매일 스케줄러). 그 사이 결제로 상위 플랜 구독이 생겼으면 원복 생략. */
   async revertExpiredTempUpgrades() {
     const today = new Date().toISOString().slice(0, 10);
