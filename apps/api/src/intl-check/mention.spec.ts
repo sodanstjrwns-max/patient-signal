@@ -228,3 +228,25 @@ describe('intl-check aggregation', () => {
     expect(result.findings.join(' ')).toContain('Harbour City Dental');
   });
 });
+
+describe('extractClinicNames — Japanese descriptive phrases are not clinics', () => {
+  it('drops na-adjective and verb phrases the suffix regex swallows', () => {
+    const text =
+      '具体的な医院をお探しなら、対応している歯科医院として千賀デンタルクリニックが挙げられます。' +
+      '紹介できる医院は他にもあります。';
+    const names = extractClinicNames(text, '新宿スマイル歯科', 'ja');
+    expect(names).toContain('千賀デンタルクリニック');
+    expect(names).not.toContain('具体的な医院');
+    expect(names).not.toContain('対応している歯科医院');
+    expect(names).not.toContain('紹介できる医院');
+  });
+
+  it('does not treat 日本歯科医師会 / 日本歯科大学 as a clinic named 日本歯科', () => {
+    const text =
+      '日本歯科医師会のガイドラインによると、日本歯科大学附属病院でも相談できます。' +
+      '渋谷ハプラス歯科も候補です。';
+    const names = extractClinicNames(text, '新宿スマイル歯科', 'ja');
+    expect(names).toContain('渋谷ハプラス歯科');
+    expect(names).not.toContain('日本歯科');
+  });
+});

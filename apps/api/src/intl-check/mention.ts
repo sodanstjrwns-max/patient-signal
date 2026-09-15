@@ -498,9 +498,35 @@ const JA_NAME_RE = new RegExp(
 // on either side is not hiragana (so "さとう歯科" / "もみじ歯科" stay intact but
 // "おすすめの田中歯科" and "東京なら田中歯科" are cut before the name).
 const JA_DELIM_RE = /[、。，．「」『』（）()【】・:：\s]/g;
-const JA_PARTICLE_RE = /(?:なら|から|まで|より|の|は|が|で|を|に|と|や|へ|も)/g;
+// Longer forms first so 「として千賀デンタルクリニック」 cuts at として, not at と.
+const JA_PARTICLE_RE =
+  /(?:としては|としても|として|といった|という|ならば|なら|からは|から|までは|まで|よりも|より|では|には|とは|でも|にも|の|は|が|で|を|に|と|や|へ|も)/g;
 const HIRAGANA_RE = /[ぁ-ん]/;
 const JA_GENERIC_CORE_TAIL_RE = /(?:向け|専門|対応|可能|希望|系|的|など|等)$/;
+/**
+ * Descriptive phrases the suffix regex swallows as if they were names:
+ * 「具体的な医院」(a specific clinic), 「対応している歯科医院」(clinics that offer …),
+ * 「紹介できる医院」. A real clinic name never ends in a verb or na-adjective tail.
+ */
+const JA_DESCRIPTIVE_CORE_TAIL_RE =
+  /(?:な|している| している|ている|してる|する|できる|された|された|した|しない|られる|くれる|ある|多い|近い)$/;
+/**
+ * Words that turn a suffix match into part of a larger institution name:
+ * 「日本歯科」 inside 「日本歯科医師会」 or 「日本歯科大学」 is not a clinic.
+ */
+const JA_INSTITUTION_FOLLOWERS = [
+  '医師会',
+  '大学',
+  '学会',
+  '学校',
+  '協会',
+  '連盟',
+  '衛生士',
+  '技工士',
+  '助手',
+  '学院',
+  '専門学校',
+];
 
 // modifiers that precede a name with の ("おすすめの田中歯科", "近くのみなと歯科")
 const JA_LEADIN_BEFORE_NO_RE =
@@ -588,6 +614,7 @@ function cleanJaCandidate(raw: string): string | null {
   if (/^[ぁ-ん]{1,2}$/.test(core)) return null;
   if (JA_GENERIC_CORES.has(core)) return null;
   if (JA_GENERIC_CORE_TAIL_RE.test(core)) return null;
+  if (JA_DESCRIPTIVE_CORE_TAIL_RE.test(core)) return null;
   const name = `${core}${suffix}`;
   if (name.length > 30) return null;
   return name;
@@ -618,7 +645,14 @@ export function extractClinicNames(
   };
 
   if (language === 'ja' || CJK_RE.test(text)) {
-    for (const m of text.matchAll(JA_NAME_RE)) push(cleanJaCandidate(m[1]));
+    for (const m of text.matchAll(JA_NAME_RE)) {
+      const after = text.slice(
+        (m.index ?? 0) + m[0].length,
+        (m.index ?? 0) + m[0].length + 6,
+      );
+      if (JA_INSTITUTION_FOLLOWERS.some((w) => after.startsWith(w))) continue;
+      push(cleanJaCandidate(m[1]));
+    }
   }
   if (language === 'en' || !CJK_RE.test(text)) {
     for (const m of text.matchAll(EN_NAME_RE)) push(cleanEnCandidate(m[1]));

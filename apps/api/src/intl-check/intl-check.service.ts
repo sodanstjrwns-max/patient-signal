@@ -72,7 +72,7 @@ export class IntlCheckService implements OnModuleInit {
    * its process (deploy restart, OOM) and will never finish or e-mail.
    */
   private get staleAfterMs(): number {
-    return this.deadlineMs + this.envInt('INTL_CHECK_STALE_MARGIN_MS', 120_000);
+    return this.deadlineMs + this.envInt('INTL_CHECK_STALE_MARGIN_MS', 300_000);
   }
   /** An interrupted run this young is re-run at boot (the visitor is still waiting). */
   private get resumeWindowMs(): number {
