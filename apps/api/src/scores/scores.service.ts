@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { withHeavySlot } from '../common/heavy-slot';
 import { CacheService } from '../common/cache/cache.service';
 
 @Injectable()
@@ -53,6 +54,10 @@ export class ScoresService {
    * 플랫폼별 분석 (상세) - 6대 AI 플랫폼
    */
   async getPlatformAnalysis(hospitalId: string) {
+    return withHeavySlot(() => this.buildPlatformAnalysis(hospitalId));
+  }
+
+  private async buildPlatformAnalysis(hospitalId: string) {
     const last30Days = new Date();
     last30Days.setDate(last30Days.getDate() - 30);
     

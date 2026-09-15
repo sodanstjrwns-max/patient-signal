@@ -52,6 +52,8 @@ export class ScoresController {
   }
 
   @Get(':hospitalId/platforms')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(1800) // 【2026-09-15】30분 캐시 — 크롤 완료 시 무효화
   @ApiOperation({ summary: '플랫폼별 분석 (찐 AI 4개, 반복측정 일관성 포함)' })
   async getPlatformAnalysis(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getPlatformAnalysis(hospitalId);
@@ -64,6 +66,8 @@ export class ScoresController {
   }
 
   @Get(':hospitalId/weekly')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(1800) // 【2026-09-15】30분 캐시 — 크롤 완료 시 무효화
   @ApiOperation({ summary: '주간 하이라이트 (Content Gap 포함)' })
   async getWeeklyHighlights(@Param('hospitalId') hospitalId: string) {
     return this.scoresService.getWeeklyHighlights(hospitalId);

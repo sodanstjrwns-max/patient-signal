@@ -10,6 +10,7 @@ import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guar
 import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 import { CacheService } from '../common/cache/cache.service';
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
+import { withHeavySlot } from '../common/heavy-slot';
 import { LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
@@ -896,20 +897,11 @@ export class AICrawlerController {
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
 
-    const responses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        createdAt: { gte: since },
-      },
-      select: {
-        citedSources: true,
-        citedUrl: true,
-        aiPlatform: true,
-        isMentioned: true,
-        sourceHints: true, // ✅ Gemini 실제 도메인은 source_hints.sources[].title 에 있음
-      },
-    });
+    return withHeavySlot(() => this.buildSourceAnalysis(hospitalId, since, daysNum));
+  }
 
+  /** 【2026-09-15】메모리 상한형 출처 분석 — 30일치(대형 병원 6만 행, source_hints JSON 포함)를 한꺼번에 올리지 않고 2,000행씩 커서로 읽어 누적 집계 */
+  private async buildSourceAnalysis(hospitalId: string, since: Date, daysNum: number) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 출처 URL 수집 + Gemini grounding-redirect 디코딩
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -928,8 +920,34 @@ export class AICrawlerController {
     const enrichedUrls: EnrichedUrl[] = [];
     let geminiDecodedCount = 0;
     let geminiUnDecodedCount = 0;
+    // 플랫폼별 출처 수 (행을 버리기 전에 누적)
+    const platformSources: Record<string, { totalSources: number; responsesWithSources: number; total: number }> = {};
+    let totalResponsesWithSources = 0;
+    let totalResponses = 0;
 
-    for (const r of responses) {
+    const CHUNK = 2000;
+    let cursorId: string | null = null;
+    for (;;) {
+      const chunk: Array<{ id: string; citedSources: string[]; citedUrl: string | null; aiPlatform: string; isMentioned: boolean; sourceHints: unknown }> =
+        await this.prisma.aIResponse.findMany({
+          where: { hospitalId, createdAt: { gte: since } },
+          select: { id: true, citedSources: true, citedUrl: true, aiPlatform: true, isMentioned: true, sourceHints: true },
+          orderBy: { id: 'asc' },
+          take: CHUNK,
+          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+        });
+      if (chunk.length === 0) break;
+      cursorId = chunk[chunk.length - 1].id;
+    for (const r of chunk) {
+      totalResponses++;
+      {
+        const p = r.aiPlatform;
+        if (!platformSources[p]) platformSources[p] = { totalSources: 0, responsesWithSources: 0, total: 0 };
+        platformSources[p].total++;
+        const sourceCount = (r.citedSources?.length || 0) + (r.citedUrl ? 1 : 0);
+        platformSources[p].totalSources += sourceCount;
+        if (sourceCount > 0) { platformSources[p].responsesWithSources++; totalResponsesWithSources++; }
+      }
       const platform = r.aiPlatform;
       const rawUrls = [
         ...(r.citedSources || []),
@@ -977,6 +995,8 @@ export class AICrawlerController {
           enrichedUrls.push({ url, rawUrl: url, platform, decoded: false });
         }
       }
+    }
+      if (chunk.length < CHUNK) break;
     }
 
     // 모든 URL (원본 비교용)
@@ -1071,16 +1091,7 @@ export class AICrawlerController {
         percentage: allUrls.length > 0 ? Math.round((count / allUrls.length) * 100) : 0,
       }));
 
-    // 플랫폼별 출처 수
-    const platformSources: Record<string, { totalSources: number; responsesWithSources: number; total: number }> = {};
-    for (const r of responses) {
-      const p = r.aiPlatform;
-      if (!platformSources[p]) platformSources[p] = { totalSources: 0, responsesWithSources: 0, total: 0 };
-      platformSources[p].total++;
-      const sourceCount = (r.citedSources?.length || 0) + (r.citedUrl ? 1 : 0);
-      platformSources[p].totalSources += sourceCount;
-      if (sourceCount > 0) platformSources[p].responsesWithSources++;
-    }
+    // 플랫폼별 출처 수는 청크 루프에서 누적됨
 
     // 미활용 채널 분석
     const activeChannels = new Set(categories.map(c => c.category));
@@ -1090,7 +1101,7 @@ export class AICrawlerController {
     return {
       period: `최근 ${daysNum}일`,
       totalUrls: allUrls.length,
-      totalResponsesWithSources: responses.filter(r => (r.citedSources?.length || 0) > 0 || r.citedUrl).length,
+      totalResponsesWithSources,
       categories,
       topDomains,
       platformSources,
