@@ -4,6 +4,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  type OnModuleInit,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { createHash } from 'crypto';
@@ -42,7 +43,7 @@ import type { IntlLanguage } from './templates.types';
  * so one broken run cannot trip the breaker used by the daily crawl.
  */
 @Injectable()
-export class IntlCheckService {
+export class IntlCheckService implements OnModuleInit {
   private readonly logger = new Logger(IntlCheckService.name);
 
   /** per-email and per-IP submissions allowed per rolling 24h */
@@ -64,6 +65,14 @@ export class IntlCheckService {
   }
   private get deadlineMs(): number {
     return this.envInt('INTL_CHECK_DEADLINE_MS', 170_000);
+  }
+  /**
+   * A run is considered dead this long after it started. The worker pool itself
+   * stops at deadlineMs, so anything still RUNNING past deadline + margin lost
+   * its process (deploy restart, OOM) and will never finish or e-mail.
+   */
+  private get staleAfterMs(): number {
+    return this.deadlineMs + this.envInt('INTL_CHECK_STALE_MARGIN_MS', 120_000);
   }
   private get platformFailCap(): number {
     return Math.max(1, this.envInt('INTL_CHECK_PLATFORM_FAIL_CAP', 3));
@@ -108,21 +117,58 @@ export class IntlCheckService {
       .slice(0, 32);
   }
 
+  /**
+   * Boot sweep: a deploy or crash kills in-flight runs and leaves their rows
+   * RUNNING forever (the visitor's page would poll until they give up). Mark
+   * those FAILED once at startup so the page can show an error and offer a retry.
+   */
+  async onModuleInit(): Promise<void> {
+    try {
+      const { count } = await this.prisma.intlCheck.updateMany({
+        where: {
+          status: { in: ['PENDING', 'RUNNING'] },
+          createdAt: { lt: new Date(Date.now() - this.staleAfterMs) },
+        },
+        data: {
+          status: 'FAILED',
+          errorMessage: 'Interrupted (server restarted during the run).',
+        },
+      });
+      if (count > 0) {
+        this.logger.warn(
+          `[intl-check] boot sweep: ${count} interrupted run(s) marked FAILED`,
+        );
+      }
+    } catch (err: unknown) {
+      this.logger.warn(
+        `[intl-check] boot sweep skipped: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   async submit(dto: CreateIntlCheckDto, ip?: string): Promise<{ id: string }> {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const email = dto.email.trim().toLowerCase();
     const ipHash = IntlCheckService.hashIp(ip);
 
     const [byEmail, byIp, total] = await Promise.all([
+      // A run that crashed never produced a report, so it must not eat the
+      // visitor's daily quota (or the global cap).
       this.prisma.intlCheck.count({
-        where: { email, createdAt: { gte: since } },
+        where: { email, createdAt: { gte: since }, status: { not: 'FAILED' } },
       }),
       ipHash
         ? this.prisma.intlCheck.count({
-            where: { ipHash, createdAt: { gte: since } },
+            where: {
+              ipHash,
+              createdAt: { gte: since },
+              status: { not: 'FAILED' },
+            },
           })
         : Promise.resolve(0),
-      this.prisma.intlCheck.count({ where: { createdAt: { gte: since } } }),
+      this.prisma.intlCheck.count({
+        where: { createdAt: { gte: since }, status: { not: 'FAILED' } },
+      }),
     ]);
 
     if (
@@ -183,14 +229,35 @@ export class IntlCheckService {
       },
     });
     if (!row) throw new NotFoundException('Check not found');
-    const { resultJson, ...rest } = row;
+
+    // Lazy recovery: the run's process is gone (deploy restart, crash) but the
+    // row still says RUNNING. Tell the poller it failed instead of spinning.
+    const { status: rowStatus, ...restRow } = row;
+    let status: string = rowStatus;
+    let errorMessage: string | null = null;
+    if (
+      (status === 'PENDING' || status === 'RUNNING') &&
+      Date.now() - row.createdAt.getTime() > this.staleAfterMs
+    ) {
+      status = 'FAILED';
+      errorMessage = 'Interrupted (server restarted during the run).';
+      this.logger.warn(`[intl-check ${id}] stale run → FAILED`);
+      await this.prisma.intlCheck
+        .update({
+          where: { id },
+          data: { status, errorMessage },
+        })
+        .catch(() => undefined);
+    }
+
+    const { resultJson, ...rest } = restRow;
     return {
       ...rest,
+      status,
+      errorMessage,
       emailed: !!row.emailedAt,
       result:
-        row.status === 'DONE'
-          ? (resultJson as unknown as IntlCheckResult)
-          : null,
+        status === 'DONE' ? (resultJson as unknown as IntlCheckResult) : null,
     };
   }
 
