@@ -61,7 +61,7 @@ export const EN_EMAILS: LeadEmail[] = [
       'This is the last note in the series, so here is the offer plainly.',
       'Patient Funnel: How Patients Find, Choose, and Refer Your Practice is the whole system. The ten stages a patient moves through, where they leak at each one, and what to do about it. It is the method I used to build the largest dental practice in central South Korea, running at about US$9M a year.',
       'Inside: the two levers of growth and which one to pull first; how to find the one pain point your practice should own; Chapter 4, the core, covering all ten stages in detail with the checklists, consultation scripts, and forms we use; and how to read your own numbers, from leakage to compound growth to seasonality.',
-      'PDF and EPUB, about 41,000 words. $197. Thirty-day refund, no questions, so the risk of finding out is zero.',
+      'PDF and EPUB, about 41,000 words. $297. Thirty-day refund, no questions, so the risk of finding out is zero.',
       'https://sodanstjrwns.gumroad.com/l/patientfunnel-en',
       'If it is not for you, that is fine. The free check stays free and the preview is yours to keep.',
     ],
