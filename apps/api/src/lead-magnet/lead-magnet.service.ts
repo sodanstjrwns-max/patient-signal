@@ -76,6 +76,20 @@ export class LeadMagnetService {
       : { emails: EN_EMAILS, layout: EN_LAYOUT };
   }
 
+  /**
+   * Reserved / non-deliverable domains (RFC 2606 and friends). Sending to these
+   * only produces bounces, which cost us sender reputation, so they never enter
+   * the sequence and are skipped if a row already exists.
+   */
+  private static readonly UNDELIVERABLE =
+    /(^|@)(localhost|.*\.(test|invalid|example|localhost)|example\.(com|net|org))$/i;
+
+  static isSendable(email: string): boolean {
+    const at = email.lastIndexOf('@');
+    if (at < 1) return false;
+    return !LeadMagnetService.UNDELIVERABLE.test(email.slice(at + 1));
+  }
+
   static hashIp(ip: string | undefined | null): string | null {
     const raw = (ip || '').trim();
     if (!raw) return null;
@@ -90,6 +104,12 @@ export class LeadMagnetService {
 
   async submit(dto: CreateLeadDto, ip?: string): Promise<{ ok: true }> {
     const email = dto.email.trim().toLowerCase();
+    if (!LeadMagnetService.isSendable(email)) {
+      throw new HttpException(
+        { code: 'UNDELIVERABLE', message: 'That address cannot receive mail.' },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     const language: Lang = dto.language === 'ja' ? 'ja' : 'en';
     const ipHash = LeadMagnetService.hashIp(ip);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -236,6 +256,7 @@ export class LeadMagnetService {
     let sent = 0;
     let failed = 0;
     for (const lead of leads) {
+      if (!LeadMagnetService.isSendable(lead.email)) continue;
       const next = lead.step + 1;
       const dueAt =
         lead.createdAt.getTime() +
