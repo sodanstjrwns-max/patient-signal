@@ -31,6 +31,16 @@ async function main() {
     } catch (e3) {
       console.warn('[ensure-sso-columns] mention_daily 생성 실패(조회는 실시간 폴백):', e3.message)
     }
+    // 【2026-09-15】해외판 AI 가시성 체크(intl_checks) — prisma db push 가 드리프트 경고로 거부되는 환경 대비, 마이그레이션 SQL 을 멱등 적용
+    try {
+      await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "intl_checks" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "clinic_name" TEXT NOT NULL, "city" TEXT NOT NULL, "country" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "website" TEXT, "specialty" TEXT NOT NULL DEFAULT \'dental\', "ip_hash" TEXT, "status" TEXT NOT NULL DEFAULT \'PENDING\', "result_json" JSONB, "emailed_at" TIMESTAMP(3), "waitlist" BOOLEAN NOT NULL DEFAULT false, "error_message" TEXT, CONSTRAINT "intl_checks_pkey" PRIMARY KEY ("id"))')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "intl_checks_email_created_at_idx" ON "intl_checks"("email", "created_at")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "intl_checks_ip_hash_created_at_idx" ON "intl_checks"("ip_hash", "created_at")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "intl_checks_created_at_idx" ON "intl_checks"("created_at")')
+      console.log('[ensure-sso-columns] intl_checks ready')
+    } catch (e4) {
+      console.error('[ensure-sso-columns] intl_checks 생성 실패(해외판 체크 API 가 DATABASE_ERROR 를 냄):', e4.message)
+    }
     console.log('[ensure-sso-columns] OK — hospitals.ps_hospital_id, users.pending_ps_hospital_id ready')
   } finally {
     await prisma.$disconnect()
