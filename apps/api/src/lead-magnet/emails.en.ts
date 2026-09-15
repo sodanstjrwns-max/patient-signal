@@ -25,14 +25,14 @@ export const EN_EMAILS: LeadEmail[] = [
     ],
   },
   {
-    subject: 'The patients who never reach your funnel',
+    subject: 'The two stages you have never seen',
     body: [
-      'The funnel starts at Awareness. For a long time that meant search results and word of mouth.',
-      'It is moving. A patient asks an assistant "who is a good dentist in my city," reads the two or three names it gives, and books one of them. If your practice is not in that answer, you never enter the funnel at all. Nothing downstream can save you, because there is no patient to lose.',
-      'Most owners have never seen what those answers say about them. So I built a free check and put it on the site.',
-      "It asks twenty questions across four AI assistants, a few with your practice's name in them and most without, the kind a real patient types. Then it emails you which answers named you, which named someone else, and which sources those answers were built on.",
-      'https://thepatientfunnel.com/en/check/',
-      'It takes about two minutes to request and the report arrives shortly after. No cost, and you do not need the book to use it.',
+      'You have never arrived at your own practice as a patient. You park in your own spot, come in through the back, and you have never once sat in your own waiting room with nothing to do.',
+      'Which is why Arrival and Waiting are the two stages nobody audits. They cost almost nothing to fix, because they run on information and on people rather than on equipment.',
+      'Start with parking. A patient who cannot find the lot, or finds it full with no idea what to do next, can give up before ever meeting you. Where to park, what to do when the lot is full, whether a large vehicle fits, how long the walk is: most booked patients are sent none of this, and every one of those gaps is a patient you lose without ever knowing their name.',
+      'Then the waiting room. Waiting is the one stage where the patient is not yet committed to anything and can still stand up and walk out without being seen. Everything you spent to get them there is gone at that moment, and it does not show up in any report.',
+      'Try it once this week. Drive in the way a patient does, park where they park, then sit in your own waiting room for twenty minutes with your phone in your pocket. Most owners find two or three things in that twenty minutes that they can fix the same day.',
+      'Chapter 4 of the book takes both stages apart in detail, with what my practice sends before a visit and what we do with the waiting room.',
     ],
   },
   {
