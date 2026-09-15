@@ -39,6 +39,8 @@ export class CompetitorsController {
   }
 
   @Get(':hospitalId/comparison')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(1800) // 【2026-09-15】30분 캐시 — 크롤 완료 시 invalidateHospital 로 즉시 무효화
   @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: '경쟁사 비교 분석' })
   async getComparison(@Param('hospitalId') hospitalId: string) {

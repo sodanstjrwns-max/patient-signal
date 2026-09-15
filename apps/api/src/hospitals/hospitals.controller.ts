@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Headers, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Headers, Logger, UseInterceptors } from '@nestjs/common';
+import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { HospitalsService } from './hospitals.service';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
@@ -90,6 +91,8 @@ export class HospitalsController {
   @HospitalParam('id')
   @ApiBearerAuth()
   @Get(':id/dashboard')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(900) // 【2026-09-15】15분 캐시 — 크롤 완료 시 invalidateHospital 로 즉시 무효화
   @ApiOperation({ summary: '대시보드 데이터', description: '병원 대시보드 데이터를 조회합니다' })
   @ApiResponse({ status: 200, description: '조회 성공' })
   async getDashboard(@Param('id') id: string) {

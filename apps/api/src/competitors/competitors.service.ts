@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { hospitalResponseStats, hospitalCompetitorMentions } from '../common/stats/response-daily';
 import { CacheService } from '../common/cache/cache.service';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
 
@@ -596,29 +597,12 @@ export class CompetitorsService {
     });
 
     // 경쟁사 점수가 없는 경우, AI 응답 데이터에서 간접 추정
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    const aiResponses = await this.prisma.aIResponse.findMany({
-      where: {
-        hospitalId,
-        responseDate: { gte: thirtyDaysAgo },
-        competitorsMentioned: { isEmpty: false },
-      },
-      select: {
-        competitorsMentioned: true,
-        isMentioned: true,
-      },
-    });
-
-    // 경쟁사별 언급 횟수 집계 (AI 응답에서 추출)
-    const competitorMentionCounts: Record<string, number> = {};
-    const totalResponses = aiResponses.length;
-    for (const resp of aiResponses) {
-      for (const name of resp.competitorsMentioned) {
-        competitorMentionCounts[name] = (competitorMentionCounts[name] || 0) + 1;
-      }
-    }
+    // 【2026-09-15】원본 30일 스캔(대형 병원 6만 행 → 30초+) 대신 mention_daily/response_daily 집계 + 최근 2일 실시간
+    const [competitorMentionCounts, stats30] = await Promise.all([
+      hospitalCompetitorMentions(this.prisma, hospitalId, 30),
+      hospitalResponseStats(this.prisma, hospitalId, 30),
+    ]);
+    const totalResponses = stats30.withCompetitors;
 
     // 【최적화 R3】갭 분석 - select 최소화 (responseText 등 불필요 필드 제외)
     const gaps = await this.prisma.aIResponse.findMany({
@@ -639,12 +623,7 @@ export class CompetitorsService {
     });
 
     // 전체 AI 응답 수 (언급률 계산용)
-    const allResponsesCount = await this.prisma.aIResponse.count({
-      where: {
-        hospitalId,
-        responseDate: { gte: thirtyDaysAgo },
-      },
-    });
+    const allResponsesCount = stats30.total;
 
     return {
       myHospital: {
@@ -747,7 +726,31 @@ export class CompetitorsService {
       FROM ai_responses r WHERE r.response_date >= ${d} AND r.response_date < ${next}
       GROUP BY r.hospital_id, r.ai_platform
       ON CONFLICT (day, hospital_id, name, platform) DO UPDATE SET cnt = EXCLUDED.cnt`;
-    return { day, rows: Number(r1) + Number(r2) };
+    // 【2026-09-15】response_daily — 대시보드 통계(언급률·감성)용 병원×플랫폼 일별 집계
+    let r3 = 0;
+    try {
+      await this.prisma.$executeRaw`DELETE FROM response_daily WHERE day = ${d}::date`;
+      r3 = await this.prisma.$executeRaw`
+        INSERT INTO response_daily (day, hospital_id, platform, total, mentioned, with_comp, pos, neu, neg, ment_pos, ment_neg, ment_labeled)
+        SELECT ${d}::date, r.hospital_id, r.ai_platform::text, COUNT(*)::int,
+               COUNT(*) FILTER (WHERE r.is_mentioned)::int,
+               COUNT(*) FILTER (WHERE array_length(r.competitors_mentioned, 1) > 0)::int,
+               COUNT(*) FILTER (WHERE r.sentiment_label = 'POSITIVE')::int,
+               COUNT(*) FILTER (WHERE r.sentiment_label = 'NEUTRAL')::int,
+               COUNT(*) FILTER (WHERE r.sentiment_label = 'NEGATIVE')::int,
+               COUNT(*) FILTER (WHERE r.is_mentioned AND r.sentiment_label = 'POSITIVE')::int,
+               COUNT(*) FILTER (WHERE r.is_mentioned AND r.sentiment_label = 'NEGATIVE')::int,
+               COUNT(*) FILTER (WHERE r.is_mentioned AND r.sentiment_label IS NOT NULL)::int
+        FROM ai_responses r WHERE r.response_date >= ${d} AND r.response_date < ${next}
+        GROUP BY r.hospital_id, r.ai_platform
+        ON CONFLICT (day, hospital_id, platform) DO UPDATE SET
+          total = EXCLUDED.total, mentioned = EXCLUDED.mentioned, with_comp = EXCLUDED.with_comp,
+          pos = EXCLUDED.pos, neu = EXCLUDED.neu, neg = EXCLUDED.neg,
+          ment_pos = EXCLUDED.ment_pos, ment_neg = EXCLUDED.ment_neg, ment_labeled = EXCLUDED.ment_labeled`;
+    } catch (e) {
+      this.logger.warn(`response_daily rebuild ${day} 실패(대시보드는 실시간 폴백): ${(e as Error).message}`);
+    }
+    return { day, rows: Number(r1) + Number(r2) + Number(r3) };
   }
   /** 최근 N일 재집계 (오래된 날부터). 크론은 2일(어제·오늘), 최초 1회는 120일 백필. */
   async rebuildMentionRange(days: number): Promise<{ days: number; rows: number; from: string; to: string; errors: string[] }> {

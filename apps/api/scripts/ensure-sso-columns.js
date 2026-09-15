@@ -31,6 +31,21 @@ async function main() {
     } catch (e3) {
       console.warn('[ensure-sso-columns] mention_daily 생성 실패(조회는 실시간 폴백):', e3.message)
     }
+    // 【2026-09-15】대시보드 지연(25~40s) 대책 — 병원×플랫폼 일별 응답 통계 집계 테이블 + mention_daily 병원 우선 인덱스
+    try {
+      await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "response_daily" ("day" DATE NOT NULL, "hospital_id" TEXT NOT NULL, "platform" TEXT NOT NULL, "total" INTEGER NOT NULL DEFAULT 0, "mentioned" INTEGER NOT NULL DEFAULT 0, "with_comp" INTEGER NOT NULL DEFAULT 0, "pos" INTEGER NOT NULL DEFAULT 0, "neu" INTEGER NOT NULL DEFAULT 0, "neg" INTEGER NOT NULL DEFAULT 0, "ment_pos" INTEGER NOT NULL DEFAULT 0, "ment_neg" INTEGER NOT NULL DEFAULT 0, "ment_labeled" INTEGER NOT NULL DEFAULT 0, PRIMARY KEY ("day","hospital_id","platform"))')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "response_daily_hospital_day_idx" ON "response_daily"("hospital_id", "day")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "mention_daily_hospital_day_idx" ON "mention_daily"("hospital_id", "day")')
+      console.log('[ensure-sso-columns] response_daily ready')
+    } catch (e5) {
+      console.warn('[ensure-sso-columns] response_daily/인덱스 생성 실패(대시보드는 실시간 폴백):', e5.message)
+    }
+    // ai_responses 는 행마다 후속 UPDATE 가 있어 가시성 맵이 빨리 낡는다(index-only scan 이 heap 을 다시 읽음) → autovacuum 을 더 자주
+    try {
+      await prisma.$executeRawUnsafe('ALTER TABLE "ai_responses" SET (autovacuum_vacuum_scale_factor = 0.02, autovacuum_analyze_scale_factor = 0.02)')
+    } catch (e6) {
+      console.warn('[ensure-sso-columns] ai_responses autovacuum 설정 건너뜀:', e6.message)
+    }
     // 【2026-09-15】해외판 AI 가시성 체크(intl_checks) — prisma db push 가 드리프트 경고로 거부되는 환경 대비, 마이그레이션 SQL 을 멱등 적용
     try {
       await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "intl_checks" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "clinic_name" TEXT NOT NULL, "city" TEXT NOT NULL, "country" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "website" TEXT, "specialty" TEXT NOT NULL DEFAULT \'dental\', "ip_hash" TEXT, "status" TEXT NOT NULL DEFAULT \'PENDING\', "result_json" JSONB, "emailed_at" TIMESTAMP(3), "waitlist" BOOLEAN NOT NULL DEFAULT false, "error_message" TEXT, CONSTRAINT "intl_checks_pkey" PRIMARY KEY ("id"))')

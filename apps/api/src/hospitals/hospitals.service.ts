@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { hospitalResponseStats } from '../common/stats/response-daily';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
@@ -399,35 +400,23 @@ export class HospitalsService {
       throw new NotFoundException('병원을 찾을 수 없습니다');
     }
 
-    // 【최적화 R3】순차 3개 쿼리 → 병렬화
-    const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 7);
-    const last30Days = new Date();
-    last30Days.setDate(last30Days.getDate() - 30);
-
-    const [recentMentions, totalResponses, sentimentResponses] = await Promise.all([
-      this.prisma.aIResponse.count({
-        where: { hospitalId, isMentioned: true, responseDate: { gte: last7Days } },
-      }),
-      this.prisma.aIResponse.count({
-        where: { hospitalId, responseDate: { gte: last7Days } },
-      }),
-      this.prisma.aIResponse.findMany({
-        where: { hospitalId, responseDate: { gte: last30Days }, sentimentLabel: { not: null } },
-        select: { sentimentLabel: true, isMentioned: true },
-      }),
+    // 【2026-09-15】ai_responses 30일치 원본 스캔(대형 병원 6만 행 → 25~40초) 대신 일별 집계 + 최근 2일 실시간 합산
+    const [s7, s30] = await Promise.all([
+      hospitalResponseStats(this.prisma, hospitalId, 7),
+      hospitalResponseStats(this.prisma, hospitalId, 30),
     ]);
+    const recentMentions = s7.mentioned;
+    const totalResponses = s7.total;
 
-    const totalSentiment = sentimentResponses.length;
-    const positiveCount = sentimentResponses.filter(r => r.sentimentLabel === 'POSITIVE').length;
-    const neutralCount = sentimentResponses.filter(r => r.sentimentLabel === 'NEUTRAL').length;
-    const negativeCount = sentimentResponses.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+    const totalSentiment = s30.pos + s30.neu + s30.neg;
+    const positiveCount = s30.pos;
+    const neutralCount = s30.neu;
+    const negativeCount = s30.neg;
 
     // 언급된 응답 중 감성 분석 (언급됐을 때 어떤 톤인지가 더 중요)
-    const mentionedSentiment = sentimentResponses.filter(r => r.isMentioned);
-    const mentionedTotal = mentionedSentiment.length;
-    const mentionedPositive = mentionedSentiment.filter(r => r.sentimentLabel === 'POSITIVE').length;
-    const mentionedNegative = mentionedSentiment.filter(r => r.sentimentLabel === 'NEGATIVE').length;
+    const mentionedTotal = s30.mentLabeled;
+    const mentionedPositive = s30.mentPos;
+    const mentionedNegative = s30.mentNeg;
 
     return {
       hospital,
