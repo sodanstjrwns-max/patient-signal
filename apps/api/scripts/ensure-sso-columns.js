@@ -46,6 +46,14 @@ async function main() {
     } catch (e6) {
       console.warn('[ensure-sso-columns] ai_responses autovacuum 설정 건너뜀:', e6.message)
     }
+    // 【2026-09-15】오래된 응답 원문 아카이브 테이블 + 미아카이브 행만 담는 부분 인덱스(아카이브 잡이 매번 전체를 훑지 않게)
+    try {
+      await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "ai_response_archive" ("id" TEXT NOT NULL, "response_text" TEXT NOT NULL, "source_hints" JSONB, "archived_at" TIMESTAMPTZ NOT NULL DEFAULT now(), CONSTRAINT "ai_response_archive_pkey" PRIMARY KEY ("id"))')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "ai_responses_unarchived_date_idx" ON "ai_responses"("response_date") WHERE "response_text" <> \'\'')
+      console.log('[ensure-sso-columns] ai_response_archive ready')
+    } catch (e7) {
+      console.warn('[ensure-sso-columns] ai_response_archive 생성 실패(아카이브 잡이 실패할 뿐 서비스 무관):', e7.message)
+    }
     // 【2026-09-15】해외판 AI 가시성 체크(intl_checks) — prisma db push 가 드리프트 경고로 거부되는 환경 대비, 마이그레이션 SQL 을 멱등 적용
     try {
       await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "intl_checks" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "clinic_name" TEXT NOT NULL, "city" TEXT NOT NULL, "country" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "website" TEXT, "specialty" TEXT NOT NULL DEFAULT \'dental\', "ip_hash" TEXT, "status" TEXT NOT NULL DEFAULT \'PENDING\', "result_json" JSONB, "emailed_at" TIMESTAMP(3), "waitlist" BOOLEAN NOT NULL DEFAULT false, "error_message" TEXT, CONSTRAINT "intl_checks_pkey" PRIMARY KEY ("id"))')

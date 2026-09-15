@@ -11,6 +11,7 @@ import { PlanLimit } from '../common/decorators/plan-limit.decorator';
 import { CacheService } from '../common/cache/cache.service';
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { withHeavySlot } from '../common/heavy-slot';
+import { fillArchivedTexts } from '../common/stats/response-archive';
 import { LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
@@ -406,8 +407,10 @@ export class AICrawlerController {
         },
       });
 
+      // 【2026-09-15】아카이브된(원문 비운) 오래된 행은 ai_response_archive 에서 원문을 채움
+      const responsesFilled = await fillArchivedTexts(this.prisma, responses);
       // responseText를 미리보기 길이로 제한 (메모리/전송량 최적화)
-      const trimmedResponses = responses.map(r => ({
+      const trimmedResponses = responsesFilled.map(r => ({
         ...r,
         responseText: r.responseText?.length > 800
           ? r.responseText.substring(0, 800) + '...'

@@ -9,6 +9,7 @@ import { ActionTrackerService } from '../scores/action-tracker.service';
 import { BenchmarkService } from '../scores/benchmark.service';
 import { CompetitorsService } from '../competitors/competitors.service';
 import { TempUpgradeService } from './temp-upgrade.service';
+import { archiveOldResponseTexts } from '../common/stats/response-archive';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -276,6 +277,26 @@ export class SchedulerController {
     const expectedSecret = process.env.CRON_SECRET;
     if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
     return { success: true, ...(await this.tempUpgrade.revertExpiredTempUpgrades()) };
+  }
+
+  /**
+   * 【2026-09-15】오래된 응답 원문 아카이브 — DB 성장 대책. 주 1회(ps-monitor 월 07:00 KST) 권장.
+   * POST /api/scheduler/archive-responses?days=120&limit=20000 (x-cron-secret)
+   */
+  @Post('archive-responses')
+  @ApiOperation({ summary: 'N일 지난 AI 응답 원문을 ai_response_archive 로 이동(본 테이블은 빈 문자열)' })
+  @ApiHeader({ name: 'x-cron-secret', description: 'Cron 시크릿 키' })
+  async archiveResponses(
+    @Headers('x-cron-secret') cronSecret: string,
+    @Query('days') days?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const expectedSecret = process.env.CRON_SECRET;
+    if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
+    const d = parseInt(days || process.env.RESPONSE_ARCHIVE_DAYS || '120', 10) || 120;
+    const n = parseInt(limit || '20000', 10) || 20000;
+    const r = await archiveOldResponseTexts(this.prisma, d, n);
+    return { success: true, ...r };
   }
 
   @Post('cleanup-zombies')
