@@ -39,6 +39,8 @@ export interface StorePing {
 
 export interface OfferConfig {
   code: string;
+  /** the store prices the Japanese edition in yen, so it may need its own code */
+  codeJa: string;
   expires: Date;
   priceEn: string;
   priceJa: string;
@@ -152,7 +154,8 @@ export class LeadMagnetService {
     // the date is inclusive: valid through the end of that day (UTC)
     const expires = new Date(`${exp}T23:59:59Z`);
     if (Number.isNaN(expires.getTime()) || now > expires) return null;
-    return { code, expires, priceEn, priceJa };
+    const codeJa = env.GUMROAD_OFFER_CODE_JA?.trim() || code;
+    return { code, codeJa, expires, priceEn, priceJa };
   }
 
   private offerText(lang: Lang): Record<string, string> | null {
@@ -167,12 +170,13 @@ export class LeadMagnetService {
             year: 'numeric',
             timeZone: 'UTC',
           });
+    const code = lang === 'ja' ? o.codeJa : o.code;
     return {
-      '{{offer_code}}': o.code,
+      '{{offer_code}}': code,
       '{{offer_price}}': lang === 'ja' ? o.priceJa : o.priceEn,
       '{{offer_expires}}': expires,
       // the store applies a code given as the last path segment
-      '{{offer_url}}': `${this.storeUrl(lang)}/${encodeURIComponent(o.code)}`,
+      '{{offer_url}}': `${this.storeUrl(lang)}/${encodeURIComponent(code)}`,
     };
   }
 
