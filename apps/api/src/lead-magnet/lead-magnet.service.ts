@@ -9,10 +9,40 @@ import {
   type LayoutStrings,
   type LeadEmail,
 } from './email.layout';
-import { EN_EMAILS, EN_LAYOUT } from './emails.en';
-import { JA_EMAILS, JA_LAYOUT } from './emails.ja';
+import {
+  EN_EMAILS,
+  EN_LAYOUT,
+  EN_PURCHASE_EMAILS,
+  EN_PURCHASE_LAYOUT,
+} from './emails.en';
+import {
+  JA_EMAILS,
+  JA_LAYOUT,
+  JA_PURCHASE_EMAILS,
+  JA_PURCHASE_LAYOUT,
+} from './emails.ja';
 
 type Lang = 'en' | 'ja';
+
+/** The store's ping (webhook) body, form-encoded; only the fields we read. */
+export interface StorePing {
+  seller_id?: string;
+  sale_id?: string;
+  product_permalink?: string;
+  permalink?: string;
+  email?: string;
+  price?: string;
+  currency?: string;
+  refunded?: string;
+  test?: string;
+}
+
+export interface OfferConfig {
+  code: string;
+  expires: Date;
+  priceEn: string;
+  priceJa: string;
+}
 
 /**
  * Free-preview lead magnet for thepatientfunnel.com.
@@ -29,8 +59,14 @@ type Lang = 'en' | 'ja';
 export class LeadMagnetService {
   private readonly logger = new Logger(LeadMagnetService.name);
 
-  /** days after sign-up at which step N (1-indexed) goes out */
-  private readonly SCHEDULE_DAYS = [0, 2, 4, 6, 8];
+  /**
+   * days after sign-up at which step N (1-indexed) goes out:
+   * five letters over eight days, the one time-limited price a week after the
+   * plain offer, then a column every two weeks.
+   */
+  private readonly SCHEDULE_DAYS = [0, 2, 4, 6, 8, 15, 29, 43, 57];
+  /** days after purchase for the two post-purchase notes */
+  private readonly PURCHASE_DAYS = [3, 14];
   private readonly PER_KEY_DAILY_LIMIT = 3;
 
   constructor(
@@ -83,6 +119,73 @@ export class LeadMagnetService {
     return lang === 'ja'
       ? { emails: JA_EMAILS, layout: JA_LAYOUT }
       : { emails: EN_EMAILS, layout: EN_LAYOUT };
+  }
+  private purchasePack(lang: Lang): {
+    emails: LeadEmail[];
+    layout: LayoutStrings;
+  } {
+    return lang === 'ja'
+      ? { emails: JA_PURCHASE_EMAILS, layout: JA_PURCHASE_LAYOUT }
+      : { emails: EN_PURCHASE_EMAILS, layout: EN_PURCHASE_LAYOUT };
+  }
+
+  private storeUrl(lang: Lang): string {
+    return `https://sodanstjrwns.gumroad.com/l/patientfunnel-${lang}`;
+  }
+
+  // ───────────────────────────────── offer ───────────────────────────────────
+
+  /**
+   * The one time-limited price. Configured entirely by environment so the code
+   * can be rotated without a deploy; while unset or past its date the offer
+   * letter is skipped and the sequence continues.
+   */
+  static offerFrom(
+    env: NodeJS.ProcessEnv,
+    now: Date = new Date(),
+  ): OfferConfig | null {
+    const code = env.GUMROAD_OFFER_CODE?.trim();
+    const exp = env.GUMROAD_OFFER_EXPIRES?.trim();
+    const priceEn = env.GUMROAD_OFFER_PRICE_EN?.trim();
+    const priceJa = env.GUMROAD_OFFER_PRICE_JA?.trim();
+    if (!code || !exp || !priceEn || !priceJa) return null;
+    // the date is inclusive: valid through the end of that day (UTC)
+    const expires = new Date(`${exp}T23:59:59Z`);
+    if (Number.isNaN(expires.getTime()) || now > expires) return null;
+    return { code, expires, priceEn, priceJa };
+  }
+
+  private offerText(lang: Lang): Record<string, string> | null {
+    const o = LeadMagnetService.offerFrom(process.env);
+    if (!o) return null;
+    const expires =
+      lang === 'ja'
+        ? `${o.expires.getUTCFullYear()}年${o.expires.getUTCMonth() + 1}月${o.expires.getUTCDate()}日`
+        : o.expires.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'UTC',
+          });
+    return {
+      '{{offer_code}}': o.code,
+      '{{offer_price}}': lang === 'ja' ? o.priceJa : o.priceEn,
+      '{{offer_expires}}': expires,
+      // the store applies a code given as the last path segment
+      '{{offer_url}}': `${this.storeUrl(lang)}/${encodeURIComponent(o.code)}`,
+    };
+  }
+
+  /** Which edition a store permalink refers to; null for anything else. */
+  static languageFromPermalink(
+    ...candidates: Array<string | undefined>
+  ): Lang | null {
+    for (const c of candidates) {
+      const v = (c || '').toLowerCase();
+      if (v.includes('patientfunnel-ja')) return 'ja';
+      if (v.includes('patientfunnel-en')) return 'en';
+    }
+    return null;
   }
 
   /**
@@ -174,15 +277,32 @@ export class LeadMagnetService {
   }
 
   async unsubscribe(token: string): Promise<string> {
-    const row = token
+    let row: {
+      id: string;
+      email: string;
+      language: string;
+      unsubscribedAt: Date | null;
+    } | null = token
       ? await this.prisma.leadMagnet.findUnique({ where: { token } })
       : null;
-    if (row && !row.unsubscribedAt) {
-      await this.prisma.leadMagnet.update({
-        where: { id: row.id },
-        data: { unsubscribedAt: new Date() },
-      });
-      this.logger.log(`[lead-magnet] unsubscribed ${row.email}`);
+    if (row) {
+      if (!row.unsubscribedAt) {
+        await this.prisma.leadMagnet.update({
+          where: { id: row.id },
+          data: { unsubscribedAt: new Date() },
+        });
+        this.logger.log(`[lead-magnet] unsubscribed ${row.email}`);
+      }
+    } else if (token) {
+      // the same link works for the post-purchase notes
+      row = await this.prisma.bookPurchase.findUnique({ where: { token } });
+      if (row && !row.unsubscribedAt) {
+        await this.prisma.bookPurchase.update({
+          where: { id: row.id },
+          data: { unsubscribedAt: new Date() },
+        });
+        this.logger.log(`[lead-magnet] purchaser unsubscribed ${row.email}`);
+      }
     }
     const ja = row?.language === 'ja';
     const msg = ja
@@ -212,29 +332,35 @@ export class LeadMagnetService {
     const tpl = emails[step - 1];
     if (!tpl) return false;
 
-    const body = tpl.body.map((p) =>
-      p === '{{download}}' ? this.downloadUrl(language) : p,
-    );
-    const html = renderLeadEmail(
-      { subject: tpl.subject, body },
-      layout,
-      this.unsubscribeUrl(token),
-    );
-
-    const sent = await this.email.sendHtmlEmail({
-      to,
-      subject: tpl.subject,
-      html,
-      fromName: 'The Patient Funnel',
-      fromEmail: this.fromEmail,
-      replyTo:
-        process.env.INTL_CHECK_REPLY_TO?.trim() || 'patientsfunnel@gmail.com',
-    });
-
-    if (!sent.ok) {
-      this.logger.warn(
-        `[lead-magnet] step ${step} to ${to} failed: ${sent.error ?? 'unknown'}`,
+    const offer = tpl.offer ? this.offerText(language) : null;
+    if (tpl.offer && !offer) {
+      // no live offer: the letter is dropped, the sequence moves on
+      if (advance) {
+        await this.prisma.leadMagnet.update({
+          where: { id },
+          data: { step, lastSentAt: new Date() },
+        });
+      }
+      this.logger.log(
+        `[lead-magnet] step ${step} skipped for ${to} (no offer)`,
       );
+      return true;
+    }
+
+    const fill = (p: string): string => {
+      let out = p === '{{download}}' ? this.downloadUrl(language) : p;
+      for (const [k, v] of Object.entries(offer ?? {}))
+        out = out.split(k).join(v);
+      return out;
+    };
+    const ok = await this.deliver(
+      to,
+      { subject: fill(tpl.subject), body: tpl.body.map(fill) },
+      layout,
+      token,
+    );
+    if (!ok) {
+      this.logger.warn(`[lead-magnet] step ${step} to ${to} failed`);
       return false;
     }
     if (advance) {
@@ -247,6 +373,144 @@ export class LeadMagnetService {
     return true;
   }
 
+  private async deliver(
+    to: string,
+    email: LeadEmail,
+    layout: LayoutStrings,
+    token: string,
+  ): Promise<boolean> {
+    const html = renderLeadEmail(email, layout, this.unsubscribeUrl(token));
+    const sent = await this.email.sendHtmlEmail({
+      to,
+      subject: email.subject,
+      html,
+      fromName: 'The Patient Funnel',
+      fromEmail: this.fromEmail,
+      replyTo:
+        process.env.INTL_CHECK_REPLY_TO?.trim() || 'patientsfunnel@gmail.com',
+    });
+    if (!sent.ok) {
+      this.logger.warn(
+        `[lead-magnet] send to ${to} failed: ${sent.error ?? 'unknown'}`,
+      );
+    }
+    return sent.ok;
+  }
+
+  // ───────────────────────────────── purchases ──────────────────────────────
+
+  /**
+   * The store pings this on every sale (form-encoded, unsigned). The seller id
+   * is the only authentication the store offers, so it is required: with the
+   * variable unset the id seen is logged and nothing is written, which is how
+   * the value is discovered on the first test ping.
+   */
+  async recordSale(
+    ping: StorePing,
+  ): Promise<{ ok: boolean; ignored?: string }> {
+    const expected = process.env.GUMROAD_SELLER_ID?.trim();
+    if (!expected) {
+      this.logger.warn(
+        `[lead-magnet] store ping refused: GUMROAD_SELLER_ID unset (seen seller_id=${ping.seller_id ?? '-'})`,
+      );
+      throw new HttpException(
+        { code: 'NOT_CONFIGURED', message: 'Store pings are not enabled.' },
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+    if ((ping.seller_id || '') !== expected) {
+      throw new HttpException(
+        { code: 'FORBIDDEN', message: 'Unknown seller.' },
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    const language = LeadMagnetService.languageFromPermalink(
+      ping.product_permalink,
+      ping.permalink,
+    );
+    if (!language) return { ok: true, ignored: 'other product' };
+    const email = (ping.email || '').trim().toLowerCase();
+    const saleId = (ping.sale_id || '').trim();
+    if (!email || !saleId) return { ok: true, ignored: 'no email or sale id' };
+    if (ping.test === 'true') {
+      this.logger.log(
+        `[lead-magnet] store test ping ok (${language}, ${email})`,
+      );
+      return { ok: true, ignored: 'test' };
+    }
+    const refunded = ping.refunded === 'true';
+    const priceCents = parseInt(ping.price || '0', 10) || 0;
+
+    await this.prisma.bookPurchase.upsert({
+      where: { saleId },
+      create: {
+        email,
+        language,
+        saleId,
+        productPermalink: (
+          ping.product_permalink ||
+          ping.permalink ||
+          ''
+        ).slice(0, 300),
+        priceCents,
+        currency: (ping.currency || 'usd').toLowerCase().slice(0, 8),
+        refunded,
+        token: randomUUID(),
+        step: 0,
+      },
+      update: { refunded },
+    });
+    if (!refunded) {
+      // a buyer leaves the sales sequence, in every language they signed up in
+      await this.prisma.leadMagnet.updateMany({
+        where: { email, purchasedAt: null },
+        data: { purchasedAt: new Date() },
+      });
+    }
+    this.logger.log(
+      `[lead-magnet] sale ${saleId} ${refunded ? 'refunded' : 'recorded'} (${language}, ${email})`,
+    );
+    return { ok: true };
+  }
+
+  private async runPurchaseSequence(
+    now: number,
+  ): Promise<{ sent: number; failed: number }> {
+    const rows = await this.prisma.bookPurchase.findMany({
+      where: {
+        unsubscribedAt: null,
+        refunded: false,
+        step: { lt: this.PURCHASE_DAYS.length },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: this.batchSize,
+    });
+    let sent = 0;
+    let failed = 0;
+    for (const row of rows) {
+      if (!LeadMagnetService.isSendable(row.email)) continue;
+      const next = row.step + 1;
+      const dueAt =
+        row.createdAt.getTime() +
+        this.PURCHASE_DAYS[next - 1] * 24 * 60 * 60 * 1000;
+      if (now < dueAt) continue;
+      const lang: Lang = row.language === 'ja' ? 'ja' : 'en';
+      const { emails, layout } = this.purchasePack(lang);
+      const tpl = emails[next - 1];
+      if (!tpl) continue;
+      const ok = await this.deliver(row.email, tpl, layout, row.token);
+      if (ok) {
+        await this.prisma.bookPurchase.update({
+          where: { id: row.id },
+          data: { step: next, lastSentAt: new Date() },
+        });
+        this.logger.log(`[lead-magnet] purchase step ${next} → ${row.email}`);
+        sent++;
+      } else failed++;
+    }
+    return { sent, failed };
+  }
+
   /**
    * Daily at 09:00 KST: send whichever step is now due for each live lead.
    * One step per lead per run, so a backlog never floods a single inbox.
@@ -257,6 +521,7 @@ export class LeadMagnetService {
     const leads = await this.prisma.leadMagnet.findMany({
       where: {
         unsubscribedAt: null,
+        purchasedAt: null,
         step: { gte: 1, lt: this.SCHEDULE_DAYS.length },
       },
       orderBy: { createdAt: 'asc' },
@@ -283,6 +548,9 @@ export class LeadMagnetService {
       if (ok) sent++;
       else failed++;
     }
+    const p = await this.runPurchaseSequence(now);
+    sent += p.sent;
+    failed += p.failed;
     if (sent || failed) {
       this.logger.log(
         `[lead-magnet] sequence run: sent ${sent}, failed ${failed}`,

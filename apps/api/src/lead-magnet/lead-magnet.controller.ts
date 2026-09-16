@@ -12,7 +12,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { CreateLeadDto } from './dto/create-lead.dto';
-import { LeadMagnetService } from './lead-magnet.service';
+import { LeadMagnetService, type StorePing } from './lead-magnet.service';
 
 /**
  * Public, anonymous endpoints for the free-preview lead magnet on
@@ -35,6 +35,20 @@ export class LeadMagnetController {
     @Req() req: Request,
   ): Promise<{ ok: true }> {
     return this.service.submit(dto, req.ip);
+  }
+
+  /**
+   * Store ping (webhook) for book sales. Form-encoded, unsigned; the service
+   * checks the seller id. Always answers quickly so the store does not retry.
+   */
+  @Post('gumroad-ping')
+  @HttpCode(200)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Store sale ping → post-purchase sequence' })
+  async storePing(
+    @Body() body: Record<string, string>,
+  ): Promise<{ ok: boolean; ignored?: string }> {
+    return this.service.recordSale(body as StorePing);
   }
 
   @Get('unsubscribe')

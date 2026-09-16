@@ -62,8 +62,78 @@ export const EN_EMAILS: LeadEmail[] = [
       'Patient Funnel: How Patients Find, Choose, and Refer Your Practice is the whole system. The ten stages a patient moves through, where they leak at each one, and what to do about it. It is the method I used to build the largest dental practice in central South Korea, running at about US$9M a year.',
       'Inside: the two levers of growth and which one to pull first; how to find the one pain point your practice should own; Chapter 4, the core, covering all ten stages in detail with the checklists, consultation scripts, and forms we use; and how to read your own numbers, from leakage to compound growth to seasonality.',
       'PDF and EPUB, about 41,000 words. $297. Thirty-day refund, no questions, so the risk of finding out is zero.',
-      'https://sodanstjrwns.gumroad.com/l/patientfunnel-en',
-      'If it is not for you, that is fine. The free check stays free and the preview is yours to keep.',
+      '[Get the full book · $297](https://sodanstjrwns.gumroad.com/l/patientfunnel-en)',
+      'If it is not for you, that is fine. The preview is yours to keep.',
+    ],
+  },
+  {
+    // day 15 — the one time-limited price; skipped while no offer is configured
+    offer: true,
+    subject: 'A reader price, until {{offer_expires}}',
+    body: [
+      'A week ago I sent the plain offer. This is the only time I will add anything to it.',
+      'Readers of the free edition can get the full book for {{offer_price}} instead of $297, with the code {{offer_code}} at checkout, until {{offer_expires}}. Same book, same thirty-day refund.',
+      'After that date the code stops working and the price is $297 again. I do not run rolling discounts, so there is no better moment coming.',
+      '[Use the code · {{offer_price}}]({{offer_url}})',
+      'If you have already decided it is not for you, ignore this and keep the preview.',
+    ],
+  },
+  {
+    // day 29 — column
+    subject: 'Stop before you buy more new patients',
+    body: [
+      'The most common question I get from an owner is some version of "how do I get more new patients?" It is a reasonable question. It is also, in most practices, the wrong first question.',
+      'There are exactly two ways a practice grows. You put more patients into the top of the funnel, or you lose fewer of them on the way down. Every vendor you will ever meet sells the first one, because it is the one they can invoice. Nobody sells the second one, because it lives inside your building and only you can do it.',
+      'I wrote the rest of this down as a column. Five minutes.',
+      '[Read the column](https://thepatientfunnel.com/en/columns/stop-before-you-buy-more-patients/)',
+    ],
+  },
+  {
+    // day 43 — column
+    subject: '"It\'s expensive" is not about the price',
+    body: [
+      'Every coordinator I have ever trained came to me with the same complaint in the first month. "They say it\'s too expensive." And every one of them wanted the same fix: permission to discount.',
+      'When a patient says "it\'s expensive," they are almost never comparing your fee to another practice\'s fee. They are comparing your fee to the value they currently feel. The sentence is not a statement about your price. It is a report on how the last twenty minutes went.',
+      'The column walks through what we changed in the consultation instead of the fee.',
+      '[Read the column](https://thepatientfunnel.com/en/columns/expensive-is-not-about-price/)',
+    ],
+  },
+  {
+    // day 57 — column
+    subject: '"We do everything well" is remembered as nothing',
+    body: [
+      'Ask an owner what their practice is known for and you will usually get a list. Implants, ortho, cosmetic, family, gentle, modern, affordable. Now ask one of their patients the same question. You get silence, or "it\'s close to my house."',
+      'That gap is the whole problem with referrals. A patient can only refer what they can describe. If your practice is "good at everything," the sentence they would need to say to a friend does not exist, so they say nothing.',
+      'The column is about picking the one sentence, and what it cost us to pick it.',
+      '[Read the column](https://thepatientfunnel.com/en/columns/we-do-everything-well/)',
+    ],
+  },
+];
+
+/** Post-purchase: sent to buyers of the book, days 3 and 14 after the sale. */
+export const EN_PURCHASE_LAYOUT: LayoutStrings = {
+  ...EN_LAYOUT,
+  why: 'You are getting this because you bought Patient Funnel. Two short notes only; you can stop them below.',
+};
+
+export const EN_PURCHASE_EMAILS: LeadEmail[] = [
+  {
+    subject: 'How to read Patient Funnel',
+    body: [
+      'Thank you for buying the book. One request before you read it: do not read it front to back.',
+      'Open Appendix A, the Ten-Stage Leak Audit, and score your practice first. Ten minutes. Then take the stage with the lowest score and read only that section of Chapter 4 this week. Do one thing from its checklist before you read the next stage. A stage fixed is worth more than the whole book skimmed.',
+      'Second, Appendix B, the weekly numbers sheet. Fill it in once this Friday. The numbers you find you do not have are the finding; most practices cannot fill in half of it, and that is where the leaks hide.',
+      'Third, Appendix C, the first ninety days. It is in order on purpose. Resist the urge to start with Awareness because it is the exciting one; it is also the expensive one.',
+      'If something in the book does not match how things work in your country, reply to this email and tell me. I read every reply, and the next edition is built from them.',
+    ],
+  },
+  {
+    subject: 'Does AI recommend your practice?',
+    body: [
+      'Two weeks in, so a note about Stage 1, Awareness, because it has changed under our feet.',
+      'Patients used to search and read ten results. Now a growing share ask ChatGPT, Gemini or Perplexity "who is a good dentist near me for implants" and read one answer. Either your practice is in that answer or it is not, and nothing in your analytics tells you which.',
+      'Patient Signal is the tool my company built to measure exactly that: how often each AI names a clinic when patients ask, and which sources it is citing when it does. Appendix D of the book describes it. Today it runs on the Korean market.',
+      'For practices outside Korea I am running the check by hand while the international version is built. Reply to this email with your practice name, city and website, and I will send you what the three engines say about you and who they name instead. It is free and there is no pitch attached; I want to see what the answers look like in your market as much as you do.',
     ],
   },
 ];

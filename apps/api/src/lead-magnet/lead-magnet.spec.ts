@@ -29,3 +29,43 @@ describe('LeadMagnetService.isSendable', () => {
     expect(LeadMagnetService.isSendable('@nope.com')).toBe(false);
   });
 });
+
+describe('LeadMagnetService.languageFromPermalink', () => {
+  it('maps the two editions and ignores anything else', () => {
+    expect(
+      LeadMagnetService.languageFromPermalink(
+        'https://sodanstjrwns.gumroad.com/l/patientfunnel-en',
+      ),
+    ).toBe('en');
+    expect(
+      LeadMagnetService.languageFromPermalink(undefined, 'patientfunnel-ja'),
+    ).toBe('ja');
+    expect(LeadMagnetService.languageFromPermalink('other-thing')).toBeNull();
+  });
+});
+
+describe('LeadMagnetService.offerFrom', () => {
+  const env = {
+    GUMROAD_OFFER_CODE: 'READER',
+    GUMROAD_OFFER_EXPIRES: '2026-10-31',
+    GUMROAD_OFFER_PRICE_EN: '$247',
+    GUMROAD_OFFER_PRICE_JA: '37,800円',
+  };
+  it('is live through the end of the expiry day', () => {
+    expect(
+      LeadMagnetService.offerFrom(env, new Date('2026-10-31T20:00:00Z')),
+    ).not.toBeNull();
+    expect(
+      LeadMagnetService.offerFrom(env, new Date('2026-11-01T00:00:01Z')),
+    ).toBeNull();
+  });
+  it('is off when any part is missing', () => {
+    expect(
+      LeadMagnetService.offerFrom(
+        { ...env, GUMROAD_OFFER_CODE: '' },
+        new Date('2026-10-01T00:00:00Z'),
+      ),
+    ).toBeNull();
+    expect(LeadMagnetService.offerFrom({}, new Date())).toBeNull();
+  });
+});

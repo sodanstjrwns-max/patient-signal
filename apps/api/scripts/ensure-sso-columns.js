@@ -71,7 +71,15 @@ async function main() {
       await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_email_language_idx" ON "lead_magnets"("email", "language")')
       await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_created_at_idx" ON "lead_magnets"("created_at")')
       await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "lead_magnets_ip_hash_created_at_idx" ON "lead_magnets"("ip_hash", "created_at")')
+      await prisma.$executeRawUnsafe('ALTER TABLE "lead_magnets" ADD COLUMN IF NOT EXISTS "purchased_at" TIMESTAMP(3)')
       console.log('[ensure-sso-columns] lead_magnets ready')
+      // 【2026-09-16】해외판 구매 기록(book_purchases) — Gumroad ping 이 쓰고, 구매자 후속 메일이 읽는다
+      await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "book_purchases" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "sale_id" TEXT NOT NULL, "product_permalink" TEXT NOT NULL, "price_cents" INTEGER NOT NULL DEFAULT 0, "currency" TEXT NOT NULL DEFAULT \'usd\', "refunded" BOOLEAN NOT NULL DEFAULT false, "token" TEXT NOT NULL, "step" INTEGER NOT NULL DEFAULT 0, "last_sent_at" TIMESTAMP(3), "unsubscribed_at" TIMESTAMP(3), CONSTRAINT "book_purchases_pkey" PRIMARY KEY ("id"))')
+      await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "book_purchases_sale_id_key" ON "book_purchases"("sale_id")')
+      await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "book_purchases_token_key" ON "book_purchases"("token")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "book_purchases_email_idx" ON "book_purchases"("email")')
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "book_purchases_created_at_idx" ON "book_purchases"("created_at")')
+      console.log('[ensure-sso-columns] book_purchases ready')
     } catch (e5) {
       console.error('[ensure-sso-columns] lead_magnets 생성 실패(무료 프리뷰 신청이 DATABASE_ERROR 를 냄):', e5.message)
     }

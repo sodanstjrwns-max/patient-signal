@@ -8,8 +8,14 @@
 
 export interface LeadEmail {
   subject: string;
-  /** paragraphs; a string that is exactly a URL is rendered as a button */
+  /**
+   * paragraphs; a string that is exactly a URL is rendered as a button, and
+   * "[Label](URL)" as a button with that label. {{offer_code}},
+   * {{offer_price}}, {{offer_expires}} and {{offer_url}} are filled in by the
+   * service; an e-mail marked `offer` is skipped while no offer is configured.
+   */
   body: string[];
+  offer?: boolean;
 }
 
 export interface LayoutStrings {
@@ -40,15 +46,21 @@ export function renderLeadEmail(
   strings: LayoutStrings,
   unsubscribeUrl: string,
 ): string {
+  const button = (url: string, label: string): string =>
+    `<p style="margin:26px 0"><a href="${esc(url)}" style="display:inline-block;background:#0b6b5e;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${esc(label)}</a></p>`;
   const paras = email.body
     .map((p) => {
+      // "[Label](https://…)" renders as a button with that label;
+      // a bare URL keeps the default download label.
+      const labelled = /^\[([^\]]+)\]\((https?:\/\/\S+)\)$/.exec(p.trim());
+      if (labelled) return button(labelled[2], labelled[1]);
       if (/^https?:\/\/\S+$/.test(p.trim())) {
-        const url = p.trim();
-        return `<p style="margin:26px 0"><a href="${esc(url)}" style="display:inline-block;background:#0b6b5e;color:#fff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:600">${esc(
+        return button(
+          p.trim(),
           strings.htmlLang === 'ja'
             ? '無料プレビューをダウンロード'
             : 'Download the free preview',
-        )}</a></p>`;
+        );
       }
       return `<p style="margin:0 0 18px;line-height:1.75">${linkify(p)}</p>`;
     })

@@ -1323,9 +1323,33 @@ model LeadMagnet {
   step           Int       @default(0)
   lastSentAt     DateTime? @map("last_sent_at")
   unsubscribedAt DateTime? @map("unsubscribed_at")
+  /// set when the same address buys the book; the sales sequence stops here
+  purchasedAt    DateTime? @map("purchased_at")
 
   @@index([email, language])
   @@index([createdAt])
   @@index([ipHash, createdAt])
   @@map("lead_magnets")
+}
+
+/// A sale of the international book, as reported by the store's ping (webhook).
+/// Drives the short post-purchase sequence (how to read, then Patient Signal).
+model BookPurchase {
+  id               String    @id @default(uuid())
+  createdAt        DateTime  @default(now()) @map("created_at")
+  email            String
+  language         String    @default("en")
+  saleId           String    @unique @map("sale_id")
+  productPermalink String    @map("product_permalink")
+  priceCents       Int       @default(0) @map("price_cents")
+  currency         String    @default("usd")
+  refunded         Boolean   @default(false)
+  token            String    @unique
+  step             Int       @default(0)
+  lastSentAt       DateTime? @map("last_sent_at")
+  unsubscribedAt   DateTime? @map("unsubscribed_at")
+
+  @@index([email])
+  @@index([createdAt])
+  @@map("book_purchases")
 }
