@@ -57,9 +57,7 @@ export function renderLeadEmail(
       if (/^https?:\/\/\S+$/.test(p.trim())) {
         return button(
           p.trim(),
-          strings.htmlLang === 'ja'
-            ? '無料プレビューをダウンロード'
-            : 'Download the free preview',
+          strings.htmlLang === 'ja' ? '無料版を開く' : 'Open the free edition',
         );
       }
       return `<p style="margin:0 0 18px;line-height:1.75">${linkify(p)}</p>`;

@@ -6,18 +6,18 @@ export const EN_LAYOUT: LayoutStrings = {
   signature: 'Suokjoon Moon',
   senderBlock:
     'Patient Funnel · Suokjoon Moon · 602 Yeongdong-daero, 6F z208, Gangnam-gu, Seoul 06083, Korea · patientsfunnel@gmail.com',
-  why: 'You are getting this because you asked for the free preview of Patient Funnel at thepatientfunnel.com.',
+  why: 'You are getting this because you asked for the free edition of Patient Funnel at thepatientfunnel.com.',
   unsubscribe: 'Unsubscribe from these emails',
 };
 
 /** Step 1 is sent immediately; {{download}} is replaced with the PDF link. */
 export const EN_EMAILS: LeadEmail[] = [
   {
-    subject: 'Your free preview of Patient Funnel',
+    subject: 'Your free edition of Patient Funnel',
     body: [
-      'Here is the preview. Chapter 1, the opening of Chapter 2, the full definition of the ten stages, and the two levers of growth. About nine pages.',
+      'Here is the free edition, 24 pages. The model and the two levers of growth, then two of the ten stages exactly as the book treats them, Arrival and Waiting, and at the back a thirty-line audit of your own practice.',
       '{{download}}',
-      'If you read one thing in it today, make it section 2.4: widening the funnel versus increasing the input.',
+      'If you read one thing in it today, make it section 2.4: widening the funnel versus increasing the input. Then, when you have ten minutes, score the audit at the back before you read anything else about your practice.',
       "There are only two ways to grow a practice's revenue. You can put more people into the funnel, which means spending more on marketing. Or you can stop the people already in it from falling out, which means fixing your own processes.",
       'Almost everyone picks the first one, because the second is tedious. But pour more volume into a funnel that already leaks and the experience gets worse, not better. More patients arrive than the practice can handle, satisfaction drops, and referrals drop with it. You end up paying more for each new patient every year.',
       "The book's position is blunt: if your annual revenue is under about $8 million, fix the funnel first. Marketing is the salt on a steak. The steak has to be good.",
@@ -32,7 +32,7 @@ export const EN_EMAILS: LeadEmail[] = [
       'Start with parking. A patient who cannot find the lot, or finds it full with no idea what to do next, can give up before ever meeting you. Where to park, what to do when the lot is full, whether a large vehicle fits, how long the walk is: most booked patients are sent none of this, and every one of those gaps is a patient you lose without ever knowing their name.',
       'Then the waiting room. Waiting is the one stage where the patient is not yet committed to anything and can still stand up and walk out without being seen. Everything you spent to get them there is gone at that moment, and it does not show up in any report.',
       'Try it once this week. Drive in the way a patient does, park where they park, then sit in your own waiting room for twenty minutes with your phone in your pocket. Most owners find two or three things in that twenty minutes that they can fix the same day.',
-      'Chapter 4 of the book takes both stages apart in detail, with what my practice sends before a visit and what we do with the waiting room.',
+      'Both stages are in your free edition in full, sections 4.4 and 4.5: what my practice sends before a visit, and what we do with the waiting room. Read them before you drive in.',
     ],
   },
   {
@@ -63,7 +63,7 @@ export const EN_EMAILS: LeadEmail[] = [
       'Inside: the two levers of growth and which one to pull first; how to find the one pain point your practice should own; Chapter 4, the core, covering all ten stages in detail with the checklists, consultation scripts, and forms we use; and how to read your own numbers, from leakage to compound growth to seasonality.',
       'PDF and EPUB, about 41,000 words. $297. Thirty-day refund, no questions, so the risk of finding out is zero.',
       '[Get the full book · $297](https://sodanstjrwns.gumroad.com/l/patientfunnel-en)',
-      'If it is not for you, that is fine. The preview is yours to keep.',
+      'If it is not for you, that is fine. The free edition is yours to keep.',
     ],
   },
   {
@@ -75,7 +75,7 @@ export const EN_EMAILS: LeadEmail[] = [
       'Readers of the free edition can get the full book for {{offer_price}} instead of $297, with the code {{offer_code}} at checkout, until {{offer_expires}}. Same book, same thirty-day refund.',
       'After that date the code stops working and the price is $297 again. I do not run rolling discounts, so there is no better moment coming.',
       '[Use the code · {{offer_price}}]({{offer_url}})',
-      'If you have already decided it is not for you, ignore this and keep the preview.',
+      'If you have already decided it is not for you, ignore this and keep the free edition.',
     ],
   },
   {
