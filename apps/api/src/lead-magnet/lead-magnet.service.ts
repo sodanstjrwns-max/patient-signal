@@ -35,6 +35,8 @@ export interface StorePing {
   currency?: string;
   refunded?: string;
   test?: string;
+  /** query parameters that were on the product URL at purchase (we add cid/sid) */
+  url_params?: Record<string, string>;
 }
 
 export interface OfferConfig {
@@ -277,6 +279,10 @@ export class LeadMagnetService {
     });
     this.logger.log(`[lead-magnet] new lead ${email} (${language})`);
     await this.sendStep(row.id, email, language, row.token, 1, true);
+    await this.notifyOwner(
+      `[Patient Funnel] New lead · ${language.toUpperCase()}`,
+      `New free-edition request: ${email} · ${language} · source ${dto.source?.trim() || '-'}. Sequence starts today.`,
+    );
     return { ok: true };
   }
 
@@ -401,6 +407,95 @@ export class LeadMagnetService {
     return sent.ok;
   }
 
+  // ───────────────────────────────── notify / analytics ─────────────────────
+
+  /** One-line heads-up to the owner so replies and sales get a human response. */
+  private async notifyOwner(subject: string, line: string): Promise<void> {
+    const to =
+      process.env.LEAD_MAGNET_NOTIFY?.trim() || 'patientsfunnel@gmail.com';
+    try {
+      await this.email.sendHtmlEmail({
+        to,
+        subject,
+        html: `<p style="font-family:system-ui,sans-serif;font-size:15px">${line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')}</p>`,
+        fromName: 'The Patient Funnel',
+        fromEmail: this.fromEmail,
+      });
+    } catch (e) {
+      this.logger.warn(
+        `[lead-magnet] owner notify failed: ${(e as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Server-side GA4 event for a store sale (Measurement Protocol). The client id
+   * and session id come from the query string track.js appends to the store
+   * link, so the purchase lands in the same session as the ad click and Ads can
+   * learn from sales, not just leads. Without GA4_API_SECRET this is a no-op.
+   */
+  private async ga4Event(
+    name: 'purchase' | 'refund',
+    ping: StorePing,
+    language: Lang,
+    saleId: string,
+    priceCents: number,
+    currency: string,
+  ): Promise<void> {
+    const secret = process.env.GA4_API_SECRET?.trim();
+    const mid = process.env.GA4_MEASUREMENT_ID?.trim() || 'G-JKY5HYYKTB';
+    if (!secret) return;
+    const cid = ping.url_params?.cid?.trim();
+    const sid = ping.url_params?.sid?.trim();
+    // a sale we cannot tie to a browser still counts, under a stable synthetic id
+    const clientId =
+      cid && /^[\w.-]{4,64}$/.test(cid)
+        ? cid
+        : `srv.${createHash('sha256')
+            .update(ping.email || saleId)
+            .digest('hex')
+            .slice(0, 16)}`;
+    const value = Math.round(priceCents) / 100;
+    const params: Record<string, unknown> = {
+      transaction_id: saleId,
+      value,
+      currency: currency.toUpperCase(),
+      items: [
+        {
+          item_id: `patientfunnel-${language}`,
+          item_name: `Patient Funnel (${language})`,
+          price: value,
+          quantity: 1,
+        },
+      ],
+      engagement_time_msec: 1,
+      source_channel: 'gumroad-ping',
+    };
+    if (sid && /^\d{6,20}$/.test(sid)) params.session_id = sid;
+    try {
+      const res = await fetch(
+        `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(mid)}&api_secret=${encodeURIComponent(secret)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            client_id: clientId,
+            events: [{ name, params }],
+          }),
+        },
+      );
+      this.logger.log(
+        `[lead-magnet] ga4 ${name} ${saleId} → ${res.status}${cid ? '' : ' (no cid; unattributed)'}`,
+      );
+    } catch (e) {
+      this.logger.warn(
+        `[lead-magnet] ga4 ${name} failed: ${(e as Error).message}`,
+      );
+    }
+  }
+
   // ───────────────────────────────── purchases ──────────────────────────────
 
   /**
@@ -473,6 +568,21 @@ export class LeadMagnetService {
     }
     this.logger.log(
       `[lead-magnet] sale ${saleId} ${refunded ? 'refunded' : 'recorded'} (${language}, ${email})`,
+    );
+    const money = `${(priceCents / 100).toFixed(2)} ${(ping.currency || 'usd').toUpperCase()}`;
+    await this.ga4Event(
+      refunded ? 'refund' : 'purchase',
+      ping,
+      language,
+      saleId,
+      priceCents,
+      ping.currency || 'usd',
+    );
+    await this.notifyOwner(
+      refunded
+        ? `[Patient Funnel] Refund · ${language.toUpperCase()} · ${money}`
+        : `[Patient Funnel] Sale · ${language.toUpperCase()} · ${money}`,
+      `${refunded ? 'Refunded' : 'New sale'}: ${email} · ${money} · ${language} · sale ${saleId}. Post-purchase notes go out on day 3 and day 14.`,
     );
     return { ok: true };
   }
