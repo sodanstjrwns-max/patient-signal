@@ -68,7 +68,7 @@ export class LeadMagnetService {
    * five letters over eight days, the one time-limited price a week after the
    * plain offer, then a column every two weeks.
    */
-  private readonly SCHEDULE_DAYS = [0, 2, 4, 6, 8, 15, 29, 43, 57];
+  private readonly SCHEDULE_DAYS = [0, 2, 4, 6, 8, 15, 29, 43, 57, 71, 85];
   /** days after purchase for the two post-purchase notes */
   private readonly PURCHASE_DAYS = [3, 14];
   private readonly PER_KEY_DAILY_LIMIT = 3;

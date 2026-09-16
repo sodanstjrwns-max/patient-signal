@@ -108,6 +108,26 @@ export const EN_EMAILS: LeadEmail[] = [
       '[Read the column](https://thepatientfunnel.com/en/columns/we-do-everything-well/)',
     ],
   },
+  {
+    // day 71 — column
+    subject: 'The phone is where bookings leak',
+    body: [
+      "Do you know how many calls your practice took this morning, and how many became a booking? Most owners cannot answer the first question. Divide last month's marketing spend by the number of new-patient calls and each call is worth tens of dollars, in some practices hundreds. The person answering it is usually the least trained person in the building.",
+      '"How much is an implant?" is the king of incoming calls, and "it depends, you\'d have to come in" is the honest sentence that ends it. The caller did not ask about price. They asked for a signal that you are the right place.',
+      'The column has the four sentence structures we use instead, and the fifteen-minute routine that keeps them alive when the desk changes staff.',
+      '[Read the column](https://thepatientfunnel.com/en/columns/the-phone-is-where-bookings-leak/)',
+    ],
+  },
+  {
+    // day 85 — column
+    subject: "No-shows are not the patient's fault",
+    body: [
+      'Reminder texts fix forgetting. Most no-shows are not forgetting; they are a mind that quietly tilted toward not going, and the reminder revived the memory without reviving the reason.',
+      "A time the practice assigned is the practice's promise. A time the patient chose is the patient's promise. Only the second one gets kept. Three sentences at the desk move the ownership of the appointment to the patient, and they cost nothing.",
+      'The column has the script, and the one line most desks say that teaches patients to no-show.',
+      '[Read the column](https://thepatientfunnel.com/en/columns/no-shows-are-not-the-patients-fault/)',
+    ],
+  },
 ];
 
 /** Post-purchase: sent to buyers of the book, days 3 and 14 after the sale. */
