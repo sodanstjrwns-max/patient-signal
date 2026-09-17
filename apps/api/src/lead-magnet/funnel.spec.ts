@@ -46,6 +46,7 @@ describe('overseas funnel boundaries', () => {
         update: jest.fn(),
       },
     };
+    prisma.$transaction = jest.fn((run) => run(prisma));
     sender = { sendHtmlEmail: jest.fn().mockResolvedValue({ ok: true }) };
     service = new LeadMagnetService(prisma, sender);
     jest.spyOn(service, 'notifyOwner').mockResolvedValue(undefined);

@@ -1,5 +1,7 @@
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import { Prisma } from '@prisma/client';
+import { flushBookAnalytics } from './book-analytics';
 import { createHash, randomUUID } from 'crypto';
 import { EmailService } from '../email/email.service';
 import { PrismaService } from '../common/prisma/prisma.service';
@@ -499,7 +501,8 @@ export class LeadMagnetService {
    * Server-side GA4 event for a store sale (Measurement Protocol). The client id
    * and session id come from the query string track.js appends to the store
    * link, so the purchase lands in the same session as the ad click and Ads can
-   * learn from sales, not just leads. Without GA4_API_SECRET this is a no-op.
+   * learn from sales. Persist in the same transaction as the purchase; the
+   * separate worker retries delivery, including while configuration is absent.
    */
   private async ga4Event(
     name: 'purchase' | 'refund',
@@ -509,10 +512,8 @@ export class LeadMagnetService {
     priceCents: number,
     currency: string,
     acquisition: Attribution = {},
+    db: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
-    const secret = process.env.GA4_API_SECRET?.trim();
-    const mid = process.env.GA4_MEASUREMENT_ID?.trim() || 'G-JKY5HYYKTB';
-    if (!secret) return;
     const cid = ping.url_params?.cid?.trim() || acquisition.gaClientId;
     const sid = ping.url_params?.sid?.trim();
     // a sale we cannot tie to a browser still counts, under a stable synthetic id
@@ -539,33 +540,29 @@ export class LeadMagnetService {
       engagement_time_msec: 1,
       source_channel: 'gumroad-ping',
     };
-    if (sid && /^\d{6,20}$/.test(sid)) params.session_id = sid;
+    if (sid && /^\d{6,16}$/.test(sid) && Number.isSafeInteger(Number(sid)))
+      params.session_id = Number(sid);
     for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) {
       if (acquisition[key]) params[`signup_${key.slice(4)}`] = acquisition[key];
     }
     const checkout = sanitizeAttribution(ping.url_params);
     if (checkout.utm_source) params.checkout_source = checkout.utm_source;
     if (checkout.utm_medium) params.checkout_medium = checkout.utm_medium;
-    try {
-      const res = await fetch(
-        `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(mid)}&api_secret=${encodeURIComponent(secret)}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            client_id: clientId,
-            events: [{ name, params }],
-          }),
-        },
-      );
-      this.logger.log(
-        `[lead-magnet] ga4 ${name} ${saleId} → ${res.status}${cid ? '' : ' (no cid; unattributed)'}`,
-      );
-    } catch (e) {
-      this.logger.warn(
-        `[lead-magnet] ga4 ${name} failed: ${(e as Error).message}`,
-      );
-    }
+    await db.bookAnalyticsEvent.create({
+      data: {
+        id: `${name}:${saleId}`,
+        payload: {
+          client_id: clientId,
+          timestamp_micros: Date.now() * 1000,
+          events: [{ name, params }],
+        } as Prisma.InputJsonObject,
+      },
+    });
+  }
+
+  @Cron('*/1 * * * *')
+  async retryBookAnalytics(): Promise<void> {
+    await flushBookAnalytics(this.prisma, this.logger);
   }
 
   // ───────────────────────────────── purchases ──────────────────────────────
@@ -610,85 +607,92 @@ export class LeadMagnetService {
       return { ok: true, ignored: 'test' };
     }
     const refunded = ping.refunded === 'true';
-    const previous = await this.prisma.bookPurchase.findUnique({
-      where: { saleId },
-    });
-    const lead = await this.prisma.leadMagnet.findFirst({
-      where: { email, language },
-      orderBy: { createdAt: 'asc' },
-    });
-    const acquisition = sanitizeAttribution(lead?.attribution);
-    const checkout = sanitizeAttribution(ping.url_params);
-    const attribution = {
-      ...acquisition,
-      checkout_source: checkout.utm_source || 'unknown',
-      checkout_medium: checkout.utm_medium || 'unknown',
-    };
-    const priceCents =
-      previous?.priceCents ?? (parseInt(ping.price || '0', 10) || 0);
-    const currency =
-      previous?.currency || (ping.currency || 'usd').toLowerCase().slice(0, 8);
-    if (previous) {
-      // A retried purchase cannot undo a refund or send duplicate notifications.
-      if (!refunded || previous.refunded)
-        return { ok: true, ignored: 'duplicate' };
-      const updated = await this.prisma.bookPurchase.updateMany({
-        where: { saleId, refunded: false },
-        data: { refunded: true },
-      });
-      if (!updated.count) return { ok: true, ignored: 'duplicate' };
-    } else {
-      const optedOut = await this.prisma.leadMagnet.findFirst({
-        where: { email, unsubscribedAt: { not: null } },
-        select: { unsubscribedAt: true },
-      });
-      try {
-        await this.prisma.bookPurchase.create({
-          data: {
-            email,
-            language,
-            saleId,
-            productPermalink: (
-              ping.product_permalink ||
-              ping.permalink ||
-              ''
-            ).slice(0, 300),
-            priceCents,
-            currency,
-            refunded,
-            token: randomUUID(),
-            step: 0,
-            attribution,
-            unsubscribedAt: optedOut?.unsubscribedAt || null,
-          },
+    let recorded: { money: string } | null;
+    try {
+      recorded = await this.prisma.$transaction(async (db) => {
+        const previous = await db.bookPurchase.findUnique({
+          where: { saleId },
         });
-      } catch (error) {
-        if ((error as { code?: string }).code === 'P2002')
-          return { ok: true, ignored: 'duplicate' };
-        throw error;
-      }
-    }
-    if (!refunded) {
-      // a buyer leaves the sales sequence, in every language they signed up in
-      await this.prisma.leadMagnet.updateMany({
-        where: { email, purchasedAt: null },
-        data: { purchasedAt: new Date() },
+        const lead = await db.leadMagnet.findFirst({
+          where: { email, language },
+          orderBy: { createdAt: 'asc' },
+        });
+        const acquisition = sanitizeAttribution(lead?.attribution);
+        const checkout = sanitizeAttribution(ping.url_params);
+        const attribution = {
+          ...acquisition,
+          checkout_source: checkout.utm_source || 'unknown',
+          checkout_medium: checkout.utm_medium || 'unknown',
+        };
+        const priceCents =
+          previous?.priceCents ?? (parseInt(ping.price || '0', 10) || 0);
+        // Gumroad Ping reports price in USD cents, even for a JPY storefront.
+        const currency = 'usd';
+        if (previous) {
+          // A retried purchase cannot undo a refund or send duplicate notifications.
+          if (!refunded || previous.refunded) return null;
+          const updated = await db.bookPurchase.updateMany({
+            where: { saleId, refunded: false },
+            data: { refunded: true },
+          });
+          if (!updated.count) return null;
+        } else {
+          const optedOut = await db.leadMagnet.findFirst({
+            where: { email, unsubscribedAt: { not: null } },
+            select: { unsubscribedAt: true },
+          });
+          await db.bookPurchase.create({
+            data: {
+              email,
+              language,
+              saleId,
+              productPermalink: (
+                ping.product_permalink ||
+                ping.permalink ||
+                ''
+              ).slice(0, 300),
+              priceCents,
+              currency,
+              refunded,
+              token: randomUUID(),
+              step: 0,
+              attribution,
+              unsubscribedAt: optedOut?.unsubscribedAt || null,
+            },
+          });
+        }
+        if (!refunded) {
+          // a buyer leaves the sales sequence, in every language they signed up in
+          await db.leadMagnet.updateMany({
+            where: { email, purchasedAt: null },
+            data: { purchasedAt: new Date() },
+          });
+        }
+        this.logger.log(
+          `[lead-magnet] sale ${saleId} ${refunded ? 'refunded' : 'recorded'} (${language}, ${email})`,
+        );
+        const money = `${(priceCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+        await this.ga4Event(
+          refunded ? 'refund' : 'purchase',
+          ping,
+          language,
+          saleId,
+          priceCents,
+          currency,
+          acquisition,
+          db,
+        );
+        return { money };
       });
+    } catch (error) {
+      if ((error as { code?: string }).code === 'P2002')
+        return { ok: true, ignored: 'duplicate' };
+      throw error;
     }
-    this.logger.log(
-      `[lead-magnet] sale ${saleId} ${refunded ? 'refunded' : 'recorded'} (${language}, ${email})`,
-    );
-    const money = `${(priceCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
-    await this.ga4Event(
-      refunded ? 'refund' : 'purchase',
-      ping,
-      language,
-      saleId,
-      priceCents,
-      currency,
-      acquisition,
-    );
-    await this.notifyOwner(
+    if (!recorded) return { ok: true, ignored: 'duplicate' };
+    const { money } = recorded;
+    // Acknowledge Gumroad after durable storage, without waiting on mail/GA4.
+    void this.notifyOwner(
       refunded
         ? `[Patient Funnel] Refund · ${language.toUpperCase()} · ${money}`
         : `[Patient Funnel] Sale · ${language.toUpperCase()} · ${money}`,

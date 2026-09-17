@@ -1357,3 +1357,19 @@ model BookPurchase {
   @@index([createdAt])
   @@map("book_purchases")
 }
+
+
+/// Durable server analytics delivery, with no email or API secret in the payload.
+model BookAnalyticsEvent {
+  id            String    @id
+  createdAt     DateTime  @default(now()) @map("created_at")
+  payload       Json
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now()) @map("next_attempt_at")
+  sentAt        DateTime? @map("sent_at")
+  stoppedAt     DateTime? @map("stopped_at")
+  lastError     String?   @map("last_error")
+
+  @@index([sentAt, stoppedAt, nextAttemptAt])
+  @@map("book_analytics_events")
+}
