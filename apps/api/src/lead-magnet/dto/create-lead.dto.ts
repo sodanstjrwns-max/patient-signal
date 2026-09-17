@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsObject,
   IsIn,
   IsOptional,
   IsString,
@@ -23,4 +24,15 @@ export class CreateLeadDto {
   @IsString()
   @MaxLength(60)
   source?: string;
+
+  /** Exact version of the unchecked-by-default consent the reader accepted. */
+  @ApiPropertyOptional({ enum: ['2026-09-17'] })
+  @IsOptional()
+  @IsIn(['2026-09-17'])
+  consentVersion?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsObject()
+  attribution?: Record<string, unknown>;
 }

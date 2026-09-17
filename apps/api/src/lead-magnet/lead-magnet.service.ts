@@ -5,6 +5,13 @@ import { EmailService } from '../email/email.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import {
+  EXTENDED_CONSENT,
+  sanitizeAttribution,
+  sequenceLimit,
+  taggedStoreLinks,
+  type Attribution,
+} from './attribution';
+import {
   renderLeadEmail,
   type LayoutStrings,
   type LeadEmail,
@@ -255,22 +262,46 @@ export class LeadMagnetService {
         this.logger.log(`[lead-magnet] re-request from unsubscribed ${email}`);
         return { ok: true };
       }
-      await this.sendStep(
+      const consentVersion = dto.consentVersion || existing.consentVersion;
+      if (
+        dto.consentVersion === EXTENDED_CONSENT &&
+        existing.consentVersion !== EXTENDED_CONSENT
+      ) {
+        await this.prisma.leadMagnet.update({
+          where: { id: existing.id },
+          data: { consentVersion, consentAt: new Date() },
+        });
+      }
+      const sent = await this.sendStep(
         existing.id,
         email,
         language,
         existing.token,
         1,
-        false,
+        existing.step === 0,
+        consentVersion,
       );
+      if (!sent)
+        throw new HttpException(
+          'Please try again shortly.',
+          HttpStatus.SERVICE_UNAVAILABLE,
+        );
       return { ok: true };
     }
 
+    const purchase = await this.prisma.bookPurchase.findFirst({
+      where: { email, refunded: false },
+      select: { createdAt: true },
+    });
     const row = await this.prisma.leadMagnet.create({
       data: {
         email,
         language,
         source: dto.source?.trim() || null,
+        consentVersion: dto.consentVersion || null,
+        consentAt: dto.consentVersion ? new Date() : null,
+        attribution: sanitizeAttribution(dto.attribution),
+        purchasedAt: purchase?.createdAt || null,
         ipHash,
         token: randomUUID(),
         step: 0,
@@ -278,7 +309,20 @@ export class LeadMagnetService {
       select: { id: true, token: true },
     });
     this.logger.log(`[lead-magnet] new lead ${email} (${language})`);
-    await this.sendStep(row.id, email, language, row.token, 1, true);
+    const sent = await this.sendStep(
+      row.id,
+      email,
+      language,
+      row.token,
+      1,
+      true,
+      dto.consentVersion,
+    );
+    if (!sent)
+      throw new HttpException(
+        'Please try again shortly.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     await this.notifyOwner(
       `[Patient Funnel] New lead · ${language.toUpperCase()}`,
       `New free-edition request: ${email} · ${language} · source ${dto.source?.trim() || '-'}. Sequence starts today.`,
@@ -314,6 +358,16 @@ export class LeadMagnetService {
         this.logger.log(`[lead-magnet] purchaser unsubscribed ${row.email}`);
       }
     }
+    if (row) {
+      await this.prisma.leadMagnet.updateMany({
+        where: { email: row.email, unsubscribedAt: null },
+        data: { unsubscribedAt: new Date() },
+      });
+      await this.prisma.bookPurchase.updateMany({
+        where: { email: row.email, unsubscribedAt: null },
+        data: { unsubscribedAt: new Date() },
+      });
+    }
     const ja = row?.language === 'ja';
     const msg = ja
       ? '配信を停止しました。今後このシリーズのメールは届きません。'
@@ -337,7 +391,9 @@ export class LeadMagnetService {
     token: string,
     step: number,
     advance: boolean,
+    consentVersion?: string | null,
   ): Promise<boolean> {
+    if (step > sequenceLimit(consentVersion)) return false;
     const { emails, layout } = this.pack(language);
     const tpl = emails[step - 1];
     if (!tpl) return false;
@@ -361,7 +417,16 @@ export class LeadMagnetService {
       let out = p === '{{download}}' ? this.downloadUrl(language) : p;
       for (const [k, v] of Object.entries(offer ?? {}))
         out = out.split(k).join(v);
-      return out;
+      const schedule =
+        language === 'ja'
+          ? sequenceLimit(consentVersion) > 5
+            ? '今後8日間で実践のヒントを4通、その後は読者向けの案内と隔週のコラムを約3か月にわたりお届けします。今回を含め最大11通で、いつでも配信を停止できます。'
+            : '今後8日間で実践のヒントを4通お届けします。今回を含め5通で、いつでも配信を停止できます。'
+          : sequenceLimit(consentVersion) > 5
+            ? 'Over the next eight days: four practical notes. After that, a reader offer when available and fortnightly columns for about three months. Up to 11 emails including this one; unsubscribe anytime.'
+            : 'Over the next eight days I will send four practical notes. Five emails including this one; unsubscribe anytime.';
+      out = out.split('{{schedule}}').join(schedule);
+      return taggedStoreLinks(out, language, step);
     };
     const ok = await this.deliver(
       to,
@@ -443,18 +508,19 @@ export class LeadMagnetService {
     saleId: string,
     priceCents: number,
     currency: string,
+    acquisition: Attribution = {},
   ): Promise<void> {
     const secret = process.env.GA4_API_SECRET?.trim();
     const mid = process.env.GA4_MEASUREMENT_ID?.trim() || 'G-JKY5HYYKTB';
     if (!secret) return;
-    const cid = ping.url_params?.cid?.trim();
+    const cid = ping.url_params?.cid?.trim() || acquisition.gaClientId;
     const sid = ping.url_params?.sid?.trim();
     // a sale we cannot tie to a browser still counts, under a stable synthetic id
     const clientId =
       cid && /^[\w.-]{4,64}$/.test(cid)
         ? cid
         : `srv.${createHash('sha256')
-            .update(ping.email || saleId)
+            .update(saleId)
             .digest('hex')
             .slice(0, 16)}`;
     const value = Math.round(priceCents) / 100;
@@ -474,6 +540,12 @@ export class LeadMagnetService {
       source_channel: 'gumroad-ping',
     };
     if (sid && /^\d{6,20}$/.test(sid)) params.session_id = sid;
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign']) {
+      if (acquisition[key]) params[`signup_${key.slice(4)}`] = acquisition[key];
+    }
+    const checkout = sanitizeAttribution(ping.url_params);
+    if (checkout.utm_source) params.checkout_source = checkout.utm_source;
+    if (checkout.utm_medium) params.checkout_medium = checkout.utm_medium;
     try {
       const res = await fetch(
         `https://www.google-analytics.com/mp/collect?measurement_id=${encodeURIComponent(mid)}&api_secret=${encodeURIComponent(secret)}`,
@@ -538,27 +610,64 @@ export class LeadMagnetService {
       return { ok: true, ignored: 'test' };
     }
     const refunded = ping.refunded === 'true';
-    const priceCents = parseInt(ping.price || '0', 10) || 0;
-
-    await this.prisma.bookPurchase.upsert({
+    const previous = await this.prisma.bookPurchase.findUnique({
       where: { saleId },
-      create: {
-        email,
-        language,
-        saleId,
-        productPermalink: (
-          ping.product_permalink ||
-          ping.permalink ||
-          ''
-        ).slice(0, 300),
-        priceCents,
-        currency: (ping.currency || 'usd').toLowerCase().slice(0, 8),
-        refunded,
-        token: randomUUID(),
-        step: 0,
-      },
-      update: { refunded },
     });
+    const lead = await this.prisma.leadMagnet.findFirst({
+      where: { email, language },
+      orderBy: { createdAt: 'asc' },
+    });
+    const acquisition = sanitizeAttribution(lead?.attribution);
+    const checkout = sanitizeAttribution(ping.url_params);
+    const attribution = {
+      ...acquisition,
+      checkout_source: checkout.utm_source || 'unknown',
+      checkout_medium: checkout.utm_medium || 'unknown',
+    };
+    const priceCents =
+      previous?.priceCents ?? (parseInt(ping.price || '0', 10) || 0);
+    const currency =
+      previous?.currency || (ping.currency || 'usd').toLowerCase().slice(0, 8);
+    if (previous) {
+      // A retried purchase cannot undo a refund or send duplicate notifications.
+      if (!refunded || previous.refunded)
+        return { ok: true, ignored: 'duplicate' };
+      const updated = await this.prisma.bookPurchase.updateMany({
+        where: { saleId, refunded: false },
+        data: { refunded: true },
+      });
+      if (!updated.count) return { ok: true, ignored: 'duplicate' };
+    } else {
+      const optedOut = await this.prisma.leadMagnet.findFirst({
+        where: { email, unsubscribedAt: { not: null } },
+        select: { unsubscribedAt: true },
+      });
+      try {
+        await this.prisma.bookPurchase.create({
+          data: {
+            email,
+            language,
+            saleId,
+            productPermalink: (
+              ping.product_permalink ||
+              ping.permalink ||
+              ''
+            ).slice(0, 300),
+            priceCents,
+            currency,
+            refunded,
+            token: randomUUID(),
+            step: 0,
+            attribution,
+            unsubscribedAt: optedOut?.unsubscribedAt || null,
+          },
+        });
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2002')
+          return { ok: true, ignored: 'duplicate' };
+        throw error;
+      }
+    }
     if (!refunded) {
       // a buyer leaves the sales sequence, in every language they signed up in
       await this.prisma.leadMagnet.updateMany({
@@ -569,14 +678,15 @@ export class LeadMagnetService {
     this.logger.log(
       `[lead-magnet] sale ${saleId} ${refunded ? 'refunded' : 'recorded'} (${language}, ${email})`,
     );
-    const money = `${(priceCents / 100).toFixed(2)} ${(ping.currency || 'usd').toUpperCase()}`;
+    const money = `${(priceCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
     await this.ga4Event(
       refunded ? 'refund' : 'purchase',
       ping,
       language,
       saleId,
       priceCents,
-      ping.currency || 'usd',
+      currency,
+      acquisition,
     );
     await this.notifyOwner(
       refunded
@@ -636,7 +746,17 @@ export class LeadMagnetService {
       where: {
         unsubscribedAt: null,
         purchasedAt: null,
-        step: { gte: 1, lt: this.SCHEDULE_DAYS.length },
+        OR: [
+          {
+            consentVersion: EXTENDED_CONSENT,
+            step: { gte: 0, lt: this.SCHEDULE_DAYS.length },
+          },
+          { consentVersion: null, step: { gte: 0, lt: 5 } },
+          {
+            consentVersion: { not: EXTENDED_CONSENT },
+            step: { gte: 0, lt: 5 },
+          },
+        ],
       },
       orderBy: { createdAt: 'asc' },
       take: this.batchSize,
@@ -647,6 +767,7 @@ export class LeadMagnetService {
     for (const lead of leads) {
       if (!LeadMagnetService.isSendable(lead.email)) continue;
       const next = lead.step + 1;
+      if (next > sequenceLimit(lead.consentVersion)) continue;
       const dueAt =
         lead.createdAt.getTime() +
         this.SCHEDULE_DAYS[next - 1] * 24 * 60 * 60 * 1000;
@@ -658,6 +779,7 @@ export class LeadMagnetService {
         lead.token,
         next,
         true,
+        lead.consentVersion,
       );
       if (ok) sent++;
       else failed++;

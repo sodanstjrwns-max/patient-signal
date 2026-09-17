@@ -1318,6 +1318,9 @@ model LeadMagnet {
   email          String
   language       String    @default("en")
   source         String?
+  consentVersion String?   @map("consent_version")
+  consentAt      DateTime? @map("consent_at")
+  attribution    Json?
   ipHash         String?   @map("ip_hash")
   token          String    @unique
   step           Int       @default(0)
@@ -1341,6 +1344,7 @@ model BookPurchase {
   language         String    @default("en")
   saleId           String    @unique @map("sale_id")
   productPermalink String    @map("product_permalink")
+  attribution      Json?
   priceCents       Int       @default(0) @map("price_cents")
   currency         String    @default("usd")
   refunded         Boolean   @default(false)
