@@ -83,6 +83,13 @@ async function main() {
     } catch (e5) {
       console.error('[ensure-sso-columns] lead_magnets 생성 실패(무료 프리뷰 신청이 DATABASE_ERROR 를 냄):', e5.message)
     }
+    // 【2026-09-17】해외 전자책 동의·유입 경로. 무관한 드리프트로 db push가 생략되어도
+    // 필요한 nullable 필드만 추가한다. 실패하면 빌드를 중단해 호환 안 되는 API 배포를 막는다.
+    await prisma.$executeRawUnsafe('ALTER TABLE "lead_magnets" ADD COLUMN IF NOT EXISTS "consent_version" TEXT')
+    await prisma.$executeRawUnsafe('ALTER TABLE "lead_magnets" ADD COLUMN IF NOT EXISTS "consent_at" TIMESTAMP(3)')
+    await prisma.$executeRawUnsafe('ALTER TABLE "lead_magnets" ADD COLUMN IF NOT EXISTS "attribution" JSONB')
+    await prisma.$executeRawUnsafe('ALTER TABLE "book_purchases" ADD COLUMN IF NOT EXISTS "attribution" JSONB')
+    console.log('[ensure-sso-columns] overseas consent and attribution ready')
     console.log('[ensure-sso-columns] OK — hospitals.ps_hospital_id, users.pending_ps_hospital_id ready')
   } finally {
     await prisma.$disconnect()
