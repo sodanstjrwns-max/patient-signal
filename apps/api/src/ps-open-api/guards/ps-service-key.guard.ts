@@ -74,17 +74,29 @@ export class PsServiceKeyGuard implements CanActivate {
    * 전역 ID → 로컬 hospitalId 해석
    * ① hospital.psHospitalId 컬럼 (허브 SSO 자동 연결) → ② PS_HOSPITAL_MAP env 폴백
    */
+  // 【2026-09-22】매핑 캐시 — 이 findUnique 한 번이 요청마다 약 0.6초(Supabase 풀러 왕복)라
+  // /api/v1/signals 캐시 적중 응답도 0.75초였다. 매핑은 사실상 불변이므로 10분 메모리 캐시(양성 결과만).
+  private static readonly MAP_TTL_MS = 10 * 60_000;
+  private readonly mapCache = new Map<string, { at: number; id: string }>();
+
   private async resolveHospitalId(psHospitalId: string): Promise<string | null> {
+    const hit = this.mapCache.get(psHospitalId);
+    if (hit && Date.now() - hit.at < PsServiceKeyGuard.MAP_TTL_MS) return hit.id;
     try {
       const hospital = await this.prisma.hospital.findUnique({
         where: { psHospitalId },
         select: { id: true },
       });
-      if (hospital) return hospital.id;
+      if (hospital) {
+        this.mapCache.set(psHospitalId, { at: Date.now(), id: hospital.id });
+        return hospital.id;
+      }
     } catch {
       // DB 조회 실패 시 env 폴백으로 진행 (공급 API 가용성 우선)
     }
-    return resolveHospitalIdFromEnv(psHospitalId);
+    const fromEnv = resolveHospitalIdFromEnv(psHospitalId);
+    if (fromEnv) this.mapCache.set(psHospitalId, { at: Date.now(), id: fromEnv });
+    return fromEnv;
   }
 }
 
