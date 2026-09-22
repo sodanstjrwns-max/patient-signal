@@ -517,16 +517,25 @@ export class SchedulerService implements OnModuleInit {
 
     // 월간 크롤링 횟수 체크 (기가입 유예 대상은 매일 페이스 30회로 상향, 어드민 구조 크롤은 우회)
     if (effectiveCrawlsPerMonth !== -1 && !bypassGates) {
+      // 【2026-09-22 FIX】한도는 "이번 달 크롤한 날짜 수(KST)"로 센다.
+      // 종전엔 잡 개수를 세서 하루 2~3세션이 돌면 매일 플랜(30회)이 18~19일에 소진돼
+      // 9/19~9/22 95곳이 "월간 한도 소진"으로 통째로 스킵됐다(오늘 크롤 잡 230건 중 190건).
+      // 오늘 이미 완료 잡이 있는 날은 추가로 세지 않으므로 세션 수와 무관하게 30 = 매일이 된다.
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const crawlCount = await this.prisma.crawlJob.count({
+      const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice(0, 10);
+      const completedThisMonth = await this.prisma.crawlJob.findMany({
         where: {
           hospitalId: hospital.id,
           startedAt: { gte: monthStart },
-          status: { in: ['COMPLETED', 'RUNNING'] },
+          status: 'COMPLETED',
+          id: { not: crawlJob.id },
         },
+        select: { startedAt: true },
       });
-      // 방금 만든 crawlJob도 RUNNING으로 집계되므로 > 비교
+      const daysUsed = new Set(completedThisMonth.filter((j) => j.startedAt).map((j) => kstDay(j.startedAt as Date)));
+      // 오늘 처음 도는 크롤이면 오늘 하루를 더한 값으로 판정
+      const crawlCount = daysUsed.size + (daysUsed.has(kstDay(now)) ? 0 : 1);
       if (crawlCount > effectiveCrawlsPerMonth) {
         this.logger.log(`[${hospital.name}] 월간 크롤링 한도 초과 (${crawlCount}/${effectiveCrawlsPerMonth}) - 스킵`);
         // 장애가 아닌 플랜 정책 스킵 — FAILED에 사유를 남겨 모니터링 노이즈/유저 오해 방지
