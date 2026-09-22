@@ -493,6 +493,52 @@ export default function DashboardPage() {
         <TopMentionedPrompts hospitalId={hospitalId} />
 
         {/* ═══════════════════════════════════════════
+            NEXT ACTION (2026-09-22): 결과만 보고 끝나지 않게 — 가이드·PFM·터치로 이어지는 다리.
+            허브 SSO 시작 주소(/api/auth/hub)로 보내면 허브 로그인 상태에서 클릭 한 번에 들어간다.
+        ═══════════════════════════════════════════ */}
+        {(() => {
+          const score = Number(ranking?.score ?? dashboard?.overallScore ?? 0);
+          const low = score > 0 && score < 40;
+          const lead = score === 0
+            ? '측정이 쌓이면 여기에 다음 행동이 뜹니다.'
+            : low
+              ? `AI 가시성 ${score}점 — 아직 AI가 우리 병원을 잘 모릅니다. 먼저 노출부터 올리고, 찾아온 환자를 잡는 준비는 지금 시작하세요.`
+              : `AI 가시성 ${score}점 — AI가 우리 병원을 알기 시작했습니다. 이제 찾아온 환자가 어디서 새는지 볼 차례입니다.`;
+          const tiles = [
+            ...(low ? [{ href: '/dashboard/content-calendar', internal: true, icon: '📝', title: '콘텐츠 캘린더', desc: 'AI가 인용할 글 주제를 주 단위로 받습니다', tag: '시그널' }] : []),
+            { href: 'https://patientguide.kr/api/auth/hub', internal: false, icon: '📊', title: '오늘 숫자 3분 입력', desc: '신환·예약·노쇼를 매일 적으면 10단계 퍼널 점수가 나옵니다', tag: '가이드' },
+            { href: 'https://pfm.kr/api/auth/hub', internal: false, icon: '🔻', title: '우리 병원 깔때기 보기', desc: '시그널·가이드·터치 데이터를 모아 가장 새는 단계를 짚어 줍니다', tag: '퍼널매니저' },
+            { href: 'https://patienttouch.kr/api/auth/hub', internal: false, icon: '💬', title: '상담 뒤 리포트 보내기', desc: '실장 상담을 알림톡 리포트로 보내 돌아오는 환자를 늘립니다', tag: '터치·리치' },
+          ].slice(0, 3);
+          return (
+            <div className="rounded-[24px] border border-brand-400/15 bg-gradient-to-br from-brand-500/[0.07] via-transparent to-violet-500/[0.06] p-5 sm:p-6">
+              <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-brand-400 mb-1">다음 행동</p>
+                  <p className="text-sm sm:text-base font-semibold text-slate-100">{lead}</p>
+                </div>
+                <a href="https://hub.patientfunnel.kr" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-brand-300 whitespace-nowrap">허브 첫 화면 ↗</a>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {tiles.map((t) => t.internal ? (
+                  <Link key={t.title} href={t.href} className="group rounded-2xl bg-white/[0.04] border border-white/[0.06] hover:border-brand-400/40 hover:bg-white/[0.06] p-4 transition-colors">
+                    <div className="flex items-center justify-between mb-2"><span className="text-xl">{t.icon}</span><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.tag}</span></div>
+                    <p className="font-bold text-slate-100 group-hover:text-brand-200">{t.title}</p>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
+                  </Link>
+                ) : (
+                  <a key={t.title} href={t.href} target="_blank" rel="noopener noreferrer" className="group rounded-2xl bg-white/[0.04] border border-white/[0.06] hover:border-brand-400/40 hover:bg-white/[0.06] p-4 transition-colors">
+                    <div className="flex items-center justify-between mb-2"><span className="text-xl">{t.icon}</span><span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{t.tag}</span></div>
+                    <p className="font-bold text-slate-100 group-hover:text-brand-200">{t.title} <span className="text-slate-500 font-normal">↗</span></p>
+                    <p className="text-xs text-slate-400 mt-1 leading-relaxed">{t.desc}</p>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ═══════════════════════════════════════════
             BENTO ROW 2: Platform cards
             ⚠️ 출처는 scores/platforms 하나뿐이다. 과거엔 여기서
                dashboard.platformScores로 폴백해, 같은 화면 안에
