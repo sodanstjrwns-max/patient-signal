@@ -51,12 +51,54 @@ export class PsOpenApiService {
   constructor(private prisma: PrismaService) {}
 
   /**
+   * 【2026-09-22】/api/v1/signals 병원별 메모리 캐시 (stale-while-revalidate).
+   * 경쟁사·인용 탐지가 ai_responses 원본을 훑어 4~5초가 걸려 PFM 홈 깔때기·허브 관제탑이 늦게 떴다.
+   * 점수는 하루 1~2회(크롤 후)만 바뀌므로 FRESH 동안은 캐시, 지나면 옛 값을 즉시 주고 뒤에서 1회 갱신.
+   * since 필터는 캐시된 전체 신호에 뒤늦게 적용하므로 의미 동일. 인스턴스 1대라 메모리 캐시로 충분.
+   */
+  private static readonly SIGNALS_FRESH_MS = 15 * 60_000;
+  private static readonly SIGNALS_MAX_STALE_MS = 6 * 3600_000;
+  private readonly signalsCache = new Map<string, { at: number; signals: PsSignal[] }>();
+  private readonly signalsInflight = new Map<string, Promise<PsSignal[]>>();
+
+  private async loadSignalsCached(hospitalId: string): Promise<PsSignal[]> {
+    const hit = this.signalsCache.get(hospitalId);
+    const age = hit ? Date.now() - hit.at : Infinity;
+    if (hit && age < PsOpenApiService.SIGNALS_FRESH_MS) return hit.signals;
+    const refresh = () => {
+      let p = this.signalsInflight.get(hospitalId);
+      if (!p) {
+        p = this.computeSignals(hospitalId)
+          .then((signals) => { this.signalsCache.set(hospitalId, { at: Date.now(), signals }); return signals; })
+          .finally(() => this.signalsInflight.delete(hospitalId));
+        this.signalsInflight.set(hospitalId, p);
+      }
+      return p;
+    };
+    if (hit && age < PsOpenApiService.SIGNALS_MAX_STALE_MS) {
+      refresh().catch((e) => this.logger.warn(`signals 캐시 갱신 실패 (${hospitalId}): ${e?.message || e}`));
+      return hit.signals;
+    }
+    return refresh();
+  }
+
+  /**
    * GET /api/v1/signals
    * @param hospitalId 로컬 hospitalId (가드가 매핑 완료)
    * @param since ISO8601 — 주어지면 그 이후 발생분만
    */
   async getSignals(hospitalId: string, since?: string): Promise<{ service: string; signals: PsSignal[] }> {
     const sinceDate = since ? new Date(since) : null;
+    const signals = await this.loadSignalsCached(hospitalId);
+    // since 필터 + 최신순 정렬
+    const filtered = signals
+      .filter((s) => !sinceDate || new Date(s.occurred_at) > sinceDate)
+      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
+    return { service: 'signal', signals: filtered };
+  }
+
+  /** 신호 계산 본체 (캐시 없음) — 21일 DailyScore + 경쟁사·인용 탐지 */
+  private async computeSignals(hospitalId: string): Promise<PsSignal[]> {
     const signals: PsSignal[] = [];
 
     // 최근 21일 DailyScore (추세 판단용) — 없으면 신호 없음 (가짜 신호 생성 금지)
@@ -83,13 +125,7 @@ export class PsOpenApiService {
 
     signals.push(...(await this.detectCompetitorOvertake(hospitalId, scores)));
     signals.push(...(await this.detectNewCompetitors(hospitalId)));
-
-    // since 필터 + 최신순 정렬
-    const filtered = signals
-      .filter((s) => !sinceDate || new Date(s.occurred_at) > sinceDate)
-      .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at));
-
-    return { service: 'signal', signals: filtered };
+    return signals;
   }
 
   /**
