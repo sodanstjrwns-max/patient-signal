@@ -6,6 +6,10 @@ const { PrismaClient } = require('@prisma/client')
 async function main() {
   const prisma = new PrismaClient()
   try {
+    // Hospital reads (including login) select this field. Ensure the additive
+    // migration even when unrelated schema drift makes prisma db push skip.
+    await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "clinic_introduction" TEXT')
+    console.log('[ensure-sso-columns] clinic_introduction ready')
     await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "ps_hospital_id" TEXT')
     await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "hospitals_ps_hospital_id_key" ON "hospitals"("ps_hospital_id")')
     await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "pending_ps_hospital_id" TEXT')

@@ -20,7 +20,9 @@ ABHS 5축 프레임워크로 정밀 분석합니다.
 ```bash
 git push origin main
 # → Render(API)와 Vercel(웹)이 main 브랜치를 감지해 자동 배포
-# DB 스키마 변경 시: cd apps/api && npm run db:migrate:deploy (Render 빌드에 포함)
+# Render build: prisma db push + scripts/ensure-sso-columns.js
+# 필수 추가 컬럼은 ensure 스크립트에서 멱등 적용하며 실패 시 배포 중단.
+# prisma migrate deploy는 자동 실행되지 않음 (별도 이력 관리 명령).
 ```
 **규칙: 배포하는 모든 커밋은 반드시 GitHub에 push한다. 샌드박스에만 있는 코드는 존재하지 않는 코드다.**
 
