@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
+import { WebsiteAnalysis } from "@/components/dashboard/WebsiteAnalysis";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TermTip } from "@/components/ui/term-tooltip";
@@ -80,6 +81,18 @@ const platformNames: Record<string, string> = {
   NAVER_AI_BRIEFING: "네이버 AI 브리핑",
 };
 
+const sourcePlatformOptions = [
+  { value: "ALL", label: "전체 AI" },
+  { value: "CHATGPT", label: "ChatGPT" },
+  { value: "CLAUDE", label: "Claude" },
+  { value: "PERPLEXITY", label: "Perplexity" },
+  { value: "GEMINI", label: "Gemini" },
+  { value: "GROK", label: "Grok" },
+  { value: "CLOVA_X", label: "CLOVA X" },
+  { value: "NAVER_AI_BRIEFING", label: "네이버 AI" },
+] as const;
+type SourcePlatform = (typeof sourcePlatformOptions)[number]["value"];
+
 const platformColors: Record<string, string> = {
   CHATGPT: "bg-brand-500",
   CLAUDE: "bg-orange-500",
@@ -88,6 +101,7 @@ const platformColors: Record<string, string> = {
   GOOGLE_AI_OVERVIEW: "bg-yellow-500",
   GROK: "bg-slate-900",
   CLOVA_X: "bg-brand-500",
+  NAVER_AI_BRIEFING: "bg-[#d9ff43]",
 };
 
 const platformBgColors: Record<string, string> = {
@@ -98,6 +112,7 @@ const platformBgColors: Record<string, string> = {
   GOOGLE_AI_OVERVIEW: "bg-[#282418] text-yellow-400",
   GROK: "bg-slate-900 text-white",
   CLOVA_X: "bg-[#281a13] text-[#ff9565]",
+  NAVER_AI_BRIEFING: "bg-[#253019] text-[#d9ff43]",
 };
 
 const insightSections = [
@@ -152,6 +167,12 @@ const insightSections = [
         description: "AI가 답변에 참고한 채널과 도메인을 살펴봅니다.",
       },
       {
+        key: "website",
+        icon: FileSearch,
+        label: "우리 홈페이지",
+        description: "우리 홈페이지의 인용 페이지와 해당 질문·답변을 확인합니다.",
+      },
+      {
         key: "topUrls",
         icon: ExternalLink,
         label: "URL 랭킹",
@@ -194,6 +215,7 @@ export default function InsightsPage() {
     "mention",
     "trend",
     "sources",
+    "website",
     "topUrls",
     "urlMatrix",
     "breadth",
@@ -209,6 +231,8 @@ export default function InsightsPage() {
     : "actions";
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [trendCohort, setTrendCohort] = useState<"all" | "fixed">("all");
+  const [sourcePlatform, setSourcePlatform] = useState<SourcePlatform>("ALL");
+  const showGeminiSourcePanels = sourcePlatform === "ALL" || sourcePlatform === "GEMINI";
   const queryClient = useQueryClient();
 
   // URL 파라미터 변경 시 탭 동기화
@@ -234,9 +258,14 @@ export default function InsightsPage() {
     data: sourceData,
     isLoading: sourceLoading,
     error: sourceError,
-  } = useSourceInsight(activeTab !== "sources");
-  const { data: diagnosticData } = useSourceDiagnostic(activeTab !== "sources");
-  const { data: geminiDietData } = useGeminiDiet(activeTab !== "sources");
+  } = useSourceInsight(activeTab !== "sources", sourcePlatform);
+  const { data: diagnosticData } = useSourceDiagnostic(
+    activeTab !== "sources" || !showGeminiSourcePanels,
+    sourcePlatform,
+  );
+  const { data: geminiDietData } = useGeminiDiet(
+    activeTab !== "sources" || !showGeminiSourcePanels,
+  );
   const {
     data: topUrlsData,
     isLoading: topUrlsLoading,
@@ -425,6 +454,29 @@ export default function InsightsPage() {
                 }
               </p>
             </div>
+            {activeTab === "sources" && (
+              <div>
+                <p className="mb-2 text-xs font-semibold text-[#959c9f]">AI별 출처 · 최근 30일</p>
+                <div role="group" aria-label="출처 분석 AI 선택" className="flex gap-2 overflow-x-auto pb-2">
+                  {sourcePlatformOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={sourcePlatform === option.value}
+                      onClick={() => setSourcePlatform(option.value)}
+                      className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${sourcePlatform === option.value ? "border-[#ff6a24] bg-[#ff6a24] text-[#08090a]" : "border-[#30343a] bg-[#111315] text-[#c0c4c7] hover:border-[#ff9565] hover:text-[#f5f5ef]"}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                {sourcePlatform === "ALL" && sourceData?.platformSources?.GOOGLE_AI_OVERVIEW?.total > 0 && (
+                  <p className="mt-1 text-[11px] text-[#959c9f]">
+                    전체에는 과거 Google AI Overview 응답 {sourceData.platformSources.GOOGLE_AI_OVERVIEW.total}건도 포함됩니다.
+                  </p>
+                )}
+              </div>
+            )}
             {isLoading ? (
               <div className="flex justify-center py-16">
                 <Loader2 className="h-8 w-8 animate-spin text-[#ff9565]" />
@@ -481,10 +533,12 @@ export default function InsightsPage() {
                 {activeTab === "sources" && sourceData && (
                   <SourceAnalysis
                     data={sourceData}
-                    diagnostic={diagnosticData}
-                    geminiDiet={geminiDietData}
+                    platform={sourcePlatform}
+                    diagnostic={showGeminiSourcePanels ? diagnosticData : undefined}
+                    geminiDiet={showGeminiSourcePanels ? geminiDietData : undefined}
                   />
                 )}
+                {activeTab === "website" && <WebsiteAnalysis hospitalId={hospitalId!} />}
                 {activeTab === "topUrls" && topUrlsData && (
                   <TopUrlsRanking data={topUrlsData} />
                 )}
@@ -518,15 +572,14 @@ export default function InsightsPage() {
         .signal-insights .insight-stat-band {
           gap: 0;
           overflow: hidden;
-          border: 1px solid #d4d6cb;
+          border: 1px solid #30343a;
           border-radius: 20px;
-          background: #fff;
+          background: #111315;
         }
         .signal-insights .insight-stat-band > div {
           border: 0 !important;
-          border-right: 1px solid #d4d6cb !important;
+          border-right: 1px solid #30343a !important;
           border-radius: 0 !important;
-          background: transparent !important;
           box-shadow: none !important;
         }
         .signal-insights .insight-stat-band > div:last-child {
@@ -543,14 +596,14 @@ export default function InsightsPage() {
         }
         .signal-insights .insight-row-list {
           overflow: hidden;
-          border: 1px solid #d4d6cb;
+          border: 1px solid #30343a;
           border-radius: 20px;
-          background: #fff;
+          background: #111315;
         }
         .signal-insights .insight-row-list > div {
           margin: 0 !important;
           border: 0 !important;
-          border-bottom: 1px solid #d4d6cb !important;
+          border-bottom: 1px solid #30343a !important;
           border-radius: 0 !important;
           box-shadow: none !important;
         }
@@ -562,7 +615,7 @@ export default function InsightsPage() {
             border-right: 0 !important;
           }
           .signal-insights .insight-stat-band > div:nth-child(n + 3) {
-            border-top: 1px solid #d4d6cb !important;
+            border-top: 1px solid #30343a !important;
           }
         }
       `}</style>
@@ -1648,13 +1701,19 @@ function GeminiDietWidget({ diet }: { diet: any }) {
 // ==================== 3. 출처 분석 ====================
 function SourceAnalysis({
   data,
+  platform,
   diagnostic,
   geminiDiet,
 }: {
   data: any;
+  platform: SourcePlatform;
   diagnostic?: any;
   geminiDiet?: any;
 }) {
+  const selectedLabel = sourcePlatformOptions.find((option) => option.value === platform)?.label || platform;
+  const totalResponses = data.totalResponses || 0;
+  const responsesWithSources = data.totalResponsesWithSources || 0;
+
   return (
     <div className="space-y-6">
       {/* Gemini 디코딩 배지 */}
@@ -1692,11 +1751,11 @@ function SourceAnalysis({
       )}
 
       {/* 요약 */}
-      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-3">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
         <Card className="bg-[#281a13] border-[#30343a]">
           <CardContent className="p-4">
             <p className="text-xs text-[#ff9565] font-medium">
-              <TermTip term="citedSources">인용된 출처</TermTip>
+              <TermTip term="citedSources">인용 URL 수</TermTip>
             </p>
             <p className="text-2xl font-bold text-[#ff9565]">
               {data.totalUrls || 0}개
@@ -1709,18 +1768,30 @@ function SourceAnalysis({
               <TermTip term="responsesWithSources">출처 포함 응답</TermTip>
             </p>
             <p className="text-2xl font-bold text-[#ff9565]">
-              {data.totalResponsesWithSources || 0}건
+              {responsesWithSources}건
+            </p>
+            <p className="mt-1 text-[11px] text-[#959c9f]">
+              {totalResponses > 0
+                ? `전체 ${totalResponses}건 중 ${Math.round((responsesWithSources / totalResponses) * 100)}%`
+                : "측정 응답 없음"}
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="p-4 col-span-2 sm:col-span-1">
-            <p className="text-xs text-amber-600 font-medium">
+        <Card className="bg-[#281a13] border-[#30343a]">
+          <CardContent className="p-4">
+            <p className="text-xs text-[#ff9565] font-medium">
               <TermTip term="analysisChannels">분석 채널</TermTip>
             </p>
-            <p className="text-2xl font-bold text-amber-800">
+            <p className="text-2xl font-bold text-[#ff9565]">
               {data.categories?.length || 0}개
             </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#281a13] border-[#30343a]">
+          <CardContent className="p-4">
+            <p className="text-xs font-medium text-[#ff9565]">분석한 AI 응답</p>
+            <p className="text-2xl font-bold text-[#ff9565]">{totalResponses}건</p>
+            <p className="mt-1 text-[11px] text-[#959c9f]">{selectedLabel} · 최근 30일</p>
           </CardContent>
         </Card>
       </div>
@@ -1733,7 +1804,7 @@ function SourceAnalysis({
             AI가 참조하는 출처 채널
           </h3>
           <p className="text-xs text-[#959c9f] mb-4">
-            AI가 우리 병원 정보를 가져오는 소스 분석
+            {selectedLabel} 응답에서 확인된 인용 URL의 채널 분포 · 최근 30일
           </p>
           {data.categories?.length > 0 ? (
             <div className="space-y-3">
@@ -1768,7 +1839,9 @@ function SourceAnalysis({
             </div>
           ) : (
             <p className="text-[#959c9f] text-sm">
-              출처 데이터가 없습니다. Perplexity 응답에서 주로 수집됩니다.
+              {totalResponses === 0
+                ? `${selectedLabel}의 최근 30일 측정 응답이 없습니다.`
+                : `${selectedLabel} 응답에서 인용 URL이 확인되지 않았습니다.`}
             </p>
           )}
         </CardContent>
@@ -1786,7 +1859,7 @@ function SourceAnalysis({
               ([platform, stats]: [string, any]) => (
                 <div
                   key={platform}
-                  className="text-center border rounded-lg p-4"
+                  className="rounded-lg border border-[#30343a] bg-[#111315] p-4 text-center"
                 >
                   <div
                     className={`w-3 h-3 rounded-full ${platformColors[platform]} mx-auto mb-2`}
@@ -1804,12 +1877,15 @@ function SourceAnalysis({
               ),
             )}
           </div>
+          {Object.keys(data.platformSources || {}).length === 0 && (
+            <p className="text-sm text-[#959c9f]">{selectedLabel}의 최근 30일 측정 응답이 없습니다.</p>
+          )}
         </CardContent>
       </Card>
 
       {/* 미활용 채널 추천 */}
-      {data.missingChannels?.length > 0 && (
-        <Card className="border-amber-200 bg-amber-50/30">
+      {data.totalUrls > 0 && data.missingChannels?.length > 0 && (
+        <Card className="border-[#57401e] bg-[#1c1710]">
           <CardContent className="p-5">
             <h3 className="text-lg font-semibold text-[#f5f5ef] mb-1 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -1822,7 +1898,7 @@ function SourceAnalysis({
               {data.missingChannels.map((ch: any) => (
                 <div
                   key={ch.channel}
-                  className="flex items-start gap-3 bg-[#111315] rounded-lg p-4 border border-amber-100"
+                  className="flex items-start gap-3 rounded-lg border border-[#57401e] bg-[#111315] p-4"
                 >
                   <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                     <Lightbulb className="h-4 w-4 text-amber-600" />
@@ -1843,18 +1919,19 @@ function SourceAnalysis({
       )}
 
       {/* 주요 도메인 (상위 25개) */}
-      {data.topDomains?.length > 0 && (
-        <Card>
-          <CardContent className="p-5">
+      <Card>
+        <CardContent className="p-5">
             <h3 className="text-lg font-semibold text-[#f5f5ef] mb-1 flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-[#ff9565]" />
-              인용 빈도 상위 도메인 (Top {Math.min(data.topDomains.length, 25)})
+              인용 빈도 상위 도메인 (Top {Math.min(data.topDomains?.length || 0, 25)})
             </h3>
             <p className="text-xs text-[#959c9f] mb-4">
-              어떤 AI가 인용했는지까지 표시 — 여러 AI에서 인용되는 도메인이
-              우선순위
+              {platform === "ALL"
+                ? "각 도메인을 인용한 AI를 함께 표시합니다."
+                : `${selectedLabel}가 인용한 도메인만 표시합니다.`}
             </p>
-            <div className="overflow-x-auto">
+            {data.topDomains?.length > 0 ? (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
@@ -1907,10 +1984,12 @@ function SourceAnalysis({
                   ))}
                 </tbody>
               </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-[#959c9f]">인용 도메인이 확인되지 않았습니다.</p>
+            )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

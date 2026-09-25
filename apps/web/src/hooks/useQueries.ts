@@ -145,11 +145,13 @@ export function useTrendInsight(lazy = false, cohort: 'all' | 'fixed' = 'all') {
 }
 
 /** 출처 분석 */
-export function useSourceInsight(lazy = false) {
+export function useSourceInsight(lazy = false, platform = 'ALL') {
   const hospitalId = useHospitalId();
   return useQuery({
-    queryKey: queryKeys.insights.sources(hospitalId!),
-    queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30).then(r => r.data),
+    queryKey: platform === 'ALL'
+      ? queryKeys.insights.sources(hospitalId!)
+      : [...queryKeys.insights.sources(hospitalId!), platform],
+    queryFn: () => crawlerApi.getSourceAnalysis(hospitalId!, 30, platform).then(r => r.data),
     enabled: !!hospitalId && !lazy,
     staleTime: STALE_TIMES.INSIGHTS,
     retry: 1,
@@ -205,11 +207,13 @@ export function useUrlMatrix(lazy = false, topN = 30) {
 }
 
 /** 출처 디코딩 진단 (Gemini 디코딩 전/후 비교) */
-export function useSourceDiagnostic(lazy = false) {
+export function useSourceDiagnostic(lazy = false, platform = 'ALL') {
   const hospitalId = useHospitalId();
   return useQuery({
-    queryKey: queryKeys.insights.sourcesDiagnostic(hospitalId!),
-    queryFn: () => crawlerApi.getSourceDiagnostic(hospitalId!, 30).then(r => r.data),
+    queryKey: platform === 'ALL'
+      ? queryKeys.insights.sourcesDiagnostic(hospitalId!)
+      : [...queryKeys.insights.sourcesDiagnostic(hospitalId!), platform],
+    queryFn: () => crawlerApi.getSourceDiagnostic(hospitalId!, 30, platform).then(r => r.data),
     enabled: !!hospitalId && !lazy,
     staleTime: STALE_TIMES.INSIGHTS,
     retry: 1,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Header } from "@/components/layout/Header";
@@ -24,6 +24,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "@/hooks/useToast";
+import { ProcedureSelector, uniqueProcedures } from "@/components/settings/ProcedureSelector";
 
 const specialtyNames: Record<string, string> = {
   DENTAL: "치과",
@@ -158,6 +159,9 @@ export default function SettingsPage() {
   const hospitalId = user?.hospitalId;
   const [isEditing, setIsEditing] = useState(false);
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
+  const proceduresDirty = useRef(false);
+  const procedureHospitalId = useRef<string>();
+  const [isSavingProcedures, setIsSavingProcedures] = useState(false);
   const [showQueryPreview, setShowQueryPreview] = useState(false);
   const [introDraft, setIntroDraft] = useState("");
   const [introEditing, setIntroEditing] = useState(false);
@@ -178,7 +182,7 @@ export default function SettingsPage() {
   });
 
   // 진료과별 시술 목록
-  const { data: procedures } = useQuery({
+  const { data: procedures, isLoading: proceduresLoading, isError: proceduresError, refetch: refetchProcedures } = useQuery({
     queryKey: ["procedures", hospital?.specialtyType],
     queryFn: () =>
       queryTemplatesApi
@@ -245,14 +249,26 @@ export default function SettingsPage() {
       });
       setNameAliases(hospital.nameAliases || []);
       if (!introEditing) setIntroDraft(hospital.clinicIntroduction || "");
-      // keyProcedures 우선, 없으면 coreTreatments fallback
-      if (hospital.keyProcedures?.length > 0) {
-        setSelectedProcedures(hospital.keyProcedures);
-      } else if (hospital.coreTreatments?.length > 0) {
-        setSelectedProcedures(hospital.coreTreatments);
-      }
     }
   }, [hospital, introEditing]);
+
+  useEffect(() => {
+    if (!hospital) return;
+    if (procedureHospitalId.current !== hospital.id) {
+      procedureHospitalId.current = hospital.id;
+      proceduresDirty.current = false;
+    }
+    if (!proceduresDirty.current) {
+      setSelectedProcedures(uniqueProcedures(
+        hospital.keyProcedures?.length ? hospital.keyProcedures : hospital.coreTreatments || [],
+      ));
+    }
+  }, [hospital]);
+
+  const changeProcedures = (next: string[]) => {
+    proceduresDirty.current = true;
+    setSelectedProcedures(uniqueProcedures(next));
+  };
 
   const importIntroductionMutation = useMutation({
     mutationFn: () => hospitalApi.hubIntroduction(true).then((res) => res.data),
@@ -359,7 +375,7 @@ export default function SettingsPage() {
         regionDong: prefill.regionDong || prev.regionDong,
       }));
       if (prefill.coreTreatments?.length > 0) {
-        setSelectedProcedures(prefill.coreTreatments.slice(0, 3));
+        changeProcedures(prefill.coreTreatments);
         setHubTreatmentsImported(true);
       }
       setIsEditing(true);
@@ -383,7 +399,8 @@ export default function SettingsPage() {
   // 병원 정보 업데이트
   const updateMutation = useMutation({
     mutationFn: (data: any) => hospitalApi.update(hospitalId!, data),
-    onSuccess: () => {
+    onSuccess: (_response, saved) => {
+      if (saved.keyProcedures) proceduresDirty.current = false;
       queryClient.invalidateQueries({ queryKey: ["hospital"] });
       queryClient.invalidateQueries({
         queryKey: ["core-questions", hospitalId],
@@ -405,37 +422,40 @@ export default function SettingsPage() {
       toast.success(`${res.data.created}개의 모니터링 쿼리가 생성되었습니다!`);
       queryClient.invalidateQueries({ queryKey: ["prompts"] });
     },
+    onError: () => toast.error("핵심 진료는 저장됐지만 질문 생성에 실패했습니다. 다시 시도해주세요."),
   });
-
-  // 시술 선택 토글
-  const toggleProcedure = (name: string) => {
-    setSelectedProcedures((prev) => {
-      if (prev.includes(name)) return prev.filter((p) => p !== name);
-      if (prev.length >= 3) {
-        toast.warning("핵심 시술은 최대 3개까지 선택 가능합니다.");
-        return prev;
-      }
-      return [...prev, name];
-    });
-  };
 
   // 시술 저장 + 쿼리 생성
   const handleSaveProcedures = async () => {
-    if (selectedProcedures.length === 0) {
-      toast.warning("최소 1개의 핵심 시술을 선택해주세요.");
+    if (selectedProcedures.length === 0 || selectedProcedures.length > 3) {
+      toast.warning("핵심 진료는 1개부터 최대 3개까지 선택해주세요.");
       return;
     }
-    // keyProcedures와 coreTreatments 모두 업데이트 (동기화)
-    await hospitalApi.update(hospitalId!, {
-      keyProcedures: selectedProcedures,
-      coreTreatments: selectedProcedures,
-    });
-    queryClient.invalidateQueries({ queryKey: ["hospital"] });
-    queryClient.invalidateQueries({ queryKey: ["core-questions", hospitalId] });
-    generateMutation.mutate();
+    if (isSavingProcedures || generateMutation.isPending) return;
+    setIsSavingProcedures(true);
+    try {
+      await hospitalApi.update(hospitalId!, {
+        keyProcedures: selectedProcedures,
+        coreTreatments: selectedProcedures,
+      });
+      proceduresDirty.current = false;
+      queryClient.invalidateQueries({ queryKey: ["hospital"] });
+      queryClient.invalidateQueries({ queryKey: ["core-questions", hospitalId] });
+      generateMutation.mutate();
+    } catch {
+      toast.error("핵심 진료를 저장하지 못했습니다. 선택은 유지됩니다. 다시 시도해주세요.");
+    } finally {
+      setIsSavingProcedures(false);
+    }
   };
 
   const handleSave = () => {
+    const saveSelectedTreatments = hubTreatmentsImported ||
+      (hubPrefilledFields.includes("coreTreatments") && hospital?.coreTreatments?.length > 0);
+    if (saveSelectedTreatments && (selectedProcedures.length === 0 || selectedProcedures.length > 3)) {
+      toast.warning("가져온 핵심 진료를 1개부터 최대 3개까지 선택한 후 저장해주세요.");
+      return;
+    }
     // 필수 필드(진료과·지역)는 빈 값으로 덮어쓰지 않도록 비어 있으면 payload에서 제외
     const payload: any = {
       name: formData.name,
@@ -452,14 +472,9 @@ export default function SettingsPage() {
     if (formData.regionDong.trim())
       payload.regionDong = formData.regionDong.trim();
     // 허브에서 다시 가져온 주력 진료는 사용자가 확인한 현재 선택값으로 함께 저장
-    if (hubTreatmentsImported && selectedProcedures.length > 0) {
+    if (saveSelectedTreatments) {
       payload.coreTreatments = selectedProcedures;
       payload.keyProcedures = selectedProcedures;
-    } else if (
-      hubPrefilledFields.includes("coreTreatments") &&
-      hospital?.coreTreatments?.length > 0
-    ) {
-      payload.coreTreatments = hospital.coreTreatments;
     }
     updateMutation.mutate(payload);
   };
@@ -900,10 +915,9 @@ export default function SettingsPage() {
             </p>
             <h2 className="font-display text-xl font-semibold tracking-tight">핵심 시술</h2>
             <p className="mt-3 text-xs leading-6 text-[#959c9f]">
-              주력 시술을 최대 3개 선택하세요.
+              {specialtyNames[hospital?.specialtyType] || "등록된 진료과"}에 맞는 주력 진료를 최대 3개 선택하세요.
               <br />
-              시술별 {hospital?.planType === "PRO" ? "34" : "14"}개 모니터링
-              질문을 생성합니다.
+              기존에 등록한 진료도 선택 목록에서 해제할 수 있습니다.
             </p>
             <p className="mt-4 text-3xl font-medium tracking-tight">
               {selectedProcedures.length}
@@ -911,46 +925,25 @@ export default function SettingsPage() {
             </p>
           </div>
           <div className="min-w-0 rounded-sm border border-[#30343a] bg-[#111315] p-5 sm:p-7">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
-              {(procedures || []).map((proc: any) => {
-                const isSelected = selectedProcedures.includes(proc.name);
-                return (
-                  <button
-                    key={proc.name}
-                    onClick={() => toggleProcedure(proc.name)}
-                    className={`rounded-xl border p-3.5 text-left transition-colors ${isSelected ? "border-[#d9ff43] bg-[#181b1e]" : "border-[#30343a] bg-[#111315] hover:bg-[#111315]"}`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`text-sm font-medium ${isSelected ? "text-[#f5f5ef]" : "text-[#c0c4c7]"}`}
-                      >
-                        {proc.name}
-                      </span>
-                      {isSelected && (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-[#c0c4c7]" />
-                      )}
-                    </div>
-                    <p className="mt-2 text-[10px] text-[#959c9f]">
-                      {proc.category === "core"
-                        ? "핵심 진료"
-                        : proc.category === "cosmetic"
-                          ? "미용 진료"
-                          : "일반 진료"}
-                      {proc.isPopular && " · 많이 선택"}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
-            {selectedProcedures.length > 0 && (
-              <p className="mt-5 text-xs leading-6 text-[#959c9f]">
-                {selectedProcedures.join(" · ")}{" "}
-                <span className="text-[#959c9f]">/</span> 총{" "}
-                {selectedProcedures.length *
-                  (hospital?.planType === "PRO" ? 34 : 14)}
-                개 질문 생성
+            <ProcedureSelector
+              options={procedures || []}
+              selected={selectedProcedures}
+              onChange={changeProcedures}
+              specialtyName={specialtyNames[hospital?.specialtyType] || "등록된 진료과"}
+              loading={proceduresLoading}
+              error={proceduresError}
+              onRetry={() => void refetchProcedures()}
+              disabled={isSavingProcedures || generateMutation.isPending}
+            />
+            {isEditing && formData.specialtyType !== hospital?.specialtyType && (
+              <p className="mt-4 text-xs leading-6 text-[#ff6a24]">
+                변경한 진료과는 병원 기본 정보를 저장한 후 이 목록에 반영됩니다.
               </p>
             )}
+            <p className="mt-5 text-xs leading-6 text-[#959c9f]">
+              선택한 진료로 질문 후보를 만듭니다. 실제 등록 수는 요금제의 남은 질문 한도에 따라 달라집니다.
+              기존 자동 생성 질문은 새 질문으로 교체됩니다.
+            </p>
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#30343a] pt-5">
               <Button
                 variant="ghost"
@@ -967,10 +960,10 @@ export default function SettingsPage() {
               <Button
                 onClick={handleSaveProcedures}
                 disabled={
-                  selectedProcedures.length === 0 || generateMutation.isPending
+                  selectedProcedures.length === 0 || selectedProcedures.length > 3 || isSavingProcedures || generateMutation.isPending
                 }
               >
-                {generateMutation.isPending ? (
+                {isSavingProcedures || generateMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Sparkles className="h-4 w-4" />
@@ -981,7 +974,7 @@ export default function SettingsPage() {
             {showQueryPreview && queryPreview && (
               <div className="mt-5 max-h-96 overflow-y-auto rounded-xl border border-[#30343a] bg-[#111315] p-4">
                 <h3 className="mb-4 text-sm font-semibold">
-                  생성될 질문 {queryPreview.total}개
+                  질문 후보 {queryPreview.total}개
                 </h3>
                 <div className="divide-y divide-[#30343a]">
                   {queryPreview.queries

@@ -239,11 +239,11 @@ export const crawlerApi = {
     api.get(`/ai-crawler/insights/mention-analysis/${hospitalId}`, { params: { days }, timeout: 60000 }),
   getResponseTrend: (hospitalId: string, days?: number, cohort?: 'all' | 'fixed') =>
     api.get(`/ai-crawler/insights/trend/${hospitalId}`, { params: { days, cohort }, timeout: 60000 }),
-  getSourceAnalysis: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getSourceAnalysis: (hospitalId: string, days?: number, platform?: string) =>
+    api.get(`/ai-crawler/insights/sources/${hospitalId}`, { params: { days, platform }, timeout: 60000 }),
   // ✅ 새로 추가: 상세 출처 분석
-  getSourceDiagnostic: (hospitalId: string, days?: number) =>
-    api.get(`/ai-crawler/insights/sources-diagnostic/${hospitalId}`, { params: { days }, timeout: 60000 }),
+  getSourceDiagnostic: (hospitalId: string, days?: number, platform?: string) =>
+    api.get(`/ai-crawler/insights/sources-diagnostic/${hospitalId}`, { params: { days, platform }, timeout: 60000 }),
   // Gemini 실제 식단 (그라운딩 리다이렉트 디코딩 분포)
   getGeminiDiet: (hospitalId: string, days?: number) =>
     api.get(`/ai-crawler/insights/gemini-diet/${hospitalId}`, { params: { days }, timeout: 60000 }),

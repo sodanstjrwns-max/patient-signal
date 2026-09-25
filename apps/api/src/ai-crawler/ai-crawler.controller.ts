@@ -12,7 +12,7 @@ import { CacheService } from '../common/cache/cache.service';
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { withHeavySlot } from '../common/heavy-slot';
 import { fillArchivedTexts } from '../common/stats/response-archive';
-import { LiveQueryCategory } from '@prisma/client';
+import { AIPlatform, LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
 
 const platformNames: Record<string, string> = {
@@ -21,6 +21,25 @@ const platformNames: Record<string, string> = {
   PERPLEXITY: 'Perplexity',
   GEMINI: 'Gemini',
 };
+
+const sourceAnalysisPlatforms = new Set<AIPlatform>([
+  AIPlatform.CHATGPT,
+  AIPlatform.CLAUDE,
+  AIPlatform.PERPLEXITY,
+  AIPlatform.GEMINI,
+  AIPlatform.GROK,
+  AIPlatform.CLOVA_X,
+  AIPlatform.NAVER_AI_BRIEFING,
+]);
+
+function parseSourcePlatform(platform?: string): AIPlatform | null {
+  const requestedPlatform = platform?.trim().toUpperCase() || 'ALL';
+  if (requestedPlatform === 'ALL') return null;
+  if (!sourceAnalysisPlatforms.has(requestedPlatform as AIPlatform)) {
+    throw new BadRequestException('지원하지 않는 AI 플랫폼입니다');
+  }
+  return requestedPlatform as AIPlatform;
+}
 
 /**
  * Gemini source_hints[].sources[item] 에서 실제 도메인을 추출
@@ -901,19 +920,22 @@ export class AICrawlerController {
   @CacheTTL(1800) // 【2026-09-15】크롤 완료 시 invalidateHospital 로 무효화되므로 30분
   @Get('insights/sources/:hospitalId')
   @ApiOperation({ summary: 'AI 응답 출처 분석 - 출처별 빈도, 채널 분석 (Gemini grounding-redirect 디코딩 포함)' })
+  @ApiQuery({ name: 'platform', required: false, description: 'ALL(기본값) 또는 측정 플랫폼' })
   async getSourceAnalysis(
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
+    @Query('platform') platform?: string,
   ) {
+    const selectedPlatform = parseSourcePlatform(platform);
     const daysNum = parseInt(days || '30');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
 
-    return withHeavySlot(() => this.buildSourceAnalysis(hospitalId, since, daysNum));
+    return withHeavySlot(() => this.buildSourceAnalysis(hospitalId, since, daysNum, selectedPlatform));
   }
 
   /** 【2026-09-15】메모리 상한형 출처 분석 — 30일치(대형 병원 6만 행, source_hints JSON 포함)를 한꺼번에 올리지 않고 2,000행씩 커서로 읽어 누적 집계 */
-  private async buildSourceAnalysis(hospitalId: string, since: Date, daysNum: number) {
+  private async buildSourceAnalysis(hospitalId: string, since: Date, daysNum: number, selectedPlatform: AIPlatform | null) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 출처 URL 수집 + Gemini grounding-redirect 디코딩
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -942,7 +964,11 @@ export class AICrawlerController {
     for (;;) {
       const chunk: Array<{ id: string; citedSources: string[]; citedUrl: string | null; aiPlatform: string; isMentioned: boolean; sourceHints: unknown }> =
         await this.prisma.aIResponse.findMany({
-          where: { hospitalId, createdAt: { gte: since } },
+          where: {
+            hospitalId,
+            createdAt: { gte: since },
+            ...(selectedPlatform ? { aiPlatform: selectedPlatform } : {}),
+          },
           select: { id: true, citedSources: true, citedUrl: true, aiPlatform: true, isMentioned: true, sourceHints: true },
           // (hospital_id, created_at) 인덱스를 타도록 created_at 순으로 키셋 페이징 — id 단독 정렬은 매 청크마다 전체 정렬을 유발
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
@@ -1113,6 +1139,8 @@ export class AICrawlerController {
 
     return {
       period: `최근 ${daysNum}일`,
+      platform: selectedPlatform || 'ALL',
+      totalResponses,
       totalUrls: allUrls.length,
       totalResponsesWithSources,
       categories,
@@ -1142,16 +1170,23 @@ export class AICrawlerController {
   @CacheTTL(600)
   @Get('insights/sources-diagnostic/:hospitalId')
   @ApiOperation({ summary: '출처 디코딩 진단 - Gemini 디코딩 전/후 도메인 분포 비교' })
+  @ApiQuery({ name: 'platform', required: false, description: 'ALL(기본값) 또는 측정 플랫폼' })
   async getSourceDiagnostic(
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
+    @Query('platform') platform?: string,
   ) {
+    const selectedPlatform = parseSourcePlatform(platform);
     const daysNum = parseInt(days || '30');
     const since = new Date();
     since.setDate(since.getDate() - daysNum);
 
     const responses = await this.prisma.aIResponse.findMany({
-      where: { hospitalId, createdAt: { gte: since } },
+      where: {
+        hospitalId,
+        createdAt: { gte: since },
+        ...(selectedPlatform ? { aiPlatform: selectedPlatform } : {}),
+      },
       select: { citedSources: true, citedUrl: true, aiPlatform: true, sourceHints: true },
     });
 
@@ -1238,6 +1273,7 @@ export class AICrawlerController {
 
     return {
       period: `최근 ${daysNum}일`,
+      platform: selectedPlatform || 'ALL',
       summary: {
         totalUrls: beforeTotal,
         decodedCount,
