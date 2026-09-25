@@ -83,7 +83,7 @@ function BillingSuccessContent() {
       <div className="text-center">
         <h2 className="text-3xl font-bold text-slate-900 mb-2">카드 등록 완료!</h2>
         <p className="text-slate-500">
-          자동결제가 설정되었습니다. 7일 무료 체험 후 자동으로 결제됩니다.
+          자동결제가 설정되었습니다. 무료 체험 중이라면 남은 체험 기간이 끝난 뒤 결제가 시작됩니다.
         </p>
       </div>
 

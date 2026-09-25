@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'crypto';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
+import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { TempUpgradeService } from '../scheduler/temp-upgrade.service';
 import { Public } from '../auth/decorators/public.decorator';
@@ -101,7 +102,7 @@ export class AdminController {
   }
 
   /**
-   * 기존 FREE 유저들에게 STARTER 7일 트라이얼 소급 적용
+   * 기존 FREE 유저들에게 STARTER 14일 트라이얼 소급 적용
    * POST /api/admin/grant-trials?secret=xxx
    */
   @Public()
@@ -163,10 +164,10 @@ export class AdminController {
 
   /**
    * 무결제 구독을 TRIAL로 마이그레이션 (체험→과금 전환)
-   * POST /api/admin/migrate-to-trial?secret=xxx&days=7
+   * POST /api/admin/migrate-to-trial?secret=xxx&days=14
    * 
    * 대상: ACTIVE + 빌링키 없음 + STARTER/STANDARD (ENTERPRISE/PRO 제외)
-   * 결과: TRIAL 7일(기본)로 전환 → Cron이 D-3,D-1,D-day 이메일 + 만료 시 FREE 다운그레이드
+   * 결과: TRIAL 14일(기본)로 전환 → Cron이 D-3,D-1,D-day 이메일 + 만료 시 FREE 다운그레이드
    */
   @Public()
   @Post('migrate-to-trial')
@@ -175,7 +176,7 @@ export class AdminController {
     @Query('days') days?: string,
   ) {
     this.validateSecret(headerSecret);
-    const trialDays = parseInt(days || '7', 10);
+    const trialDays = parseInt(days || String(FREE_TRIAL_DAYS), 10);
     this.logger.log(`[Admin] 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작`);
     return this.adminService.migrateUnpaidSubscriptionsToTrial(trialDays);
   }

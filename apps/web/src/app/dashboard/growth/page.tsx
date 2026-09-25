@@ -1062,7 +1062,7 @@ export default function GrowthDiagnosisPage() {
         description="언급률만 보면 놓치는 것 — 왜 오르고 왜 안 오르는지 원인을 분해합니다"
       />
 
-      <div className="p-4 sm:p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4 max-w-7xl mx-auto">
         {/* 탭 + 기간 */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <nav className="flex gap-1.5 overflow-x-auto pb-0.5" aria-label="지표 그룹">
@@ -1073,9 +1073,9 @@ export default function GrowthDiagnosisPage() {
                 <button
                   key={t.key}
                   onClick={() => setTab(t.key)}
-                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
                     active
-                      ? 'bg-slate-900 text-white shadow-sm'
+                      ? 'bg-brand-600 text-white'
                       : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -1091,9 +1091,9 @@ export default function GrowthDiagnosisPage() {
               <button
                 key={d}
                 onClick={() => setDays(d)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
                   days === d
-                    ? 'bg-brand-500 text-white shadow-sm'
+                    ? 'bg-brand-600 text-white'
                     : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
                 }`}
               >

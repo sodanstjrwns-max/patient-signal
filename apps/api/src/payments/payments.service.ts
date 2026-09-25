@@ -1,9 +1,10 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CouponsService, PLAN_PRICES } from '../coupons/coupons.service';
 import { PaymentStatus, PlanType } from '@prisma/client';
+import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
 
 interface TossPaymentConfirmRequest {
   paymentKey: string;
@@ -72,6 +73,18 @@ export class PaymentsService {
     this.secretKey = process.env.TOSS_SECRET_KEY || '';
   }
 
+  private assertPaymentOwner(
+    payment: { hospitalId: string | null; userId: string | null },
+    hospitalId?: string,
+    userId?: string,
+  ): void {
+    const sameHospital = !!hospitalId && payment.hospitalId === hospitalId;
+    const legacySameUser = !!hospitalId && payment.hospitalId === null && !!userId && payment.userId === userId;
+    if (!sameHospital && !legacySameUser) {
+      throw new ForbiddenException('해당 결제에 대한 접근 권한이 없습니다.');
+    }
+  }
+
   /**
    * 결제 승인 요청
    */
@@ -82,6 +95,10 @@ export class PaymentsService {
     const existingPayment = await this.prisma.payment.findUnique({
       where: { orderId: data.orderId },
     });
+
+    if (existingPayment) {
+      this.assertPaymentOwner(existingPayment, data.hospitalId, data.userId);
+    }
 
     if (existingPayment && existingPayment.status === 'DONE') {
       throw new BadRequestException('이미 처리된 결제입니다.');
@@ -263,13 +280,23 @@ export class PaymentsService {
     if (hospitalId) paymentData.hospitalId = hospitalId;
     if (userId) paymentData.userId = userId;
 
-    return this.prisma.payment.upsert({
+    const existingPayment = await this.prisma.payment.findUnique({
       where: { orderId },
-      create: {
-        orderId,
-        ...paymentData,
-      },
-      update: paymentData,
+      select: { id: true, hospitalId: true, userId: true },
+    });
+
+    if (existingPayment) {
+      this.assertPaymentOwner(existingPayment, hospitalId, userId);
+      return this.prisma.payment.update({
+        where: existingPayment.hospitalId === null
+          ? { id: existingPayment.id, hospitalId: null, userId }
+          : { id: existingPayment.id, hospitalId },
+        data: paymentData,
+      });
+    }
+
+    return this.prisma.payment.create({
+      data: { orderId, ...paymentData },
     });
   }
 
@@ -460,7 +487,7 @@ export class PaymentsService {
    * 프론트엔드에서 결제 승인 후 저장
    * (토스페이먼츠 API 응답 데이터를 그대로 저장)
    */
-  async savePaymentFromFrontend(data: any): Promise<any> {
+  async savePaymentFromFrontend(data: any, hospitalId: string, userId: string): Promise<any> {
     this.logger.log(`프론트엔드 결제 저장: orderId=${data.orderId}, status=${data.status}`);
 
     const planType = this.extractPlanFromOrderId(data.orderId);
@@ -481,14 +508,27 @@ export class PaymentsService {
       metadata: data.metadata || null,
     };
 
-    const payment = await this.prisma.payment.upsert({
+    const existingPayment = await this.prisma.payment.findUnique({
       where: { orderId: data.orderId },
-      create: {
-        orderId: data.orderId,
-        ...paymentData,
-      },
-      update: paymentData,
+      select: { id: true, hospitalId: true, userId: true },
     });
+
+    if (existingPayment) {
+      this.assertPaymentOwner(existingPayment, hospitalId, userId);
+    }
+
+    const payment = existingPayment
+      ? await this.prisma.payment.update({
+          where: existingPayment.hospitalId === null
+            ? { id: existingPayment.id, hospitalId: null, userId }
+            : { id: existingPayment.id, hospitalId },
+          data: existingPayment.hospitalId === null
+            ? { ...paymentData, hospitalId, userId }
+            : paymentData,
+        })
+      : await this.prisma.payment.create({
+          data: { orderId: data.orderId, hospitalId, userId, ...paymentData },
+        });
 
     this.logger.log(`결제 저장 완료: id=${payment.id}, status=${payment.status}`);
 
@@ -638,20 +678,34 @@ export class PaymentsService {
 
       // 구독 정보 업데이트 (빌링키 저장)
       const selectedPlan = (data.planType as PlanType) || 'STARTER';
+      const now = new Date();
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + FREE_TRIAL_DAYS);
+      const existingSubscription = await this.prisma.subscription.findUnique({
+        where: { hospitalId: data.hospitalId },
+        select: { currentPeriodEnd: true, nextBillingDate: true },
+      });
+      // 카드 등록은 이미 부여한 무료 체험 종료일을 앞당기지 않는다.
+      const nextBillingDate = existingSubscription
+        ? new Date(Math.max(
+            existingSubscription.currentPeriodEnd.getTime(),
+            existingSubscription.nextBillingDate?.getTime() ?? 0,
+          ))
+        : trialEnd;
       await this.prisma.subscription.upsert({
         where: { hospitalId: data.hospitalId },
         create: {
           hospitalId: data.hospitalId,
           planType: selectedPlan,
           status: 'TRIAL',
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 트라이얼
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEnd,
           billingKey: result.billingKey,
           customerKey: result.customerKey,
           cardLast4: result.card?.number?.slice(-4) || null,
           cardBrand: result.card?.company || null,
           autoRenewal: true,
-          nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7일 후
+          nextBillingDate: trialEnd,
         },
         update: {
           billingKey: result.billingKey,
@@ -659,6 +713,7 @@ export class PaymentsService {
           cardLast4: result.card?.number?.slice(-4) || null,
           cardBrand: result.card?.company || null,
           autoRenewal: true,
+          nextBillingDate,
         },
       });
 

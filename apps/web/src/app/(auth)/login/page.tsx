@@ -1,23 +1,16 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles, Eye, EyeOff, Bot, BarChart3, Shield, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, Check, Eye, EyeOff, LockKeyhole, MessageSquareText, ScanSearch } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
-// Patient Hub SSO — API가 허브 authorize로 302 리다이렉트
-// 모든 로그인(구글 포함)은 이 경로로 일원화한다. 예전 "직접 구글 로그인"은
-// 구서버(patient-signal.onrender.com)로 콜백해 구서버 JWT_SECRET로 토큰을
-// 발급했는데, 대시보드 API는 신서버(-1)라 토큰이 거부돼 무한 로그아웃 루프가
-// 났다(구/신 서버 JWT_SECRET 불일치, 구서버는 다른 계정 소유라 손댈 수 없음).
-// 허브 구글 로그인은 -1에서 검증되므로 문제가 없다 — 그래서 허브로 federate 한다.
+// Hub SSO uses the active Signal API. Google accounts authenticate through Hub as well.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
-const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
+const HUB_SSO_START_URL = API_BASE_URL + '/auth/hub';
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_auth_failed: 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
@@ -37,18 +30,14 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
 
-  // URL에서 에러 파라미터 읽기
   useEffect(() => {
     const errorParam = searchParams.get('error');
     const detailParam = searchParams.get('detail');
     if (errorParam) {
-      const msg = ERROR_MESSAGES[errorParam] || `로그인 오류: ${errorParam}`;
-      setError(detailParam ? `${msg} (${detailParam})` : msg);
+      const msg = ERROR_MESSAGES[errorParam] || '로그인 오류: ' + errorParam;
+      setError(detailParam ? msg + ' (' + detailParam + ')' : msg);
       window.history.replaceState({}, '', '/login');
     }
   }, [searchParams]);
@@ -61,9 +50,7 @@ function LoginForm() {
     try {
       const { data } = await authApi.login(formData);
       setAuth(data.user, data.accessToken, data.refreshToken);
-      
-      const redirectUrl = data.user.hospitalId ? '/dashboard' : '/onboarding';
-      window.location.href = redirectUrl;
+      window.location.href = data.user.hospitalId ? '/dashboard' : '/onboarding';
     } catch (err: any) {
       setError(err.response?.data?.message || '로그인에 실패했습니다');
     } finally {
@@ -71,234 +58,90 @@ function LoginForm() {
     }
   };
 
-  // Google 로그인 — 허브 SSO로 federate (구글 계정은 Patient Hub에서 인증).
-  // 구서버 직접 콜백을 쓰지 않아 JWT_SECRET 불일치 루프가 발생하지 않는다.
-  const handleGoogleLogin = () => {
+  const handleHubLogin = () => {
     window.location.href = HUB_SSO_START_URL;
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* 좌측: 서비스 소개 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900 text-white p-12 flex-col justify-between relative overflow-hidden">
-        {/* 배경 장식 */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl" />
-        
-        <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2 mb-16">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl">Patient Signal</span>
+    <div className="grid min-h-screen bg-[#f6f7f9] text-[#17212e] lg:grid-cols-2">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#17212e] p-10 text-white lg:flex xl:p-16">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.1]" style={{ backgroundImage: 'linear-gradient(#dce7ff 1px, transparent 1px), linear-gradient(90deg, #dce7ff 1px, transparent 1px)', backgroundSize: '56px 56px' }} />
+        <div className="relative">
+          <Link href="/" className="inline-flex items-center gap-3 text-lg font-bold tracking-[-0.04em]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#285cf4]"><ScanSearch className="h-5 w-5" /></span>
+            Patient Signal
           </Link>
-
-          <h2 className="text-3xl font-bold mb-4 leading-tight">
-            AI가 우리 병원을<br />
-            추천하고 있을까요?
-          </h2>
-          <p className="text-brand-200 text-base leading-relaxed mb-10">
-            ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X<br />
-            글로벌·국내 6개 AI 플랫폼에서의 병원 노출을 자동 추적합니다.
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-brand-500/20 flex items-center justify-center flex-shrink-0">
-                <BarChart3 className="h-5 w-5 text-brand-300" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">AI 가시성 점수 추적</p>
-                <p className="text-xs text-brand-300">매일 자동으로 측정 & 리포트</p>
-              </div>
+          <div className="mt-24 max-w-lg">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#a9bcff]">Your AI visibility workspace</span>
+            <h1 className="mt-4 text-4xl font-bold leading-[1.16] tracking-[-0.06em] xl:text-5xl">질문에서 답변까지,<br />한눈에 확인하세요.</h1>
+            <p className="mt-6 max-w-md text-base leading-7 text-[#abb8c9]">우리 병원에 중요한 질문을 고르고, AI가 실제로 남긴 답변을 확인하는 작업 공간입니다.</p>
+          </div>
+          <div className="mt-12 max-w-md rounded-[18px] border border-white/15 bg-white/10 p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#285cf4]"><MessageSquareText className="h-4 w-4" /></span>
+              <div><p className="text-sm font-semibold">질문 · 답변 · 경쟁 병원</p><p className="text-xs text-[#abb8c9]">필요한 근거를 한곳에</p></div>
             </div>
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="h-5 w-5 text-green-300" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">경쟁사 비교 분석</p>
-                <p className="text-xs text-brand-300">우리 병원 vs 경쟁 병원 AI 추천 현황</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">
-              <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                <Shield className="h-5 w-5 text-purple-300" />
-              </div>
-              <div>
-                <p className="font-medium text-sm">감성 & 인사이트 분석</p>
-                <p className="text-xs text-brand-300">AI가 우리 병원을 어떤 톤으로 소개하는지</p>
-              </div>
+            <div className="mt-5 space-y-2.5">
+              <div className="h-2.5 w-full rounded-full bg-white/20" />
+              <div className="h-2.5 w-[83%] rounded-full bg-white/15" />
+              <div className="h-2.5 w-[61%] rounded-full bg-white/10" />
             </div>
           </div>
         </div>
+        <p className="relative text-xs text-[#7e8da1]">Patient Signal by 페이션트퍼널</p>
+      </aside>
 
-        <div className="relative z-10 text-sm text-brand-300/60">
-          Patient Signal by 페이션트퍼널
-        </div>
-      </div>
+      <main className="flex items-center justify-center px-5 py-10 sm:px-10 lg:px-12">
+        <div className="w-full max-w-[440px]">
+          <Link href="/" className="mb-10 inline-flex items-center gap-3 text-[17px] font-bold tracking-[-0.04em] lg:hidden">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#285cf4] text-white"><ScanSearch className="h-5 w-5" /></span>
+            Patient Signal
+          </Link>
+          <div className="rounded-[20px] border border-[#e7ecf2] bg-white p-6 shadow-[0_8px_34px_rgba(18,33,54,0.045)] sm:p-9">
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#285cf4]">Welcome back</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.05em]">다시 만나 반갑습니다</h2>
+            <p className="mt-2 text-sm leading-6 text-[#69788b]">Patient Signal에 로그인해 우리 병원의 AI 답변을 확인하세요.</p>
 
-      {/* 우측: 로그인 폼 */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-mesh">
-        <div className="w-full max-w-md">
-          {/* 모바일에서만 보이는 로고 */}
-          <div className="lg:hidden text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-white" />
+            <button type="button" onClick={handleHubLogin} className="mt-8 flex h-12 w-full items-center justify-center gap-2.5 rounded-[11px] bg-[#285cf4] px-4 text-sm font-semibold text-white hover:bg-[#204bce]">
+              <span className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-white/20 text-[10px] font-bold">PH</span>
+              Patient Hub 계정으로 로그인 <ArrowRight className="h-4 w-4" />
+            </button>
+            <p className="mt-2.5 text-center text-xs text-[#8390a0]">Google 계정도 Patient Hub에서 로그인할 수 있습니다.</p>
+
+            <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#9aa6b5]"><span className="h-px flex-1 bg-[#e7ecf2]" />이메일로 로그인<span className="h-px flex-1 bg-[#e7ecf2]" /></div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && <div role="alert" className="rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+              <div className="space-y-2">
+                <label htmlFor="login-email" className="text-sm font-semibold text-[#334155]">이메일</label>
+                <Input id="login-email" type="email" placeholder="doctor@clinic.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="email" />
               </div>
-              <span className="font-bold text-xl text-slate-900">Patient Signal</span>
-            </Link>
-          </div>
-
-          <Card className="shadow-xl border-0">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl">로그인</CardTitle>
-              <CardDescription>
-                병원의 AI 가시성을 확인하세요
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              {/* 1순위 CTA: Patient Hub 계정으로 시작하기 (가장 크고 눈에 띄게) */}
-              <button
-                type="button"
-                onClick={() => { window.location.href = HUB_SSO_START_URL; }}
-                className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 text-white text-lg font-bold shadow-lg shadow-brand-500/30 transition-all"
-              >
-                <span className="w-7 h-7 rounded-md bg-white/20 flex items-center justify-center text-white text-xs font-bold">
-                  PH
-                </span>
-                Patient Hub 계정으로 시작하기
+              <div className="space-y-2">
+                <label htmlFor="login-password" className="text-sm font-semibold text-[#334155]">비밀번호</label>
+                <div className="relative">
+                  <Input id="login-password" type={showPassword ? 'text' : 'password'} placeholder="비밀번호 입력" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required autoComplete="current-password" />
+                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8390a0] hover:text-[#334155]" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="text-right"><Link href="/forgot-password" className="text-xs font-semibold text-[#69788b] hover:text-[#285cf4]">비밀번호를 잊으셨나요?</Link></div>
+              <button type="submit" disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-[10px] border border-[#dce2e9] bg-white text-sm font-semibold text-[#263548] hover:bg-[#f6f8fb] disabled:opacity-50">
+                <LockKeyhole className="h-4 w-4" />{loading ? '로그인 중...' : '이메일로 로그인'}
               </button>
-
-              {/* 구분선 */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white/80 backdrop-blur-sm text-slate-500">또는</span>
-                </div>
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-                    {error}
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">이메일</label>
-                  <Input
-                    type="email"
-                    placeholder="doctor@clinic.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">비밀번호</label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? '로그인 중...' : '로그인'}
-                </Button>
-
-                <div className="text-right">
-                  <Link 
-                    href="/forgot-password" 
-                    className="text-sm text-slate-500 hover:text-brand-600"
-                  >
-                    비밀번호를 잊으셨나요?
-                  </Link>
-                </div>
-              </form>
-
-              {/* 구분선 */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white/80 backdrop-blur-sm text-slate-500">또는</span>
-                </div>
-              </div>
-
-              {/* Google 로그인 버튼 */}
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all bg-white/80 backdrop-blur-sm shadow-sm"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                <span className="text-slate-700 font-medium">Google로 로그인</span>
-              </button>
-
-              <div className="mt-6 text-center text-sm text-slate-500">
-                계정이 없으신가요?{' '}
-                <Link href="/register" className="text-brand-600 hover:underline font-medium">
-                  무료 회원가입
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 모바일에서만 보이는 하단 기능 요약 */}
-          <div className="lg:hidden mt-8">
-            <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
-              <div className="flex items-center gap-1">
-                <Bot className="h-3.5 w-3.5" />
-                <span>6개 AI 플랫폼</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <BarChart3 className="h-3.5 w-3.5" />
-                <span>자동 분석</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Shield className="h-3.5 w-3.5" />
-                <span>경쟁사 비교</span>
-              </div>
-            </div>
+            </form>
+            <div className="mt-7 border-t border-[#eef1f5] pt-6 text-center text-sm text-[#69788b]">계정이 없으신가요? <Link href="/register" className="font-semibold text-[#285cf4] hover:underline">무료 회원가입</Link></div>
           </div>
+          <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-[#8390a0]"><Check className="h-3.5 w-3.5 text-[#285cf4]" /> 병원 정보는 로그인 후 설정에서 수정할 수 있습니다.</p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-mesh">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f6f7f9]"><span className="h-7 w-7 animate-spin rounded-full border-2 border-[#dce7ff] border-t-[#285cf4]" /></div>}>
       <LoginForm />
     </Suspense>
   );

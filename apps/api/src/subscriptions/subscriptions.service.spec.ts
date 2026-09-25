@@ -2,7 +2,7 @@
  * SubscriptionsService 핵심 유닛 테스트 — 구독 생성/갱신/업그레이드
  *
  * 범위:
- *  - createSubscription: 7일 트라이얼 기간 계산
+ *  - createSubscription: 14일 트라이얼 기간 계산
  *  - getSubscription: 트라이얼 남은 일수 / 결제 필요 여부 판정
  *  - upgradePlan: 플랜 순서 검증 (다운그레이드 차단)
  */
@@ -33,10 +33,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('SubscriptionsService — 구독 갱신/트라이얼 핵심 로직', () => {
   // ─────────────────────────────────────────────
-  // createSubscription — 7일 트라이얼
+  // createSubscription — 14일 트라이얼
   // ─────────────────────────────────────────────
   describe('createSubscription (트라이얼 기간 계산)', () => {
-    it('생성 시 TRIAL 상태로 정확히 7일 기간 설정', async () => {
+    it('생성 시 TRIAL 상태로 정확히 14일 기간 설정', async () => {
       const { service, prisma } = createService();
       prisma.subscription.upsert.mockImplementation(({ create }: any) => Promise.resolve({ id: 's1', ...create }));
 
@@ -47,9 +47,9 @@ describe('SubscriptionsService — 구독 갱신/트라이얼 핵심 로직', ()
       const args = prisma.subscription.upsert.mock.calls[0][0];
       expect(args.create.status).toBe('TRIAL');
       const periodMs = args.create.currentPeriodEnd.getTime() - args.create.currentPeriodStart.getTime();
-      // 7일 ±(호출 시간 오차)
-      expect(periodMs).toBeGreaterThanOrEqual(7 * DAY_MS - (after - before) - 1000);
-      expect(periodMs).toBeLessThanOrEqual(7 * DAY_MS + 1000);
+      // 14일 ±(호출 시간 오차)
+      expect(periodMs).toBeGreaterThanOrEqual(14 * DAY_MS - (after - before) - 1000);
+      expect(periodMs).toBeLessThanOrEqual(14 * DAY_MS + 1000);
     });
 
     it('병원 planType/subscriptionStatus도 동기화 업데이트', async () => {
@@ -74,7 +74,7 @@ describe('SubscriptionsService — 구독 갱신/트라이얼 핵심 로직', ()
       expect(result).toEqual({ hasSubscription: false, status: 'NONE', planType: 'FREE' });
     });
 
-    it('트라이얼 3일차: isInTrial=true, trialDaysRemaining 계산', async () => {
+    it('기존 7일 체험도 확정된 종료일까지 유지', async () => {
       const { service, prisma } = createService();
       prisma.subscription.findFirst.mockResolvedValue({
         status: 'TRIAL',
@@ -89,6 +89,38 @@ describe('SubscriptionsService — 구독 갱신/트라이얼 핵심 로직', ()
       expect(result.needsPayment).toBe(true);
       expect(result.trialDaysRemaining).toBeGreaterThanOrEqual(3);
       expect(result.trialDaysRemaining).toBeLessThanOrEqual(4);
+    });
+
+    it('14일 체험 10일차도 체험 중이며 실제 남은 4일을 표시', async () => {
+      const { service, prisma } = createService();
+      prisma.subscription.findFirst.mockResolvedValue({
+        status: 'TRIAL',
+        planType: 'STARTER',
+        currentPeriodStart: new Date(Date.now() - 10 * DAY_MS),
+        currentPeriodEnd: new Date(Date.now() + 4 * DAY_MS),
+        cancelAtPeriodEnd: false,
+        billingKey: null,
+      });
+      const result: any = await service.getSubscription('h1');
+      expect(result.isInTrial).toBe(true);
+      expect(result.trialDaysRemaining).toBe(4);
+      expect(result.needsPayment).toBe(true);
+    });
+
+    it('TRIAL 상태라도 종료일이 지나면 체험 종료로 판정', async () => {
+      const { service, prisma } = createService();
+      prisma.subscription.findFirst.mockResolvedValue({
+        status: 'TRIAL',
+        planType: 'STARTER',
+        currentPeriodStart: new Date(Date.now() - 15 * DAY_MS),
+        currentPeriodEnd: new Date(Date.now() - DAY_MS),
+        cancelAtPeriodEnd: false,
+        billingKey: null,
+      });
+      const result: any = await service.getSubscription('h1');
+      expect(result.isInTrial).toBe(false);
+      expect(result.trialDaysRemaining).toBe(0);
+      expect(result.isExpired).toBe(true);
     });
 
     it('빌링키 없는 ACTIVE = 미결제 사용자 → needsPayment=true', async () => {

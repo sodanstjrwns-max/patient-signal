@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PromptsService } from './prompts.service';
-import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
+import { CreatePromptDto, BulkCreatePromptsDto, ReplacePromptDto, UpdatePromptTextDto } from './dto/create-prompt.dto';
 import { GeneratePresetsDto } from './dto/generate-presets.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -37,6 +37,15 @@ export class PromptsController {
     return this.promptsService.bulkCreate(hospitalId, dto);
   }
 
+  @Post(':hospitalId/replace')
+  @ApiOperation({ summary: '활성 질문 하나를 교체하고 기존 질문의 답변 이력을 보존' })
+  async replace(
+    @Param('hospitalId') hospitalId: string,
+    @Body() dto: ReplacePromptDto,
+  ) {
+    return this.promptsService.replace(hospitalId, dto);
+  }
+
   @Get(':hospitalId')
   @ApiOperation({ summary: '질문 목록 조회' })
   async findAll(
@@ -60,7 +69,7 @@ export class PromptsController {
   async update(
     @Param('id') id: string,
     @CurrentUser('hospitalId') hospitalId: string,
-    @Body() dto: Partial<CreatePromptDto>,
+    @Body() dto: UpdatePromptTextDto,
   ) {
     return this.promptsService.update(id, hospitalId, dto);
   }

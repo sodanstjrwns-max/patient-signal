@@ -11,19 +11,19 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Premium brand palette
+        // Signal workspace: crisp cobalt accents on neutral surfaces
         brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50: '#eff4ff',
+          100: '#dce8ff',
+          200: '#bdd2ff',
+          300: '#94b3ff',
+          400: '#668fff',
+          500: '#4274fa',
+          600: '#285cf4',
+          700: '#204bce',
+          800: '#213ea4',
+          900: '#203680',
+          950: '#17265b',
         },
         surface: {
           0: '#ffffff',

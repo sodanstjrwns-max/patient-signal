@@ -65,6 +65,39 @@ export interface HubPrefill {
   openedYear: number | null;
 }
 
+/** Signal에서 편집할 수 있는 병원 소개 초안. 허브의 확인된 사실만 사용한다. */
+export function buildHubIntroduction(profile: HubHospitalProfile): string | null {
+  const clean = (value: unknown, max = 300): string =>
+    typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+  const name = clean(profile.name, 100);
+  const basic = profile.basic;
+  const treatments = Array.isArray(basic?.key_treatments)
+    ? basic.key_treatments.map((value) => clean(value, 60)).filter(Boolean).slice(0, 5)
+    : [];
+  const confirmedMvv = profile.mvv?.status === 'confirmed' ? profile.mvv : null;
+  const coreValues = Array.isArray(confirmedMvv?.core_values)
+    ? confirmedMvv.core_values
+      .map((value) => clean(typeof value === 'string' ? value : value?.value, 60))
+      .filter(Boolean)
+      .slice(0, 5)
+    : [];
+
+  const lines = [
+    name ? `병원명: ${name}` : '',
+    clean(basic?.clinic_type, 60) ? `진료 분야: ${clean(basic?.clinic_type, 60)}` : '',
+    clean(basic?.region, 100) ? `지역: ${clean(basic?.region, 100)}` : '',
+    treatments.length ? `주력 진료: ${treatments.join(', ')}` : '',
+    clean(confirmedMvv?.mission, 500) ? `병원의 미션: ${clean(confirmedMvv?.mission, 500)}` : '',
+    clean(confirmedMvv?.vision, 500) ? `병원의 비전: ${clean(confirmedMvv?.vision, 500)}` : '',
+    coreValues.length ? `핵심가치: ${coreValues.join(', ')}` : '',
+    clean(confirmedMvv?.slogan, 200) ? `슬로건: ${clean(confirmedMvv?.slogan, 200)}` : '',
+  ].filter(Boolean);
+
+  // 사실이 한 가지만 있으면 소개라고 보기 어렵다. 내용을 임의로 채우지 않는다.
+  if (lines.length < 2) return null;
+  return lines.join('\n').slice(0, 2000);
+}
+
 // 허브 clinic_type(자유 문자열) → 시그널 SpecialtyType 키워드 매핑
 const SPECIALTY_KEYWORDS: Array<[string, SpecialtyType]> = [
   ['치과', SpecialtyType.DENTAL],
@@ -123,6 +156,7 @@ export class HubProfileService {
           Authorization: `Bearer ${key}`,
           'X-PS-Hospital-Id': psHospitalId,
         },
+        signal: AbortSignal.timeout(3000),
       });
       if (res.status === 404) {
         // 미등록 병원: 정상 케이스로 캐시해 재호출 방지

@@ -7,6 +7,7 @@ import { PlanGuard } from '../common/guards/plan.guard';
 import { CrawlQueueService, CrawlJobData } from './crawl-queue.service';
 import { CacheService } from '../common/cache/cache.service';
 import { SPECIALTY_PROCEDURES, SPECIALTY_NAMES } from '../query-templates/query-templates.service';
+import { selectCompetitorsForAeo } from './competitor-rotation';
 import {
   generateMatrixCandidates,
   selectDailyPrompts,
@@ -662,13 +663,16 @@ export class SchedulerService implements OnModuleInit {
       session,
     };
 
-    // 저녁 세션에서 경쟁사 AEO 측정 (플랜 체크)
+    // 저녁 세션에서 경쟁사 AEO 측정 (플랜 체크). 하루 최대 5개를 순환해
+    // 등록 가능 병원 수가 늘어도 비용과 크롤 시간을 일정하게 유지한다.
     if (includeCompetitors && hospital.competitors?.length > 0 && planLimits.competitorAEO) {
-      const maxCompetitors = planLimits.maxCompetitors === -1 ? 5 : Math.min(planLimits.maxCompetitors, 5);
-      this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개)`);
+      const selectedCompetitors = selectCompetitorsForAeo<{ id: string; createdAt: Date; competitorName: string }>(
+        hospital.competitors, planLimits.maxCompetitors, new Date(),
+      );
+      this.logger.log(`[${hospital.name}] 경쟁사 AEO 측정 시작 (${hospital.competitors.length}개 중 ${selectedCompetitors.length}개)`);
       const competitorResults = [];
 
-      for (const competitor of hospital.competitors.slice(0, maxCompetitors)) {
+      for (const competitor of selectedCompetitors) {
         try {
           const competitorScore = await this.aiCrawlerService.measureCompetitorAEO(
             hospital.id,

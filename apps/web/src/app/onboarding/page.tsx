@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
+import {
   Sparkles, Building2, MapPin, Stethoscope, ArrowRight, ArrowLeft,
   Target, Users, Plus, X, Check, Lightbulb, Star, Globe, Loader2,
   Search, Zap, BarChart3, ChevronDown, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { hospitalApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
@@ -59,7 +59,7 @@ const suggestedTreatments: Record<string, string[]> = {
 // ─── 진료과별 병원 강점 옵션 (공통 + 특화) ───
 function getStrengthOptions(specialtyType: string): string[] {
   const common = ['친절', '상담꼼꼼', '가격합리적', '최신장비', '야간진료', '주말진료', '주차편리', '역세권', '경력풍부', '전문의', '대기시간짧음', '원장직접진료'];
-  
+
   const specialtyStrengths: Record<string, string[]> = {
     DENTAL: ['무통치료', '수면치료', '소아전문', '감염관리', '디지털진료', '대학병원급', '원데이치료'],
     DERMATOLOGY: ['자연스러운결과', '남녀전용', '피부맞춤상담', '시술후관리', '피부과전문의'],
@@ -95,6 +95,8 @@ export default function OnboardingPage() {
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [analyzingAnimation, setAnalyzingAnimation] = useState(false);
   const [hubPrefilled, setHubPrefilled] = useState(false); // 허브 프로필 프리필 적용 여부
+  const [hubIntroductionConnected, setHubIntroductionConnected] = useState(false);
+  const introductionEdited = useRef(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -107,6 +109,7 @@ export default function OnboardingPage() {
     websiteUrl: '',
     naverPlaceId: '',
     businessNumber: '',
+    clinicIntroduction: '',
     coreTreatments: [] as string[],
     targetRegions: [] as string[],
     competitorNames: [] as string[],
@@ -177,6 +180,24 @@ export default function OnboardingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 소개는 별도 Hub 조회 API에서 가져온다. 사용자가 편집하기 시작했다면 늦게 온 응답으로 덮어쓰지 않는다.
+  useEffect(() => {
+    let cancelled = false;
+    hospitalApi.hubIntroduction()
+      .then(({ data }) => {
+        if (cancelled || !data?.connected) return;
+        setHubIntroductionConnected(true);
+        if (typeof data.introduction === 'string' && data.introduction.trim() && !introductionEdited.current) {
+          setFormData((prev) => introductionEdited.current || prev.clinicIntroduction
+            ? prev
+            : { ...prev, clinicIntroduction: data.introduction.slice(0, 2000) });
+          setHubPrefilled(true);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // 주력 진료 토글
   const [customTreatment, setCustomTreatment] = useState('');
   const handleTreatmentToggle = (treatment: string) => {
@@ -184,8 +205,8 @@ export default function OnboardingPage() {
       ...prev,
       coreTreatments: prev.coreTreatments.includes(treatment)
         ? prev.coreTreatments.filter((t) => t !== treatment)
-        : prev.coreTreatments.length < 10 
-          ? [...prev.coreTreatments, treatment] 
+        : prev.coreTreatments.length < 10
+          ? [...prev.coreTreatments, treatment]
           : prev.coreTreatments,
     }));
   };
@@ -204,7 +225,7 @@ export default function OnboardingPage() {
   const [competitorInput, setCompetitorInput] = useState('');
   const handleAddCompetitor = () => {
     const trimmed = competitorInput.trim();
-    if (trimmed && !formData.competitorNames.includes(trimmed) && formData.competitorNames.length < 5) {
+    if (trimmed && !formData.competitorNames.includes(trimmed) && formData.competitorNames.length < 3) {
       setFormData((prev) => ({
         ...prev,
         competitorNames: [...prev.competitorNames, trimmed],
@@ -232,6 +253,9 @@ export default function OnboardingPage() {
         websiteUrl: formData.websiteUrl?.trim() || undefined,
         naverPlaceId: formData.naverPlaceId?.trim() || undefined,
         regionDong: formData.regionDong?.trim() || undefined,
+        // 허브 응답이 늦거나 실패한 미편집 소개는 null로 남겨 이후 프리필을 허용한다.
+        // 사용자가 직접 지운 경우에만 빈 문자열을 보내 의도를 보존한다.
+        clinicIntroduction: formData.clinicIntroduction.trim() || (introductionEdited.current ? '' : undefined),
       };
       const { data } = await hospitalApi.create(cleanData);
       updateUser({ hospitalId: data.id, hospital: data });
@@ -266,12 +290,12 @@ export default function OnboardingPage() {
   // 분석 시작 애니메이션 화면
   if (analyzingAnimation) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#f6f7f9] flex items-center justify-center p-5">
         <div className="text-center max-w-md">
           <div className="relative w-24 h-24 mx-auto mb-8">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-brand-500 to-indigo-600 animate-pulse" />
-            <div className="absolute inset-2 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center">
-              <Search className="h-10 w-10 text-brand-600 animate-bounce" />
+            <div className="absolute inset-0 rounded-[22px] bg-[#e8eeff]" />
+            <div className="absolute inset-2 rounded-[16px] bg-white flex items-center justify-center">
+              <Search className="h-9 w-9 text-[#285cf4]" />
             </div>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
@@ -295,20 +319,21 @@ export default function OnboardingPage() {
   }
 
   // 진료과 표시 (기본 6개, 전체보기 시 13개)
-  const visibleSpecialties = showAllSpecialties 
-    ? specialtyOptions 
+  const visibleSpecialties = showAllSpecialties
+    ? specialtyOptions
     : specialtyOptions.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg shadow-xl border-0">
-        <CardHeader className="text-center pb-4">
+    <div className="min-h-screen bg-[#f6f7f9] flex items-center justify-center px-4 py-10 sm:px-6">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[20px] border border-[#e7ecf2] bg-white shadow-[0_12px_40px_rgba(18,33,54,0.055)]">
+        <CardHeader className="border-b border-[#e7ecf2] bg-[#fbfcfe] px-6 py-7 text-center sm:px-9">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 rounded-[11px] bg-[#285cf4] flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#285cf4]">Setup / {String(step).padStart(2, '0')}</p>
+          <CardTitle className="text-[27px]">
             {step === 1 && '병원 정보 등록'}
             {step === 2 && '주력 진료 설정'}
             {step === 3 && 'AI 분석 시작'}
@@ -318,17 +343,17 @@ export default function OnboardingPage() {
             {step === 2 && '환자가 AI에 검색할 때 쓰는 핵심 키워드를 선택해주세요'}
             {step === 3 && '입력하신 정보를 바탕으로 AI 모니터링을 시작합니다'}
           </CardDescription>
-          
+
           {/* Progress Bar */}
-          <div className="flex items-center justify-center gap-2 mt-4">
+          <div className="flex items-center justify-center gap-2 mt-6">
             {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map((s) => (
               <div key={s} className="flex items-center gap-2">
                 <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all duration-300 ${
-                  s < step 
-                    ? 'bg-brand-600 text-white' 
-                    : s === step 
-                      ? 'bg-brand-600 text-white ring-4 ring-blue-100' 
-                      : 'bg-slate-200 text-slate-400'
+                  s < step
+                    ? 'bg-brand-600 text-white'
+                    : s === step
+                      ? 'bg-brand-600 text-white ring-4 ring-[#dce7ff]'
+                      : 'bg-[#e7ecf2] text-[#8390a0]'
                 }`}>
                   {s < step ? <Check className="h-4 w-4" /> : s}
                 </div>
@@ -340,13 +365,13 @@ export default function OnboardingPage() {
               </div>
             ))}
           </div>
-          <div className="flex justify-between text-[10px] text-slate-400 mt-1 px-2 max-w-[280px] mx-auto">
+          <div className="mx-auto mt-2 grid max-w-[250px] grid-cols-3 gap-4 text-center text-[11px] font-medium text-[#8390a0]">
             <span>기본 정보</span>
             <span>주력 진료</span>
             <span>분석 시작</span>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-6 pb-7 pt-7 sm:px-9 sm:pb-8 sm:pt-8">
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl mb-4">
               {error}
@@ -358,9 +383,9 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               {/* 허브 프리필 안내 — 빈 필드만 채웠고 모두 수정 가능 */}
               {hubPrefilled && (
-                <div className="flex items-center gap-2 p-3 bg-indigo-50 border border-indigo-100 rounded-2xl">
-                  <Sparkles className="h-4 w-4 text-indigo-500 shrink-0" />
-                  <p className="text-xs text-indigo-700">
+                <div className="flex items-center gap-2 rounded-[11px] border border-[#dce7ff] bg-[#f7f9ff] p-3">
+                  <Sparkles className="h-4 w-4 text-[#285cf4] shrink-0" />
+                  <p className="text-xs text-[#285cf4]">
                     Patient Hub 프로필에서 가져와 미리 채웠어요. 수정할 수 있어요.
                   </p>
                 </div>
@@ -391,10 +416,10 @@ export default function OnboardingPage() {
                       key={option.value}
                       type="button"
                       onClick={() => setFormData({ ...formData, specialtyType: option.value, coreTreatments: [] })}
-                      className={`p-2.5 rounded-2xl border text-center transition-all ${
+                      className={`p-2.5 rounded-[11px] border text-center transition-colors ${
                         formData.specialtyType === option.value
-                          ? 'border-brand-500 bg-blue-50 text-brand-700 shadow-sm'
-                          : 'border-slate-200 hover:border-slate-300'
+                          ? 'border-[#285cf4] bg-[#eff4ff] text-[#204bce]'
+                          : 'border-[#e7ecf2] bg-white hover:border-[#b9c6d6]'
                       }`}
                     >
                       <span className="text-lg">{option.icon}</span>
@@ -403,7 +428,7 @@ export default function OnboardingPage() {
                   ))}
                 </div>
                 {!showAllSpecialties && (
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setShowAllSpecialties(true)}
                     className="w-full text-center text-xs text-brand-600 hover:text-brand-700 py-1 flex items-center justify-center gap-1"
@@ -424,7 +449,7 @@ export default function OnboardingPage() {
                   <select
                     value={formData.regionSido}
                     onChange={(e) => setFormData({ ...formData, regionSido: e.target.value })}
-                    className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white/80 backdrop-blur-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full h-11 px-3 rounded-[10px] border border-[#dce2e9] bg-white text-sm focus:border-[#285cf4] focus:outline-none focus:ring-2 focus:ring-[#285cf4]/15"
                   >
                     <option value="">시/도 선택</option>
                     {SIDO_LIST.map(sido => (
@@ -462,8 +487,38 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
+              <div className="space-y-2 border-t border-[#e7ecf2] pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <label htmlFor="clinic-introduction" className="flex items-center gap-2 text-sm font-semibold text-[#334155]">
+                    <Sparkles className="h-4 w-4 text-[#285cf4]" />
+                    병원 소개
+                  </label>
+                  {hubIntroductionConnected && (
+                    <span className="rounded-full bg-[#eff4ff] px-2.5 py-1 text-[11px] font-semibold text-[#285cf4]">Hub 연결됨</span>
+                  )}
+                </div>
+                <p className="text-xs leading-5 text-[#69788b]">
+                  {hubIntroductionConnected
+                    ? 'Patient Hub의 정보를 초안으로 가져왔습니다. 내용은 이곳에서 자유롭게 수정할 수 있습니다.'
+                    : '병원의 진료와 특징을 적어 주세요. 이 정보를 바탕으로 더 관련 있는 핵심 질문을 추천합니다.'}
+                </p>
+                <textarea
+                  id="clinic-introduction"
+                  value={formData.clinicIntroduction}
+                  onChange={(e) => {
+                    introductionEdited.current = true;
+                    setFormData((prev) => ({ ...prev, clinicIntroduction: e.target.value }));
+                  }}
+                  maxLength={2000}
+                  rows={5}
+                  placeholder="주력 진료, 환자분께 설명하고 싶은 특징, 진료 방식을 적어 주세요."
+                  className="w-full resize-y rounded-[11px] border border-[#dce2e9] bg-white px-3.5 py-3 text-sm leading-6 text-[#17212e] placeholder:text-[#9aa6b5] focus:border-[#285cf4] focus:outline-none focus:ring-2 focus:ring-[#285cf4]/15"
+                />
+                <p className="text-right text-[11px] text-[#9aa6b5]">{formData.clinicIntroduction.length}/2000</p>
+              </div>
+
               <Button
-                className="w-full bg-gradient-to-r from-brand-600 to-brand-500"
+                className="w-full bg-[#285cf4] hover:bg-[#204bce] text-white"
                 onClick={() => setStep(2)}
                 disabled={!canProceed()}
               >
@@ -482,7 +537,7 @@ export default function OnboardingPage() {
                   주력 진료 / 시술
                   <span className="text-xs text-slate-400 font-normal">(1~10개 선택)</span>
                 </label>
-                <div className="bg-blue-50 rounded-2xl p-3 mb-2">
+                <div className="rounded-[11px] border border-[#dce7ff] bg-[#f7f9ff] p-3 mb-2">
                   <p className="text-xs text-brand-700">
                     <Lightbulb className="inline h-3 w-3 mr-1" />
                     선택한 진료별로 AI 모니터링 질문이 자동 생성됩니다.
@@ -497,8 +552,8 @@ export default function OnboardingPage() {
                       onClick={() => handleTreatmentToggle(treatment)}
                       className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
                         formData.coreTreatments.includes(treatment)
-                          ? 'border-brand-500 bg-brand-500 text-white shadow-sm'
-                          : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'
+                          ? 'border-[#285cf4] bg-[#285cf4] text-white'
+                          : 'border-[#dce2e9] bg-white hover:border-[#94b3ff] hover:bg-[#eff4ff]'
                       }`}
                     >
                       {formData.coreTreatments.includes(treatment) && (
@@ -553,8 +608,8 @@ export default function OnboardingPage() {
                       }}
                       className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
                         formData.hospitalStrengths.includes(strength)
-                          ? 'border-yellow-500 bg-yellow-500 text-white shadow-sm'
-                          : 'border-slate-200 hover:border-yellow-300 hover:bg-yellow-50'
+                          ? 'border-[#285cf4] bg-[#eff4ff] text-[#204bce]'
+                          : 'border-[#dce2e9] bg-white hover:border-[#94b3ff] hover:bg-[#eff4ff]'
                       }`}
                     >
                       {formData.hospitalStrengths.includes(strength) && (
@@ -571,10 +626,10 @@ export default function OnboardingPage() {
                 <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                   <Users className="h-4 w-4 text-orange-600" />
                   경쟁 병원
-                  <span className="text-xs text-slate-400 font-normal">(선택, 최대 5개)</span>
+                  <span className="text-xs text-slate-400 font-normal">(선택, 시작 플랜 최대 3개)</span>
                 </label>
                 <p className="text-xs text-slate-500">
-                  AI가 우리 대신 추천하는 경쟁 병원을 자동으로 추적합니다
+                  비교할 병원을 직접 추가하세요. 이후에도 경쟁 병원 화면에서 수정할 수 있습니다.
                 </p>
                 <div className="flex gap-2">
                   <Input
@@ -582,15 +637,15 @@ export default function OnboardingPage() {
                     value={competitorInput}
                     onChange={(e) => setCompetitorInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCompetitor())}
-                    disabled={formData.competitorNames.length >= 5}
+                    disabled={formData.competitorNames.length >= 3}
                     className="flex-1"
                   />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     size="sm"
                     onClick={handleAddCompetitor}
-                    disabled={formData.competitorNames.length >= 5 || !competitorInput.trim()}
+                    disabled={formData.competitorNames.length >= 3 || !competitorInput.trim()}
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
@@ -600,7 +655,7 @@ export default function OnboardingPage() {
                     {formData.competitorNames.map((name) => (
                       <span
                         key={name}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-50 text-orange-700 text-sm rounded-full border border-orange-200"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#eff4ff] text-[#204bce] text-sm rounded-full border border-[#dce7ff]"
                       >
                         {name}
                         <button onClick={() => handleRemoveCompetitor(name)}>
@@ -616,8 +671,8 @@ export default function OnboardingPage() {
                 <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> 이전
                 </Button>
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-brand-600 to-brand-500"
+                <Button
+                  className="flex-1 bg-[#285cf4] hover:bg-[#204bce] text-white"
                   onClick={() => setStep(3)}
                   disabled={!canProceed()}
                 >
@@ -632,7 +687,7 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               {/* 등록 요약 */}
               <div className="space-y-3">
-                <div className="p-3 bg-mesh rounded-2xl">
+                <div className="rounded-[12px] border border-[#e7ecf2] bg-[#fbfcfe] p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-slate-900">{formData.name}</p>
@@ -642,8 +697,8 @@ export default function OnboardingPage() {
                         {' · '}📍 {formData.regionSido} {formData.regionSigungu} {formData.regionDong}
                       </p>
                     </div>
-                    <button 
-                      onClick={() => setStep(1)} 
+                    <button
+                      onClick={() => setStep(1)}
                       className="text-xs text-brand-600 hover:underline"
                     >
                       수정
@@ -652,37 +707,46 @@ export default function OnboardingPage() {
                 </div>
 
                 {formData.coreTreatments.length > 0 && (
-                  <div className="p-3 bg-blue-50 rounded-2xl">
-                    <p className="text-xs text-brand-600 mb-1.5 font-medium">🎯 주력 진료 ({formData.coreTreatments.length}개)</p>
+                  <div className="rounded-[12px] border border-[#dce7ff] bg-[#f7f9ff] p-4">
+                    <p className="text-xs text-[#285cf4] mb-1.5 font-semibold">주력 진료 ({formData.coreTreatments.length}개)</p>
                     <div className="flex flex-wrap gap-1">
                       {formData.coreTreatments.map((t) => (
-                        <span key={t} className="px-2 py-0.5 bg-blue-100 text-brand-700 text-xs rounded-full">
+                        <span key={t} className="rounded-full border border-[#dce7ff] bg-white px-2 py-0.5 text-xs text-[#204bce]">
                           {t}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
+                {formData.clinicIntroduction.trim() && (
+                  <div className="rounded-[12px] border border-[#e7ecf2] bg-white p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs font-semibold text-[#526175]">병원 소개</p>
+                      <button onClick={() => setStep(1)} className="text-xs font-semibold text-[#285cf4] hover:underline">수정</button>
+                    </div>
+                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-5 text-[#69788b]">{formData.clinicIntroduction}</p>
+                  </div>
+                )}
               </div>
 
               {/* AI 분석 미리보기 */}
-              <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+              <div className="rounded-[14px] border border-[#dce7ff] bg-[#f7f9ff] p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="h-4 w-4 text-brand-600" />
-                  <p className="text-sm font-bold text-brand-800">시작하면 이렇게 분석됩니다</p>
+                  <p className="text-sm font-bold text-[#17212e]">시작하면 이런 질문을 추적합니다</p>
                 </div>
-                
+
                 <div className="space-y-2.5">
                   {/* 자동 생성 질문 미리보기 */}
-                  <div className="bg-white/80 rounded-2xl p-3">
+                  <div className="rounded-[11px] border border-[#e7ecf2] bg-white p-3">
                     <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
                       <Sparkles className="h-3 w-3 text-brand-500" />
-                      자동 생성될 모니터링 질문 예시
+                      입력한 정보로 만든 질문 예시
                     </p>
                     <div className="space-y-1">
                       {generatePreviewQuestions(formData).slice(0, 5).map((q, i) => (
                         <p key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                          <span className="text-blue-400 mt-0.5">•</span>
+                          <span className="text-[#285cf4] mt-0.5">•</span>
                           <span>"{q}"</span>
                         </p>
                       ))}
@@ -694,12 +758,12 @@ export default function OnboardingPage() {
 
                   {/* 분석 항목 */}
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white/80 rounded-2xl p-2.5 text-center">
+                    <div className="rounded-[11px] border border-[#e7ecf2] bg-white p-2.5 text-center">
                       <BarChart3 className="h-5 w-5 text-brand-500 mx-auto mb-1" />
                       <p className="text-[11px] font-medium text-slate-700">6개 AI 플랫폼</p>
                       <p className="text-[10px] text-slate-400">ChatGPT·Perplexity·Claude·Gemini·Grok·CLOVA X</p>
                     </div>
-                    <div className="bg-white/80 rounded-2xl p-2.5 text-center">
+                    <div className="rounded-[11px] border border-[#e7ecf2] bg-white p-2.5 text-center">
                       <Target className="h-5 w-5 text-green-500 mx-auto mb-1" />
                       <p className="text-[11px] font-medium text-slate-700">SoV 점수 산출</p>
                       <p className="text-[10px] text-slate-400">Voice Share 기반 가시성</p>
@@ -712,9 +776,9 @@ export default function OnboardingPage() {
                 <Button variant="outline" className="w-[100px]" onClick={() => setStep(2)}>
                   <ArrowLeft className="mr-2 h-4 w-4" /> 이전
                 </Button>
-                <Button 
-                  className="flex-1 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700 shadow-lg shadow-brand-500/25" 
-                  onClick={handleSubmit} 
+                <Button
+                  className="flex-1 bg-[#285cf4] hover:bg-[#204bce] text-white"
+                  onClick={handleSubmit}
                   disabled={loading}
                 >
                   {loading ? (
@@ -731,12 +795,12 @@ export default function OnboardingPage() {
               </div>
 
               <p className="text-center text-[11px] text-slate-400">
-                7일 무료 체험 · 신용카드 불필요 · 언제든 취소 가능
+                14일 무료 체험 · 신용카드 불필요
               </p>
             </div>
           )}
         </CardContent>
-      </Card>
+      </div>
     </div>
   );
 }

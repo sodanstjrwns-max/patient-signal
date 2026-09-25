@@ -47,6 +47,14 @@ export class CompetitorsController {
     return this.competitorsService.getComparison(hospitalId);
   }
 
+  @Get(':hospitalId/answer-ranking')
+  @UseInterceptors(HttpCacheInterceptor)
+  @CacheTTL(300)
+  @ApiOperation({ summary: '등록 경쟁 병원 사이 실제 AI 답변 등장률 순위 (의료 품질 순위 아님)' })
+  async getAnswerRanking(@Param('hospitalId') hospitalId: string) {
+    return this.competitorsService.getAnswerRanking(hospitalId);
+  }
+
   @Post(':hospitalId/suggest')
   @PlanLimit({ minPlan: 'STANDARD' })
   @ApiOperation({ summary: 'AI 경쟁사 제안 - 크롤링 데이터 기반 위협도 분석' })

@@ -1,113 +1,77 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard,
-  MessageSquare,
-  BarChart3,
-  Users,
-  Settings,
-  LogOut,
-  Sparkles,
+  Activity,
+  ArrowUpRight,
+  BookOpen,
   Building2,
-  Menu,
-  X,
-  CreditCard,
-  Lightbulb,
-  Zap,
-  Target,
-  ChevronDown,
-  Crown,
-  Search,
   CalendarDays,
-  Key,
+  ChevronRight,
+  CreditCard,
+  FileQuestion,
   Filter,
   Gauge,
-  BookOpen,
+  Key,
+  LayoutDashboard,
+  Lightbulb,
+  LogOut,
+  Menu,
+  MessageSquareText,
+  ScanSearch,
+  Search,
+  Target,
+  Users,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: any;
-  badge?: string;
-}
-
-interface NavGroup {
-  label: string;
-  items: NavItem[];
-  defaultOpen?: boolean;
-}
+type NavItem = { label: string; href: string; icon: LucideIcon };
+type NavGroup = { label: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
   {
-    label: '개요',
-    defaultOpen: true,
+    label: '워크스페이스',
     items: [
-      { name: '대시보드', href: '/dashboard', icon: LayoutDashboard },
-      { name: '이용 가이드', href: '/dashboard/guide', icon: BookOpen, badge: 'NEW' },
-      { name: '환자 퍼널 진단', href: '/dashboard/funnel', icon: Filter, badge: 'NEW' },
-    ],
-  },
-  {
-    label: '모니터링',
-    defaultOpen: true,
-    items: [
-      { name: '질문 관리', href: '/dashboard/prompts', icon: MessageSquare },
-      { name: 'AI 응답', href: '/dashboard/responses', icon: Sparkles },
-      { name: '실시간 질문', href: '/dashboard/live-query', icon: Zap },
+      { label: '한눈에 보기', href: '/dashboard', icon: LayoutDashboard },
+      { label: '병원 프로필', href: '/dashboard/settings', icon: Building2 },
+      { label: '핵심 질문', href: '/dashboard/prompts', icon: FileQuestion },
+      { label: '질문별 AI 답변', href: '/dashboard/responses', icon: MessageSquareText },
+      { label: '경쟁 병원', href: '/dashboard/competitors', icon: Users },
     ],
   },
   {
     label: '분석',
-    defaultOpen: true,
     items: [
-      { name: 'ABHS 분석 리포트', href: '/dashboard/analytics', icon: BarChart3 },
-      { name: '기회 분석', href: '/dashboard/opportunities', icon: Target, badge: 'NEW' },
-      { name: '성장 진단', href: '/dashboard/growth', icon: Gauge, badge: 'NEW' },
-      { name: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
+      { label: 'ABHS 리포트', href: '/dashboard/analytics', icon: Activity },
+      { label: '기회 분석', href: '/dashboard/opportunities', icon: Target },
+      { label: '성장 진단', href: '/dashboard/growth', icon: Gauge },
+      { label: 'AI 인사이트', href: '/dashboard/insights', icon: Lightbulb },
+      { label: '인용 역분석', href: '/dashboard/citation-analysis', icon: Search },
+      { label: '카테고리 분석', href: '/dashboard/category-analysis', icon: Filter },
+      { label: '경쟁 추이', href: '/dashboard/competitors/trending', icon: ScanSearch },
+      { label: '리포트', href: '/dashboard/report', icon: BookOpen },
     ],
   },
   {
-    label: 'GEO 콘텐츠',
-    defaultOpen: true,
+    label: '도구',
     items: [
-      { name: '인용 역분석', href: '/dashboard/citation-analysis', icon: Search, badge: 'NEW' },
-      { name: '56주 캘린더', href: '/dashboard/content-calendar', icon: CalendarDays, badge: 'NEW' },
-    ],
-  },
-  {
-    label: '경쟁',
-    defaultOpen: true,
-    items: [
-      { name: '경쟁사', href: '/dashboard/competitors', icon: Users },
-      { name: 'AI 답변 등장률', href: '/dashboard/competitors/trending', icon: Sparkles, badge: 'NEW' },
-    ],
-  },
-  {
-    label: '관리',
-    defaultOpen: false,
-    items: [
-      { name: 'API 연동', href: '/dashboard/api-keys', icon: Key, badge: 'NEW' },
-      { name: '결제/구독', href: '/dashboard/billing', icon: CreditCard },
-      { name: '설정', href: '/dashboard/settings', icon: Settings },
+      { label: '실시간 질문', href: '/dashboard/live-query', icon: MessageSquareText },
+      { label: '환자 퍼널', href: '/dashboard/funnel', icon: Filter },
+      { label: '콘텐츠 캘린더', href: '/dashboard/content-calendar', icon: CalendarDays },
+      { label: 'API 연동', href: '/dashboard/api-keys', icon: Key },
+      { label: '결제 및 구독', href: '/dashboard/billing', icon: CreditCard },
+      { label: '이용 가이드', href: '/dashboard/guide', icon: BookOpen },
     ],
   },
 ];
 
-const getPathname = (href: string) => href.split('?')[0];
-
-// 【2026.08.19 가격 최종본】티어명 S/M/L 통일
-const PLAN_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  ENTERPRISE: { label: '별도', color: 'text-amber-300', bg: 'bg-amber-500/10' },
-  PRO: { label: 'L', color: 'text-purple-300', bg: 'bg-purple-500/10' },
-  STANDARD: { label: 'M', color: 'text-brand-300', bg: 'bg-brand-500/10' },
-  STARTER: { label: 'S', color: 'text-emerald-300', bg: 'bg-emerald-500/10' },
-  FREE: { label: 'Free', color: 'text-slate-400', bg: 'bg-slate-500/10' },
+const planLabels: Record<string, string> = {
+  FREE: 'Free', STARTER: 'S', STANDARD: 'M', PRO: 'L', ENTERPRISE: 'Enterprise',
 };
 
 export function Sidebar() {
@@ -115,231 +79,88 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    navGroups.forEach((group) => {
-      const hasActive = group.items.some((item) => pathname === getPathname(item.href));
-      initial[group.label] = hasActive || !!group.defaultOpen;
-    });
-    return initial;
-  });
-
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
   useEffect(() => {
-    setMobileOpen(false);
-    setOpenGroups((prev) => {
-      const next = { ...prev };
-      navGroups.forEach((group) => {
-        if (group.items.some((item) => pathname === getPathname(item.href))) {
-          next[group.label] = true;
-        }
-      });
-      return next;
-    });
-  }, [pathname]);
-
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [mobileOpen]);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
-  };
-
-  const planType = user?.hospital?.planType || 'FREE';
-  const planStyle = PLAN_STYLES[planType] || PLAN_STYLES.FREE;
-
+  const plan = planLabels[user?.hospital?.planType || 'FREE'] || 'Free';
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      {/* ─── Logo ─── */}
-      <div className="flex items-center justify-between h-16 px-5">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
-            <Sparkles className="h-5 w-5 text-white" />
-            <div className="absolute inset-0 rounded-xl bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-          <div>
-            <h1 className="font-bold text-white text-[15px] tracking-tight">Patient Signal</h1>
-            <p className="text-[10px] text-slate-400 font-medium">AI Search Visibility</p>
-          </div>
+    <div className="flex h-full flex-col">
+      <div className="flex h-[76px] items-center justify-between border-b border-[#e9edf1] px-5">
+        <Link href="/dashboard" className="flex items-center gap-3" aria-label="Patient Signal 홈">
+          <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#1a2b43] text-[20px] font-black tracking-[-0.1em] text-white">S<span className="text-[#71e0ca]">.</span></span>
+          <span className="leading-tight">
+            <strong className="block text-[15px] font-bold tracking-[-0.035em] text-[#17212e]">Patient Signal</strong>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8b9aae]">AI visibility studio</span>
+          </span>
         </Link>
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="lg:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
-        >
-          <X className="h-5 w-5 text-slate-400" />
+        <button type="button" onClick={() => setMobileOpen(false)} aria-label="메뉴 닫기" className="lg:hidden rounded-lg p-2 text-[#66778b] hover:bg-[#f1f4f8]">
+          <X className="h-5 w-5" />
         </button>
       </div>
 
-      {/* ─── Hospital Card ─── */}
-      {user?.hospital && (
-        <div className="px-4 pb-3 pt-1">
-          <div className="p-3 rounded-xl bg-white/[0.06] border border-white/[0.06] hover:bg-white/[0.08] transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center flex-shrink-0 border border-indigo-500/10">
-                <Building2 className="h-4 w-4 text-indigo-300" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-sm text-white truncate">
-                  {user.hospital.name}
-                </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {(planType === 'ENTERPRISE' || planType === 'PRO') && (
-                    <Crown className="h-3 w-3 text-amber-400" />
-                  )}
-                  <span className={`text-[11px] font-semibold ${planStyle.color}`}>
-                    {planStyle.label}
-                  </span>
-                </div>
-              </div>
+      <div className="px-4 pb-2 pt-4">
+        <Link href="/dashboard/settings" className="group flex items-center gap-3 rounded-[14px] border border-[#e5eaf0] bg-[#f8fafc] px-3 py-3 transition-colors hover:border-[#c9d7ff] hover:bg-[#f3f7ff]">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-[#285cf4] shadow-[0_1px_3px_rgba(18,32,56,0.08)]"><Building2 className="h-[18px] w-[18px]" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold text-[#17212e]">{user?.hospital?.name || '병원 프로필'}</span>
+            <span className="mt-0.5 block text-[11px] text-[#7b899b]">{plan} 플랜 · 프로필 관리</span>
+          </span>
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#9aa7b6] group-hover:text-[#285cf4]" />
+        </Link>
+      </div>
+
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-5" aria-label="시그널 메뉴">
+        {navGroups.map((group) => (
+          <section key={group.label} className="mt-5">
+            <h2 className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[#97a3b1]">{group.label}</h2>
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link key={item.href} href={item.href} aria-current={active ? 'page' : undefined} className={cn(
+                    'group flex min-h-10 items-center gap-3 rounded-[10px] px-3 text-[13px] font-medium transition-colors',
+                    active ? 'bg-[#ecf2ff] font-semibold text-[#2454de]' : 'text-[#5d6d80] hover:bg-[#f4f6f9] hover:text-[#17212e]'
+                  )}>
+                    <item.icon className={cn('h-[17px] w-[17px] shrink-0', active ? 'text-[#285cf4]' : 'text-[#8897aa] group-hover:text-[#52667f]')} strokeWidth={active ? 2.2 : 1.8} />
+                    <span className="flex-1">{item.label}</span>
+                    {active && <span className="h-1.5 w-1.5 rounded-full bg-[#285cf4]" />}
+                  </Link>
+                );
+              })}
             </div>
-          </div>
-          {(!planType || planType === 'FREE' || planType === 'STARTER') && (
-            <Link
-              href="/dashboard/billing"
-              className="mt-2 flex items-center justify-center gap-1.5 w-full py-2 text-xs font-semibold text-indigo-200 bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition-all border border-indigo-500/10 hover:border-indigo-500/20"
-            >
-              <Sparkles className="h-3 w-3" />
-              업그레이드
-            </Link>
-          )}
-        </div>
-      )}
-
-      {/* ─── Navigation ─── */}
-      <nav className="flex-1 px-3 py-2 overflow-y-auto space-y-0.5">
-        {navGroups.map((group) => {
-          const isGroupOpen = openGroups[group.label] ?? true;
-
-          return (
-            <div key={group.label} className="mb-1">
-              <button
-                onClick={() => toggleGroup(group.label)}
-                className="flex items-center justify-between w-full px-3 py-2 group/header"
-              >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  {group.label}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    'h-3 w-3 text-slate-600 transition-transform duration-200',
-                    isGroupOpen ? 'rotate-0' : '-rotate-90'
-                  )}
-                />
-              </button>
-
-              <div
-                className={cn(
-                  'overflow-hidden transition-all duration-200',
-                  isGroupOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                )}
-              >
-                {group.items.map((item) => {
-                  const isActive = pathname === getPathname(item.href);
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group/item relative',
-                        isActive
-                          ? 'bg-gradient-to-r from-indigo-500/25 to-violet-500/10 text-white shadow-[0_0_16px_rgba(99,102,241,0.15)] border border-indigo-400/20'
-                          : 'text-slate-400 hover:bg-white/[0.06] hover:text-slate-200 border border-transparent'
-                      )}
-                    >
-                      {/* Active indicator */}
-                      {isActive && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-gradient-to-b from-indigo-400 to-violet-400 rounded-r-full shadow-[0_0_8px_rgba(129,140,248,0.8)]" />
-                      )}
-                      <item.icon
-                        className={cn(
-                          'h-[17px] w-[17px] flex-shrink-0 transition-colors',
-                          isActive ? 'text-indigo-400' : 'text-slate-500 group-hover/item:text-slate-400'
-                        )}
-                      />
-                      <span className="flex-1">{item.name}</span>
-                      {item.badge && (
-                        <span className="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white leading-none animate-pulse-soft shadow-[0_0_8px_rgba(99,102,241,0.5)]">
-                          {item.badge}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+          </section>
+        ))}
       </nav>
 
-      {/* ─── User Info ─── */}
-      <div className="px-4 py-3 border-t border-white/[0.06]">
-        <div className="flex items-center gap-3 mb-3 px-1">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center flex-shrink-0 ring-2 ring-white/[0.08]">
-            <span className="text-sm font-semibold text-white">
-              {user?.name?.charAt(0) || 'U'}
-            </span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-sm text-white truncate">{user?.name}</p>
-            <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
-          </div>
+      <div className="border-t border-[#e9edf1] p-4">
+        <Link href="/dashboard/billing" className="mb-3 flex items-center justify-between rounded-[12px] bg-[#1a2b43] px-3.5 py-3 text-white hover:bg-[#223b5d]">
+          <span className="text-xs font-semibold">더 많은 질문 측정하기</span>
+          <ArrowUpRight className="h-4 w-4 text-[#96e9d6]" />
+        </Link>
+        <div className="flex items-center gap-2.5 px-1">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e9edf2] text-xs font-bold text-[#466079]">{user?.name?.charAt(0) || 'U'}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-semibold text-[#344458]">{user?.name}</span>
+            <span className="block truncate text-[10px] text-[#94a0ae]">{user?.email}</span>
+          </span>
+          <button type="button" onClick={logout} aria-label="로그아웃" title="로그아웃" className="rounded-lg p-2 text-[#8c99a8] hover:bg-[#f1f4f8] hover:text-[#344458]"><LogOut className="h-4 w-4" /></button>
         </div>
-        <button
-          onClick={logout}
-          className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-500 hover:bg-white/[0.06] hover:text-slate-300 rounded-lg transition-all"
-        >
-          <LogOut className="h-4 w-4" />
-          로그아웃
-        </button>
       </div>
     </div>
   );
 
   return (
     <>
-      {/* ─── Mobile Top Bar ─── */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-strong h-14 flex items-center px-4 border-b border-slate-200/50">
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-        >
-          <Menu className="h-5 w-5 text-slate-700" />
-        </button>
-        <div className="flex items-center gap-2.5 ml-3">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-indigo-600 flex items-center justify-center shadow-sm">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-bold text-slate-900 text-sm tracking-tight">Patient Signal</span>
-        </div>
+      <div className="fixed left-0 right-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-[#e9edf1] bg-white px-4 lg:hidden">
+        <button type="button" onClick={() => setMobileOpen(true)} aria-label="메뉴 열기" className="rounded-lg p-2 text-[#344458] hover:bg-[#f1f4f8]"><Menu className="h-5 w-5" /></button>
+        <span className="text-sm font-bold tracking-tight text-[#17212e]">Patient Signal</span>
       </div>
-
-      {/* ─── Mobile Overlay ─── */}
-      {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* ─── Mobile Sidebar ─── */}
-      <div
-        className={cn(
-          'lg:hidden fixed top-0 left-0 z-50 w-72 h-full glass-sidebar shadow-2xl transform transition-transform duration-300 ease-in-out',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        {sidebarContent}
-      </div>
-
-      {/* ─── Desktop Sidebar ─── */}
-      <div className="hidden lg:flex lg:flex-col lg:w-[272px] glass-sidebar h-screen sticky top-0">
-        {sidebarContent}
-      </div>
+      {mobileOpen && <button type="button" aria-label="메뉴 닫기" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-50 bg-[#101c2c]/40 lg:hidden" />}
+      <aside className={cn('fixed bottom-0 left-0 top-0 z-50 w-[260px] transform border-r border-[#e9edf1] bg-white transition-transform lg:hidden', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>{sidebarContent}</aside>
+      <aside className="sticky top-0 hidden h-screen w-[260px] shrink-0 border-r border-[#e9edf1] bg-white lg:block">{sidebarContent}</aside>
     </>
   );
 }

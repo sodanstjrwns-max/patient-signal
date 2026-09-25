@@ -227,7 +227,7 @@ export default function FunnelPage() {
         onRefresh={() => refetch()}
         refreshing={isRefetching}
       />
-      <main className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto bg-aurora rounded-3xl">
+      <main className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* ─── Hero: 퍼널 건강 점수 + 신환 임팩트 ─── */}
         <section id="funnel-hero" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -236,7 +236,7 @@ export default function FunnelPage() {
             <CardContent className="p-6 text-center">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2"><TermTip term="funnelHealth">퍼널 건강 점수</TermTip></p>
               <div className="flex items-end justify-center gap-2">
-                <span className={`text-6xl font-black tabular-nums ${healthScore >= 60 ? 'text-emerald-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`} style={{ textShadow: '0 4px 24px rgba(99,102,241,0.15)' }}>
+                <span className={`text-6xl font-black tabular-nums ${healthScore >= 60 ? 'text-emerald-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
                   {healthScore}
                 </span>
                 <span className="text-2xl font-bold text-slate-400 mb-2">/ 100</span>
@@ -326,7 +326,7 @@ export default function FunnelPage() {
               return (
                 <div key={stage.stage} className="flex justify-center">
                   <Card
-                    className={`cursor-pointer transition-all hover:shadow-md ${style.border} border-2`}
+                    className={`cursor-pointer transition-all hover:border-blue-200 ${style.border} border-2`}
                     style={{ width: `${widthPct}%`, minWidth: '280px' }}
                     onClick={() => setExpandedStage(isExpanded ? null : stage.stage)}
                   >
@@ -549,7 +549,7 @@ export default function FunnelPage() {
               {playbook.map((action, i) => {
                 const ps = PRIORITY_STYLE[action.priority];
                 return (
-                  <Card key={i} className="hover:shadow-md transition-shadow">
+                  <Card key={i} className="hover:border-blue-200 transition-shadow">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-3">
                         <span className={`px-2 py-1 rounded-md text-[11px] font-bold flex-shrink-0 ${ps.bg}`}>{ps.label}</span>

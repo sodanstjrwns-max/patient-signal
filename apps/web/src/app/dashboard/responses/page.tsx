@@ -164,7 +164,7 @@ export default function ResponsesPage() {
     <div className="min-h-screen">
       <Header title="AI 응답" description="AI 플랫폼들의 응답 내역을 확인합니다" />
 
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto">
 
         {/* 상단 통계 요약 */}
         {totalCount > 0 && (
@@ -269,7 +269,7 @@ export default function ResponsesPage() {
           <Card>
             <CardContent className="p-8 sm:p-16 text-center">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 rounded-lg bg-red-50 flex items-center justify-center mx-auto mb-6">
                   <XCircle className="h-8 w-8 text-red-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
@@ -290,7 +290,7 @@ export default function ResponsesPage() {
           <Card>
             <CardContent className="p-8 sm:p-16 text-center">
               <div className="max-w-md mx-auto">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center mx-auto mb-6">
+                <div className="w-16 h-16 rounded-lg bg-blue-100 flex items-center justify-center mx-auto mb-6">
                   <Sparkles className="h-8 w-8 text-brand-600" />
                 </div>
                 <h3 className="text-xl font-semibold text-slate-900 mb-3">
@@ -389,7 +389,7 @@ export default function ResponsesPage() {
                     </div>
 
                     {/* 질문 */}
-                    <div className="bg-slate-50 rounded-2xl p-3 mb-3">
+                    <div className="bg-slate-50 rounded-lg p-3 mb-3">
                       <p className="text-sm font-medium text-slate-700">
                         Q: {response.prompt?.promptText || '질문 정보 없음'}
                       </p>
@@ -452,10 +452,10 @@ export default function ResponsesPage() {
 
         {/* 실시간 질문 안내 배너 */}
         <Link href="/dashboard/live-query">
-          <Card className="mt-6 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50 hover:shadow-card-hover transition-all cursor-pointer group">
+          <Card className="mt-6 border-brand-200 bg-brand-50 hover:border-blue-200 transition-all cursor-pointer group">
             <CardContent className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-brand-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:scale-105 transition-transform">
+                <div className="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center shadow-none group-hover:scale-105 transition-transform">
                   <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
@@ -463,7 +463,7 @@ export default function ResponsesPage() {
                   <p className="text-xs text-slate-500">원하는 질문을 실시간으로 6개 AI에 동시에 물어보세요</p>
                 </div>
               </div>
-              <Button size="sm" className="bg-gradient-to-r from-purple-600 to-brand-600 hover:from-purple-700 hover:to-brand-700 text-white">
+              <Button size="sm" className="bg-brand-600 hover:bg-brand-700 text-white">
                 질문하기
               </Button>
             </CardContent>

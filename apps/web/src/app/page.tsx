@@ -1,513 +1,180 @@
 'use client';
 
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import {
+  Activity, ArrowRight, ArrowUpRight, Building2, Check, CircleHelp,
+  Layers3, Link2, MessageSquareText, ScanSearch, Sparkles, Target,
+} from 'lucide-react';
 import SiteFooter from '@/components/layout/SiteFooter';
 import { useAuthStore } from '@/stores/auth';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Search, 
-  BarChart3, 
-  Shield, 
-  TrendingUp,
-  MessageSquare,
-  Eye,
-  Zap,
-  CheckCircle,
-  Bot,
-  Activity,
-  Target,
-  Globe,
-  Users,
-  FileText,
-  Layers,
-  ChevronRight,
-} from 'lucide-react';
 
-// Patient Hub SSO — API가 허브 authorize로 302 리다이렉트 (로그인 페이지와 동일 시작 라우트)
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
-const HUB_SSO_START_URL = `${API_BASE_URL}/auth/hub`;
+const HUB_SSO_START_URL = API_BASE_URL + '/auth/hub';
 
-// Static classes for Tailwind detection
-const ABHS_AXES = [
-  { axis: 'Voice Share', desc: 'AI 응답에서 우리 병원이 언급되는 비율', icon: Activity, iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
-  { axis: 'Sentiment', desc: '언급 시 긍정·중립·부정 톤 분석', icon: Shield, iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  { axis: 'Rec Depth', desc: '단독추천(R3)부터 단순언급(R1)까지', icon: Layers, iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-  { axis: 'Platform', desc: '6개 플랫폼별 가중치 적용 점수', icon: Globe, iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600' },
-  { axis: 'Intent', desc: '예약·비교·공포 등 질문 의도별 분석', icon: Target, iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
+const workflow = [
+  { number: '01', icon: Building2, title: '병원 소개를 연결하세요', description: 'Patient Hub의 병원 정보를 가져와 확인하고, 시그널 안에서 직접 수정할 수 있습니다.' },
+  { number: '02', icon: CircleHelp, title: '중요한 질문을 정하세요', description: '지역과 진료, 병원 소개를 바탕으로 추천된 질문을 검토하고 원하는 질문을 추가합니다.' },
+  { number: '03', icon: MessageSquareText, title: '답변을 확인하세요', description: '질문마다 AI가 남긴 답변을 보고 언급 여부와 경쟁 병원을 함께 살핍니다.' },
 ];
 
-const FEATURES = [
-  { icon: Eye, title: 'SoV 기반 가시성 점수', desc: '글로벌·국내 6개 AI 플랫폼에서 우리 병원이 차지하는 Voice Share를 매일 추적합니다. 점수 변동과 트렌드를 한눈에 확인하세요.', iconBg: 'bg-brand-100', iconColor: 'text-brand-600' },
-  { icon: TrendingUp, title: '경쟁사 AEO 비교', desc: '같은 지역 경쟁 병원의 AI 노출 현황을 자동으로 비교합니다. 누가 AI의 1순위 추천을 받고 있는지 파악하세요.', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  { icon: Shield, title: '감성 & 추천 깊이 분석', desc: 'AI가 우리 병원을 긍정적으로 추천하는지(R3), 단순 언급(R1)인지, 부정적(R0)인지 자동으로 분류합니다.', iconBg: 'bg-violet-100', iconColor: 'text-violet-600' },
-  { icon: FileText, title: '인용 출처 추적', desc: 'AI가 우리 병원을 추천할 때 어떤 출처(블로그, 리뷰 등)를 참고하는지 추적합니다. 소스 관리 전략에 활용하세요.', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
-  { icon: Zap, title: '개선 기회 자동 발견', desc: '경쟁사는 AI에서 추천되지만 우리 병원은 빠져있는 질문 패턴을 자동으로 감지하고 개선 방향을 제시합니다.', iconBg: 'bg-amber-100', iconColor: 'text-amber-600' },
-  { icon: Users, title: '13개 진료과 전문 분석', desc: '치과, 피부과, 성형외과, 정형외과, 한의원, 안과, 내과 등 13개 진료과별 맞춤 질문과 분석을 제공합니다.', iconBg: 'bg-cyan-100', iconColor: 'text-cyan-600' },
+const capabilities = [
+  { icon: MessageSquareText, title: '질문별 답변 확인', description: '질문과 답변을 연결해 AI가 병원을 어떻게 설명했는지 확인합니다.' },
+  { icon: Target, title: '병원에 맞는 질문', description: '진료와 지역을 반영한 추천 질문으로 추적을 시작하고 필요할 때 조정합니다.' },
+  { icon: Layers3, title: '경쟁 병원 비교', description: '관심 있는 경쟁 병원을 추가해 같은 질문에서 함께 등장하는지 비교합니다.' },
+  { icon: Activity, title: '변화의 흐름', description: '반복 측정 결과를 살펴보고 이전 답변과 달라진 부분을 찾습니다.' },
 ];
 
 export default function HomePage() {
-  // 로그인 상태면 "무료로 시작하기" CTA를 "대시보드로 이동"으로 분기
-  // (_hasHydrated 전에는 비로그인과 동일하게 렌더 → SSR/hydration 불일치 방지)
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const loggedIn = _hasHydrated && isAuthenticated;
   const startHref = loggedIn ? '/dashboard' : '/register';
   const startLabel = loggedIn ? '대시보드로 이동' : '무료로 시작하기';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
-      <header className="glass-strong border-b border-slate-200/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-violet-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/20">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-black text-xl text-slate-900 tracking-tight">Patient Signal</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Link href="/login">
-                <Button variant="ghost" className="font-semibold">로그인</Button>
-              </Link>
-              <Link href={startHref}>
-                <Button className="shadow-md shadow-brand-500/20">{startLabel}</Button>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-[#f6f7f9] text-[#17212e]">
+      <header className="sticky top-0 z-50 border-b border-[#e7ecf2] bg-white/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-8">
+          <Link href="/" className="flex shrink-0 items-center gap-2 sm:gap-3" aria-label="Patient Signal 홈">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[#285cf4] text-white sm:h-9 sm:w-9"><ScanSearch className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.2} /></span>
+            <span className="whitespace-nowrap text-[14px] font-bold tracking-[-0.04em] sm:text-[17px]">Patient Signal</span>
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-[#667487] md:flex" aria-label="주요 메뉴">
+            <a href="#how-it-works" className="hover:text-[#17212e]">작동 방식</a>
+            <a href="#capabilities" className="hover:text-[#17212e]">주요 기능</a>
+            <Link href="/pricing" className="hover:text-[#17212e]">요금제</Link>
+          </nav>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
+            <Link href={loggedIn ? '/dashboard' : '/login'} className="whitespace-nowrap rounded-[10px] px-2 py-2.5 text-xs font-semibold text-[#526175] hover:bg-[#f2f5f9] sm:px-3 sm:text-sm">
+              {loggedIn ? '내 대시보드' : '로그인'}
+            </Link>
+            <Link href={startHref} className="inline-flex h-10 shrink-0 items-center gap-1 whitespace-nowrap rounded-[10px] bg-[#285cf4] px-3 text-xs font-semibold text-white shadow-[0_3px_9px_rgba(40,92,244,0.16)] hover:bg-[#204bce] sm:gap-2 sm:px-4 sm:text-sm">
+              <span className="sm:hidden">{loggedIn ? '대시보드' : '시작하기'}</span><span className="hidden sm:inline">{startLabel}</span><ArrowUpRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section — Aurora + AI Chat Live Mockup */}
-      <section id="hero-section" className="relative pt-20 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden bg-aurora">
-        <div className="absolute inset-0 grid-pattern opacity-60" />
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left: Copy */}
-            <div className="text-center lg:text-left">
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2.5 glass rounded-full px-5 py-2 mb-8 shadow-sm">
-                <span className="glow-dot w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                <span className="text-sm font-bold text-slate-700">지금 이 순간에도 환자들이 AI에게 묻고 있습니다</span>
+      <main>
+        <section id="hero-section" className="relative overflow-hidden border-b border-[#e7ecf2] bg-white">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.35]" style={{ backgroundImage: 'linear-gradient(#edf1f6 1px, transparent 1px), linear-gradient(90deg, #edf1f6 1px, transparent 1px)', backgroundSize: '54px 54px', maskImage: 'linear-gradient(to right, transparent, black)' }} />
+          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:gap-16 lg:py-28">
+            <div>
+              <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-[#dce7ff] bg-[#eff4ff] px-3.5 py-1.5 text-xs font-bold text-[#285cf4]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#285cf4]" />AI 검색에서 보이는 우리 병원
               </div>
-
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 mb-6 leading-[1.08] tracking-tight">
-                AI가 우리 병원을<br />
-                <span className="text-gradient-aurora">
-                  추천하고 있나요?
-                </span>
+              <h1 className="max-w-[720px] text-[clamp(2.8rem,5vw,5rem)] font-bold leading-[1.1] tracking-[-0.07em]">
+                AI는 우리 병원을<br /><span className="text-[#285cf4]">어떻게 말할까요?</span>
               </h1>
-
-              <p className="text-lg text-slate-600 mb-4 leading-relaxed">
-                <strong className="text-slate-900">&ldquo;우리 동네 병원 추천해줘&rdquo;</strong> — 6개 AI의 답변에<br className="hidden sm:block" />
-                우리 병원이 나오는지, 매일 자동으로 추적합니다.
+              <p className="mt-7 max-w-xl text-base leading-8 text-[#5e6d80] sm:text-lg">
+                환자가 AI에 묻는 핵심 질문을 추적하고, 질문마다 나온 답변을 바로 확인하세요. 병원 소개부터 경쟁 병원까지 한곳에서 관리할 수 있습니다.
               </p>
-              <p className="text-base text-slate-500 mb-10 font-medium">
-                <strong className="text-slate-700">13개 전체 진료과</strong> 지원 · 환자 여정 퍼널 진단 ·
-                <strong className="text-slate-700"> 병원 전문</strong> AEO 플랫폼
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4">
-                <Link href={startHref}>
-                  <Button size="lg" className="px-10 py-6 text-base bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-xl shadow-brand-500/30 font-bold hover:scale-[1.03] transition-transform">
-                    {startLabel}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <Link href={startHref} className="inline-flex h-12 items-center gap-2 rounded-[11px] bg-[#285cf4] px-6 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(40,92,244,0.18)] hover:bg-[#204bce]">
+                  {startLabel}<ArrowRight className="h-4 w-4" />
                 </Link>
-                <Link href="/pricing">
-                  <Button variant="outline" size="lg" className="px-8 py-6 text-base glass font-bold">
-                    요금제 보기
-                  </Button>
+                <Link href="/pricing" className="inline-flex h-12 items-center gap-2 rounded-[11px] border border-[#dce2e9] bg-white px-6 text-sm font-semibold text-[#263548] hover:bg-[#f6f8fb]">
+                  요금제 살펴보기<ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
-
-              {/* Patient Hub SSO 로그인 — 시작화면 노출 */}
-              <div className="mt-4 flex lg:justify-start justify-center">
-                <a href={HUB_SSO_START_URL} className="inline-flex items-center justify-center gap-2.5 px-6 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-all bg-white/80 backdrop-blur-sm shadow-sm">
-                  <span className="w-5 h-5 rounded-md bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center text-white text-[10px] font-bold">
-                    PH
-                  </span>
-                  <span className="text-slate-700 font-semibold">Patient Hub 계정으로 로그인</span>
+              {!loggedIn && (
+                <a href={HUB_SSO_START_URL} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#526175] hover:text-[#285cf4]">
+                  <Link2 className="h-4 w-4" /> Patient Hub 계정으로 연결하기 <ArrowRight className="h-4 w-4" />
                 </a>
-              </div>
-            </div>
-
-            {/* Right: AI Chat Live Mockup */}
-            <div id="hero-chat-mockup" className="relative">
-              <div className="absolute -inset-4 bg-gradient-to-br from-brand-400/10 via-violet-400/10 to-transparent rounded-[2rem] blur-2xl" />
-              <div className="gradient-border relative shadow-float">
-                <div className="p-5 sm:p-6">
-                  {/* Window chrome */}
-                  <div className="flex items-center gap-2 mb-5">
-                    <span className="w-3 h-3 rounded-full bg-red-400" />
-                    <span className="w-3 h-3 rounded-full bg-amber-400" />
-                    <span className="w-3 h-3 rounded-full bg-emerald-400" />
-                    <span className="ml-3 text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                      <Bot className="w-3.5 h-3.5" /> AI 검색 시뮬레이션
-                    </span>
-                  </div>
-
-                  {/* User question */}
-                  <div className="flex justify-end mb-4 chat-bubble-in" style={{ animationDelay: '0.2s' }}>
-                    <div className="bg-gradient-to-r from-brand-600 to-violet-600 text-white text-sm font-medium px-4 py-2.5 rounded-2xl rounded-br-md max-w-[85%] shadow-lg shadow-brand-500/20">
-                      강남에서 임플란트 잘하는 병원 추천해줘
-                    </div>
-                  </div>
-
-                  {/* AI answer */}
-                  <div className="flex gap-2.5 mb-4 chat-bubble-in" style={{ animationDelay: '0.7s' }}>
-                    <div className="w-7 h-7 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0 mt-1">
-                      <Sparkles className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <div className="bg-white/90 border border-slate-100 text-sm text-slate-700 px-4 py-3 rounded-2xl rounded-tl-md max-w-[88%] shadow-sm leading-relaxed">
-                      강남 지역에서 평가가 좋은 병원을 추천드릴게요:<br />
-                      <span className="font-bold">1. <span className="highlight-sweep text-brand-700">OO병원</span></span> — 임플란트 전문의, 환자 만족도 높음 ⭐<br />
-                      <span className="text-slate-400">2. △△병원 — 교정 중심</span><br />
-                      <span className="text-slate-400">3. □□병원 — 일반 진료</span>
-                    </div>
-                  </div>
-
-                  {/* Signal detection card */}
-                  <div className="chat-bubble-in ambient-sheen rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/60 p-4" style={{ animationDelay: '1.4s' }}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center shadow-md shadow-emerald-500/30">
-                          <CheckCircle className="w-4.5 h-4.5 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-emerald-800">단독 추천 감지 (R3)</p>
-                          <p className="text-[11px] text-emerald-600 font-medium">1순위 · 긍정 감성 +2 · 예약 의도</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-emerald-500 uppercase">SoV</p>
-                        <p className="text-xl font-black text-emerald-700 tabular-nums">+12%</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Live platforms */}
-                  <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
-                    <span className="text-[11px] font-bold text-slate-400">매일 자동 추적 중</span>
-                    <div className="flex items-center gap-1.5">
-                      {['ChatGPT', 'Perplexity', 'Gemini', '+3'].map((p) => (
-                        <span key={p} className="text-[10px] font-bold px-2 py-1 rounded-md bg-slate-100 text-slate-500">{p}</span>
-                      ))}
-                      <span className="glow-dot w-1.5 h-1.5 rounded-full bg-emerald-500 ml-1" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 지원 진료과 마퀴 */}
-          <div className="mt-14 relative overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, black 12%, black 88%, transparent)', WebkitMaskImage: 'linear-gradient(90deg, transparent, black 12%, black 88%, transparent)' }}>
-            <div className="marquee-track gap-3">
-              {[...Array(2)].flatMap((_, dup) =>
-                ['🦷 치과', '💆 피부과', '✨ 성형외과', '🦴 정형외과', '🌿 한의원', '👁️ 안과', '🩺 내과', '👂 이비인후과', '🧠 정신건강의학과', '🤰 산부인과', '👶 소아청소년과', '💧 비뇨의학과'].map((tag, i) => (
-                  <span
-                    key={`${dup}-${i}`}
-                    className="text-sm px-4 py-2 mr-3 rounded-full font-bold glass text-slate-600 whitespace-nowrap flex-shrink-0"
-                  >
-                    {tag}
-                  </span>
-                ))
               )}
             </div>
-          </div>
-        </div>
-      </section>
 
-      {/* 문제 제기 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative rounded-3xl p-8 sm:p-12 text-white overflow-hidden noise">
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-brand-950 to-slate-900" />
-            <div className="absolute top-0 right-0 w-72 h-72 bg-brand-500/15 rounded-full blur-[100px] -translate-y-1/3 translate-x-1/4" />
-            <div className="absolute bottom-0 left-0 w-56 h-56 bg-violet-500/10 rounded-full blur-[80px] translate-y-1/3 -translate-x-1/4" />
-            
-            <div className="relative z-10">
-              <h2 className="text-2xl sm:text-3xl font-black mb-8 text-center tracking-tight">
-                환자의 검색 행동이 바뀌고 있습니다
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                {[
-                  { num: '73%', desc: '의 MZ세대 환자가\nAI에게 병원 추천을 요청' },
-                  { num: '4개', desc: '주요 AI 플랫폼에서\n병원 추천이 실시간 발생' },
-                  { num: '0%', desc: '의 병원이 자기 병원의\nAI 노출 현황을 파악 중' },
-                ].map((item, i) => (
-                  <div key={i} className="rounded-2xl bg-white/[0.06] border border-white/[0.06] p-6 text-center backdrop-blur-sm hover:bg-white/[0.08] transition-colors">
-                    <div className="text-4xl sm:text-5xl font-black text-brand-400 mb-3 tabular-nums">{item.num}</div>
-                    <p className="text-sm text-slate-400 whitespace-pre-line leading-relaxed">{item.desc}</p>
-                  </div>
-                ))}
+            <div className="rounded-[22px] border border-[#dfe6ef] bg-white p-3 shadow-[0_24px_70px_rgba(24,43,73,0.11)] sm:p-5" aria-label="제품 흐름 예시">
+              <div className="flex items-center justify-between border-b border-[#e7ecf2] px-2 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#eff4ff] text-[#285cf4]"><ScanSearch className="h-4 w-4" /></span>
+                  <span className="text-sm font-bold">질문과 답변</span>
+                </div>
+                <span className="rounded-full bg-[#f2f5f9] px-2.5 py-1 text-[11px] font-semibold text-[#758297]">화면 예시</span>
               </div>
-              <p className="text-center text-slate-500 mt-8 text-sm font-medium">
-                네이버, 구글 SEO는 이미 하고 계시죠? <strong className="text-white">AI 검색 최적화(AEO)</strong>는 시작하셨나요?
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* AI 환자 퍼널 진단 티저 Section (NEW) */}
-      <section id="funnel-teaser-section" className="py-20 px-4 sm:px-6 lg:px-8 bg-aurora">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 glass rounded-full px-5 py-2 mb-5 shadow-sm">
-              <Zap className="h-4 w-4 text-violet-600" />
-              <span className="text-sm font-bold text-violet-700">NEW · AI 환자 퍼널 진단</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-              점수만 보여주는 툴은 많습니다.<br />
-              <span className="text-gradient-aurora">어디서 새는지</span> 알려주는 건 우리뿐입니다.
-            </h2>
-            <p className="text-slate-500 max-w-2xl mx-auto font-medium">
-              환자 여정 4단계(인지→비교→신뢰→결정)별로 AI 가시성을 진단하고,<br className="hidden sm:block" />
-              놓치고 있는 <strong className="text-slate-700">신환 수와 매출</strong>까지 환산해 드립니다.
-            </p>
-          </div>
-
-          {/* 퍼널 미니 시각화 */}
-          <div className="max-w-2xl mx-auto space-y-2.5 mb-10">
-            {[
-              { label: '1. 인지', voice: '"임플란트 가격이 얼마야?"', sov: 72, status: 'ok' },
-              { label: '2. 탐색·비교', voice: '"강남에서 어디가 잘하지?"', sov: 45, status: 'ok' },
-              { label: '3. 신뢰 검증', voice: '"이 병원 후기 어때?"', sov: 18, status: 'leak' },
-              { label: '4. 결정·예약', voice: '"지금 예약 가능한 곳은?"', sov: 31, status: 'warn' },
-            ].map((s, i) => (
-              <div key={i} className="flex justify-center">
-                <div
-                  className={`glass-bento p-4 w-full transition-all ${s.status === 'leak' ? 'border-2 border-red-300' : ''}`}
-                  style={{ width: `${100 - i * 10}%`, minWidth: '260px' }}
-                >
-                  <div className="flex items-center justify-between gap-3 mb-2">
-                    <div className="min-w-0">
-                      <span className="font-black text-slate-800 text-sm">{s.label}</span>
-                      <span className="text-xs text-slate-400 ml-2 hidden sm:inline">{s.voice}</span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {s.status === 'leak' && (
-                        <span className="text-[10px] font-black text-red-600 bg-red-50 px-2 py-0.5 rounded-full border border-red-200">🚨 누수 감지</span>
-                      )}
-                      <span className={`text-lg font-black tabular-nums ${s.status === 'leak' ? 'text-red-600' : s.status === 'warn' ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {s.sov}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full bar-shine ${s.status === 'leak' ? 'bg-red-500' : s.status === 'warn' ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                      style={{ width: `${s.sov}%` }}
-                    />
+              <div className="space-y-3 pt-4">
+                <div className="rounded-[14px] border border-[#dce7ff] bg-[#f7f9ff] p-4 sm:p-5">
+                  <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-[#285cf4]"><CircleHelp className="h-3.5 w-3.5" /> 추적 질문</div>
+                  <p className="mt-3 text-base font-semibold tracking-[-0.025em]">“우리 지역에서 임플란트 상담을 받으려면 무엇을 비교해야 할까?”</p>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {['지역', '주력 진료', '비교 의도'].map((tag) => <span key={tag} className="rounded-full border border-[#dce7ff] bg-white px-2.5 py-1 text-[11px] text-[#526175]">{tag}</span>)}
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 임팩트 환산 카드 */}
-          <div className="max-w-2xl mx-auto">
-            <div className="gradient-border">
-              <div className="p-6 sm:p-8 text-center">
-                <p className="text-sm font-bold text-slate-500 mb-2">신뢰 단계 누수로 인한 이번 달 추정 기회 손실</p>
-                <p className="text-3xl sm:text-4xl font-black text-slate-900 mb-1">
-                  신환 <span className="text-red-600">8~24명</span> · 매출 <span className="text-red-600">1,000~2,900만원</span>
-                </p>
-                <p className="text-xs text-slate-400 font-medium mb-5">진료과별 객단가 × 보수적 전환율 기반 추정</p>
-                <Link href="/register">
-                  <Button className="bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-lg shadow-brand-500/25 font-bold">
-                    우리 병원 퍼널 진단받기
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Patient Signal 프레임워크 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <div className="inline-flex items-center gap-2 glass rounded-full px-5 py-2 mb-5 shadow-sm">
-              <Target className="h-4 w-4 text-brand-600" />
-              <span className="text-sm font-bold text-brand-700">Patient Signal 독자 프레임워크</span>
-            </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-              ABHS 5축 분석으로 정밀하게 측정합니다
-            </h2>
-            <p className="text-slate-500 max-w-2xl mx-auto font-medium">
-              단순 키워드 추적이 아닙니다. 5가지 측정축으로 AI가 우리 병원을 <strong className="text-slate-700">얼마나 적극적으로</strong> 추천하는지 분석합니다.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {ABHS_AXES.map((item, i) => (
-              <div key={i} className="glass rounded-2xl p-5 text-center hover-lift group">
-                <div className={`w-12 h-12 rounded-xl ${item.iconBg} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
-                  <item.icon className={`h-6 w-6 ${item.iconColor}`} />
-                </div>
-                <h3 className="font-black text-slate-900 text-sm mb-1.5">{item.axis}</h3>
-                <p className="text-xs text-slate-500 leading-relaxed font-medium">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 작동 원리 Section - 3단계 */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-mesh">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-              3분이면 시작할 수 있습니다
-            </h2>
-            <p className="text-slate-500 font-medium">복잡한 설정 없이, 3단계면 충분합니다</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: MessageSquare, step: 'STEP 1', title: '병원 정보 입력', desc: '병원명, 진료과, 위치, 주력 진료만\n입력하면 AI 모니터링 질문이\n자동으로 생성됩니다', iconBg: 'bg-brand-100', iconColor: 'text-brand-600', stepColor: 'text-brand-600' },
-              { icon: Search, step: 'STEP 2', title: 'AI 자동 분석', desc: '매일, ChatGPT·Perplexity·Claude·Gemini·Grok·CLOVA X\n6개 플랫폼에 자동으로 질문하고\nABHS 5축 분석을 수행합니다', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', stepColor: 'text-emerald-600' },
-              { icon: BarChart3, step: 'STEP 3', title: '인사이트 확인', desc: 'SoV(Voice Share) 중심 대시보드에서\n가시성 점수, 경쟁사 비교,\n개선 기회를 확인하세요', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', stepColor: 'text-violet-600' },
-            ].map((item, i) => (
-              <div key={i} className="text-center glass rounded-2xl p-8 hover-lift">
-                <div className={`w-14 h-14 rounded-2xl ${item.iconBg} flex items-center justify-center mx-auto mb-5`}>
-                  <item.icon className={`h-7 w-7 ${item.iconColor}`} />
-                </div>
-                <div className={`text-sm font-black ${item.stepColor} mb-2 tracking-wider`}>{item.step}</div>
-                <h3 className="text-lg font-black text-slate-900 mb-3">{item.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed whitespace-pre-line font-medium">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 주요 기능 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-              원장님이 알아야 할 것들
-            </h2>
-            <p className="text-slate-500 font-medium">AI가 우리 병원을 어떻게 소개하는지, 정확히 파악하세요</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((feature, i) => (
-              <div key={i} className="glass rounded-2xl p-6 hover-glow group">
-                <div className={`w-12 h-12 rounded-xl ${feature.iconBg} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                  <feature.icon className={`h-6 w-6 ${feature.iconColor}`} />
-                </div>
-                <h3 className="font-black text-slate-900 mb-2">{feature.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed font-medium">{feature.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 대상 고객 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-600 to-brand-500" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-violet-500/10 rounded-full blur-[80px]" />
-        
-        <div className="max-w-4xl mx-auto text-center text-white relative z-10">
-          <h2 className="text-2xl sm:text-3xl font-black mb-10 tracking-tight">
-            이런 원장님께 추천합니다
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
-            {[
-              '"ChatGPT한테 우리 병원 물어보면 뭐라 하는지 궁금한" 원장님',
-              '"광고비 대비 신환이 줄어드는 느낌이 드는" 원장님',
-              '"AEO, AI SEO가 뭔지 알고 싶은" 원장님',
-              '"경쟁 병원은 AI에서 어떻게 나오나 궁금한" 원장님',
-              '"네이버·구글은 하고 있는데 AI는 뭘 해야 할지 모르겠는" 원장님',
-              '"AI 시대에 뒤처지고 싶지 않은" 원장님',
-            ].map((text, i) => (
-              <div key={i} className="flex items-start gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/10 hover:bg-white/15 transition-colors">
-                <CheckCircle className="h-5 w-5 text-brand-200 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-brand-100 leading-relaxed font-medium">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Patient Funnel 연계 Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-white/80 backdrop-blur-sm">
-        <div className="max-w-4xl mx-auto">
-          <div className="relative rounded-3xl p-8 sm:p-12 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-50 to-violet-50" />
-            <div className="absolute inset-0 border border-brand-100 rounded-3xl" />
-            
-            <div className="relative z-10">
-              <div className="text-center mb-10">
-                <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-5 py-2 mb-5 shadow-sm border border-brand-100">
-                  <Sparkles className="h-4 w-4 text-brand-600" />
-                  <span className="text-sm font-bold text-brand-700">페이션트 퍼널 × Patient Signal</span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-4 tracking-tight">
-                  환자 여정의 시작점이 바뀌고 있습니다
-                </h2>
-                <p className="text-slate-600 max-w-2xl mx-auto font-medium">
-                  환자가 병원을 선택하는 10단계 여정, 그 첫 번째 단계인 <strong className="text-slate-900">&ldquo;인지&rdquo;</strong>가 
-                  이제 AI 추천으로 시작됩니다. Patient Signal은 이 변화를 추적하는 유일한 도구입니다.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                {[
-                  { num: '6,000+', desc: '페이션트 퍼널 수강 원장님' },
-                  { num: '2.1배', desc: '평균 매출 성장률' },
-                  { num: '40%', desc: '광고비 절감' },
-                ].map((item, i) => (
-                  <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-card hover-lift">
-                    <div className="text-3xl font-black text-brand-600 mb-1.5 tabular-nums">{item.num}</div>
-                    <p className="text-xs text-slate-500 font-semibold">{item.desc}</p>
+                <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-[#526175]">연결된 AI 답변</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#edf7f1] px-2.5 py-1 text-[11px] font-semibold text-[#23865a]"><Check className="h-3 w-3" /> 원문 확인</span>
                   </div>
-                ))}
+                  <div className="mt-4 space-y-2.5">
+                    <div className="h-2.5 w-full rounded-full bg-[#e8edf4]" />
+                    <div className="h-2.5 w-[91%] rounded-full bg-[#e8edf4]" />
+                    <div className="h-2.5 w-[68%] rounded-full bg-[#e8edf4]" />
+                  </div>
+                  <div className="mt-5 flex items-center justify-between border-t border-[#eef1f5] pt-3 text-xs text-[#69788b]">
+                    <span>질문 · 플랫폼 · 측정일 연결</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-[#285cf4]">답변 보기 <ArrowRight className="h-3.5 w-3.5" /></span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-[13px] border border-[#e7ecf2] bg-[#fbfcfe] p-3.5"><p className="text-[11px] text-[#69788b]">우리 병원</p><p className="mt-1 text-sm font-bold">언급 여부 확인</p></div>
+                  <div className="rounded-[13px] border border-[#e7ecf2] bg-[#fbfcfe] p-3.5"><p className="text-[11px] text-[#69788b]">경쟁 병원</p><p className="mt-1 text-sm font-bold">같은 질문에서 비교</p></div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-mesh relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-brand-400/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
-        
-        <div className="max-w-3xl mx-auto text-center relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 via-violet-500 to-brand-600 flex items-center justify-center mx-auto mb-8 shadow-xl shadow-brand-500/25 animate-float">
-            <Sparkles className="h-8 w-8 text-white" />
+        <section id="how-it-works" className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+          <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#285cf4]">How it works</p><h2 className="mt-3 text-3xl font-bold tracking-[-0.055em] sm:text-4xl">병원 정보에서 실제 답변까지</h2></div>
+            <p className="max-w-sm text-sm leading-7 text-[#69788b]">무엇을 물었고, 어떤 답변이 돌아왔는지 한 흐름으로 확인합니다.</p>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mb-4 tracking-tight">
-            지금 바로 확인해보세요
-          </h2>
-          <p className="text-slate-500 mb-10 font-medium">
-            가입부터 첫 분석까지 3분이면 충분합니다.<br />
-            무료 7일 체험으로 시작하세요.
-          </p>
-          <Link href={startHref}>
-            <Button size="lg" className="px-12 py-6 text-base bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 shadow-xl shadow-brand-500/25 font-bold">
-              {startLabel}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
-          <p className="text-xs text-slate-400 mt-5 font-medium">
-            신용카드 불필요 · 설치 없음 · 3분 만에 시작
-          </p>
-        </div>
-      </section>
+          <div className="grid gap-4 md:grid-cols-3">
+            {workflow.map((item) => (
+              <article key={item.number} className="rounded-[18px] border border-[#e7ecf2] bg-white p-6 shadow-[0_1px_2px_rgba(18,33,54,0.025)] sm:p-7">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[#eff4ff] text-[#285cf4]"><item.icon className="h-5 w-5" /></span>
+                  <span className="text-xs font-bold tracking-[0.14em] text-[#a0acbb]">{item.number}</span>
+                </div>
+                <h3 className="mt-7 text-lg font-bold tracking-[-0.035em]">{item.title}</h3>
+                <p className="mt-2 text-sm leading-7 text-[#69788b]">{item.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
+        <section id="capabilities" className="border-y border-[#e7ecf2] bg-white">
+          <div className="mx-auto grid max-w-7xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20 lg:py-28">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#285cf4]">A clearer signal</p>
+              <h2 className="mt-3 text-3xl font-bold leading-tight tracking-[-0.055em] sm:text-4xl">숫자 뒤에 있는<br />답변을 보세요.</h2>
+              <p className="mt-5 text-sm leading-7 text-[#69788b]">우리 병원에 중요한 질문을 고르고, AI의 응답을 근거로 다음 행동을 판단할 수 있습니다.</p>
+              <Link href="/pricing" className="mt-7 inline-flex items-center gap-2 text-sm font-bold text-[#285cf4] hover:text-[#204bce]">플랜 비교하기 <ArrowRight className="h-4 w-4" /></Link>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {capabilities.map((item) => (
+                <article key={item.title} className="rounded-[16px] border border-[#e7ecf2] bg-[#fbfcfe] p-5 sm:p-6">
+                  <item.icon className="h-5 w-5 text-[#285cf4]" />
+                  <h3 className="mt-5 text-base font-bold tracking-[-0.025em]">{item.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#69788b]">{item.description}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+          <div className="flex flex-col gap-8 rounded-[22px] bg-[#17212e] px-7 py-10 text-white sm:px-10 lg:flex-row lg:items-center lg:justify-between lg:px-12 lg:py-12">
+            <div>
+              <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#a9bcff]"><Sparkles className="h-4 w-4" /> Start with Signal</span>
+              <h2 className="mt-3 text-2xl font-bold tracking-[-0.045em] sm:text-3xl">우리 병원이 AI에서 어떻게 보이는지 확인하세요.</h2>
+              <p className="mt-3 text-sm leading-6 text-[#abb8c9]">병원 정보를 연결하고 질문별 답변을 확인하는 데서 시작합니다.</p>
+            </div>
+            <Link href={startHref} className="inline-flex h-12 shrink-0 items-center justify-center gap-2 self-start rounded-[11px] bg-white px-6 text-sm font-bold text-[#17212e] hover:bg-[#edf2ff]">
+              {startLabel}<ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      </main>
       <SiteFooter />
     </div>
   );

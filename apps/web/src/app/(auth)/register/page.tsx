@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Eye, EyeOff, CheckCircle, Bot, BarChart3, Shield, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, Check, Eye, EyeOff, ScanSearch, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 
@@ -41,194 +39,86 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* 좌측: 서비스 소개 */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-600 via-blue-700 to-indigo-800 text-white p-12 flex-col justify-between relative overflow-hidden">
-        {/* 배경 장식 */}
-        <div className="absolute top-20 right-10 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 left-10 w-64 h-64 bg-cyan-400/10 rounded-full blur-3xl" />
-        
-        <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2 mb-16">
-            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl">Patient Signal</span>
+    <div className="grid min-h-screen bg-[#f6f7f9] text-[#17212e] lg:grid-cols-2">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#17212e] p-10 text-white lg:flex xl:p-16">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.1]" style={{ backgroundImage: 'linear-gradient(#dce7ff 1px, transparent 1px), linear-gradient(90deg, #dce7ff 1px, transparent 1px)', backgroundSize: '56px 56px' }} />
+        <div className="relative">
+          <Link href="/" className="inline-flex items-center gap-3 text-lg font-bold tracking-[-0.04em]">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[11px] bg-[#285cf4]"><ScanSearch className="h-5 w-5" /></span>
+            Patient Signal
           </Link>
-
-          <h2 className="text-3xl font-bold mb-4 leading-tight">
-            3분 만에 시작하는<br />
-            AI 가시성 분석
-          </h2>
-          <p className="text-brand-200 text-base leading-relaxed mb-10">
-            가입 → 병원 등록 → 질문 설정<br />
-            이후엔 매일 자동으로 분석해드립니다.
-          </p>
-
-          {/* 혜택 리스트 */}
-          <div className="space-y-4">
-            {[
-              { icon: <Zap className="h-5 w-5" />, title: '무료로 시작', desc: '신용카드 없이 바로 이용 가능' },
-              { icon: <Bot className="h-5 w-5" />, title: '6개 AI 플랫폼', desc: 'ChatGPT, Perplexity, Claude, Gemini, Grok, CLOVA X' },
-              { icon: <BarChart3 className="h-5 w-5" />, title: '매일 자동 분석', desc: '설정 후 자동으로 추적 & 리포트' },
-              { icon: <Shield className="h-5 w-5" />, title: '경쟁사 비교', desc: '같은 지역 병원 대비 AI 노출 현황' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-4 bg-white/5 backdrop-blur rounded-xl p-4">
-                <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 text-cyan-300">
-                  {item.icon}
-                </div>
-                <div>
-                  <p className="font-medium text-sm">{item.title}</p>
-                  <p className="text-xs text-brand-200">{item.desc}</p>
-                </div>
-              </div>
-            ))}
+          <div className="mt-24 max-w-lg">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#a9bcff]">Get started</span>
+            <h1 className="mt-4 text-4xl font-bold leading-[1.16] tracking-[-0.06em] xl:text-5xl">우리 병원의<br />AI 검색 현황을 보세요.</h1>
+            <p className="mt-6 max-w-md text-base leading-7 text-[#abb8c9]">병원 소개를 정리하고 중요한 질문을 고르면, 질문별 AI 답변을 확인할 수 있습니다.</p>
           </div>
-        </div>
-
-        <div className="relative z-10 text-sm text-brand-300/60">
-          Patient Signal by 페이션트퍼널
-        </div>
-      </div>
-
-      {/* 우측: 회원가입 폼 */}
-      <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-mesh">
-        <div className="w-full max-w-md">
-          {/* 모바일에서만 보이는 로고 */}
-          <div className="lg:hidden text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
-                <Sparkles className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-xl text-slate-900">Patient Signal</span>
-            </Link>
-          </div>
-
-          <Card className="shadow-xl border-0">
-            <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl">회원가입</CardTitle>
-              <CardDescription>
-                무료로 AI 가시성 분석을 시작하세요
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
-                    {error}
-                  </div>
-                )}
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">이름</label>
-                  <Input
-                    type="text"
-                    placeholder="홍길동"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    autoComplete="name"
-                  />
+          <div className="mt-12 max-w-md rounded-[18px] border border-white/15 bg-white/10 p-6 backdrop-blur-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#a9bcff]">시작하는 순서</p>
+            <div className="mt-5 space-y-4">
+              {['병원 소개 확인 및 수정', '주력 진료와 경쟁 병원 설정', '핵심 질문과 AI 답변 확인'].map((item, index) => (
+                <div key={item} className="flex items-center gap-3">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#a9bcff]/50 text-xs font-bold text-[#dce7ff]">{index + 1}</span>
+                  <span className="text-sm font-medium text-white/90">{item}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">이메일</label>
-                  <Input
-                    type="email"
-                    placeholder="doctor@clinic.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                    autoComplete="email"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">비밀번호</label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="8자 이상 입력해주세요"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      minLength={8}
-                      autoComplete="new-password"
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-slate-700">전화번호 <span className="text-slate-400 font-normal">(선택)</span></label>
-                  <Input
-                    type="tel"
-                    placeholder="010-1234-5678"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    autoComplete="tel"
-                  />
-                </div>
-
-                <label className="flex items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-lg cursor-pointer hover:bg-brand-100 transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={formData.isPfMember}
-                    onChange={(e) => setFormData({ ...formData, isPfMember: e.target.checked })}
-                    className="w-5 h-5 rounded border-slate-300 text-brand-600 focus:ring-blue-500"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-slate-900">
-                      페이션트퍼널 수강생입니다
-                    </span>
-                    <p className="text-xs text-slate-500 mt-0.5">수강생은 Starter 기능을 무료로 이용할 수 있습니다</p>
-                  </div>
-                </label>
-
-                <Button type="submit" className="w-full bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600" loading={loading}>
-                  무료로 시작하기
-                </Button>
-
-                <p className="text-xs text-center text-slate-400">
-                  가입 시 <Link href="/terms" className="underline hover:text-slate-600">이용약관</Link> 및{' '}
-                  <Link href="/privacy" className="underline hover:text-slate-600">개인정보처리방침</Link>에 동의합니다
-                </p>
-              </form>
-
-              <div className="mt-6 text-center text-sm text-slate-500">
-                이미 계정이 있으신가요?{' '}
-                <Link href="/login" className="text-brand-600 hover:underline font-medium">
-                  로그인
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 모바일에서만 보이는 하단 기능 요약 */}
-          <div className="lg:hidden mt-8 space-y-3">
-            <div className="flex items-center justify-center gap-6 text-xs text-slate-400">
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                <span>무료</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                <span>6개 AI 플랫폼</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-                <span>자동 분석</span>
-              </div>
+              ))}
             </div>
           </div>
         </div>
-      </div>
+        <p className="relative text-xs text-[#7e8da1]">Patient Signal by 페이션트퍼널</p>
+      </aside>
+
+      <main className="flex items-center justify-center px-5 py-10 sm:px-10 lg:px-12">
+        <div className="w-full max-w-[440px]">
+          <Link href="/" className="mb-10 inline-flex items-center gap-3 text-[17px] font-bold tracking-[-0.04em] lg:hidden">
+            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#285cf4] text-white"><ScanSearch className="h-5 w-5" /></span>
+            Patient Signal
+          </Link>
+          <div className="rounded-[20px] border border-[#e7ecf2] bg-white p-6 shadow-[0_8px_34px_rgba(18,33,54,0.045)] sm:p-9">
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#285cf4]">Create account</p>
+            <h2 className="mt-2 text-3xl font-bold tracking-[-0.05em]">시그널 시작하기</h2>
+            <p className="mt-2 text-sm leading-6 text-[#69788b]">계정을 만든 뒤 병원 정보를 연결할 수 있습니다.</p>
+
+            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+              {error && <div role="alert" className="rounded-[10px] border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+              <div className="space-y-2">
+                <label htmlFor="register-name" className="text-sm font-semibold text-[#334155]">이름</label>
+                <Input id="register-name" type="text" placeholder="홍길동" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoComplete="name" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="register-email" className="text-sm font-semibold text-[#334155]">이메일</label>
+                <Input id="register-email" type="email" placeholder="doctor@clinic.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="email" />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="register-password" className="text-sm font-semibold text-[#334155]">비밀번호</label>
+                <div className="relative">
+                  <Input id="register-password" type={showPassword ? 'text' : 'password'} placeholder="8자 이상 입력해주세요" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required minLength={8} autoComplete="new-password" />
+                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8390a0] hover:text-[#334155]" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="register-phone" className="text-sm font-semibold text-[#334155]">전화번호 <span className="font-normal text-[#9aa6b5]">(선택)</span></label>
+                <Input id="register-phone" type="tel" placeholder="010-1234-5678" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} autoComplete="tel" />
+              </div>
+
+              <label className="flex cursor-pointer items-start gap-3 rounded-[11px] border border-[#dce7ff] bg-[#f7f9ff] p-4 hover:bg-[#eff4ff]">
+                <input type="checkbox" checked={formData.isPfMember} onChange={(e) => setFormData({ ...formData, isPfMember: e.target.checked })} className="mt-0.5 h-4 w-4 rounded border-[#c8d1df] text-[#285cf4] focus:ring-[#285cf4]" />
+                <span><span className="block text-sm font-semibold text-[#263548]">페이션트퍼널 수강생입니다</span><span className="mt-1 block text-xs leading-5 text-[#69788b]">수강생은 Starter 기능을 무료로 이용할 수 있습니다.</span></span>
+              </label>
+
+              <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-[11px] bg-[#285cf4] text-sm font-semibold text-white hover:bg-[#204bce] disabled:opacity-50">
+                {loading ? '가입 중...' : '무료로 시작하기'} {!loading && <ArrowRight className="h-4 w-4" />}
+              </button>
+              <p className="text-center text-xs leading-5 text-[#8390a0]">
+                가입 시 <Link href="/terms" className="underline hover:text-[#285cf4]">이용약관</Link> 및 <Link href="/privacy" className="underline hover:text-[#285cf4]">개인정보처리방침</Link>에 동의합니다.
+              </p>
+            </form>
+            <div className="mt-7 border-t border-[#eef1f5] pt-6 text-center text-sm text-[#69788b]">이미 계정이 있으신가요? <Link href="/login" className="font-semibold text-[#285cf4] hover:underline">로그인</Link></div>
+          </div>
+          <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-[#8390a0]"><Check className="h-3.5 w-3.5 text-[#285cf4]" /> 병원 정보는 가입 후 입력하고 수정할 수 있습니다.</p>
+        </div>
+      </main>
     </div>
   );
 }

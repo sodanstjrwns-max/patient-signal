@@ -42,6 +42,70 @@
   --bento-radius-lg: 28px;
 }
 
+/* Signal console 2026: precise surfaces and a calmer information hierarchy. */
+.dashboard-shell {
+  --background: #f6f7f9;
+  --foreground: #17212e;
+  --brand-primary: #285cf4;
+  --brand-secondary: #4274fa;
+  --sidebar-width: 260px;
+  color: #17212e;
+  background: #f6f7f9;
+}
+
+.dashboard-shell .glass-bento,
+.dashboard-shell .glass,
+.dashboard-shell .glass-strong {
+  background: #fff;
+  border: 1px solid #e7ecf2;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(18, 33, 54, 0.025);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dashboard-shell .glass-bento:hover,
+.dashboard-shell .glass:hover,
+.dashboard-shell .glass-strong:hover {
+  background: #fff;
+  border-color: #d9e2ed;
+  box-shadow: 0 5px 18px rgba(18, 33, 54, 0.045);
+  transform: none;
+}
+
+.dashboard-shell .glass-solid {
+  background: #fff;
+  border-color: #e7ecf2;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dashboard-shell .grid-pattern,
+.dashboard-shell .bg-aurora::before,
+.dashboard-shell .gradient-border::before,
+.dashboard-shell .ambient-sheen::after,
+.dashboard-shell .bar-shine::after {
+  display: none;
+}
+
+.dashboard-shell .text-gradient,
+.dashboard-shell .text-gradient-aurora {
+  background: none;
+  color: #285cf4;
+  -webkit-text-fill-color: currentColor;
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell *,
+  .dashboard-shell *::before,
+  .dashboard-shell *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

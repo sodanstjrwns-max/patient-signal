@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
     <div className="min-h-screen">
       <Header title="ABHS 분석 리포트" description="AI-Based Hospital Score · 초고도화 평가 프레임워크" />
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
             {/* ========== ABHS 종합 점수 섹션 ========== */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               {/* ABHS 종합 점수 */}
-              <Card className="md:col-span-2 bg-gradient-to-br from-brand-600 to-indigo-700 text-white border-0">
+              <Card className="md:col-span-2 !bg-brand-600 !border-brand-600 text-white">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-sm text-blue-100"><TermTip term="abhs" className="text-blue-100">ABHS 종합 점수</TermTip></p>
@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="mt-3 w-full bg-brand-500/30 rounded-full h-2">
                     <div
-                      className="bg-white/80 backdrop-blur-sm rounded-full h-2 transition-all"
+                      className="bg-white/80 rounded-full h-2 transition-all"
                       style={{ width: `${abhs?.abhsScore ?? 0}%` }}
                     />
                   </div>
@@ -329,7 +329,7 @@ export default function AnalyticsPage() {
                   </div>
                   
                   {/* 깊이 설명 */}
-                  <div className="mt-6 p-3 bg-slate-50 rounded-2xl text-xs text-slate-500 space-y-1">
+                  <div className="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-slate-500 space-y-1">
                     <p><TermTip term="r3"><strong>R3</strong></TermTip>: AI가 우리 병원만 단독 추천</p>
                     <p><TermTip term="r2"><strong>R2</strong></TermTip>: 복수 추천 중 1~2순위</p>
                     <p><TermTip term="r1"><strong>R1</strong></TermTip>: 단순 언급/하위 노출</p>
@@ -353,7 +353,7 @@ export default function AnalyticsPage() {
                     const weight = intentWeights[intent] || 1.0;
                     const hasWeight = weight > 1.0;
                     return (
-                      <div key={intent} className={`p-4 rounded-2xl border ${hasWeight ? 'border-brand-200 bg-brand-50' : 'border-slate-100'}`}>
+                      <div key={intent} className={`p-4 rounded-lg border ${hasWeight ? 'border-brand-200 bg-brand-50' : 'border-slate-100'}`}>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-slate-500">{intentNames[intent] || intent}</span>
                           {hasWeight && <span className="text-xs bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">×{weight}</span>}
@@ -391,7 +391,7 @@ export default function AnalyticsPage() {
                     {actions.map((action: any, idx: number) => (
                       <div
                         key={idx}
-                        className={`p-4 rounded-2xl border-l-4 ${
+                        className={`p-4 rounded-lg border-l-4 ${
                           action.severity === 'critical' ? 'border-l-red-500 bg-red-50' :
                           action.severity === 'warning' ? 'border-l-yellow-500 bg-yellow-50' :
                           'border-l-blue-500 bg-brand-50'
@@ -589,7 +589,7 @@ export default function AnalyticsPage() {
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Link href="/dashboard/insights?tab=contentGap">
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-brand-100 hover:shadow-card-hover transition-all cursor-pointer">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-slate-900">콘텐츠 갭 분석</span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
@@ -598,7 +598,7 @@ export default function AnalyticsPage() {
                     </div>
                   </Link>
                   <Link href="/dashboard/opportunities">
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-brand-100 hover:shadow-card-hover transition-all cursor-pointer">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-slate-900">기회 분석</span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
@@ -607,7 +607,7 @@ export default function AnalyticsPage() {
                     </div>
                   </Link>
                   <Link href="/dashboard">
-                    <div className="p-3 bg-white/80 backdrop-blur-sm rounded-2xl border border-brand-100 hover:shadow-card-hover transition-all cursor-pointer">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-sm font-medium text-slate-900">대시보드로 돌아가기</span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />

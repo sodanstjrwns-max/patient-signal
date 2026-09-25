@@ -26,7 +26,7 @@ git push origin main
 
 ### 필요한 시크릿 — 이름만 (값은 절대 저장소에 넣지 않는다)
 **Render (API):**
-`DATABASE_URL` `DIRECT_URL` `JWT_SECRET` `OPENAI_API_KEY` `ANTHROPIC_API_KEY` `PERPLEXITY_API_KEY` `GEMINI_API_KEY` `XAI_API_KEY` `CLOVA_X_API_KEY` `REDIS_URL` `FRONTEND_URL` `TOSS_SECRET_KEY` `TOSS_WEBHOOK_SECRET` `RESEND_API_KEY` `EMAIL_FROM` `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `ADMIN_SECRET` `ADMIN_EMAILS` `CRON_SECRET` `PS_SERVICE_KEY` `PS_HOSPITAL_MAP`
+`DATABASE_URL` `DIRECT_URL` `JWT_SECRET` `OPENAI_API_KEY` `ANTHROPIC_API_KEY` `PERPLEXITY_API_KEY` `GEMINI_API_KEY` `XAI_API_KEY` `CLOVA_X_API_KEY` `REDIS_URL` `FRONTEND_URL` `TOSS_SECRET_KEY` `TOSS_WEBHOOK_SECRET` `RESEND_API_KEY` `EMAIL_FROM` `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `ADMIN_SECRET` `ADMIN_EMAILS` `CRON_SECRET` `PS_SERVICE_KEY` `PS_HOSPITAL_MAP` `HUB_API_KEY`(허브 프로필 조회용, 미설정 시 연동 비활성)
 
 **운영 옵션 (env, 시크릿 아님):** `GRANDFATHER_CUTOFF`(기가입 유예 컷오프) · `GROK_CRAWL_DAYS`(그록 크롤 요일, 기본 `1,4`=월·목 KST, `*`=매일) · `GROK_MODEL` · `DB_CONNECTION_LIMIT` · `DB_POOL_TIMEOUT` · `HOSPITAL_CONCURRENCY`
 
@@ -43,7 +43,9 @@ git push origin main
 | 공급 | `GET /api/v1/signals?since={ISO8601}` | `Authorization: Bearer {PS_SERVICE_KEY}` + `X-PS-Hospital-Id` 헤더 | Patient Sync(회의 안건), Patient Hub(대시보드) |
 
 - 환경변수: `PS_SERVICE_KEY`(서비스 간 인증 키, 미설정 시 503 `PS_NOT_CONFIGURED`) · `PS_HOSPITAL_MAP`(PS 병원 ID ↔ 로컬 병원 ID 매핑 JSON)
-- 소비 엔드포인트: 현재 없음 (시그널은 타 PS 서비스 API를 호출하지 않음)
+- 소비: `HUB_API_KEY`가 설정되면 Hub `GET /api/v1/hospital-profile`을 읽어 병원 소개 초안을 보여준다. Signal에서 저장한 소개가 우선하며 허브 다시 가져오기는 편집 폼에만 적용된다. 키가 없거나 Hub 조회가 실패하면 Signal 자체 병원 정보로 핵심 질문을 추천한다.
+- 핵심 질문은 병원 소개·주력 진료·허브의 환자 고민을 바탕으로 화면에서 바로 추천한다. 신규 병원의 첫 질문 5개는 이 추천을 우선 사용한다. 사용자는 문장을 수정하거나, 슬롯이 가득 찼으면 기존 질문을 선택해 교체할 수 있다. 교체한 질문과 기존 AI 답변은 기록에 남는다.
+- 경쟁 병원 등록 한도는 S 3개·M 10개·L 20개다. 경쟁 순위는 등록 병원과 우리 병원의 **같은 기간·같은 AI 답변**에서 나온 병원명 등장률로 계산한다. 새 병원 등록 직후에는 공통 재측정 전까지 보류하며, 30건 미만은 임시 순위로 표시한다. 의료 품질이나 지역 전체 순위가 아니다.
 - 레이트리밋: 서비스 간 폴링 1분 60회
 - 구현: `apps/api/src/ps-open-api/`
 
@@ -214,6 +216,16 @@ git push origin main
 |--------|------|------|
 | GET | `/ai-crawler/first-crawl-status/:hospitalId` | **첫 크롤 진행/결과** (온보딩 직후 아하모먼트 배너용) |
 | GET | `/ai-crawler/last-analysis/:hospitalId` | 마지막 분석 시간 |
+| GET | `/ai-crawler/prompt-responses/:hospitalId/:promptId` | 질문별 실측 AI 답변·측정 질문 문구·플랫폼 집계 |
+
+### 병원 맞춤 질문·경쟁 병원
+| Method | Path | 설명 |
+|--------|------|------|
+| GET | `/hospitals/hub-introduction` | 허브 병원 소개 초안 조회 (`force=1`은 재조회) |
+| PUT | `/hospitals/:id` | Signal 병원 소개 직접 수정·저장 |
+| GET | `/query-templates/core/:hospitalId` | 병원 정보 기반 핵심 질문 추천 |
+| POST | `/prompts/:hospitalId/replace` | 활성 질문 교체, 이전 질문·답변 보관 |
+| GET | `/competitors/:hospitalId/answer-ranking` | 등록 병원 사이 실측 AI 답변 등장률 순위 |
 
 ### Scheduler API
 | Method | Path | 설명 |

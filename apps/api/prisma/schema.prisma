@@ -202,6 +202,7 @@ model Hospital {
   websiteUrl         String?            @map("website_url")
   naverPlaceId       String?            @map("naver_place_id")
   coreTreatments     String[]           @map("core_treatments") // 주력 진료/시술
+  clinicIntroduction String?            @map("clinic_introduction") @db.Text // Signal에서 편집하는 병원 소개; Hub 프리필은 저장값을 덮어쓰지 않음
   targetRegions      String[]           @map("target_regions") // 주요 내원 지역
   hospitalStrengths  String[]           @map("hospital_strengths") // 병원 강점
   planType           PlanType           @default(FREE) @map("plan_type")

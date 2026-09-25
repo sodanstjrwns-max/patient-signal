@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { CreatePromptDto, BulkCreatePromptsDto } from './dto/create-prompt.dto';
+import { CreatePromptDto, BulkCreatePromptsDto, ReplacePromptDto, UpdatePromptTextDto } from './dto/create-prompt.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
 
 @Injectable()
@@ -82,6 +83,59 @@ export class PromptsService {
     };
   }
 
+  /** 질문 ID를 새로 만들어 이전 AI 답변이 기존 질문에 연결된 채 남도록 교체한다. */
+  async replace(hospitalId: string, dto: ReplacePromptDto) {
+    const promptText = dto.promptText?.trim();
+    if (!promptText || promptText.length > 500) {
+      throw new BadRequestException('새 질문은 1~500자로 입력해 주세요.');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const hospital = await tx.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { planType: true },
+      });
+      if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다.');
+
+      const current = await tx.prompt.findFirst({
+        where: { id: dto.replacePromptId, hospitalId, isActive: true },
+        select: { id: true, specialtyCategory: true, regionKeywords: true },
+      });
+      if (!current) throw new NotFoundException('교체할 활성 질문을 찾을 수 없습니다.');
+
+      const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType || 'FREE'] || PlanGuard.PLAN_LIMITS.FREE;
+      const maxPrompts = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
+      const active = await tx.prompt.findMany({
+        where: { hospitalId, isActive: true },
+        select: { id: true, promptText: true },
+      });
+      if (active.length > maxPrompts) {
+        throw new ForbiddenException(`현재 플랜의 활성 질문 한도(${maxPrompts}개)를 초과했습니다.`);
+      }
+      const normalized = (text: string) => text.replace(/\s+/g, ' ').trim().toLocaleLowerCase('ko-KR');
+      if (active.some((prompt) => normalized(prompt.promptText) === normalized(promptText))) {
+        throw new BadRequestException('이미 모니터링 중인 질문입니다.');
+      }
+
+      const retired = await tx.prompt.updateMany({
+        where: { id: current.id, hospitalId, isActive: true },
+        data: { isActive: false },
+      });
+      if (retired.count !== 1) throw new BadRequestException('질문 상태가 변경되었습니다. 새로고침 후 다시 시도해 주세요.');
+      const prompt = await tx.prompt.create({
+        data: {
+          hospitalId,
+          promptText,
+          promptType: 'CUSTOM',
+          specialtyCategory: current.specialtyCategory,
+          regionKeywords: current.regionKeywords,
+          isActive: true,
+        },
+      });
+      return { retiredPromptId: current.id, prompt };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+  }
+
   async findAll(hospitalId: string, onlyActive: boolean = true) {
     return this.prisma.prompt.findMany({
       where: {
@@ -120,7 +174,7 @@ export class PromptsService {
     return prompt;
   }
 
-  async update(id: string, hospitalId: string, dto: Partial<CreatePromptDto>) {
+  async update(id: string, hospitalId: string, dto: UpdatePromptTextDto) {
     const prompt = await this.prisma.prompt.findUnique({
       where: { id },
     });
@@ -133,15 +187,18 @@ export class PromptsService {
       throw new ForbiddenException('수정 권한이 없습니다');
     }
 
+    if (!prompt.isActive) {
+      throw new ForbiddenException('측정이 중단된 질문의 문장은 수정할 수 없습니다.');
+    }
+
+    const promptText = dto.promptText?.trim();
+    if (!promptText || promptText.length > 500) {
+      throw new BadRequestException('질문은 1~500자로 입력해 주세요.');
+    }
+
     return this.prisma.prompt.update({
       where: { id },
-      data: {
-        promptText: dto.promptText,
-        promptType: dto.promptType,
-        specialtyCategory: dto.specialtyCategory,
-        regionKeywords: dto.regionKeywords,
-        isActive: dto.isActive,
-      },
+      data: { promptText },
     });
   }
 
@@ -176,6 +233,14 @@ export class PromptsService {
 
     if (prompt.hospitalId !== hospitalId) {
       throw new ForbiddenException('수정 권한이 없습니다');
+    }
+
+    if (!prompt.isActive) {
+      const maxPrompts = await this.getPromptLimit(hospitalId);
+      const activeCount = await this.prisma.prompt.count({ where: { hospitalId, isActive: true } });
+      if (activeCount >= maxPrompts) {
+        throw new ForbiddenException(`현재 플랜에서는 활성 질문을 최대 ${maxPrompts}개까지 등록할 수 있습니다.`);
+      }
     }
 
     return this.prisma.prompt.update({

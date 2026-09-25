@@ -44,6 +44,17 @@ export class QueryTemplatesController {
 
   // ==================== 인증 필요 API ====================
 
+  @Get('core/:hospitalId')
+  @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: '병원 핵심 질문 추천',
+    description: '허브 프로필과 시그널에서 수정한 병원 정보를 바탕으로 저장 없이 핵심 모니터링 질문을 추천합니다',
+  })
+  async coreQuestions(@Param('hospitalId') hospitalId: string) {
+    return this.queryTemplatesService.coreQuestionsForHospital(hospitalId);
+  }
+
   @Post('generate/:hospitalId')
   @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @ApiBearerAuth()

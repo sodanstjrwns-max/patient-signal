@@ -12,7 +12,7 @@ import { PaymentsService } from './payments.service';
 // ── 헬퍼: private 의존성 최소 mock으로 인스턴스 생성 ──
 function createService(prismaOverrides: any = {}) {
   const prisma: any = {
-    subscription: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
+    subscription: { findFirst: jest.fn(), findMany: jest.fn(), update: jest.fn(), findUnique: jest.fn(), upsert: jest.fn() },
     payment: { create: jest.fn(), update: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     hospital: { update: jest.fn(), findUnique: jest.fn() },
     ...prismaOverrides,
@@ -27,6 +27,65 @@ function createService(prismaOverrides: any = {}) {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 describe('PaymentsService — 돈 계산/매핑 핵심 로직', () => {
+  describe('issueBillingKey (체험 종료일과 결제 예정일)', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    function mockTossIssue() {
+      jest.spyOn(global, 'fetch').mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          billingKey: 'bk_test',
+          customerKey: 'ck_test',
+          card: { number: '1234', company: '테스트 카드' },
+        }),
+      } as Response);
+    }
+
+    it('구독이 없으면 14일 체험을 만들고 그 종료일에 첫 결제를 예약', async () => {
+      const { service, prisma } = createService();
+      mockTossIssue();
+      prisma.subscription.findUnique.mockResolvedValue(null);
+
+      await service.issueBillingKey({ authKey: 'auth', customerKey: 'ck_test', hospitalId: 'h1' });
+
+      const args = prisma.subscription.upsert.mock.calls[0][0];
+      expect(args.create.status).toBe('TRIAL');
+      expect(args.create.currentPeriodEnd.getTime() - args.create.currentPeriodStart.getTime()).toBe(14 * DAY_MS);
+      expect(args.create.nextBillingDate).toEqual(args.create.currentPeriodEnd);
+    });
+
+    it('기존 14일 체험 중 카드 등록 시 종료일을 유지하고 그때 첫 결제를 예약', async () => {
+      const { service, prisma } = createService();
+      mockTossIssue();
+      const trialEnd = new Date(Date.now() + 11 * DAY_MS);
+      prisma.subscription.findUnique.mockResolvedValue({
+        currentPeriodEnd: trialEnd,
+        nextBillingDate: new Date(Date.now() + 3 * DAY_MS),
+      });
+
+      await service.issueBillingKey({ authKey: 'auth', customerKey: 'ck_test', hospitalId: 'h1' });
+
+      const args = prisma.subscription.upsert.mock.calls[0][0];
+      expect(args.update.currentPeriodEnd).toBeUndefined();
+      expect(args.update.nextBillingDate).toEqual(trialEnd);
+    });
+
+    it('기존 결제 예정일이 체험 종료일보다 늦으면 그 예정일을 보존', async () => {
+      const { service, prisma } = createService();
+      mockTossIssue();
+      const laterBillingDate = new Date(Date.now() + 16 * DAY_MS);
+      prisma.subscription.findUnique.mockResolvedValue({
+        currentPeriodEnd: new Date(Date.now() + 11 * DAY_MS),
+        nextBillingDate: laterBillingDate,
+      });
+
+      await service.issueBillingKey({ authKey: 'auth', customerKey: 'ck_test', hospitalId: 'h1' });
+
+      const args = prisma.subscription.upsert.mock.calls[0][0];
+      expect(args.update.nextBillingDate).toEqual(laterBillingDate);
+    });
+  });
+
   // ─────────────────────────────────────────────
   // mapTossStatus
   // ─────────────────────────────────────────────

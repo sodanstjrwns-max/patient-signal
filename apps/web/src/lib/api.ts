@@ -186,6 +186,8 @@ export const hospitalApi = {
   // force: 설정 화면 [허브 프로필에서 다시 가져오기] — 캐시 무효화 후 전체 값(병원명 포함) 강제 조회
   hubPrefill: (force?: boolean) =>
     api.get('/hospitals/hub-prefill', force ? { params: { force: 1 } } : undefined),
+  hubIntroduction: (force?: boolean) =>
+    api.get('/hospitals/hub-introduction', force ? { params: { force: 1 } } : undefined),
   get: (id: string) =>
     api.get(`/hospitals/${id}`),
   update: (id: string, data: any) =>
@@ -198,8 +200,12 @@ export const hospitalApi = {
 export const promptsApi = {
   create: (hospitalId: string, data: any) =>
     api.post(`/prompts/${hospitalId}`, data),
-  list: (hospitalId: string) =>
-    api.get(`/prompts/${hospitalId}`),
+  list: (hospitalId: string, onlyActive = true) =>
+    api.get(`/prompts/${hospitalId}`, { params: { onlyActive } }),
+  replace: (hospitalId: string, data: { replacePromptId: string; promptText: string }) =>
+    api.post(`/prompts/${hospitalId}/replace`, data),
+  update: (id: string, data: { promptText: string }) =>
+    api.put(`/prompts/${id}`, data),
   delete: (id: string) =>
     api.delete(`/prompts/${id}`),
   toggle: (id: string) =>
@@ -372,6 +378,8 @@ export const competitorsApi = {
     api.post(`/competitors/${hospitalId}/accept-suggestion`, data),
   getComparison: (hospitalId: string) =>
     api.get(`/competitors/${hospitalId}/comparison`),
+  getAnswerRanking: (hospitalId: string) =>
+    api.get(`/competitors/${hospitalId}/answer-ranking`),
   getInactive: (hospitalId: string) =>
     api.get(`/competitors/${hospitalId}/inactive`),
   restoreAll: (hospitalId: string) =>
@@ -385,6 +393,9 @@ export const competitorsApi = {
 
 // Query Templates API (쿼리 템플릿 & 진료과 프리셋)
 export const queryTemplatesApi = {
+  // Hub + Signal 병원 소개를 바탕으로 빠르게 산출한 핵심 질문
+  coreQuestions: (hospitalId: string) =>
+    api.get(`/query-templates/core/${hospitalId}`),
   // 진료과 목록 (공개)
   getAllSpecialties: () =>
     api.get('/query-templates/specialties'),

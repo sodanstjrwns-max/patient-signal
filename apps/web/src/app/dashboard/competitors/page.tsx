@@ -37,6 +37,7 @@ import {
   Zap,
   RotateCcw,
   Archive,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { UpgradeModal, UsageBar, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -122,6 +123,13 @@ export default function CompetitorsPage() {
   // 경쟁사 비교 데이터 - 공유 훅 사용
   const { data: comparison } = useCompetitorComparison();
 
+  const { data: answerRanking, isLoading: rankingLoading, isError: rankingError } = useQuery({
+    queryKey: ['competitor-answer-ranking', hospitalId],
+    queryFn: () => competitorsApi.getAnswerRanking(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // 경쟁사 추가
   const addMutation = useMutation({
     mutationFn: () =>
@@ -132,6 +140,7 @@ export default function CompetitorsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitor-answer-ranking', hospitalId] });
       setNewCompetitor('');
       setNewRegion('');
       toast.success('경쟁사가 추가되었습니다.');
@@ -156,6 +165,7 @@ export default function CompetitorsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitor-answer-ranking', hospitalId] });
       toast.success('경쟁사가 삭제되었습니다.');
     },
   });
@@ -166,11 +176,13 @@ export default function CompetitorsPage() {
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitor-answer-ranking', hospitalId] });
       queryClient.invalidateQueries({ queryKey: ['competitors-inactive', hospitalId] });
       const count = res.data?.restored || 0;
-      toast.success(`${count}개 경쟁사가 복구되었습니다!`);
-      if (count === 0) {
-        toast.info('복구할 경쟁사가 없습니다. 데이터가 DB에서 완전히 삭제된 것일 수 있습니다.');
+      if (count > 0) {
+        toast.success(`${count}개 경쟁 병원이 복구되었습니다.`);
+      } else {
+        toast.info('복구할 병원이 없거나 현재 플랜의 등록 한도에 도달했습니다.');
       }
       setShowInactive(false);
     },
@@ -185,8 +197,18 @@ export default function CompetitorsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitor-answer-ranking', hospitalId] });
       queryClient.invalidateQueries({ queryKey: ['competitors-inactive', hospitalId] });
       toast.success('경쟁사가 복구되었습니다!');
+    },
+    onError: (error: any) => {
+      const errData = error.response?.data;
+      if (errData?.error === 'PLAN_LIMIT_REACHED') {
+        setUpgradeFeature('maxCompetitors');
+        setShowUpgradeModal(true);
+      } else {
+        toast.error(errData?.message || '경쟁 병원을 복구하지 못했습니다.');
+      }
     },
   });
 
@@ -215,6 +237,7 @@ export default function CompetitorsPage() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.list(hospitalId!) });
       queryClient.invalidateQueries({ queryKey: queryKeys.competitors.comparison(hospitalId!) });
+      queryClient.invalidateQueries({ queryKey: ['competitor-answer-ranking', hospitalId] });
       setDismissedSuggestions((prev) => new Set(Array.from(prev).concat(variables.competitorName)));
       toast.success(`${variables.competitorName}이(가) 경쟁사로 등록되었습니다!`);
     },
@@ -262,6 +285,10 @@ export default function CompetitorsPage() {
     .filter((s: Suggestion) => !dismissedSuggestions.has(s.name));
 
   const analysisInfo = suggestMutation.data?.data?.analysisInfo;
+  const rankingRows = answerRanking ? [
+    { ...answerRanking.myHospital, mine: true },
+    ...(answerRanking.competitors || []).map((item: any) => ({ ...item, mine: false })),
+  ].sort((a: any, b: any) => (a.rank ?? 999) - (b.rank ?? 999) || b.mentionCount - a.mentionCount) : [];
 
   if (!hospitalId) {
     return (
@@ -283,9 +310,53 @@ export default function CompetitorsPage() {
 
   return (
     <div className="min-h-screen">
-      <Header title="경쟁사 관리" description="경쟁사를 추가하고 AI 기반 위협도를 분석합니다" />
+      <Header title="경쟁 병원" description="우리 병원과 함께 AI 답변에 등장하는 병원을 확인합니다" />
 
-      <div className="p-6 space-y-6">
+      <div className="mx-auto max-w-[1320px] space-y-6 p-5 sm:p-8">
+        <div className="flex flex-col justify-between gap-3 rounded-[16px] border border-[#dce6f6] bg-[#f9fbff] p-5 sm:flex-row sm:items-center sm:p-6">
+          <div>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#285cf4]">비교 대상 설정</p>
+            <h2 className="text-lg font-bold tracking-[-0.02em] text-[#1d2b3c]">실제로 비교하고 싶은 병원을 추가하세요</h2>
+            <p className="mt-1 text-sm leading-6 text-[#6a7b90]">병원 이름으로 직접 등록하고, 측정된 AI 답변에서 함께 등장한 후보도 확인할 수 있습니다.</p>
+          </div>
+          <a href="#add-competitor" className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-[9px] bg-[#285cf4] px-3 text-xs font-semibold text-white hover:bg-[#1e4edb]">경쟁 병원 추가 <ArrowRight className="h-3.5 w-3.5" /></a>
+        </div>
+
+        <Card className="!border-[#d5e0f2]">
+          <CardContent className="p-5 sm:p-6">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#285cf4]">경쟁 병원 비교</p>
+                <h2 className="flex items-center gap-2 text-lg font-bold tracking-[-0.02em] text-[#17212e]"><BarChart3 className="h-5 w-5 text-[#285cf4]" /> AI 답변 속 순위</h2>
+                <p className="mt-1 text-xs leading-5 text-[#718198]">등록한 경쟁 병원과 우리 병원이 같은 기간의 AI 답변에 등장한 비율을 비교합니다.</p>
+              </div>
+              <span className="rounded-full bg-[#f0f3f7] px-3 py-1.5 text-xs font-semibold text-[#65778c]">최대 최근 {answerRanking?.periodDays || 30}일 · 공통 창 실측 답변 {answerRanking?.totalResponses ?? '—'}건</span>
+            </div>
+
+            {rankingLoading ? <div className="flex items-center gap-2 py-8 text-sm text-[#718198]"><Loader2 className="h-4 w-4 animate-spin" /> 순위를 불러오고 있습니다</div> : rankingError ? (
+              <div className="rounded-[12px] border border-[#f2dada] bg-[#fff8f8] p-5 text-sm text-[#a74f4f]">순위 데이터를 불러오지 못했습니다.</div>
+            ) : answerRanking?.status === 'READY' || answerRanking?.status === 'LOW_SAMPLE' ? (
+              <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
+                <div className="rounded-[14px] bg-[#182a44] p-5 text-white">
+                  <p className="text-xs font-semibold text-[#9eafc6]">우리 병원</p>
+                  <div className="mt-3 flex items-baseline gap-2"><strong className="text-[44px] font-bold leading-none tracking-[-0.07em]">{answerRanking.rank}</strong><span className="text-sm text-[#bdcce0]">/ {answerRanking.totalClinics}위</span></div>
+                  <p className="mt-4 text-xs text-[#c1d0e2]">AI 답변 {answerRanking.myHospital?.mentionCount || 0}건에서 등장 · {Number(answerRanking.myHospital?.mentionRate || 0).toFixed(1)}%</p>
+                  {answerRanking.status === 'LOW_SAMPLE' && <span className="mt-3 inline-flex rounded-full bg-[#f9c66d]/15 px-2.5 py-1 text-[11px] font-semibold text-[#f9d592]">표본 {answerRanking.minRecommendedResponses}건 미만 · 임시 순위</span>}
+                </div>
+                <div className="overflow-hidden rounded-[14px] border border-[#e6ebf2] bg-white">
+                  <div className="grid grid-cols-[34px_minmax(0,1fr)_66px] gap-2 border-b border-[#edf0f4] bg-[#f8fafc] px-3 py-2.5 text-[11px] font-semibold text-[#8796a7] sm:grid-cols-[44px_minmax(0,1fr)_78px_72px] sm:px-4"><span>순위</span><span>병원</span><span className="hidden text-right sm:block">등장</span><span className="text-right">비율</span></div>
+                  {rankingRows.map((row: any) => <div key={row.id} className={`grid grid-cols-[34px_minmax(0,1fr)_66px] items-center gap-2 border-b border-[#f0f2f5] px-3 py-3 text-sm last:border-b-0 sm:grid-cols-[44px_minmax(0,1fr)_78px_72px] sm:px-4 ${row.mine ? 'bg-[#f5f8ff]' : ''}`}><span className={`font-bold ${row.mine ? 'text-[#285cf4]' : 'text-[#708197]'}`}>{row.rank ?? '—'}</span><span className={`min-w-0 font-semibold ${row.mine ? 'text-[#224aca]' : 'text-[#31445a]'}`}><span className="block truncate">{row.name}{row.mine && <span className="ml-1.5 text-[10px] text-[#6e84af]">우리 병원</span>}</span><span className="block text-[10px] font-normal text-[#91a0b0] sm:hidden">{row.mentionCount}건 등장</span></span><span className="hidden text-right text-[#60748b] sm:block">{row.mentionCount}건</span><span className="text-right font-semibold text-[#31445a]">{Number(row.mentionRate || 0).toFixed(1)}%</span></div>)}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[12px] border border-dashed border-[#d6e0ea] bg-[#fafbfd] p-6 text-sm text-[#63758a]">
+                {answerRanking?.status === 'NO_COMPETITORS' ? '등록한 경쟁 병원이 없습니다. 아래에서 비교할 병원을 추가해 주세요.' : answerRanking?.pendingMeasurement ? '새 경쟁 병원 등록 후 AI 재측정을 기다리고 있습니다. 같은 답변에서 함께 확인한 결과가 쌓이면 순위를 표시합니다.' : answerRanking?.status === 'NO_MENTIONS' ? '공통 비교 기간의 AI 답변에서 우리 병원과 등록된 경쟁 병원이 아직 등장하지 않았습니다.' : '공통 비교 기간에 실측된 AI 답변이 없어 순위를 계산할 수 없습니다.'}
+                {answerRanking?.status === 'NO_COMPETITORS' && <a href="#add-competitor" className="ml-2 inline-flex items-center gap-1 font-semibold text-[#285cf4] hover:underline">병원 추가 <ArrowRight className="h-3.5 w-3.5" /></a>}
+              </div>
+            )}
+            <p className="mt-4 text-[11px] leading-5 text-[#8795a6]">{answerRanking?.windowStart && !Number.isNaN(new Date(answerRanking.windowStart).getTime()) ? `${new Date(answerRanking.windowStart).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' })} 이후` : '공통 비교 기간의'} 동일한 실제 AI 답변을 분모로 사용합니다. 등록 병원 모두 비교할 수 있는 시점부터 계산하며, 동률은 공동 순위입니다. 의료 수준이나 진료 품질의 순위가 아닙니다.</p>
+          </CardContent>
+        </Card>
         {/* 플랜 사용량 표시 */}
         {planLimits.maxCompetitors !== -1 && (
           <Card className="bg-gradient-to-r from-slate-50 to-white">
@@ -301,28 +372,27 @@ export default function CompetitorsPage() {
         )}
 
         {/* 경쟁사 추가 */}
-        <Card>
+        <Card id="add-competitor" className="scroll-mt-24">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plus className="h-5 w-5" />
-                경쟁사 추가
+                경쟁 병원 추가
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-3">
-                <Input
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <div className="min-w-0 flex-1"><Input
                   placeholder="경쟁 병원 이름"
                   value={newCompetitor}
                   onChange={(e) => setNewCompetitor(e.target.value)}
-                  className="flex-1"
                   onKeyDown={(e) => e.key === 'Enter' && handleAddCompetitor()}
-                />
-                <Input
+                /></div>
+                <div className="sm:w-40"><Input
                   placeholder="지역 (선택)"
                   value={newRegion}
                   onChange={(e) => setNewRegion(e.target.value)}
-                  className="w-40"
-                />
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddCompetitor()}
+                /></div>
                 <Button
                   onClick={handleAddCompetitor}
                   disabled={addMutation.isPending || !newCompetitor.trim()}
@@ -354,7 +424,7 @@ export default function CompetitorsPage() {
                   ) : (
                     <Lightbulb className="h-4 w-4 mr-2 text-purple-600" />
                   )}
-                  AI 경쟁사 제안
+                  AI 경쟁 병원 제안
                   {!canUseFeature(planType, 'autoDetect') && (
                     <Lock className="h-3 w-3 ml-1 text-slate-400" />
                   )}
@@ -487,15 +557,15 @@ export default function CompetitorsPage() {
         )}
 
         {/* 검색 + 복구 버튼 */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="relative">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
-                placeholder="경쟁사 검색..."
+                placeholder="경쟁 병원 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
+                className="w-full pl-10"
               />
             </div>
             <Button
@@ -509,7 +579,7 @@ export default function CompetitorsPage() {
             </Button>
           </div>
           <p className="text-sm text-slate-500">
-            총 {filteredCompetitors?.length || 0}개 경쟁사
+            총 {filteredCompetitors?.length || 0}개 경쟁 병원
           </p>
         </div>
 
@@ -642,9 +712,7 @@ export default function CompetitorsPage() {
                     {searchTerm ? '검색 결과가 없습니다' : '등록된 경쟁사가 없습니다'}
                   </p>
                   <p className="text-sm text-slate-400 mt-1">
-                    {planType === 'FREE' || planType === 'STARTER'
-                      ? 'Standard 플랜으로 업그레이드하여 경쟁사 분석을 시작하세요'
-                      : '경쟁사를 추가하거나 AI 제안을 사용해보세요'}
+                    경쟁 병원을 직접 추가하거나 AI 후보를 확인해보세요
                   </p>
                 </CardContent>
               </Card>

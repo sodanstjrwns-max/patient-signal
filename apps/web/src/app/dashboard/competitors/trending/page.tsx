@@ -47,7 +47,7 @@ export default function TrendingPage() {
     <div className="flex-1 min-h-screen">
       <Header title="AI 답변 등장률" description="전국 고객 병원의 AI 답변에 어떤 병원명이 얼마나 자주 나오는지 관찰한 통계 — 품질 순위가 아닙니다" onRefresh={() => refetch()} refreshing={isRefetching} />
       <main className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
-        <Card className="border-0 shadow-sm">
+        <Card className="border border-slate-200 shadow-none">
           <CardContent className="p-4 flex flex-wrap items-end gap-3">
             <label className="text-xs font-semibold text-slate-600">진료과
               <select value={specialty} onChange={(e) => setSpecialty(e.target.value)} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm bg-white">
@@ -59,13 +59,13 @@ export default function TrendingPage() {
               </select></label>
             <div className="text-xs font-semibold text-slate-600">기간
               <div className="mt-1 inline-flex rounded-lg border border-slate-200 overflow-hidden">
-                {[30, 90].map((d) => <button key={d} onClick={() => setDays(d)} className={`px-3 py-2 text-sm font-semibold ${days === d ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>{d}일</button>)}
+                {[30, 90].map((d) => <button key={d} onClick={() => setDays(d)} className={`px-3 py-2 text-sm font-semibold ${days === d ? 'bg-brand-600 text-white' : 'bg-white text-slate-600'}`}>{d}일</button>)}
               </div></div>
             <div className="text-xs font-semibold text-slate-600">순위 기준
               <div className="mt-1 inline-flex rounded-lg border border-slate-200 overflow-hidden">
-                <button onClick={() => setSort('rate')} title="질문한 병원마다 응답 중 등장 비율을 구해 평균 — 기본" className={`px-3 py-2 text-sm font-semibold ${sort === 'rate' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>등장률</button>
-                <button onClick={() => setSort('mentions')} className={`px-3 py-2 text-sm font-semibold ${sort === 'mentions' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>언급 수</button>
-                <button onClick={() => setSort('hospitals')} title="한 병원의 질문량에 쏠리지 않게, 몇 곳의 질문에서 나왔는지로 정렬" className={`px-3 py-2 text-sm font-semibold ${sort === 'hospitals' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600'}`}>물어본 병원 수</button>
+                <button onClick={() => setSort('rate')} title="질문한 병원마다 응답 중 등장 비율을 구해 평균 — 기본" className={`px-3 py-2 text-sm font-semibold ${sort === 'rate' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600'}`}>등장률</button>
+                <button onClick={() => setSort('mentions')} className={`px-3 py-2 text-sm font-semibold ${sort === 'mentions' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600'}`}>언급 수</button>
+                <button onClick={() => setSort('hospitals')} title="한 병원의 질문량에 쏠리지 않게, 몇 곳의 질문에서 나왔는지로 정렬" className={`px-3 py-2 text-sm font-semibold ${sort === 'hospitals' ? 'bg-brand-600 text-white' : 'bg-white text-slate-600'}`}>물어본 병원 수</button>
               </div></div>
             {data && <div className="ml-auto text-xs text-slate-500">{data.period.since} ~ {data.period.until} · 질문 병원 {(data.askingHospitals || 0).toLocaleString()}곳 · 응답 {(data.responsesTotal || 0).toLocaleString()}건 · 병원명 {data.totalNames.toLocaleString()}개</div>}
           </CardContent>
@@ -75,7 +75,7 @@ export default function TrendingPage() {
         {isError && <div className="text-sm text-rose-600 p-6">불러오지 못했습니다. 새로고침을 눌러주세요.</div>}
 
         {data && data.risers.length > 0 && (
-          <Card className="border-0 shadow-sm bg-amber-50/60">
+          <Card className="border border-slate-200 shadow-none bg-amber-50/60">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-amber-800 mb-2"><Flame className="w-4 h-4" />새로 뜬 병원 <span className="text-xs font-normal text-amber-700">직전 {data.period.days}일엔 없었는데 이번에 5건 이상</span></div>
               <div className="flex flex-wrap gap-2">{data.risers.map((r) => <span key={r.name} className="px-2.5 py-1 rounded-full bg-white border border-amber-200 text-xs font-semibold text-slate-700">{r.name} <span className="text-amber-700">{r.rate}%</span></span>)}</div>
@@ -84,7 +84,7 @@ export default function TrendingPage() {
         )}
 
         {data && (
-          <Card className="border-0 shadow-sm overflow-hidden">
+          <Card className="border border-slate-200 shadow-none overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-slate-50 text-[11px] uppercase tracking-wide text-slate-500">

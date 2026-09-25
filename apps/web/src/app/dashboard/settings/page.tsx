@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import {
   X,
   Tags,
   Info,
+  ArrowRight,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 
@@ -89,7 +91,7 @@ const PLANS = [
       '모니터링 질문 5개',
       '4개 AI 플랫폼 + 티저 (Grok·CLOVA X 맛보기)',
       '주 2회 크롤링',
-      '경쟁사 1개 비교 분석',
+      '경쟁 병원 3개 비교 분석',
       'ABHS 점수',
       '주간 리포트',
     ],
@@ -114,7 +116,7 @@ const PLANS = [
       '매일 크롤링',
       'ABHS 점수',
       '주간 리포트',
-      '경쟁사 5개 비교 분석',
+      '경쟁 병원 10개 비교 분석',
       'AI 질문 변형 생성',
       '경쟁사 AEO 측정',
       '자동 액션 인텔리전스',
@@ -138,7 +140,7 @@ const PLANS = [
       '매일 크롤링',
       'ABHS 점수',
       '주간 + 월간 딥리포트',
-      '경쟁사 10개 비교 분석',
+      '경쟁 병원 20개 비교 분석',
       'AI 질문 변형 생성',
       '경쟁사 AEO 측정',
       'Content Gap 분석',
@@ -159,12 +161,22 @@ export default function SettingsPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [showQueryPreview, setShowQueryPreview] = useState(false);
+  const [introDraft, setIntroDraft] = useState('');
+  const [introEditing, setIntroEditing] = useState(false);
+  const [hubTreatmentsImported, setHubTreatmentsImported] = useState(false);
 
   // 병원 정보 조회
   const { data: hospital, isLoading } = useQuery({
     queryKey: ['hospital', hospitalId],
     queryFn: () => hospitalApi.get(hospitalId!).then((res) => res.data),
     enabled: !!hospitalId,
+  });
+
+  const { data: hubIntroStatus } = useQuery({
+    queryKey: ['hub-introduction-status', hospitalId],
+    queryFn: () => hospitalApi.hubIntroduction().then((res) => res.data),
+    enabled: !!hospitalId,
+    staleTime: 5 * 60 * 1000,
   });
 
   // 진료과별 시술 목록
@@ -196,7 +208,7 @@ export default function SettingsPage() {
   const hubPrefilledFields: string[] = hospital?.hubPrefill?.fields || [];
   const hubFieldLabels: Record<string, string> = {
     specialtyType: '진료과목', regionSido: '지역(시/도)', regionSigungu: '지역(시/군/구)',
-    regionDong: '지역(동)', coreTreatments: '주력 진료',
+    regionDong: '지역(동)', coreTreatments: '주력 진료', clinicIntroduction: '병원 소개',
   };
 
   useEffect(() => {
@@ -209,6 +221,7 @@ export default function SettingsPage() {
         regionDong: hospital.regionDong || '',
       });
       setNameAliases(hospital.nameAliases || []);
+      if (!introEditing) setIntroDraft(hospital.clinicIntroduction || '');
       // keyProcedures 우선, 없으면 coreTreatments fallback
       if (hospital.keyProcedures?.length > 0) {
         setSelectedProcedures(hospital.keyProcedures);
@@ -216,7 +229,32 @@ export default function SettingsPage() {
         setSelectedProcedures(hospital.coreTreatments);
       }
     }
-  }, [hospital]);
+  }, [hospital, introEditing]);
+
+  const importIntroductionMutation = useMutation({
+    mutationFn: () => hospitalApi.hubIntroduction(true).then((res) => res.data),
+    onSuccess: (data: any) => {
+      if (!data?.enabled) { toast.warning('허브 연동이 설정되지 않았습니다.'); return; }
+      if (!data?.connected) { toast.warning('허브 프로필에 연결할 수 없습니다. 계정 연결 상태를 확인해주세요.'); return; }
+      if (!data?.introduction) { toast.warning('허브에 병원 소개에 사용할 정보가 없습니다. 직접 작성할 수 있습니다.'); return; }
+      setIntroDraft(data.introduction);
+      setIntroEditing(true);
+      queryClient.setQueryData(['hub-introduction-status', hospitalId], data);
+      toast.success('허브 내용을 편집 화면에 가져왔습니다. 확인 후 저장하면 반영됩니다.');
+    },
+    onError: () => toast.error('허브 병원 소개를 가져오지 못했습니다.'),
+  });
+
+  const saveIntroductionMutation = useMutation({
+    mutationFn: () => hospitalApi.update(hospitalId!, { clinicIntroduction: introDraft.trim() }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hospital', hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
+      setIntroEditing(false);
+      toast.success('병원 소개가 저장되었습니다. 핵심 질문 추천에 반영됩니다.');
+    },
+    onError: () => toast.error('병원 소개를 저장하지 못했습니다.'),
+  });
 
   // 별칭 추가
   const addAlias = () => {
@@ -269,6 +307,7 @@ export default function SettingsPage() {
       }));
       if (prefill.coreTreatments?.length > 0) {
         setSelectedProcedures(prefill.coreTreatments.slice(0, 3));
+        setHubTreatmentsImported(true);
       }
       setIsEditing(true);
       toast.success('허브 프로필 값으로 채웠습니다. 확인 후 [저장]을 눌러야 반영됩니다.');
@@ -286,7 +325,9 @@ export default function SettingsPage() {
     mutationFn: (data: any) => hospitalApi.update(hospitalId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hospital'] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
       setIsEditing(false);
+      setHubTreatmentsImported(false);
       toast.success('병원 정보가 업데이트되었습니다.');
     },
   });
@@ -318,6 +359,7 @@ export default function SettingsPage() {
       coreTreatments: selectedProcedures,
     });
     queryClient.invalidateQueries({ queryKey: ['hospital'] });
+    queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
     generateMutation.mutate();
   };
 
@@ -334,8 +376,11 @@ export default function SettingsPage() {
     if (formData.regionSido.trim()) payload.regionSido = formData.regionSido.trim();
     if (formData.regionSigungu.trim()) payload.regionSigungu = formData.regionSigungu.trim();
     if (formData.regionDong.trim()) payload.regionDong = formData.regionDong.trim();
-    // 허브에서 가져온 주력 진료가 아직 DB에 없으면 저장 시 함께 반영
-    if (hubPrefilledFields.includes('coreTreatments') && hospital?.coreTreatments?.length > 0) {
+    // 허브에서 다시 가져온 주력 진료는 사용자가 확인한 현재 선택값으로 함께 저장
+    if (hubTreatmentsImported && selectedProcedures.length > 0) {
+      payload.coreTreatments = selectedProcedures;
+      payload.keyProcedures = selectedProcedures;
+    } else if (hubPrefilledFields.includes('coreTreatments') && hospital?.coreTreatments?.length > 0) {
       payload.coreTreatments = hospital.coreTreatments;
     }
     updateMutation.mutate(payload);
@@ -367,7 +412,71 @@ export default function SettingsPage() {
     <div className="min-h-screen">
       <Header title="설정" description="병원 설정, 핵심 시술 관리, 요금제를 관리합니다" />
 
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="mx-auto max-w-[1320px] space-y-6 p-5 sm:p-8">
+        <Card className="!border-[#cddcff] !bg-[#f9fbff]">
+          <CardContent className="p-5 sm:p-7">
+            <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#e7eeff] text-[#285cf4]"><Sparkles className="h-5 w-5" /></div>
+                <div>
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#285cf4]">추천 질문의 기준</p>
+                  <h2 className="text-xl font-bold tracking-[-0.03em] text-[#17212e]">우리 병원 소개</h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-[#617187]">허브에 입력한 병원 정보를 가져와 초안을 만들고, 이 화면에서 실제 강점과 진료 내용을 수정하세요. 저장한 소개를 기준으로 핵심 질문을 추천합니다.</p>
+                </div>
+              </div>
+              <span className={`inline-flex shrink-0 items-center gap-1.5 self-start rounded-full px-3 py-1.5 text-xs font-semibold ${hubIntroStatus?.connected ? 'bg-[#e4f6ef] text-[#147654]' : 'bg-[#edf0f4] text-[#657589]'}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${hubIntroStatus?.connected ? 'bg-[#20ab7a]' : 'bg-[#9aa8b8]'}`} />
+                {hubIntroStatus?.connected ? '허브 병원 정보 수신' : hubIntroStatus?.enabled === false ? '허브 연동 미설정' : hubIntroStatus?.enabled ? '허브 병원 정보 연결 안 됨' : '허브 상태 확인 중'}
+              </span>
+            </div>
+
+            <label htmlFor="clinic-introduction" className="mb-2 block text-xs font-semibold text-[#415168]">병원 소개</label>
+            {introEditing ? (
+              <textarea
+                id="clinic-introduction"
+                value={introDraft}
+                onChange={(e) => setIntroDraft(e.target.value)}
+                maxLength={2000}
+                rows={6}
+                placeholder="주요 진료, 진료 철학, 지역 환자분께 알려야 할 특징을 사실에 맞게 작성하세요."
+                className="w-full resize-y rounded-[12px] border border-[#cdd9e9] bg-white p-4 text-sm leading-6 text-[#1e2d3f] outline-none placeholder:text-[#a5b0bd] focus:border-[#285cf4] focus:ring-2 focus:ring-[#285cf4]/15"
+              />
+            ) : (
+              <div id="clinic-introduction" className="min-h-32 whitespace-pre-wrap rounded-[12px] border border-[#e4eaf2] bg-white p-4 text-sm leading-6 text-[#304156]">
+                {introDraft || <span className="text-[#8b99aa]">아직 병원 소개가 없습니다. 허브에서 가져오거나 직접 작성해 주세요.</span>}
+              </div>
+            )}
+            <div className="mt-2 flex items-center justify-between text-xs text-[#8a98a9]">
+              <span>{hubPrefilledFields.includes('clinicIntroduction') ? '허브에서 채운 초안 · 저장 전' : hospital?.clinicIntroduction ? 'Signal에 저장한 소개' : '소개를 저장하면 추천 기준으로 사용됩니다'}</span>
+              {introEditing && <span>{introDraft.length} / 2,000자</span>}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#e3eaf5] pt-4">
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => importIntroductionMutation.mutate()} disabled={importIntroductionMutation.isPending}>
+                  {importIntroductionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  허브에서 소개 가져오기
+                </Button>
+                <Link href="/dashboard/competitors" className="inline-flex h-10 items-center gap-1.5 rounded-[10px] px-3 text-sm font-semibold text-[#46617f] hover:bg-white hover:text-[#285cf4]">
+                  경쟁 병원 추가 <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+              <div className="flex gap-2">
+                {introEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => { setIntroDraft(hospital?.clinicIntroduction || ''); setIntroEditing(false); }}>취소</Button>
+                    <Button onClick={() => saveIntroductionMutation.mutate()} disabled={saveIntroductionMutation.isPending}>
+                      {saveIntroductionMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 소개 저장
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={() => setIntroEditing(true)}>직접 수정</Button>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ==================== 병원 정보 ==================== */}
         <Card>
           <CardHeader>
@@ -456,7 +565,7 @@ export default function SettingsPage() {
               <div className="flex gap-2">
               {isEditing ? (
                 <>
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>취소</Button>
+                  <Button variant="outline" onClick={() => { setIsEditing(false); setHubTreatmentsImported(false); setSelectedProcedures(hospital?.keyProcedures?.length ? hospital.keyProcedures : hospital?.coreTreatments || []); }}>취소</Button>
                   <Button onClick={handleSave} disabled={updateMutation.isPending}>
                     {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
                     저장

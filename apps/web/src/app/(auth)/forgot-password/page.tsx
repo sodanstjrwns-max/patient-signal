@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Sparkles, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
+import { ScanSearch, ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -31,13 +31,13 @@ export default function ForgotPasswordPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-8 pb-8 text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
+      <div className="min-h-screen bg-[#f6f7f9] flex items-center justify-center p-5">
+        <Card className="w-full max-w-md !rounded-[20px] !border !border-[#e7ecf2] !bg-white !shadow-[0_8px_34px_rgba(18,33,54,0.045)]">
+          <CardContent className="px-7 pb-8 pt-8 text-center sm:px-9">
+            <div className="w-14 h-14 bg-[#edf7f1] rounded-[14px] flex items-center justify-center mx-auto mb-5">
+              <CheckCircle className="h-7 w-7 text-[#23865a]" />
             </div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">이메일을 확인해주세요</h2>
+            <h2 className="text-2xl font-bold tracking-[-0.04em] text-[#17212e] mb-2">이메일을 확인해주세요</h2>
             <p className="text-slate-600 mb-6">
               <strong>{email}</strong>로<br />
               비밀번호 재설정 링크를 발송했습니다.
@@ -57,20 +57,20 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-mesh flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
+    <div className="min-h-screen bg-[#f6f7f9] flex items-center justify-center p-5">
+      <Card className="w-full max-w-md !rounded-[20px] !border !border-[#e7ecf2] !bg-white !shadow-[0_8px_34px_rgba(18,33,54,0.045)]">
+        <CardHeader className="text-center px-7 pb-2 pt-8 sm:px-9">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center">
-              <Sparkles className="h-6 w-6 text-white" />
+            <div className="w-10 h-10 rounded-[11px] bg-[#285cf4] flex items-center justify-center">
+              <ScanSearch className="h-5 w-5 text-white" />
             </div>
           </Link>
-          <CardTitle className="text-2xl">비밀번호 찾기</CardTitle>
+          <CardTitle className="text-[27px]">비밀번호 찾기</CardTitle>
           <CardDescription>
             가입하신 이메일 주소를 입력해주세요
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-7 pb-8 pt-4 sm:px-9">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
@@ -79,10 +79,11 @@ export default function ForgotPasswordPage() {
             )}
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">이메일</label>
+              <label htmlFor="forgot-email" className="text-sm font-semibold text-[#334155]">이메일</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                 <Input
+                  id="forgot-email"
                   type="email"
                   placeholder="doctor@clinic.com"
                   value={email}
@@ -93,7 +94,7 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full" loading={loading}>
+            <Button type="submit" className="w-full bg-[#285cf4] hover:bg-[#204bce] text-white" loading={loading}>
               비밀번호 재설정 링크 받기
             </Button>
           </form>

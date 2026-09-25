@@ -134,23 +134,23 @@ export default function ContentCalendarPage() {
         {/* ─── 상단 통계 + 생성 버튼 ─── */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 flex-1">
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center">
+            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
               <p className="text-lg font-bold text-slate-800">{calendar?.total || 0}</p>
               <p className="text-[10px] text-slate-500">총 주차</p>
             </div>
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center">
+            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
               <p className="text-lg font-bold text-green-600">{stats.PUBLISHED || 0}</p>
               <p className="text-[10px] text-slate-500">발행 완료</p>
             </div>
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center">
+            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
               <p className="text-lg font-bold text-blue-600">{stats.ANALYZED || 0}</p>
               <p className="text-[10px] text-slate-500">분석 완료</p>
             </div>
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center">
+            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
               <p className="text-lg font-bold text-slate-600">{stats.PLANNED || 0}</p>
               <p className="text-[10px] text-slate-500">계획 중</p>
             </div>
-            <div className="bg-white rounded-xl px-3 py-2 shadow-sm text-center">
+            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
               <p className="text-lg font-bold text-purple-600">
                 {calendar?.total ? Math.round(((stats.PUBLISHED || 0) / calendar.total) * 100) : 0}%
               </p>
@@ -172,7 +172,7 @@ export default function ContentCalendarPage() {
 
         {/* ─── 퍼널 분포 바 ─── */}
         {calendar?.total > 0 && (
-          <Card className="border-0 shadow-sm">
+          <Card className="border border-slate-200 shadow-none">
             <CardContent className="p-4">
               <h4 className="text-xs font-semibold text-slate-500 mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
               <div className="flex h-6 rounded-full overflow-hidden">
@@ -233,7 +233,7 @@ export default function ContentCalendarPage() {
 
         {/* ─── 캘린더 비어있을 때 ─── */}
         {!isLoading && items.length === 0 && (
-          <Card className="border-0 shadow-md">
+          <Card className="border border-slate-200 shadow-none">
             <CardContent className="p-12 text-center">
               <CalendarDays className="w-16 h-16 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-slate-700 mb-2">콘텐츠 캘린더가 비어있습니다</h3>
@@ -276,7 +276,7 @@ export default function ContentCalendarPage() {
               return (
                 <Card
                   key={item.id}
-                  className={`border-0 shadow-sm border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
+                  className={`border border-slate-200 shadow-none border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
                 >
                   <CardContent className="p-0">
                     <button

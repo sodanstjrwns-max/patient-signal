@@ -43,7 +43,7 @@ export class PlanGuard implements CanActivate {
     },
     STARTER: {
       maxPrompts: 5,
-      maxCompetitors: 1,           // 경쟁사 1개 맛보기
+      maxCompetitors: 3,           // 추적 가능한 경쟁 병원 3개
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],  // S는 4개 + 티저
       // 【티저】S는 프롬프트 1개(첫 번째)에 한해 GROK + CLOVA_X 맛보기 제공
       //  → "네이버 AI에서 우리 병원이 어떻게 나오는지"를 보여줘 M 업셀 유도
@@ -59,7 +59,7 @@ export class PlanGuard implements CanActivate {
     },
     STANDARD: {
       maxPrompts: 15,
-      maxCompetitors: 5,
+      maxCompetitors: 10,
       // 7개 전체 — NAVER_AI_BRIEFING은 별도 SERP 수집 크론에서 처리 (6-AI 세션과 교집합 없음 → 안전)
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
       crawlsPerMonth: 30,          // 매일
@@ -73,7 +73,7 @@ export class PlanGuard implements CanActivate {
     },
     PRO: {
       maxPrompts: 35,
-      maxCompetitors: 10,
+      maxCompetitors: 20,
       platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
       crawlsPerMonth: 30,          // 매일
       minDaysBetweenCrawls: 0,

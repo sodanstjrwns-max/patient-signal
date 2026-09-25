@@ -234,7 +234,7 @@ export default function GuidePage() {
       <main className="p-4 sm:p-6 max-w-5xl mx-auto space-y-8">
         {/* ═══ 0. 이 서비스가 하는 일 ═══ */}
         <section id="intro-section">
-          <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white">
+          <Card className="border-indigo-200 bg-indigo-50">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
@@ -260,10 +260,10 @@ export default function GuidePage() {
             2026.08.26 신설: 유료 원장이 "어떤 질문에 노출되는지 어디서 보냐"고 문의
             → 핵심 기능 3개를 가이드 최상단에서 1·2·3으로 즉답 */}
         <section id="first-three-section">
-          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
+          <Card className="border-amber-200 bg-amber-50">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
                   <CheckCircle2 className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
@@ -301,7 +301,7 @@ export default function GuidePage() {
                 <Link
                   key={item.step}
                   href={item.href}
-                  className="flex items-start gap-3.5 rounded-2xl border border-amber-100 bg-white/70 p-4 hover:border-amber-300 hover:shadow-sm transition-all group"
+                  className="flex items-start gap-3.5 rounded-lg border border-amber-100 bg-white/70 p-4 hover:border-amber-300 hover:shadow-sm transition-all group"
                 >
                   <span className="w-7 h-7 rounded-xl bg-amber-500 text-white text-sm font-black flex items-center justify-center shrink-0 mt-0.5">
                     {item.step}
@@ -325,7 +325,7 @@ export default function GuidePage() {
           <p className="text-sm text-slate-500 mb-4">이 네 가지만 구분하면 대시보드의 80%가 읽힙니다.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {CORE_TERMS.map((t) => (
-              <Card key={t.name} className="hover:shadow-md transition-shadow">
+              <Card key={t.name} className="hover:border-blue-200 transition-shadow">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg shrink-0 ${t.color}`}>
@@ -386,7 +386,7 @@ export default function GuidePage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {group.items.map((item) => (
                     <Link key={item.name} href={item.href} className="block group">
-                      <Card className="h-full hover:border-indigo-300 hover:shadow-md transition-all">
+                      <Card className="h-full hover:border-brand-200 transition-colors">
                         <CardContent className="pt-4 pb-4">
                           <div className="flex items-center gap-2 mb-2">
                             <item.icon className="w-4 h-4 text-indigo-500" />
@@ -467,9 +467,9 @@ export default function GuidePage() {
 
         {/* ═══ 마무리 ═══ */}
         <section id="closing-section" className="pb-8">
-          <div className="rounded-xl bg-slate-900 text-white p-6 text-center">
-            <p className="text-sm font-medium text-slate-300 leading-relaxed">
-              지표가 이해되지 않을 때는 각 숫자 옆의 <span className="text-white font-bold">ⓘ 아이콘</span>을 눌러보세요.
+          <div className="rounded-lg border border-brand-100 bg-brand-50 p-6 text-center">
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+              지표가 이해되지 않을 때는 각 숫자 옆의 <span className="text-brand-700 font-bold">ⓘ 아이콘</span>을 눌러보세요.
               그래도 궁금하면 언제든 문의 주세요 — 질문 주신 내용은 이 가이드에 계속 반영됩니다.
             </p>
           </div>

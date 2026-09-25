@@ -133,25 +133,25 @@ export default function CitationAnalysisPage() {
         {/* ─── 인용 통계 카드 ─── */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="border-0 shadow-sm">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-brand-600">{stats.totalCitations}</p>
                 <p className="text-xs text-slate-500 mt-1"><TermTip term="totalCitations">총 인용 수 (30일)</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-green-600">{stats.totalDomains}</p>
                 <p className="text-xs text-slate-500 mt-1"><TermTip term="citationDomains">인용 도메인</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-emerald-600">{stats.naverCitationRate}%</p>
                 <p className="text-xs text-slate-500 mt-1"><TermTip term="naverCitationRate">네이버 인용률</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-sm">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-4 text-center">
                 <p className="text-2xl font-bold text-purple-600">{stats.overallCompanionRate ?? 0}%</p>
                 <p className="text-xs text-slate-500 mt-1"><TermTip term="companionRate">언급 동반율</TermTip></p>
@@ -161,7 +161,7 @@ export default function CitationAnalysisPage() {
         )}
 
         {/* ─── 검색 입력 ─── */}
-        <Card className="border-0 shadow-md bg-gradient-to-r from-brand-50 to-purple-50">
+        <Card className="border border-slate-200 shadow-none bg-brand-50">
           <CardContent className="p-6">
             <div className="flex items-center gap-2 mb-3">
               <Search className="w-5 h-5 text-brand-600" />
@@ -210,7 +210,7 @@ export default function CitationAnalysisPage() {
         {analysisResult && (
           <div className="space-y-4">
             {/* 요약 + 점수 */}
-            <Card className="border-0 shadow-md">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -231,7 +231,7 @@ export default function CitationAnalysisPage() {
                     </p>
                     <p className="text-xs text-slate-400">/ 100</p>
                   </div>
-                  <div className="bg-gradient-to-br from-brand-50 to-purple-50 rounded-xl p-4 text-center">
+                  <div className="bg-brand-50 rounded-xl p-4 text-center">
                     <p className="text-xs text-slate-500 mb-1">지시어 반영 후 예상</p>
                     <p className="text-3xl font-bold text-brand-600">
                       {analysisResult.contentScore.potential}
@@ -247,7 +247,7 @@ export default function CitationAnalysisPage() {
 
             {/* 인용 페이지 분석 */}
             {analysisResult.analyzedPages.length > 0 && (
-              <Card className="border-0 shadow-sm">
+              <Card className="border border-slate-200 shadow-none">
                 <CardContent className="p-4">
                   <button
                     onClick={() => setShowPages(!showPages)}
@@ -301,7 +301,7 @@ export default function CitationAnalysisPage() {
             )}
 
             {/* SEO 지시어 */}
-            <Card className="border-0 shadow-md">
+            <Card className="border border-slate-200 shadow-none">
               <CardContent className="p-6">
                 <h4 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4">
                   <FileText className="w-5 h-5 text-red-500" />
@@ -365,7 +365,7 @@ export default function CitationAnalysisPage() {
             {analysisResult.seoUpgrade && (
               <div className="grid md:grid-cols-3 gap-4">
                 {/* 네이버 */}
-                <Card className="border-0 shadow-sm border-l-4 border-l-green-400">
+                <Card className="border border-slate-200 shadow-none border-l-4 border-l-green-400">
                   <CardContent className="p-4">
                     <h5 className="text-sm font-bold text-green-700 flex items-center gap-2 mb-3">
                       <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">N</div>
@@ -382,7 +382,7 @@ export default function CitationAnalysisPage() {
                   </CardContent>
                 </Card>
                 {/* 구글 */}
-                <Card className="border-0 shadow-sm border-l-4 border-l-blue-400">
+                <Card className="border border-slate-200 shadow-none border-l-4 border-l-blue-400">
                   <CardContent className="p-4">
                     <h5 className="text-sm font-bold text-blue-700 flex items-center gap-2 mb-3">
                       <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">G</div>
@@ -399,7 +399,7 @@ export default function CitationAnalysisPage() {
                   </CardContent>
                 </Card>
                 {/* AI 엔진 */}
-                <Card className="border-0 shadow-sm border-l-4 border-l-purple-400">
+                <Card className="border border-slate-200 shadow-none border-l-4 border-l-purple-400">
                   <CardContent className="p-4">
                     <h5 className="text-sm font-bold text-purple-700 flex items-center gap-2 mb-3">
                       <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">AI</div>
@@ -422,7 +422,7 @@ export default function CitationAnalysisPage() {
 
         {/* ─── 최근 분석 이력 ─── */}
         {recentAnalyses.length > 0 && (
-          <Card className="border-0 shadow-sm">
+          <Card className="border border-slate-200 shadow-none">
             <CardContent className="p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <BookOpen className="w-4 h-4 text-slate-500" />
@@ -469,7 +469,7 @@ export default function CitationAnalysisPage() {
 
         {/* ─── 인용 도메인 통계 ─── */}
         {stats?.topDomains?.length > 0 && (
-          <Card className="border-0 shadow-sm">
+          <Card className="border border-slate-200 shadow-none">
             <CardContent className="p-4">
               <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-blue-500" />

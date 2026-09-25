@@ -110,11 +110,11 @@ export default function ApiKeysPage() {
     <div className="min-h-screen">
       <Header title="API 연동" description="외부 서비스에 내 병원의 AI 가시성 데이터를 연동합니다" />
 
-      <div className="p-6 space-y-6 max-w-5xl">
+      <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
 
         {/* ==================== 새로 발급된 키 알림 ==================== */}
         {newlyCreatedKey && (
-          <Card className="border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-lg">
+          <Card className="border-amber-300 bg-amber-50 shadow-none">
             <CardContent className="p-6">
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -156,10 +156,10 @@ export default function ApiKeysPage() {
         )}
 
         {/* ==================== API Key 발급 ==================== */}
-        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-white">
+        <Card className="border-brand-200 bg-brand-50/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-indigo-600" />
+              <Key className="h-5 w-5 text-brand-600" />
               API Key 발급
             </CardTitle>
             <CardDescription>
@@ -217,7 +217,7 @@ export default function ApiKeysPage() {
           <CardContent>
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
               </div>
             ) : keys.length === 0 ? (
               <div className="text-center py-12">
@@ -400,7 +400,7 @@ export default function ApiKeysPage() {
                         {ep.method}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <code className="text-xs font-mono text-indigo-600">{ep.path}</code>
+                        <code className="text-xs font-mono text-brand-600">{ep.path}</code>
                         <p className="text-xs text-slate-500 mt-0.5">{ep.desc}</p>
                       </div>
                     </div>

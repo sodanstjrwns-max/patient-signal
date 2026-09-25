@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { hospitalResponseStats, hospitalCompetitorMentions } from '../common/stats/response-daily';
 import { CacheService } from '../common/cache/cache.service';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
+import { PlanGuard } from '../common/guards/plan.guard';
 
 export interface CompetitorSuggestion {
   name: string;
@@ -113,17 +114,19 @@ export class CompetitorsService {
     if (duplicate) {
       if (!duplicate.isActive) {
         // 비활성 상태면 재활성화
-        return this.prisma.competitor.update({
+        const restored = await this.prisma.competitor.update({
           where: { id: duplicate.id },
           data: { isActive: true },
         });
+        await this.cache.invalidateHospital(hospitalId);
+        return restored;
       }
       throw new ConflictException(
         `이미 유사한 경쟁사가 등록되어 있습니다: ${duplicate.competitorName}`,
       );
     }
 
-    return this.prisma.competitor.create({
+    const created = await this.prisma.competitor.create({
       data: {
         hospitalId,
         competitorName: dto.competitorName,
@@ -132,6 +135,8 @@ export class CompetitorsService {
         isActive: true,
       },
     });
+    await this.cache.invalidateHospital(hospitalId);
+    return created;
   }
 
   /**
@@ -151,6 +156,134 @@ export class CompetitorsService {
   }
 
   /**
+   * 우리 병원에서 실제 측정한 동일 AI 답변을 분모로 쓰는 등장률 순위.
+   * 경쟁 병원명은 등록 후에만 검증/기록되므로 마지막 등록·복구 이후의
+   * 공통 응답 창을 사용한다. 이 수치는 의료 품질이나 전체 지역 순위가 아니다.
+   */
+  async getAnswerRanking(hospitalId: string) {
+    const [hospital, competitors] = await Promise.all([
+      this.prisma.hospital.findUnique({
+        where: { id: hospitalId },
+        select: { id: true, name: true },
+      }),
+      this.prisma.competitor.findMany({
+        where: { hospitalId, isActive: true },
+        select: { id: true, competitorName: true, competitorRegion: true, createdAt: true, updatedAt: true },
+      }),
+    ]);
+
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+
+    const periodStart = new Date();
+    periodStart.setUTCHours(0, 0, 0, 0);
+    periodStart.setUTCDate(periodStart.getUTCDate() - 29);
+    const latestActivation = competitors.reduce<Date | null>((latest, competitor) => {
+      const activation = competitor.updatedAt > competitor.createdAt
+        ? competitor.updatedAt : competitor.createdAt;
+      return !latest || activation > latest ? activation : latest;
+    }, null);
+    const windowStart = latestActivation && latestActivation > periodStart
+      ? latestActivation : periodStart;
+
+    // 원문(responseText)과 LLM 원가는 절대 가져오지 않는다. 병원 소유 데이터만 조회한다.
+    const responses = await this.prisma.aIResponse.findMany({
+      where: {
+        hospitalId,
+        responseDate: { gte: periodStart },
+        createdAt: { gte: windowStart },
+        isVerified: true,
+      },
+      select: { isMentioned: true, competitorsMentioned: true },
+    });
+
+    const totalResponses = responses.length;
+    const competitorKeys = competitors.map((competitor) => new Set([
+      this.normalizeDentalName(competitor.competitorName).toLocaleLowerCase(),
+      this.normalizeDentalName(`${competitor.competitorRegion || ''}${competitor.competitorName}`).toLocaleLowerCase(),
+    ].filter((key) => key.length >= 2 && key !== '치과')));
+    const competitorCounts = competitors.map(() => 0);
+    let myMentionCount = 0;
+    for (const response of responses) {
+      if (response.isMentioned) myMentionCount++;
+      const matched = new Set<number>();
+      for (const name of response.competitorsMentioned || []) {
+        const normalized = this.normalizeDentalName(name).toLocaleLowerCase();
+        if (normalized.length < 2 || normalized === '치과') continue;
+
+        // 표기가 정확히 일치하는 등록 병원을 우선한다. 지역 접두사 등 표기 변형은
+        // 기존 경쟁사 비교의 유사명 규칙으로 보완하되, 여러 병원에 걸치면 추측하지 않는다.
+        const exactIndex = competitorKeys.findIndex((keys) => keys.has(normalized));
+        if (exactIndex >= 0) {
+          matched.add(exactIndex);
+          continue;
+        }
+        const fuzzy = competitors.map((competitor, index) => ({
+          index,
+          specificity: Math.max(0, ...Array.from(competitorKeys[index], (key) => key.length)),
+          matches: this.isSameDentalClinic(competitor.competitorName, name)
+            || (!!competitor.competitorRegion && this.isSameDentalClinic(`${competitor.competitorRegion}${competitor.competitorName}`, name)),
+        })).filter((candidate) => candidate.matches);
+        const specificity = Math.max(0, ...fuzzy.map((candidate) => candidate.specificity));
+        const best = fuzzy.filter((candidate) => candidate.specificity === specificity);
+        if (best.length === 1) matched.add(best[0].index);
+      }
+      matched.forEach((index) => { competitorCounts[index]++; });
+    }
+    const rate = (count: number) => totalResponses > 0
+      ? Math.round((count / totalResponses) * 1000) / 10 : 0;
+    const matchedCompetitors = competitors.map((competitor, index) => {
+      // 별칭을 한 답변에서 여러 번 추출해도 해당 병원은 답변당 한 번만 센다.
+      const mentionCount = competitorCounts[index];
+      return {
+        id: competitor.id,
+        name: competitor.competitorName,
+        mentionCount,
+        mentionRate: rate(mentionCount),
+        rank: null as number | null,
+        addedAt: (competitor.updatedAt > competitor.createdAt
+          ? competitor.updatedAt : competitor.createdAt).toISOString(),
+      };
+    });
+    const myHospital = {
+      id: hospital.id,
+      name: hospital.name,
+      mentionCount: myMentionCount,
+      mentionRate: rate(myMentionCount),
+      rank: null as number | null,
+    };
+    const all = [myHospital, ...matchedCompetitors];
+    const hasEvidence = all.some((clinic) => clinic.mentionCount > 0);
+    if (competitors.length > 0 && totalResponses > 0 && hasEvidence) {
+      for (const clinic of all) {
+        clinic.rank = 1 + all.filter((other) => other.mentionCount > clinic.mentionCount).length;
+      }
+    }
+    matchedCompetitors.sort((a, b) =>
+      b.mentionCount - a.mentionCount || a.name.localeCompare(b.name, 'ko'),
+    );
+
+    const status = competitors.length === 0 ? 'NO_COMPETITORS'
+      : totalResponses === 0 ? 'NO_DATA'
+      : !hasEvidence ? 'NO_MENTIONS'
+      : totalResponses < 30 ? 'LOW_SAMPLE' : 'READY';
+
+    return {
+      periodDays: 30,
+      windowStart: windowStart.toISOString(),
+      totalResponses,
+      minRecommendedResponses: 30,
+      pendingMeasurement: status === 'NO_DATA' && !!latestActivation && latestActivation > periodStart,
+      status,
+      metric: 'ANSWER_MENTION_RATE',
+      rank: myHospital.rank,
+      totalClinics: all.length,
+      myHospital,
+      competitors: matchedCompetitors,
+      note: '우리 병원 모니터 질문의 동일한 AI 답변에서 병원명이 등장한 비율입니다. 의료 품질이나 지역 전체 병원 순위가 아닙니다.',
+    };
+  }
+
+  /**
    * 비활성(삭제된) 경쟁사 목록 조회
    */
   async findInactive(hospitalId: string) {
@@ -160,14 +293,36 @@ export class CompetitorsService {
     });
   }
 
+  private async remainingCompetitorSlots(hospitalId: string): Promise<number> {
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: {
+        planType: true,
+        _count: { select: { competitors: { where: { isActive: true } } } },
+      },
+    });
+    if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
+    const limit = PlanGuard.PLAN_LIMITS[hospital.planType].maxCompetitors;
+    return limit === -1 ? -1 : Math.max(0, limit - hospital._count.competitors);
+  }
+
   /**
    * 비활성 경쟁사 전체 복구
    */
   async restoreAll(hospitalId: string) {
-    const result = await this.prisma.competitor.updateMany({
+    const remaining = await this.remainingCompetitorSlots(hospitalId);
+    const inactive = await this.prisma.competitor.findMany({
       where: { hospitalId, isActive: false },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+      ...(remaining === -1 ? {} : { take: remaining }),
+    });
+    if (inactive.length === 0) return { restored: 0 };
+    const result = await this.prisma.competitor.updateMany({
+      where: { hospitalId, isActive: false, id: { in: inactive.map((c) => c.id) } },
       data: { isActive: true },
     });
+    await this.cache.invalidateHospital(hospitalId);
     this.logger.log(`[경쟁사 복구] hospitalId=${hospitalId}, 복구된 수: ${result.count}`);
     return { restored: result.count };
   }
@@ -182,10 +337,16 @@ export class CompetitorsService {
     if (!competitor || competitor.hospitalId !== hospitalId) {
       throw new NotFoundException('경쟁사를 찾을 수 없습니다');
     }
-    return this.prisma.competitor.update({
+    if (competitor.isActive) return competitor;
+    if (await this.remainingCompetitorSlots(hospitalId) === 0) {
+      throw new ForbiddenException({ error: 'PLAN_LIMIT_REACHED', message: '현재 플랜의 경쟁 병원 한도에 도달했습니다.' });
+    }
+    const restored = await this.prisma.competitor.update({
       where: { id: competitorId },
       data: { isActive: true },
     });
+    await this.cache.invalidateHospital(hospitalId);
+    return restored;
   }
 
   /**
@@ -204,6 +365,7 @@ export class CompetitorsService {
       where: { id },
       data: { isActive: false },
     });
+    await this.cache.invalidateHospital(hospitalId);
 
     return { success: true };
   }
@@ -432,15 +594,17 @@ export class CompetitorsService {
     if (duplicate) {
       // 비활성이었으면 재활성화
       if (!duplicate.isActive) {
-        return this.prisma.competitor.update({
+        const restored = await this.prisma.competitor.update({
           where: { id: duplicate.id },
           data: { isActive: true },
         });
+        await this.cache.invalidateHospital(hospitalId);
+        return restored;
       }
       return duplicate;
     }
 
-    return this.prisma.competitor.create({
+    const created = await this.prisma.competitor.create({
       data: {
         hospitalId,
         competitorName: dto.competitorName,
@@ -449,6 +613,8 @@ export class CompetitorsService {
         isActive: true,
       },
     });
+    await this.cache.invalidateHospital(hospitalId);
+    return created;
   }
 
   /**

@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsArray, IsBoolean } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsArray, IsBoolean, IsNotEmpty, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PromptType } from '@prisma/client';
 
@@ -37,4 +37,25 @@ export class BulkCreatePromptsDto {
   @ApiProperty({ type: [CreatePromptDto], description: '질문 목록' })
   @IsArray()
   prompts: CreatePromptDto[];
+}
+
+export class ReplacePromptDto {
+  @ApiProperty({ description: '모니터링을 중단할 기존 활성 질문 ID' })
+  @IsString()
+  @IsNotEmpty()
+  replacePromptId: string;
+
+  @ApiProperty({ description: '새로 모니터링할 질문 문장' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  promptText: string;
+}
+
+export class UpdatePromptTextDto {
+  @ApiProperty({ description: '수정할 질문 문장' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(500)
+  promptText: string;
 }

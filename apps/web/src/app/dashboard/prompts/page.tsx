@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { promptsApi, hospitalApi, queryTemplatesApi, schedulerApi } from '@/lib/api';
+import { api, promptsApi, hospitalApi, queryTemplatesApi, schedulerApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import {
   Plus,
@@ -35,6 +36,10 @@ import {
   RefreshCw,
   Target,
   Layers,
+  ArrowRight,
+  ExternalLink,
+  Building2,
+  Pencil,
 } from 'lucide-react';
 import { toast } from '@/hooks/useToast';
 import { UsageBar, UpgradeModal, getPlanLimits, canUseFeature } from '@/components/plan/PlanGate';
@@ -109,6 +114,22 @@ const specialtyNames: Record<string, string> = {
   OTHER: '기타',
 };
 
+interface CoreQuestion {
+  query: string;
+  category: string;
+  intent: string;
+  reason: string;
+  source: 'hub' | 'signal' | 'profile';
+  alreadyTracked?: boolean;
+  promptId?: string;
+}
+
+const coreSourceLabels: Record<CoreQuestion['source'], string> = {
+  hub: '허브 병원 정보',
+  signal: 'Signal 병원 소개',
+  profile: '기본 병원 정보',
+};
+
 export default function PromptsPage() {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -133,12 +154,26 @@ export default function PromptsPage() {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [showMatrix, setShowMatrix] = useState(false);
   const [selectedMatrixPrompts, setSelectedMatrixPrompts] = useState<Set<string>>(new Set());
+  const [editingCoreQuery, setEditingCoreQuery] = useState<string | null>(null);
+  const [coreDrafts, setCoreDrafts] = useState<Record<string, string>>({});
+  const [replacingCoreQuery, setReplacingCoreQuery] = useState<string | null>(null);
+  const [replacementPromptId, setReplacementPromptId] = useState('');
+  const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [promptDraft, setPromptDraft] = useState('');
 
   // 프롬프트 목록 조회
   const { data: prompts, isLoading } = useQuery({
     queryKey: ['prompts', hospitalId],
-    queryFn: () => promptsApi.list(hospitalId!).then((res) => res.data),
+    queryFn: () => promptsApi.list(hospitalId!, false).then((res) => res.data),
     enabled: !!hospitalId,
+  });
+
+  const { data: coreData, isLoading: coreLoading } = useQuery({
+    queryKey: ['core-questions', hospitalId],
+    queryFn: () => queryTemplatesApi.coreQuestions(hospitalId!).then((res) => res.data),
+    enabled: !!hospitalId,
+    staleTime: 60 * 1000,
   });
 
   // 질문 제안 조회
@@ -161,7 +196,10 @@ export default function PromptsPage() {
       promptsApi.create(hospitalId!, { promptText, promptType: 'CUSTOM' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
       setNewPrompt('');
+      setEditingCoreQuery(null);
+      toast.success('질문을 모니터링 목록에 추가했습니다.');
     },
     onError: (error: any) => {
       const errData = error.response?.data;
@@ -194,6 +232,7 @@ export default function PromptsPage() {
     },
     onSuccess: (added) => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
       queryClient.invalidateQueries({ queryKey: ['suggestions'] });
       queryClient.invalidateQueries({ queryKey: ['matrix-preview'] });
       setSelectedSuggestions(new Set());
@@ -209,6 +248,7 @@ export default function PromptsPage() {
     mutationFn: (id: string) => promptsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
     },
   });
 
@@ -217,7 +257,34 @@ export default function PromptsPage() {
     mutationFn: (id: string) => promptsApi.toggle(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
     },
+    onError: (error: any) => toast.error(error.response?.data?.message || '질문 상태를 변경하지 못했습니다.'),
+  });
+
+  const replaceMutation = useMutation({
+    mutationFn: ({ replacePromptId, promptText }: { replacePromptId: string; promptText: string }) =>
+      promptsApi.replace(hospitalId!, { replacePromptId, promptText }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
+      setReplacingCoreQuery(null);
+      setReplacementPromptId('');
+      setEditingCoreQuery(null);
+      toast.success('핵심 질문으로 교체했습니다. 이전 질문과 AI 답변은 기록에서 확인할 수 있습니다.');
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || '질문을 교체하지 못했습니다.'),
+  });
+
+  const editPromptMutation = useMutation({
+    mutationFn: ({ id, promptText }: { id: string; promptText: string }) => promptsApi.update(id, { promptText }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['prompts', hospitalId] });
+      queryClient.invalidateQueries({ queryKey: ['core-questions', hospitalId] });
+      setEditingPromptId(null);
+      toast.success('질문이 수정되었습니다. 이전 AI 답변의 측정 당시 질문은 그대로 확인할 수 있습니다.');
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || '질문을 수정하지 못했습니다.'),
   });
 
   // AI 연관 질문 생성
@@ -240,12 +307,51 @@ export default function PromptsPage() {
 
   const totalPrompts = prompts?.length || 0;
   const activePrompts = prompts?.filter((p: any) => p.isActive)?.length || 0;
+  const archivedPrompts = totalPrompts - activePrompts;
   const isAtLimit = activePrompts >= MAX_PROMPTS;
   const remainingSlots = MAX_PROMPTS - activePrompts;
 
   const handleAddPrompt = () => {
     if (!newPrompt.trim()) return;
     addMutation.mutate(newPrompt.trim());
+  };
+
+  const handleAddCoreQuestion = (question: CoreQuestion) => {
+    const text = (coreDrafts[question.query] ?? question.query).trim();
+    if (!text) { toast.warning('질문을 입력해주세요.'); return; }
+    if (!prompts) { toast.warning('등록된 질문을 확인하는 중입니다.'); return; }
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim().toLocaleLowerCase('ko-KR');
+    const existing = prompts.find((prompt: any) => prompt.isActive && normalize(prompt.promptText) === normalize(text));
+    if (existing) {
+      toast.info('이미 등록된 질문입니다. 연결된 답변을 확인해 주세요.');
+      openTrackedQuestion(existing.id);
+      return;
+    }
+    if (isAtLimit) {
+      setReplacingCoreQuery(question.query);
+      setReplacementPromptId('');
+      return;
+    }
+    addMutation.mutate(text);
+  };
+
+  const handleReplaceCoreQuestion = (question: CoreQuestion) => {
+    const text = (coreDrafts[question.query] ?? question.query).trim();
+    if (!text) { toast.warning('질문을 입력해주세요.'); return; }
+    if (!replacementPromptId) { toast.warning('교체할 기존 질문을 선택해 주세요.'); return; }
+    replaceMutation.mutate({ replacePromptId: replacementPromptId, promptText: text });
+  };
+
+  const saveEditedPrompt = (id: string) => {
+    const text = promptDraft.trim();
+    if (!text) { toast.warning('질문을 입력해주세요.'); return; }
+    editPromptMutation.mutate({ id, promptText: text });
+  };
+
+  const openTrackedQuestion = (promptId: string) => {
+    setSearchTerm('');
+    setExpandedPromptId(promptId);
+    window.setTimeout(() => document.getElementById(`question-${promptId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
   };
 
   const filteredPrompts = prompts?.filter((prompt: any) =>
@@ -354,7 +460,77 @@ export default function PromptsPage() {
           : 'AI에게 물어볼 질문을 관리합니다'}
       />
 
-      <div className="p-6 space-y-6">
+      <div className="mx-auto max-w-[1320px] space-y-6 p-5 sm:p-8">
+        <Card className="!border-[#cddcff] !bg-[#f9fbff]">
+          <CardContent className="p-5 sm:p-7">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-[#e7eeff] text-[#285cf4]"><Sparkles className="h-5 w-5" /></span>
+                <div>
+                  <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.15em] text-[#285cf4]">먼저 확인할 질문</p>
+                  <h2 className="text-xl font-bold tracking-[-0.03em] text-[#17212e]">우리 병원에 맞는 핵심 질문</h2>
+                  <p className="mt-1 text-sm leading-6 text-[#65758a]">병원 소개와 주력 진료를 바탕으로 추천합니다. 문장을 직접 고쳐 추가하거나 기존 질문과 교체할 수 있습니다.</p>
+                </div>
+              </div>
+              <Link href="/dashboard/settings" className="inline-flex h-9 shrink-0 items-center gap-1.5 self-start rounded-[9px] border border-[#d7e2fb] bg-white px-3 text-xs font-semibold text-[#2853c6] hover:bg-[#eff4ff]"><Building2 className="h-3.5 w-3.5" /> 병원 소개 수정 <ArrowRight className="h-3.5 w-3.5" /></Link>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-[#e3eaf5] pt-4 text-xs text-[#63758a]">
+              <span className={`rounded-full px-2.5 py-1 font-semibold ${coreData?.hubConnected ? 'bg-[#e3f6ed] text-[#137b55]' : 'bg-[#ecf0f5] text-[#6a7b8e]'}`}>{coreData?.hubConnected ? '허브 정보 반영' : 'Signal 프로필 기준'}</span>
+              {coreData?.profile?.name && <span className="font-semibold text-[#364a61]">{coreData.profile.name}</span>}
+              {coreData?.profile?.region && <span>· {coreData.profile.region}</span>}
+              {coreData?.profile?.treatments?.length > 0 && <span>· {coreData.profile.treatments.join(' · ')}</span>}
+            </div>
+
+            {coreLoading ? (
+              <div className="flex items-center gap-2 py-10 text-sm text-[#6d7d90]"><Loader2 className="h-4 w-4 animate-spin" /> 핵심 질문을 준비하고 있습니다</div>
+            ) : !coreData?.coreQuestions?.length ? (
+              <div className="mt-4 rounded-[12px] border border-dashed border-[#cbd8eb] bg-white p-5 text-sm text-[#607187]">추천할 질문이 아직 없습니다. 병원 소개와 주력 진료를 확인해 주세요.</div>
+            ) : (
+              <div className="mt-5 grid gap-3 lg:grid-cols-2">
+                {(coreData.coreQuestions as CoreQuestion[]).map((question, index) => {
+                  const editing = editingCoreQuery === question.query;
+                  return (
+                    <div key={`${question.query}-${index}`} className="flex flex-col rounded-[13px] border border-[#e1e8f1] bg-white p-4">
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2"><span className="text-[11px] font-bold tracking-[0.1em] text-[#285cf4]">{String(index + 1).padStart(2, '0')}</span><span className="rounded-full bg-[#edf2f8] px-2 py-0.5 text-[11px] font-semibold text-[#60738b]">{question.category}</span></div>
+                        <span className="text-[11px] text-[#8c9bac]">{coreSourceLabels[question.source] || '병원 정보'}</span>
+                      </div>
+                      {editing ? (
+                        <Input autoFocus aria-label="추천 질문 수정" value={coreDrafts[question.query] ?? question.query} onChange={(e) => setCoreDrafts((prev) => ({ ...prev, [question.query]: e.target.value }))} onKeyDown={(e) => e.key === 'Enter' && handleAddCoreQuestion(question)} />
+                      ) : <p className="min-h-[48px] text-[15px] font-semibold leading-6 tracking-[-0.01em] text-[#1d2b3d]">{coreDrafts[question.query] ?? question.query}</p>}
+                      <p className="mt-2 flex-1 text-xs leading-5 text-[#748398]">{question.reason}</p>
+                      <div className="mt-4 flex items-center justify-end gap-2 border-t border-[#edf0f4] pt-3">
+                        {question.alreadyTracked && question.promptId ? (
+                          <button type="button" onClick={() => openTrackedQuestion(question.promptId!)} className="inline-flex h-8 items-center gap-1 rounded-[8px] bg-[#eef5ff] px-3 text-xs font-semibold text-[#2853c6] hover:bg-[#e4eeff]">측정 중 · 답변 보기 <ArrowRight className="h-3.5 w-3.5" /></button>
+                        ) : (
+                          <>
+                            {editing ? <button type="button" onClick={() => { setEditingCoreQuery(null); setCoreDrafts((prev) => { const next = { ...prev }; delete next[question.query]; return next; }); }} className="px-2 py-1 text-xs font-semibold text-[#748398] hover:text-[#304156]">취소</button> : <button type="button" onClick={() => setEditingCoreQuery(question.query)} className="px-2 py-1 text-xs font-semibold text-[#506883] hover:text-[#285cf4]">문장 수정</button>}
+                            <Button size="sm" onClick={() => handleAddCoreQuestion(question)} disabled={addMutation.isPending || replaceMutation.isPending}><Plus className="h-3.5 w-3.5" /> {isAtLimit ? '기존 질문 교체' : '모니터링에 추가'}</Button>
+                          </>
+                        )}
+                      </div>
+                      {replacingCoreQuery === question.query && !question.alreadyTracked && (
+                        <div className="mt-3 rounded-[10px] border border-[#cddcff] bg-[#f6f9ff] p-3">
+                          <label htmlFor={`replace-prompt-${index}`} className="block text-xs font-semibold text-[#364d69]">모니터링을 중단할 기존 질문</label>
+                          <select id={`replace-prompt-${index}`} value={replacementPromptId} onChange={(event) => setReplacementPromptId(event.target.value)} className="mt-2 h-10 w-full rounded-[8px] border border-[#cfd9e8] bg-white px-3 text-sm text-[#26384e]">
+                            <option value="">질문을 선택해 주세요</option>
+                            {prompts?.filter((prompt: any) => prompt.isActive).map((prompt: any) => <option key={prompt.id} value={prompt.id}>{prompt.promptText} · 답변 {prompt._count?.aiResponses || 0}개</option>)}
+                          </select>
+                          <p className="mt-2 text-xs leading-5 text-[#6c7e94]">선택한 질문의 측정은 중단됩니다. 이전 질문과 AI 답변은 기록에 남습니다.</p>
+                          <div className="mt-3 flex justify-end gap-2">
+                            <Button variant="outline" size="sm" onClick={() => { setReplacingCoreQuery(null); setReplacementPromptId(''); }}>취소</Button>
+                            <Button size="sm" onClick={() => handleReplaceCoreQuestion(question)} disabled={!replacementPromptId || replaceMutation.isPending}>{replaceMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 질문 교체</Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
         {/* 플랜 사용량 표시 */}
         <Card className="bg-gradient-to-r from-slate-50 to-white">
           <CardContent className="p-4">
@@ -398,14 +574,13 @@ export default function PromptsPage() {
               </div>
             ) : (
               <>
-                <div className="flex gap-3">
-                  <Input
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="min-w-0 flex-1"><Input
                     placeholder={specialtyPlaceholders[hospitalData?.specialtyType || 'DENTAL'] || specialtyPlaceholders.OTHER}
                     value={newPrompt}
                     onChange={(e) => setNewPrompt(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAddPrompt()}
-                    className="flex-1"
-                  />
+                  /></div>
                   <Button
                     onClick={handleAddPrompt}
                     disabled={addMutation.isPending || !newPrompt.trim()}
@@ -418,7 +593,7 @@ export default function PromptsPage() {
                     추가
                   </Button>
                 </div>
-                <div className="flex items-center justify-between mt-3">
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm text-slate-500">
                     💡 팁: 환자들이 실제로 검색할 만한 질문을 추가해보세요 (남은 슬롯: {remainingSlots}개)
                   </p>
@@ -853,14 +1028,14 @@ export default function PromptsPage() {
         )}
 
         {/* 검색 */}
-        <div className="flex justify-between items-center">
-          <div className="relative">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
               placeholder="질문 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
+              className="w-full pl-10"
             />
           </div>
           <p className="text-sm text-slate-500">
@@ -874,7 +1049,7 @@ export default function PromptsPage() {
             <CardTitle className="flex items-center justify-between">
               <span className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                등록된 질문 ({filteredPrompts?.length || 0})
+                등록된 질문 ({activePrompts}개 측정 중{archivedPrompts > 0 ? ` · ${archivedPrompts}개 보관` : ''})
               </span>
             </CardTitle>
           </CardHeader>
@@ -898,84 +1073,37 @@ export default function PromptsPage() {
             ) : (
               <div className="space-y-3">
                 {filteredPrompts?.map((prompt: any) => (
-                  <div
-                    key={prompt.id}
-                    className={`flex items-center justify-between p-4 rounded-2xl border ${
-                      prompt.isActive ? 'bg-white/80 backdrop-blur-sm' : 'bg-slate-50 opacity-60'
-                    }`}
-                  >
-                    <div className="flex-1">
-                      <p className="text-slate-900">{prompt.promptText}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          prompt.promptType === 'PRESET'
-                            ? 'bg-brand-100 text-brand-700'
-                            : prompt.promptType === 'AUTO_GENERATED'
-                            ? 'bg-purple-100 text-purple-700'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}>
-                          {prompt.promptType === 'PRESET' ? '추천' :
-                           prompt.promptType === 'AUTO_GENERATED' ? 'AI생성' : '직접입력'}
-                        </span>
-                        {prompt.specialtyCategory && (
-                          <span className="text-xs text-slate-500">
-                            {prompt.specialtyCategory}
-                          </span>
-                        )}
-                        {prompt._count?.aiResponses > 0 && (
-                          <span className="text-xs text-slate-400">
-                            응답 {prompt._count.aiResponses}개
-                          </span>
+                  <div id={`question-${prompt.id}`} key={prompt.id} className={`rounded-[13px] border ${prompt.isActive ? 'border-[#e2e8f0] bg-white' : 'border-[#e8ecf1] bg-[#f7f9fb]'}`}>
+                    <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 flex-1">
+                        {editingPromptId === prompt.id ? (
+                          <Input autoFocus aria-label="등록된 질문 수정" value={promptDraft} onChange={(e) => setPromptDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && saveEditedPrompt(prompt.id)} />
+                        ) : <p className={`text-sm font-semibold leading-6 ${prompt.isActive ? 'text-[#223146]' : 'text-[#8998aa]'}`}>{prompt.promptText}</p>}
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="rounded-full bg-[#f0f3f7] px-2 py-0.5 font-semibold text-[#64768a]">{prompt.promptType === 'PRESET' ? '추천' : prompt.promptType === 'AUTO_GENERATED' ? 'AI 생성' : '직접 입력'}</span>
+                          {!prompt.isActive && <span className="rounded-full bg-[#e9edf2] px-2 py-0.5 font-semibold text-[#68798e]">측정 중단 · 기록 보관</span>}
+                          {prompt.specialtyCategory && <span className="text-[#7d8c9e]">{prompt.specialtyCategory}</span>}
+                          <span className="text-[#7d8c9e]">실측 답변 {prompt._count?.aiResponses || 0}개</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {editingPromptId === prompt.id ? (
+                          <>
+                            <Button variant="outline" size="sm" onClick={() => setEditingPromptId(null)}>취소</Button>
+                            <Button size="sm" onClick={() => saveEditedPrompt(prompt.id)} disabled={editPromptMutation.isPending || !promptDraft.trim()}>{editPromptMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} 저장</Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant={expandedPromptId === prompt.id ? 'secondary' : 'outline'} size="sm" onClick={() => setExpandedPromptId((current) => current === prompt.id ? null : prompt.id)} aria-expanded={expandedPromptId === prompt.id}><MessageSquare className="h-3.5 w-3.5" /> 답변 보기 <ChevronDown className={`h-3.5 w-3.5 ${expandedPromptId === prompt.id ? 'rotate-180' : ''}`} /></Button>
+                            {prompt.isActive && <Button variant="ghost" size="sm" onClick={() => { setEditingPromptId(prompt.id); setPromptDraft(prompt.promptText); }} title="질문 문장 수정" aria-label="질문 문장 수정"><Pencil className="h-4 w-4" /></Button>}
+                            {prompt.isActive && !isAtLimit && <Button variant="ghost" size="sm" onClick={() => { if (!canUseFeature(planType, 'queryFanouts')) { setUpgradeFeature('queryFanouts'); setShowUpgradeModal(true); return; } generateMutation.mutate(prompt.id); }} disabled={generateMutation.isPending} title="AI로 연관 질문 생성" aria-label="AI로 연관 질문 생성"><Sparkles className="h-4 w-4" />{!canUseFeature(planType, 'queryFanouts') && <Lock className="h-3 w-3 text-slate-400" />}</Button>}
+                            <Button variant="ghost" size="sm" onClick={() => toggleMutation.mutate(prompt.id)} disabled={!prompt.isActive && isAtLimit || toggleMutation.isPending} title={prompt.isActive ? '비활성화' : '활성화'} aria-label={prompt.isActive ? '비활성화' : '활성화'}>{prompt.isActive ? <ToggleRight className="h-5 w-5 text-emerald-600" /> : <ToggleLeft className="h-5 w-5" />}</Button>
+                            {(prompt.isActive || !prompt._count?.aiResponses) && <Button variant="ghost" size="sm" onClick={() => { if (confirm('이 질문을 삭제하시겠습니까?')) deleteMutation.mutate(prompt.id); }} title="삭제" aria-label="질문 삭제"><Trash2 className="h-4 w-4 text-red-500" /></Button>}
+                          </>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {!isAtLimit && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            if (!canUseFeature(planType, 'queryFanouts')) {
-                              setUpgradeFeature('queryFanouts');
-                              setShowUpgradeModal(true);
-                              return;
-                            }
-                            generateMutation.mutate(prompt.id);
-                          }}
-                          disabled={generateMutation.isPending}
-                          title="AI로 연관 질문 생성"
-                        >
-                          <Sparkles className="h-4 w-4 text-purple-600" />
-                          {!canUseFeature(planType, 'queryFanouts') && (
-                            <Lock className="h-3 w-3 ml-0.5 text-slate-400" />
-                          )}
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleMutation.mutate(prompt.id)}
-                        title={prompt.isActive ? '비활성화' : '활성화'}
-                      >
-                        {prompt.isActive ? (
-                          <ToggleRight className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-5 w-5 text-slate-400" />
-                        )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          if (confirm('이 질문을 삭제하시겠습니까?')) {
-                            deleteMutation.mutate(prompt.id);
-                          }
-                        }}
-                        title="삭제"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
+                    {expandedPromptId === prompt.id && <PromptAnswerPanel hospitalId={hospitalId} promptId={prompt.id} />}
                   </div>
                 ))}
               </div>
@@ -990,6 +1118,94 @@ export default function PromptsPage() {
         feature={upgradeFeature}
         currentPlan={planType}
       />
+    </div>
+  );
+}
+
+interface PromptResponse {
+  id: string;
+  measuredQuestion: string | null;
+  questionSnapshotAvailable: boolean;
+  aiPlatform: string;
+  responseText: string;
+  responseDate: string | null;
+  createdAt: string;
+  isMentioned: boolean;
+  mentionPosition: number | null;
+  citedSources?: unknown[];
+}
+
+interface PromptResponsePage {
+  prompt: { id: string; promptText: string; isActive: boolean };
+  summary: { total: number; mentioned: number; mentionRate: number; byPlatform: { platform: string; total: number; mentioned: number }[] };
+  data: PromptResponse[];
+  total: number;
+  hasMore: boolean;
+}
+
+function PromptAnswerPanel({ hospitalId, promptId }: { hospitalId: string; promptId: string }) {
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery<PromptResponsePage>({
+    queryKey: ['prompt-responses', hospitalId, promptId],
+    queryFn: ({ pageParam }) => api.get(`/ai-crawler/prompt-responses/${hospitalId}/${promptId}`, { params: { limit: 20, offset: pageParam } }).then((res) => res.data),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => lastPage.hasMore ? pages.reduce((count, page) => count + page.data.length, 0) : undefined,
+    staleTime: 60 * 1000,
+  });
+  const summary = data?.pages[0]?.summary;
+  const responses = data?.pages.flatMap((page) => page.data) || [];
+
+  return (
+    <div className="border-t border-[#e7ecf2] bg-[#fafbfd] p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-bold text-[#233349]">이 질문에 나온 실제 AI 답변</h4>
+          <p className="mt-1 text-xs text-[#74849a]">측정 당시 질문과 답변 원문을 함께 보여줍니다. 질문을 수정해도 지난 측정 기록은 구분됩니다.</p>
+        </div>
+        <Link href="/dashboard/responses" className="inline-flex items-center gap-1 text-xs font-semibold text-[#285cf4] hover:underline">전체 AI 답변 <ExternalLink className="h-3.5 w-3.5" /></Link>
+      </div>
+      {isLoading ? <div className="flex items-center gap-2 py-7 text-sm text-[#6b7b90]"><Loader2 className="h-4 w-4 animate-spin" /> 답변을 불러오고 있습니다</div> : isError ? (
+        <div className="rounded-[10px] border border-[#f2d7d7] bg-[#fff7f7] p-4 text-sm text-[#b44d4d]">답변을 불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>
+      ) : (
+        <>
+          <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-full bg-[#eaf0ff] px-2.5 py-1 font-semibold text-[#2853c6]">측정 {summary?.total || 0}건</span>
+            <span className="rounded-full bg-[#e5f6ec] px-2.5 py-1 font-semibold text-[#177454]">우리 병원 언급 {summary?.mentioned || 0}건</span>
+            {(summary?.byPlatform || []).map((item) => <span key={item.platform} className="rounded-full border border-[#e4eaf0] bg-white px-2.5 py-1 text-[#67788d]">{item.platform} {item.mentioned}/{item.total}</span>)}
+          </div>
+          {responses.length === 0 ? (
+            <div className="rounded-[12px] border border-dashed border-[#d9e2ec] bg-white p-6 text-center text-sm text-[#74849a]">이 질문으로 저장된 AI 답변이 아직 없습니다. 다음 측정 후 여기에 연결됩니다.</div>
+          ) : (
+            <div className="space-y-3">
+              {responses.map((response) => {
+                const dateValue = response.responseDate || response.createdAt;
+                const date = dateValue && !Number.isNaN(new Date(dateValue).getTime())
+                  ? response.responseDate
+                    ? new Date(dateValue).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'short', day: 'numeric' })
+                    : new Date(dateValue).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                  : '측정 시각 미확인';
+                return (
+                  <div key={response.id} className="rounded-[12px] border border-[#e5ebf2] bg-white p-4">
+                    <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className="font-bold text-[#314b69]">{response.aiPlatform}</span>
+                      <span className="text-[#9ba8b7]">{date}</span>
+                      <span className={`rounded-full px-2 py-0.5 font-semibold ${response.isMentioned ? 'bg-[#e5f6ec] text-[#177454]' : 'bg-[#f0f2f5] text-[#78889a]'}`}>{response.isMentioned ? `우리 병원 언급${response.mentionPosition ? ` · ${response.mentionPosition}번째` : ''}` : '우리 병원 미언급'}</span>
+                      {Array.isArray(response.citedSources) && response.citedSources.length > 0 && <span className="text-[#7c8ba0]">인용 출처 {response.citedSources.length}개</span>}
+                    </div>
+                    <p className="mt-3 rounded-[8px] bg-[#f5f7fa] px-3 py-2 text-xs leading-5 text-[#68798e]">측정 질문: {response.questionSnapshotAvailable && response.measuredQuestion ? response.measuredQuestion : '당시 질문 문구를 확인할 수 없습니다'}</p>
+                    {response.responseText?.length > 240 ? (
+                      <details className="group mt-3 text-sm leading-6 text-[#34465a]">
+                        <summary className="cursor-pointer list-none font-medium marker:hidden">{response.responseText.slice(0, 220)}… <span className="whitespace-nowrap font-semibold text-[#285cf4] group-open:hidden">전체 답변 보기</span></summary>
+                        <div className="mt-3 max-h-[420px] overflow-y-auto whitespace-pre-wrap border-t border-[#edf0f4] pt-3">{response.responseText}</div>
+                      </details>
+                    ) : <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#34465a]">{response.responseText || '답변 원문이 없습니다.'}</p>}
+                  </div>
+                );
+              })}
+              {hasNextPage && <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage} className="w-full">{isFetchingNextPage ? <Loader2 className="h-4 w-4 animate-spin" /> : null} 이전 답변 더 보기</Button>}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

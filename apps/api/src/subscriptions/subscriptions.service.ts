@@ -5,6 +5,7 @@ import { PlanType, SubscriptionStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { HospitalsService } from '../hospitals/hospitals.service';
 import { CacheService } from '../common/cache/cache.service';
+import { FREE_TRIAL_DAYS } from './trial.constants';
 
 @Injectable()
 export class SubscriptionsService {
@@ -45,7 +46,7 @@ export class SubscriptionsService {
 
     // 14일 무료 체험 기간으로 설정 (2026.08.19 최종본: 전 제품 공통 14일, 카드 등록 없음)
     const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 14);
+    trialEnd.setDate(trialEnd.getDate() + FREE_TRIAL_DAYS);
 
     const subscription = await this.prisma.subscription.upsert({
       where: { hospitalId: data.hospitalId },
@@ -112,11 +113,8 @@ export class SubscriptionsService {
     const isUnlimitedPeriod = rawDaysRemaining > UNLIMITED_THRESHOLD_DAYS;
     const daysRemaining = isUnlimitedPeriod ? 0 : rawDaysRemaining;
 
-    // 체험 기간 남은 일수 계산
-    const trialDaysUsed = Math.ceil(
-      (now.getTime() - subscription.currentPeriodStart.getTime()) / (1000 * 60 * 60 * 24)
-    );
-    const isInTrial = subscription.status === 'TRIAL' && trialDaysUsed <= 7;
+    // 기존 체험은 가입 당시 확정된 종료일을 따른다. 신규 체험은 14일이다.
+    const isInTrial = subscription.status === 'TRIAL' && !isExpired;
 
     // 빌링키(결제수단) 없이 ACTIVE인 경우 = 아직 결제하지 않은 사용자
     // 이 경우도 체험과 동일하게 취급
@@ -148,7 +146,7 @@ export class SubscriptionsService {
       isInTrial,
       isUnpaidActive,
       needsPayment,
-      trialDaysRemaining: isInTrial ? Math.max(0, 7 - trialDaysUsed) : 0,
+      trialDaysRemaining: isInTrial ? daysRemaining : 0,
       daysRemaining,
       // 【P1-1】 무기한 구독(내부 계정/평생 쿠폰 등) — 클라이언트는 만료 카운트다운을 숨겨야 함
       isUnlimitedPeriod,

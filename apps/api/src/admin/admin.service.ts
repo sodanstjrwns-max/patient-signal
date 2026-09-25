@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createHmac } from 'crypto';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { PsOpenApiService } from '../ps-open-api/ps-open-api.service';
+import { PlanGuard } from '../common/guards/plan.guard';
+import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
 
 @Injectable()
 export class AdminService {
@@ -701,10 +703,10 @@ export class AdminService {
   }
 
   /**
-   * 기존 FREE 유저들에게 STARTER 7일 트라이얼 소급 적용
+   * 기존 FREE 유저들에게 STARTER 14일 트라이얼 소급 적용
    * 
    * 대상: planType='FREE'이고, 구독이 없거나 FREE 구독만 있는 병원
-   * 동작: subscription을 STARTER/TRIAL/7일로 변경, hospital.planType도 STARTER로
+   * 동작: subscription을 STARTER/TRIAL/14일로 변경, hospital.planType도 STARTER로
    */
   async grantStarterTrialToFreeUsers() {
     this.logger.log('=== FREE 유저 STARTER 트라이얼 소급 적용 시작 ===');
@@ -719,7 +721,7 @@ export class AdminService {
 
     const now = new Date();
     const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 7);
+    trialEnd.setDate(trialEnd.getDate() + FREE_TRIAL_DAYS);
 
     const results: any[] = [];
 
@@ -761,14 +763,16 @@ export class AdminService {
           },
         });
 
-        // 경쟁사 1개 활성화 (STARTER 기준)
+        // STARTER 체험 한도까지 등록된 경쟁 병원 활성화
         const competitors = await this.prisma.competitor.findMany({
           where: { hospitalId: hospital.id },
           orderBy: { createdAt: 'asc' },
+          select: { id: true },
+          take: PlanGuard.PLAN_LIMITS.STARTER.maxCompetitors,
         });
         if (competitors.length > 0) {
-          await this.prisma.competitor.update({
-            where: { id: competitors[0].id },
+          await this.prisma.competitor.updateMany({
+            where: { id: { in: competitors.map((competitor) => competitor.id) } },
             data: { isActive: true },
           });
         }
@@ -780,7 +784,7 @@ export class AdminService {
           trialEnd: trialEnd.toISOString(),
         });
 
-        this.logger.log(`[소급적용] ${hospital.name} → STARTER 7일 트라이얼 부여`);
+        this.logger.log(`[소급적용] ${hospital.name} → STARTER ${FREE_TRIAL_DAYS}일 트라이얼 부여`);
       } catch (err) {
         results.push({ hospital: hospital.name, status: 'error', error: err?.message });
         this.logger.error(`[소급적용 실패] ${hospital.name}: ${err?.message}`);
@@ -799,19 +803,19 @@ export class AdminService {
   }
 
   /**
-   * 무결제 구독을 TRIAL 7일로 리셋 (체험 → 과금 전환 마이그레이션)
+   * 무결제 구독을 TRIAL로 리셋 (체험 → 과금 전환 마이그레이션)
    * 
    * 대상: ACTIVE 상태 + billingKey 없음 + 쿠폰 미사용 (= 순수 무료 체험 사용자)
    * 제외: ENTERPRISE, PRO, FREE, 쿠폰 사용자 (12개월 무료 등)
    * 
    * 동작:
    *   1. status → TRIAL
-   *   2. currentPeriodEnd → 오늘 + trialDays일 (기본 7일)
+   *   2. currentPeriodEnd → 오늘 + trialDays일 (기본 14일)
    *   3. hospital.subscriptionStatus → TRIAL
    * 
    * 쿠폰 사용자는 별도로 쿠폰 만료일 기준으로 유지됨
    */
-  async migrateUnpaidSubscriptionsToTrial(trialDays: number = 7): Promise<any> {
+  async migrateUnpaidSubscriptionsToTrial(trialDays: number = FREE_TRIAL_DAYS): Promise<any> {
     this.logger.log(`=== 무결제 구독 → TRIAL ${trialDays}일 마이그레이션 시작 ===`);
 
     const now = new Date();

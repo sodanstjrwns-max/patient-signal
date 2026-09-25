@@ -20,7 +20,7 @@ export const PLAN_LIMITS = {
   },
   STARTER: {
     maxPrompts: 5,
-    maxCompetitors: 1,
+    maxCompetitors: 3,
     platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI'],
     // 【티저】첫 질문 1개에 한해 GROK/CLOVA_X 미리보기 수집 (백엔드 teaserPlatforms와 동기화)
     teaserPlatforms: ['GROK', 'CLOVA_X'],
@@ -35,7 +35,7 @@ export const PLAN_LIMITS = {
   },
   STANDARD: {
     maxPrompts: 15,
-    maxCompetitors: 5,
+    maxCompetitors: 10,
     platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
     crawlsPerMonth: 30, // 매일
     exportEnabled: true,
@@ -48,7 +48,7 @@ export const PLAN_LIMITS = {
   },
   PRO: {
     maxPrompts: 35,
-    maxCompetitors: 10,
+    maxCompetitors: 20,
     platforms: ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GROK', 'CLOVA_X', 'NAVER_AI_BRIEFING'],
     crawlsPerMonth: 30,
     exportEnabled: true,
@@ -139,14 +139,14 @@ export function UpgradeModal({
       '7개 AI 플랫폼 전체 (CLOVA X·네이버 AI 브리핑 포함)',
       '매일 자동 크롤링',
       '모니터링 질문 15개',
-      '경쟁사 5개 비교 분석',
+      '경쟁사 10개 비교 분석',
       'AI 질문 변형 생성',
       '자동 액션 인텔리전스',
     ],
     PRO: [
       'M의 모든 기능',
       '모니터링 질문 35개',
-      '경쟁사 10개 비교 분석',
+      '경쟁사 20개 비교 분석',
       'Content Gap 분석',
       '매일 크롤링',
       '우선 지원',

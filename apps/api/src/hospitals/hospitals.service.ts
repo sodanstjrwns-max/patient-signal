@@ -6,8 +6,12 @@ import { UpdateHospitalDto } from './dto/update-hospital.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { SchedulerService } from '../scheduler/scheduler.service';
 import { buildGlobalPatientQuestions } from '../common/utils/global-patient';
-import { HubProfileService } from './hub-profile.service';
+import { isDongConsistentWithSigungu } from '../common/utils/region-consistency';
+import { buildHubIntroduction, HubProfileService, HubQuestionMaterials } from './hub-profile.service';
 import { findGlobalIdFromMap } from '../auth/hub-sso.util';
+import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
+import { buildCoreQuestions } from '../query-templates/core-questions';
+import { SPECIALTY_NAMES, SPECIALTY_PROCEDURES } from '../query-templates/query-templates.service';
 
 @Injectable()
 export class HospitalsService {
@@ -53,11 +57,42 @@ export class HospitalsService {
     }
   }
 
+  /** 허브 병원 소개를 Signal 설정 화면의 편집 가능한 초안으로 제공한다. 조회만으로 DB를 바꾸지 않는다. */
+  async getHubIntroduction(userId: string, force = false) {
+    const empty = { enabled: this.hubProfileService.isEnabled(), connected: false, introduction: null, sourceUpdatedAt: null };
+    if (!empty.enabled) return empty;
+
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: { hospital: true },
+      });
+      const psId =
+        user?.pendingPsHospitalId ||
+        user?.hospital?.psHospitalId ||
+        (user?.hospitalId ? findGlobalIdFromMap(user.hospitalId) : null);
+      if (!psId) return empty;
+
+      if (force) this.hubProfileService.invalidate(psId);
+      const profile = await this.hubProfileService.fetchProfile(psId);
+      if (!profile) return empty;
+      return {
+        enabled: true,
+        connected: true,
+        introduction: buildHubIntroduction(profile),
+        sourceUpdatedAt: profile.updated_at || null,
+      };
+    } catch (err: any) {
+      this.logger.warn(`getHubIntroduction failed: ${err?.message}`);
+      return empty;
+    }
+  }
+
   async create(userId: string, dto: CreateHospitalDto) {
     // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)
     const sanitize = (val?: string) => val?.trim() || null;
 
-    // 병원 생성 (STARTER 7일 트라이얼로 시작)
+    // 병원 생성 (STARTER 14일 트라이얼로 시작)
     // 새 필드(coreTreatments 등)가 DB에 아직 없을 수 있으므로 fallback 처리
     let hospital;
     try {
@@ -69,6 +104,7 @@ export class HospitalsService {
           specialtyType: dto.specialtyType,
           subSpecialties: dto.subSpecialties || [],
           coreTreatments: dto.coreTreatments || [],
+          clinicIntroduction: dto.clinicIntroduction === undefined ? null : (dto.clinicIntroduction?.trim() ?? null),
           keyProcedures: dto.coreTreatments || [], // 온보딩 시 coreTreatments → keyProcedures 동기화
           targetRegions: dto.targetRegions || [],
           hospitalStrengths: dto.hospitalStrengths || [],
@@ -78,7 +114,7 @@ export class HospitalsService {
           address: dto.address,
           websiteUrl: dto.websiteUrl,
           naverPlaceId: dto.naverPlaceId,
-          planType: 'STARTER',              // 7일 트라이얼은 STARTER 권한
+          planType: 'STARTER',              // 14일 트라이얼은 STARTER 권한
           subscriptionStatus: 'TRIAL',       // 트라이얼 상태
         },
       });
@@ -133,11 +169,11 @@ export class HospitalsService {
       }
     }
 
-    // STARTER 7일 트라이얼 구독 생성
-    // 7일 후 자동으로 FREE로 다운그레이드 (Cron에서 처리)
+    // STARTER 14일 트라이얼 구독 생성
+    // 체험 종료 후 자동으로 FREE로 다운그레이드 (Cron에서 처리)
     const now = new Date();
     const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + 14); // 14일 후 만료 (2026.08.19 최종본: 전 제품 공통 14일)
+    trialEnd.setDate(trialEnd.getDate() + FREE_TRIAL_DAYS); // 2026.08.19 최종본: 전 제품 공통 14일
 
     try {
       await this.prisma.subscription.create({
@@ -154,20 +190,20 @@ export class HospitalsService {
       this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }
 
-    // ── 경쟁 병원 등록 (STARTER 트라이얼 → 경쟁사 1개 활성화) ──
+    // ── 경쟁 병원 등록 (STARTER 트라이얼 한도 적용) ──
     if (dto.competitorNames && dto.competitorNames.length > 0) {
       const planLimits = PlanGuard.PLAN_LIMITS['STARTER']; // 트라이얼은 STARTER 권한
       const maxCompetitors = planLimits.maxCompetitors;
       const competitorRegion = `${dto.regionSido} ${dto.regionSigungu}`;
       
-      for (const [idx, name] of dto.competitorNames.slice(0, 5).entries()) {
+      for (const [idx, name] of dto.competitorNames.slice(0, maxCompetitors).entries()) {
         try {
           await this.prisma.competitor.create({
             data: {
               hospitalId: hospital.id,
               competitorName: name.trim(),
               competitorRegion: competitorRegion,
-              isActive: idx < maxCompetitors, // STARTER=1개 활성, 나머지 비활성
+              isActive: idx < maxCompetitors,
             },
           });
         } catch (err) {
@@ -176,10 +212,35 @@ export class HospitalsService {
       }
     }
 
-    // 자동 프롬프트 생성 (STARTER 기준: 5개)
-    // 트라이얼 동안 STARTER 수준의 질문 제공 (실패해도 온보딩은 진행)
+    // 처음 5개 슬롯은 화면의 핵심 질문 추천과 같은 규칙으로 채운다.
+    // 허브가 응답하지 않아도 Signal에 저장된 소개와 진료 정보를 사용한다.
     try {
-      await this.createAutoPrompts(hospital.id, dto, 'STARTER');
+      const hubMaterials: HubQuestionMaterials = {
+        mission: null, keyTreatments: [], painPoints: [], targetPatients: [],
+      };
+      if (this.hubProfileService.isEnabled()) {
+        try {
+          const psId = creator?.pendingPsHospitalId || findGlobalIdFromMap(hospital.id);
+          const profile = psId ? await this.hubProfileService.fetchProfile(psId) : null;
+          if (profile) Object.assign(hubMaterials, this.hubProfileService.buildQuestionMaterials(profile));
+        } catch (err: any) {
+          this.logger.warn(`온보딩 핵심 질문용 허브 조회 실패 (${hospital.id}): ${err?.message}`);
+        }
+      }
+      const validDong = dto.regionDong && isDongConsistentWithSigungu(
+        dto.regionSido, dto.regionSigungu, dto.regionDong,
+      ) ? dto.regionDong : null;
+      const coreQuestions = buildCoreQuestions({
+        name: dto.name,
+        specialty: SPECIALTY_NAMES[dto.specialtyType] || dto.specialtyType,
+        region: validDong || dto.regionSigungu.replace(/[시군구]$/, '') || dto.regionSigungu,
+        localTreatments: dto.coreTreatments?.length ? dto.coreTreatments : dto.keyProcedures || [],
+        introduction: dto.clinicIntroduction || null,
+        hubMaterials,
+        knownProcedures: SPECIALTY_PROCEDURES[dto.specialtyType] || [],
+        trackedPrompts: [],
+      });
+      await this.createAutoPrompts(hospital.id, dto, 'STARTER', 0, coreQuestions.map((question) => question.query));
     } catch (err) {
       this.logger.warn(`자동 프롬프트 생성 실패 (무시됨): ${err?.message}`);
     }
@@ -290,9 +351,11 @@ export class HospitalsService {
       const needsSigungu = isBlank(h.regionSigungu);
       const needsDong = isBlank(h.regionDong);
       const needsTreatments = !(Array.isArray(h.coreTreatments) && h.coreTreatments.length > 0);
+      // null은 아직 입력한 적이 없는 상태, ''는 사용자가 의도적으로 비운 상태다.
+      const needsIntroduction = h.clinicIntroduction == null;
 
       // 채울 빈 필드가 없으면 허브 호출 자체를 생략
-      if (!needsSpecialty && !needsSido && !needsSigungu && !needsDong && !needsTreatments) {
+      if (!needsSpecialty && !needsSido && !needsSigungu && !needsDong && !needsTreatments && !needsIntroduction) {
         return hospital;
       }
 
@@ -331,6 +394,13 @@ export class HospitalsService {
         merged.coreTreatments = prefill.coreTreatments;
         fields.push('coreTreatments');
       }
+      if (needsIntroduction) {
+        const introduction = buildHubIntroduction(profile);
+        if (introduction) {
+          merged.clinicIntroduction = introduction;
+          fields.push('clinicIntroduction');
+        }
+      }
 
       if (fields.length === 0) return hospital;
 
@@ -357,11 +427,12 @@ export class HospitalsService {
       data: {
         name: dto.name,
         nameAliases: dto.nameAliases,
-        businessNumber: dto.businessNumber?.trim() || null,
+        businessNumber: dto.businessNumber === undefined ? undefined : dto.businessNumber?.trim() || null,
         specialtyType: dto.specialtyType,
         subSpecialties: dto.subSpecialties,
         keyProcedures: dto.keyProcedures,
         coreTreatments: dto.coreTreatments,
+        clinicIntroduction: dto.clinicIntroduction === undefined ? undefined : (dto.clinicIntroduction?.trim() ?? null),
         targetRegions: dto.targetRegions,
         hospitalStrengths: dto.hospitalStrengths,
         regionSido: dto.regionSido,
@@ -460,7 +531,7 @@ export class HospitalsService {
    * @param planType - 현재 플랜 (질문 수 제한 적용)
    * @param existingCount - 이미 생성된 질문 수 (업그레이드 시 추가분만 계산)
    */
-  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'FREE', existingCount: number = 0) {
+  async createAutoPrompts(hospitalId: string, dto: CreateHospitalDto, planType: string = 'FREE', existingCount: number = 0, preferredQuestions: string[] = []) {
     const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.FREE;
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
     const availableSlots = Math.max(0, maxPrompts - existingCount);
@@ -616,8 +687,11 @@ export class HospitalsService {
     // ⑩ 외국어 질문은 국내 질문에 밀려 잘리지 않도록 슬롯을 예약해서 항상 포함
     const globalSlots = Math.min(globalQuestions.length, Math.floor(availableSlots * 0.2));
     const domesticSlots = availableSlots - globalSlots;
+    const prioritizedTemplates = [
+      ...new Set([...preferredQuestions, ...uniqueTemplates].map((text) => text.trim()).filter(Boolean)),
+    ];
     const limitedTemplates = [
-      ...uniqueTemplates.slice(0, domesticSlots),
+      ...prioritizedTemplates.slice(0, domesticSlots),
       ...globalQuestions.slice(0, globalSlots),
     ].slice(0, availableSlots);
 

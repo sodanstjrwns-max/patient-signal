@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { ArrowLeft, ScanSearch } from 'lucide-react';
 import SiteFooter from '@/components/layout/SiteFooter';
 
 export const metadata: Metadata = {
@@ -10,12 +11,19 @@ export const metadata: Metadata = {
 // §2 단건 상품은 "해당 상품 판매 사이트에만 게시" — 시그널은 SaaS 구독만이므로 제외
 export default function RefundPage() {
   return (
-    <div className="min-h-screen bg-mesh flex flex-col">
-      <main className="flex-1 max-w-4xl mx-auto px-4 py-16 w-full">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">페이션트 시그널 환불규정</h1>
-        <p className="text-sm text-slate-400 mb-8">적용일: 2026년 8월 20일</p>
+    <div className="min-h-screen bg-[#f6f7f9] flex flex-col text-[#17212e]">
+      <header className="border-b border-[#e7ecf2] bg-white">
+        <div className="mx-auto flex h-[72px] max-w-5xl items-center justify-between px-5 sm:px-8">
+          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#285cf4] text-white"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
+          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#69788b] hover:text-[#285cf4]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
+        </div>
+      </header>
+      <main className="flex-1 max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16 w-full">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#285cf4]">Legal</p>
+        <h1 className="text-3xl sm:text-4xl font-bold tracking-[-0.05em] text-[#17212e] mb-3">페이션트 시그널 환불규정</h1>
+        <p className="text-sm text-[#8390a0] mb-8">적용일: 2026년 8월 20일</p>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm p-8 space-y-8">
+        <div className="rounded-[18px] border border-[#e7ecf2] bg-white p-6 sm:p-9 shadow-[0_1px_2px_rgba(18,33,54,0.025)] divide-y divide-[#eef1f5] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
           <section id="refund-subscription">
             <h2 className="text-xl font-semibold text-slate-800 mb-4">
               1. 구독 서비스 (월간·연간 결제)
@@ -48,7 +56,7 @@ export default function RefundPage() {
                 고객센터(이메일{' '}
                 <a
                   href="mailto:patientsfunnel@gmail.com"
-                  className="text-indigo-600 hover:text-indigo-700"
+                  className="text-[#285cf4] hover:text-[#204bce]"
                 >
                   patientsfunnel@gmail.com
                 </a>{' '}
@@ -83,7 +91,7 @@ export default function RefundPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          <a href="/" className="text-[#285cf4] hover:text-[#204bce] font-medium">
             ← 메인으로 돌아가기
           </a>
         </div>

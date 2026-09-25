@@ -284,6 +284,24 @@ export default function DashboardPage() {
 
       <div className="p-4 sm:p-6 space-y-4 stagger-children">
 
+        <section aria-labelledby="signal-workflow-title" className="rounded-[16px] border border-[#dfe6f0] bg-white p-5 sm:p-6">
+          <div className="mb-4 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[#285cf4]">먼저 할 일</p>
+              <h2 id="signal-workflow-title" className="text-lg font-bold tracking-[-0.02em] text-[#1a2a3d]">병원 소개부터 실제 AI 답변까지</h2>
+              <p className="mt-1 text-xs leading-5 text-[#74849a]">우리 병원의 정보를 정리하고 질문을 선택하면, 질문마다 AI가 실제로 답한 내용을 확인할 수 있습니다.</p>
+            </div>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {[
+              { href: '/dashboard/settings', number: '01', title: '병원 소개 연결', detail: hospitalData?.hubPrefill?.fields?.includes('clinicIntroduction') ? '허브 초안 확인 후 저장' : hospitalData?.clinicIntroduction ? '소개 확인 및 수정' : '허브에서 가져오거나 직접 입력' },
+              { href: '/dashboard/prompts', number: '02', title: '핵심 질문 고르기', detail: `${dashboard?.stats?.totalPrompts || 0}개 질문 모니터링 중` },
+              { href: '/dashboard/responses', number: '03', title: '질문별 답변 확인', detail: '측정 당시 질문과 답변 원문' },
+              { href: '/dashboard/competitors', number: '04', title: '경쟁 병원 비교', detail: `${dashboard?.stats?.totalCompetitors || 0}개 병원 등록` },
+            ].map((step) => <Link key={step.href} href={step.href} className="group flex items-start gap-3 rounded-[11px] border border-[#e7ecf2] bg-[#fafbfd] p-3.5 transition-colors hover:border-[#bfd1ff] hover:bg-[#f4f7ff]"><span className="pt-0.5 text-[11px] font-bold text-[#285cf4]">{step.number}</span><span className="min-w-0 flex-1"><strong className="block text-[13px] font-semibold text-[#27394e]">{step.title}</strong><span className="mt-1 block text-[11px] leading-4 text-[#8391a2]">{step.detail}</span></span><ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#9cabc0] group-hover:text-[#285cf4]" /></Link>)}
+          </div>
+        </section>
+
         {/* ═══════════════════════════════════════════
             BENTO ROW 1: Hero SoV (2/3) + ABHS Ring (1/3)
         ═══════════════════════════════════════════ */}

@@ -57,15 +57,12 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-mesh">
+    <div className="dashboard-shell flex min-h-screen bg-[#f6f7f9]">
       <Sidebar />
-      {/* Main content - glassmorphism backdrop */}
-      <main className="flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen relative">
-        {/* Subtle grid pattern behind glass cards */}
-        <div className="absolute inset-0 grid-pattern pointer-events-none" />
-        <div className="relative z-10">
+      <main className="min-w-0 flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen">
+        <div>
           <TrialBanner />
-          <div className="animate-fade-in">
+          <div>
             {children}
           </div>
         </div>

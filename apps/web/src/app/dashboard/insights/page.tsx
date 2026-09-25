@@ -184,7 +184,7 @@ export default function InsightsPage() {
     <div className="min-h-screen">
       <Header title="AI 인사이트" description="AI가 우리 병원을 어떻게 추천하는지 심층 분석" />
 
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
         {/* 탭 */}
         <div className="flex gap-2 overflow-x-auto pb-1">
           {[
@@ -306,13 +306,13 @@ function MentionAnalysis({ data }: { data: any }) {
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">전체 응답</p>
             <p className="text-2xl font-bold text-brand-800">{data.totalResponses}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium">언급된 응답</p>
             <p className="text-2xl font-bold text-green-800">{data.mentionedResponses}</p>
@@ -321,7 +321,7 @@ function MentionAnalysis({ data }: { data: any }) {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4">
             <p className="text-xs text-amber-600 font-medium">1순위 추천</p>
             <p className="text-2xl font-bold text-amber-800">{ctx.primaryRecommend || 0}</p>
@@ -330,7 +330,7 @@ function MentionAnalysis({ data }: { data: any }) {
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium">조건부 추천</p>
             <p className="text-2xl font-bold text-purple-800">{ctx.conditionalRecommend || 0}</p>
@@ -390,7 +390,7 @@ function MentionAnalysis({ data }: { data: any }) {
             {Object.entries(data.platformContext || {}).map(([platform, stats]: [string, any]) => {
               const mentioned = stats.primary + stats.list + stats.conditional;
               return (
-                <div key={platform} className="border rounded-2xl p-4">
+                <div key={platform} className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
                     <span className="font-medium text-slate-900">{platformNames[platform]}</span>
@@ -438,7 +438,7 @@ function MentionAnalysis({ data }: { data: any }) {
             <p className="text-xs text-slate-500 mb-4">AI가 경쟁사를 추천할 때 강조하는 포인트 vs 우리</p>
             <div className="space-y-3">
               {/* 우리 병원 */}
-              <div className="bg-brand-50 rounded-2xl p-4">
+              <div className="bg-brand-50 rounded-lg p-4">
                 <p className="text-sm font-semibold text-brand-800 mb-2">
                   🏥 {data.hospitalName} (우리)
                 </p>
@@ -458,7 +458,7 @@ function MentionAnalysis({ data }: { data: any }) {
               </div>
               {/* 경쟁사 */}
               {data.competitorComparison.map((comp: any) => (
-                <div key={comp.name} className="bg-slate-50 rounded-2xl p-4">
+                <div key={comp.name} className="bg-slate-50 rounded-lg p-4">
                   <p className="text-sm font-medium text-slate-700 mb-2">{comp.name}</p>
                   <div className="flex flex-wrap gap-2">
                     {comp.topAttributes?.map((attr: any) => (
@@ -574,25 +574,25 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
 
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium"><TermTip term="totalResponses">전체 응답 (60일)</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{data.summary?.totalResponses || 0}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium"><TermTip term="totalMentions">총 언급</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{data.summary?.totalMentions || 0}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4">
             <p className="text-xs text-amber-600 font-medium"><TermTip term="mentionRate">언급률</TermTip></p>
             <p className="text-2xl font-bold text-amber-800">{data.summary?.overallMentionRate || 0}%</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium"><TermTip term="firstPositionShare">1위 점유율</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{data.summary?.firstPositionShare ?? 0}%</p>
@@ -650,7 +650,7 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {Object.entries(data.platformTrend || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="border rounded-2xl p-4 hover:shadow-sm transition-shadow">
+              <div key={platform} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
@@ -1053,19 +1053,19 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
 
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium"><TermTip term="citedSources">인용된 출처</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{data.totalUrls || 0}개</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium"><TermTip term="responsesWithSources">출처 포함 응답</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{data.totalResponsesWithSources || 0}건</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+        <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4 col-span-2 sm:col-span-1">
             <p className="text-xs text-amber-600 font-medium"><TermTip term="analysisChannels">분석 채널</TermTip></p>
             <p className="text-2xl font-bold text-amber-800">{data.categories?.length || 0}개</p>
@@ -1119,7 +1119,7 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {Object.entries(data.platformSources || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="text-center border rounded-2xl p-4">
+              <div key={platform} className="text-center border rounded-lg p-4">
                 <div className={`w-3 h-3 rounded-full ${platformColors[platform]} mx-auto mb-2`} />
                 <p className="text-sm font-medium text-slate-900">{platformNames[platform]}</p>
                 <p className="text-2xl font-bold text-slate-800 my-1">{stats.totalSources}</p>
@@ -1143,7 +1143,7 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
             <p className="text-xs text-slate-500 mb-4">이 채널에 콘텐츠를 올리면 AI 가시성이 올라갈 수 있어요</p>
             <div className="space-y-3">
               {data.missingChannels.map((ch: any) => (
-                <div key={ch.channel} className="flex items-start gap-3 bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-amber-100">
+                <div key={ch.channel} className="flex items-start gap-3 bg-white rounded-lg p-4 border border-amber-100">
                   <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                     <Lightbulb className="h-4 w-4 text-amber-600" />
                   </div>
@@ -1220,26 +1220,26 @@ function TopUrlsRanking({ data }: { data: any }) {
     <div className="space-y-6">
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200">
+        <Card className="bg-indigo-50 border-indigo-200">
           <CardContent className="p-4">
             <p className="text-xs text-indigo-600 font-medium"><TermTip term="uniqueUrls">고유 URL</TermTip></p>
             <p className="text-2xl font-bold text-indigo-800">{data.totalUniqueUrls || 0}개</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
+        <Card className="bg-rose-50 border-rose-200">
           <CardContent className="p-4">
             <p className="text-xs text-rose-600 font-medium"><TermTip term="crossAI">크로스-AI 인용</TermTip></p>
             <p className="text-2xl font-bold text-rose-800">{data.crossAICount || 0}개</p>
             <p className="text-[10px] text-rose-500 mt-0.5">3개 이상 AI가 인용</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium"><TermTip term="geminiDecoded">Gemini 디코딩</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{data.geminiDecoded || 0}건</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+        <Card className="bg-emerald-50 border-emerald-200">
           <CardContent className="p-4">
             <p className="text-xs text-emerald-600 font-medium">표시</p>
             <p className="text-2xl font-bold text-emerald-800">Top {Math.min(showCount, urls.length)}</p>
@@ -1517,21 +1517,21 @@ function BreadthInsights({ data }: { data: any }) {
             <p className="text-xs mt-1 opacity-90">{summary.overallAuthorityTier}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium"><TermTip term="totalCitations">총 인용 URL</TermTip></p>
             <p className="text-2xl font-bold text-brand-800">{summary.totalUrls?.toLocaleString()}</p>
             <p className="text-xs text-brand-600 mt-1">{summary.totalResponses?.toLocaleString()}개 응답</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium"><TermTip term="categoryDiversity">카테고리 다양성</TermTip></p>
             <p className="text-2xl font-bold text-purple-800">{summary.uniqueCategories}</p>
             <p className="text-xs text-purple-600 mt-1">/ 25개 카테고리</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium"><TermTip term="positiveSentiment">긍정 감성</TermTip></p>
             <p className="text-2xl font-bold text-green-800">{sentiment.positiveRate}%</p>
@@ -1834,7 +1834,7 @@ function SourceIntelDashboard({
   return (
     <div className="space-y-6">
       {/* 상단 — 분석 트리거 */}
-      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+      <Card className="border-purple-200 bg-purple-50">
         <CardContent className="p-5">
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div className="flex-1 min-w-0">
@@ -1923,28 +1923,28 @@ function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagr
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium">분석된 페이지</p>
             <p className="text-2xl font-bold text-purple-800">{summary.analyzed?.toLocaleString() || 0}</p>
             <p className="text-xs text-purple-600 mt-1">/ {summary.totalSnapshots?.toLocaleString() || 0} 스냅샷 ({summary.coverage}%)</p>
           </CardContent>
         </Card>
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+        <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium">우리 병원 언급</p>
             <p className="text-2xl font-bold text-green-800">{summary.mentionsUs?.toLocaleString() || 0}</p>
             <p className="text-xs text-green-600 mt-1">{td.positiveRate || 0}% 긍정</p>
           </CardContent>
         </Card>
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+        <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
             <p className="text-xs text-amber-600 font-medium">정확성 이슈</p>
             <p className="text-2xl font-bold text-amber-800">{ai.total || 0}</p>
             <p className="text-xs text-amber-600 mt-1">옛 정보 {ai.outdated || 0} · 오류 {ai.incorrect || 0}</p>
           </CardContent>
         </Card>
-        <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100">
+        <Card className="border-pink-200 bg-pink-50">
           <CardContent className="p-4">
             <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
             <p className="text-2xl font-bold text-pink-800">{instagram?.summary?.igCitations?.toLocaleString() || 0}</p>
@@ -2206,14 +2206,14 @@ function SI_Instagram({ data }: { data: any }) {
     <div className="space-y-4">
       {/* 요약 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100">
+        <Card className="border-pink-200 bg-pink-50">
           <CardContent className="p-4">
             <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
             <p className="text-2xl font-bold text-pink-800">{s.igCitations?.toLocaleString() || 0}</p>
             <p className="text-xs text-pink-600 mt-1">{s.igPercent}% (전체 대비)</p>
           </CardContent>
         </Card>
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100">
+        <Card className="border-purple-200 bg-purple-50">
           <CardContent className="p-4">
             <p className="text-xs text-purple-600 font-medium">고유 URL</p>
             <p className="text-2xl font-bold text-purple-800">{s.uniqueUrls || 0}</p>
@@ -2221,7 +2221,7 @@ function SI_Instagram({ data }: { data: any }) {
           </CardContent>
         </Card>
         {data.ourHandle ? (
-          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100">
+          <Card className="border-emerald-200 bg-emerald-50">
             <CardContent className="p-4">
               <p className="text-xs text-emerald-600 font-medium">우리 병원 핸들</p>
               <p className="text-base font-bold text-emerald-800 truncate">{data.ourHandle.handle}</p>
@@ -2229,7 +2229,7 @@ function SI_Instagram({ data }: { data: any }) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-red-200 bg-gradient-to-br from-red-50 to-red-100">
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="p-4">
               <p className="text-xs text-red-600 font-medium">우리 병원 핸들</p>
               <p className="text-base font-bold text-red-800">🚨 부재</p>
@@ -2237,7 +2237,7 @@ function SI_Instagram({ data }: { data: any }) {
             </CardContent>
           </Card>
         )}
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100">
+        <Card className="border-blue-200 bg-blue-50">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">AI 분석된 URL</p>
             <p className="text-2xl font-bold text-brand-800">{s.analyzedCount || 0}</p>
@@ -2488,13 +2488,13 @@ function PositioningMap({ data }: { data: any }) {
     <div className="space-y-6">
       {/* 요약 카드 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">우리 병원 언급</p>
             <p className="text-2xl font-bold text-brand-800">{data.ourPosition?.totalMentions || 0}회</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+        <Card className="bg-red-50 border-red-200">
           <CardContent className="p-4">
             <p className="text-xs text-red-600 font-medium">비교 경쟁사</p>
             <p className="text-2xl font-bold text-red-800">{competitors.length}곳</p>
@@ -2503,7 +2503,7 @@ function PositioningMap({ data }: { data: any }) {
         {(() => {
           const topAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) > (ourScores[b] || 0) ? a : b, axisKeys[0]);
           return (
-            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <Card className="bg-green-50 border-green-200">
               <CardContent className="p-4">
                 <p className="text-xs text-green-600 font-medium">최강 포인트</p>
                 <p className="text-lg font-bold text-green-800">{axisEmojis[topAxis]} {axisLabels[topAxis]}</p>
@@ -2515,7 +2515,7 @@ function PositioningMap({ data }: { data: any }) {
         {(() => {
           const weakAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) < (ourScores[b] || 0) ? a : b, axisKeys[0]);
           return (
-            <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+            <Card className="bg-amber-50 border-amber-200">
               <CardContent className="p-4">
                 <p className="text-xs text-amber-600 font-medium">강화 필요</p>
                 <p className="text-lg font-bold text-amber-800">{axisEmojis[weakAxis]} {axisLabels[weakAxis]}</p>
@@ -2624,7 +2624,7 @@ function PositioningMap({ data }: { data: any }) {
             {/* 범례 + 수치 */}
             <div className="flex-1 space-y-3 w-full">
               {/* 우리 병원 */}
-              <div className="bg-brand-50 rounded-2xl p-4 border border-brand-200">
+              <div className="bg-brand-50 rounded-lg p-4 border border-brand-200">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-4 h-1 bg-brand-600 rounded" />
                   <span className="text-sm font-semibold text-brand-800">🏥 {data.hospitalName} (우리)</span>
@@ -2641,7 +2641,7 @@ function PositioningMap({ data }: { data: any }) {
 
               {/* 경쟁사 */}
               {competitors.map((comp: any, ci: number) => (
-                <div key={comp.name} className="bg-slate-50 rounded-2xl p-4 border">
+                <div key={comp.name} className="bg-slate-50 rounded-lg p-4 border">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-4 h-1 rounded" style={{ backgroundColor: compColors[ci % compColors.length] }} />
                     <span className="text-sm font-medium text-slate-700">{comp.name}</span>
@@ -2686,7 +2686,7 @@ function PositioningMap({ data }: { data: any }) {
             </h3>
             <div className="space-y-3">
               {data.insights.map((insight: string, i: number) => (
-                <div key={i} className="flex items-start gap-3 bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-brand-100">
+                <div key={i} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-brand-100">
                   <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <span className="text-xs font-bold text-brand-600">{i + 1}</span>
                   </div>
@@ -2777,14 +2777,14 @@ function SourceQuality({ data }: { data: any }) {
             <p className="text-sm font-semibold">{data.healthLabel}</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-brand-200">
+        <Card className="bg-blue-50 border-brand-200">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-brand-600 font-medium">평균 품질</p>
             <p className="text-3xl font-bold text-brand-800">{data.avgQuality || 0}</p>
             <p className="text-xs text-brand-600">100점 만점</p>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-purple-50 border-purple-200">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-purple-600 font-medium">활성 채널</p>
             <p className="text-3xl font-bold text-purple-800">{data.channelDiversity || 0}</p>
@@ -2811,7 +2811,7 @@ function SourceQuality({ data }: { data: any }) {
           {channels.length > 0 ? (
             <div className="space-y-4">
               {channels.map((ch: any, i: number) => (
-                <div key={ch.channel} className="border rounded-2xl p-4 hover:shadow-sm transition-shadow">
+                <div key={ch.channel} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-slate-900">{ch.channel}</span>
@@ -2881,7 +2881,7 @@ function SourceQuality({ data }: { data: any }) {
             <p className="text-xs text-slate-500 mb-4">AI 가시성을 높이기 위해 집중해야 할 채널</p>
             <div className="space-y-3">
               {data.recommendations.map((rec: any, i: number) => (
-                <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-amber-100">
+                <div key={i} className="bg-white rounded-lg p-4 border border-amber-100">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm">{rec.priority}</span>
                     <span className="text-sm font-semibold text-slate-900">{rec.channel}</span>
@@ -2903,9 +2903,23 @@ function SourceQuality({ data }: { data: any }) {
 
 // ==================== 6. 자동 액션 리포트 ====================
 function ActionReport({ data }: { data: any }) {
-  const summary = data.summary || {};
-  const actions = data.actions || [];
-  const weeklyGoals = data.weeklyGoals || [];
+  const summary = data?.summary || {};
+  const actions = Array.isArray(data?.actions) ? data.actions : [];
+  const weeklyGoals = Array.isArray(data?.weeklyGoals) ? data.weeklyGoals : [];
+  const measuredResponses = Number.isFinite(summary.totalResponses) ? summary.totalResponses : 0;
+
+  if (measuredResponses <= 0) {
+    return (
+      <Card>
+        <CardContent className="p-8 sm:p-12 text-center">
+          <FileSearch className="h-10 w-10 text-slate-400 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-slate-900">아직 분석할 AI 답변이 없습니다</h2>
+          <p className="text-sm text-slate-500 mt-2">최근 30일에 수집된 응답이 없어 언급률과 실행 과제를 계산할 수 없습니다.</p>
+          <p className="text-xs text-slate-400 mt-1">질문 측정이 시작된 뒤 다시 확인해 주세요.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   const priorityStyles: Record<number, string> = {
     1: 'border-l-red-500 bg-red-50/50',
@@ -2926,7 +2940,7 @@ function ActionReport({ data }: { data: any }) {
   return (
     <div className="space-y-6">
       {/* 리포트 헤더 */}
-      <Card className="bg-gradient-to-r from-slate-900 to-slate-800 text-white border-0">
+      <Card className="!bg-slate-900 !border-slate-900 text-white">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -2934,35 +2948,35 @@ function ActionReport({ data }: { data: any }) {
                 <FileText className="h-6 w-6" />
                 주간 액션 리포트
               </h2>
-              <p className="text-sm text-slate-300 mt-1">{data.hospitalName} · {data.period}</p>
+              <p className="text-sm text-slate-300 mt-1">{[data.hospitalName, data.period || '최근 30일'].filter(Boolean).join(' · ')}</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-400">생성 시각</p>
               <p className="text-sm text-slate-200">
-                {data.generatedAt ? new Date(data.generatedAt).toLocaleDateString('ko-KR', {
+                {data.generatedAt && !Number.isNaN(Date.parse(data.generatedAt)) ? new Date(data.generatedAt).toLocaleDateString('ko-KR', {
                   year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) : '-'}
+                }) : '확인 불가'}
               </p>
             </div>
           </div>
 
           {/* 핵심 수치 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-2xl p-3 text-center">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
               <p className="text-xs text-slate-300"><TermTip term="mentionRate" icon={false}>전체 언급률</TermTip></p>
               <p className="text-2xl font-bold">{summary.overallMentionRate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-2xl p-3 text-center">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
               <p className="text-xs text-slate-300">최강 플랫폼</p>
               <p className="text-lg font-bold">{summary.strongestPlatform?.name || '-'}</p>
               <p className="text-xs text-green-400">{summary.strongestPlatform?.rate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-2xl p-3 text-center">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
               <p className="text-xs text-slate-300">최약 플랫폼</p>
               <p className="text-lg font-bold">{summary.weakestPlatform?.name || '-'}</p>
               <p className="text-xs text-red-400">{summary.weakestPlatform?.rate || 0}%</p>
             </div>
-            <div className="bg-white/10 rounded-2xl p-3 text-center">
+            <div className="bg-white/10 rounded-lg p-3 text-center">
               <p className="text-xs text-slate-300">콘텐츠 갭</p>
               <p className="text-2xl font-bold">{summary.contentGapCount || 0}건</p>
             </div>
@@ -2980,7 +2994,7 @@ function ActionReport({ data }: { data: any }) {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {weeklyGoals.map((goal: string, i: number) => (
-                <div key={i} className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-brand-100 flex items-start gap-3">
+                <div key={i} className="bg-white rounded-lg p-4 border border-brand-100 flex items-start gap-3">
                   <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-4 w-4 text-brand-600" />
                   </div>
@@ -3006,11 +3020,11 @@ function ActionReport({ data }: { data: any }) {
               {actions.map((action: any, i: number) => (
                 <div
                   key={i}
-                  className={`border-l-4 rounded-2xl p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-slate-50/50'}`}
+                  className={`border-l-4 rounded-lg p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-slate-50/50'}`}
                 >
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                     <span className="text-lg">{categoryIcons[action.category] || '📋'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white/80 backdrop-blur-sm border text-slate-600 font-medium">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border text-slate-600 font-medium">
                       {action.category}
                     </span>
                     <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
@@ -3029,9 +3043,9 @@ function ActionReport({ data }: { data: any }) {
             </div>
           ) : (
             <div className="text-center py-8">
-              <CheckCircle2 className="h-12 w-12 text-green-400 mx-auto mb-3" />
-              <p className="text-slate-600 font-medium">현재 긴급 액션 아이템이 없습니다!</p>
-              <p className="text-sm text-slate-400 mt-1">AI 가시성이 잘 관리되고 있어요 👏</p>
+              <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600 font-medium">이 기간에 생성된 실행 과제가 없습니다</p>
+              <p className="text-sm text-slate-400 mt-1">측정된 AI 답변을 확인하고 다음 분석에서 다시 살펴보세요.</p>
             </div>
           )}
         </CardContent>

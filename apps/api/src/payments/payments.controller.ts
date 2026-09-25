@@ -9,6 +9,7 @@ import {
   HttpCode,
   Logger,
   BadRequestException,
+  ForbiddenException,
   UnauthorizedException,
   UseGuards,
   Req,
@@ -34,6 +35,15 @@ export class PaymentsController {
     this.webhookSecretKey = process.env.TOSS_WEBHOOK_SECRET || '';
     if (!this.webhookSecretKey) {
       this.logger.warn('⚠️ TOSS_WEBHOOK_SECRET이 설정되지 않았습니다. 웹훅 서명 검증이 비활성화됩니다.');
+    }
+  }
+
+  private assertHospitalOwnership(hospitalId: string | undefined, user: any): asserts hospitalId is string {
+    if (!user) {
+      throw new UnauthorizedException('인증이 필요합니다.');
+    }
+    if (!hospitalId || user.hospitalId !== hospitalId) {
+      throw new ForbiddenException('해당 병원에 대한 접근 권한이 없습니다.');
     }
   }
 
@@ -87,17 +97,20 @@ export class PaymentsController {
     @Body() body: { paymentKey: string; orderId: string; amount: number; hospitalId?: string; userId?: string; couponCode?: string },
     @CurrentUser() user: any,
   ) {
-    this.logger.log(`결제 승인 요청: orderId=${body.orderId}, hospitalId=${body.hospitalId}, userId=${user.id}`);
+    this.logger.log(`결제 승인 요청: orderId=${body.orderId}, hospitalId=${body.hospitalId}, userId=${user?.id}`);
 
     if (!body.paymentKey || !body.orderId || !body.amount) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
     }
 
+    const hospitalId = body.hospitalId ?? user?.hospitalId;
+    this.assertHospitalOwnership(hospitalId, user);
+
     return this.paymentsService.confirmPayment({
       paymentKey: body.paymentKey,
       orderId: body.orderId,
       amount: body.amount,
-      hospitalId: body.hospitalId,
+      hospitalId,
       // 보안: 클라이언트가 보낸 userId 대신 JWT에서 추출한 실제 사용자 ID 사용
       userId: user.id,
       couponCode: body.couponCode,
@@ -113,14 +126,16 @@ export class PaymentsController {
   @HttpCode(200)
   @ApiOperation({ summary: '결제 정보 저장', description: '결제 승인 완료된 정보를 DB에 저장합니다' })
   @ApiResponse({ status: 200, description: '저장 성공' })
-  async savePayment(@Body() body: any) {
+  async savePayment(@Body() body: any, @CurrentUser() user: any) {
     this.logger.log(`결제 정보 저장 요청: orderId=${body.orderId}, status=${body.status}`);
 
     if (!body.orderId || !body.paymentKey) {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
     }
 
-    return this.paymentsService.savePaymentFromFrontend(body);
+    const hospitalId = body.hospitalId ?? user?.hospitalId;
+    this.assertHospitalOwnership(hospitalId, user);
+    return this.paymentsService.savePaymentFromFrontend(body, hospitalId, user.id);
   }
 
   /**
@@ -195,11 +210,18 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '결제 조회', description: '결제 정보를 조회합니다' })
-  async getPayment(@Param('orderId') orderId: string) {
+  async getPayment(@Param('orderId') orderId: string, @CurrentUser() user: any) {
     const payment = await this.paymentsService.getPayment(orderId);
     
     if (!payment) {
       throw new BadRequestException('결제 정보를 찾을 수 없습니다.');
+    }
+
+    // 이전 데이터에 병원 ID가 없는 경우에도 결제 당사자만 조회할 수 있다.
+    if (payment.hospitalId) {
+      this.assertHospitalOwnership(payment.hospitalId, user);
+    } else if (!user || !payment.userId || payment.userId !== user.id) {
+      throw new ForbiddenException('해당 결제에 대한 접근 권한이 없습니다.');
     }
 
     return payment;
@@ -269,6 +291,8 @@ export class PaymentsController {
       throw new BadRequestException('필수 파라미터가 누락되었습니다.');
     }
 
+    this.assertHospitalOwnership(body.hospitalId, user);
+
     return this.paymentsService.issueBillingKey(body);
   }
 
@@ -289,6 +313,8 @@ export class PaymentsController {
     if (!body.hospitalId) {
       throw new BadRequestException('hospitalId가 필요합니다.');
     }
+
+    this.assertHospitalOwnership(body.hospitalId, user);
 
     return this.paymentsService.deleteBillingKey(body.hospitalId);
   }

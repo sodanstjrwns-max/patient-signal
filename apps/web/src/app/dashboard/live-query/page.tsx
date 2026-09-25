@@ -222,29 +222,29 @@ export default function LiveQueryPage() {
     <div className="min-h-screen">
       <Header title="실시간 AI 질문" description="AI에게 직접 질문하고 카테고리별 언급 성과를 분석하세요" />
 
-      <div className="p-4 sm:p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-6 max-w-6xl mx-auto">
 
         {/* 사용량 배너 */}
         {usage && (
-          <Card className={`border ${isLimitReached ? 'border-red-200 bg-red-50/50' : usagePercent >= 80 ? 'border-yellow-200 bg-yellow-50/30' : 'border-slate-200 bg-white/80 backdrop-blur-sm'}`}>
+          <Card className={`border ${isLimitReached ? 'border-red-200 bg-red-50/50' : usagePercent >= 80 ? 'border-yellow-200 bg-yellow-50/30' : 'border-slate-200 bg-white/80 '}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Gauge className="h-4 w-4 text-slate-500" />
                   <span className="text-sm font-semibold text-slate-700">오늘 사용량</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planType === 'PRO' || planType === 'ENTERPRISE' ? 'bg-purple-100 text-purple-700' : planType === 'STANDARD' || planType === 'STARTER' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planType === 'PRO' || planType === 'ENTERPRISE' ? 'bg-brand-100 text-brand-700' : planType === 'STANDARD' || planType === 'STARTER' ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-600'}`}>
                     {planDisplayNames[planType] || planType}
                   </span>
                 </div>
                 {usage.isUnlimited ? (
-                  <span className="text-sm font-bold text-purple-600 flex items-center gap-1"><Shield className="h-3.5 w-3.5" />무제한</span>
+                  <span className="text-sm font-bold text-brand-600 flex items-center gap-1"><Shield className="h-3.5 w-3.5" />무제한</span>
                 ) : (
                   <span className={`text-sm font-bold ${isLimitReached ? 'text-red-600' : usagePercent >= 80 ? 'text-yellow-600' : 'text-slate-800'}`}>{usage.used} / {usage.limit}회</span>
                 )}
               </div>
               {!usage.isUnlimited && (
                 <div className="w-full bg-slate-200 rounded-full h-2 mb-2">
-                  <div className={`h-2 rounded-full transition-all duration-300 ${isLimitReached ? 'bg-red-500' : usagePercent >= 80 ? 'bg-yellow-500' : 'bg-gradient-to-r from-purple-500 to-brand-500'}`} style={{ width: `${usagePercent}%` }} />
+                  <div className={`h-2 rounded-full transition-all duration-300 ${isLimitReached ? 'bg-red-500' : usagePercent >= 80 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${usagePercent}%` }} />
                 </div>
               )}
               <div className="flex items-center justify-between">
@@ -252,7 +252,7 @@ export default function LiveQueryPage() {
                   {usage.isUnlimited ? '별도(엔터프라이즈) 플랜은 무제한' : isLimitReached ? '오늘 소진 완료. 자정에 초기화.' : `남은 횟수: ${usage.remaining}회`}
                 </p>
                 {planType !== 'ENTERPRISE' && planType !== 'PRO' && (
-                  <button onClick={() => window.location.href = '/dashboard/settings'} className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1">
+                  <button onClick={() => window.location.href = '/dashboard/settings'} className="text-xs text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1">
                     <ArrowUpCircle className="h-3 w-3" />업그레이드
                   </button>
                 )}
@@ -264,22 +264,22 @@ export default function LiveQueryPage() {
         {/* 카테고리 성과 바로가기 배너 */}
         <button
           onClick={() => window.location.href = '/dashboard/opportunities?tab=category'}
-          className="w-full flex items-center justify-between p-3.5 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl hover:from-purple-100 hover:to-blue-100 transition-all group"
+          className="w-full flex items-center justify-between p-3.5 bg-brand-50 border border-brand-200 rounded-xl hover:bg-brand-100 transition-all group"
         >
           <div className="flex items-center gap-2.5">
-            <PieChart className="h-4 w-4 text-purple-500" />
+            <PieChart className="h-4 w-4 text-brand-500" />
             <span className="text-sm font-semibold text-slate-800">카테고리별 성과 분석</span>
-            <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">실시간 + 크롤링 통합</span>
+            <span className="text-[10px] bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-full">실시간 + 크롤링 통합</span>
           </div>
-          <ArrowRight className="h-4 w-4 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight className="h-4 w-4 text-brand-400 group-hover:translate-x-0.5 transition-transform" />
         </button>
 
         {/* ==================== 질문 영역 ==================== */}
             {/* 질문 입력 카드 */}
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50/50 to-blue-50/30 shadow-sm">
+            <Card className="border-brand-200 bg-brand-50/50 shadow-sm">
               <CardContent className="p-5 sm:p-6">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-brand-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
+                  <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center shadow-none">
                     <Zap className="h-5 w-5 text-white" />
                   </div>
                   <div>
@@ -294,7 +294,7 @@ export default function LiveQueryPage() {
                   <div className="flex flex-wrap gap-2">
                     {(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'] as const).map(platform => (
                       <button key={platform} onClick={() => togglePlatform(platform)}
-                        className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all ${platforms.includes(platform) ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm` : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${platforms.includes(platform) ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm` : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}>
                         {platformNames[platform]}
                         {platforms.includes(platform) && <CheckCircle className="inline h-3 w-3 ml-1" />}
                       </button>
@@ -305,16 +305,16 @@ export default function LiveQueryPage() {
                 {/* 질문 입력 */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-purple-400" />
+                    <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-400" />
                     <Input ref={inputRef} placeholder="예: 강남역 임플란트 잘하는 병원 추천해줘"
                       value={question} onChange={e => setQuestion(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && !isLimitReached && handleQuery()}
-                      className="pl-10 pr-4 h-12 text-sm border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+                      className="pl-10 pr-4 h-12 text-sm border-brand-200 focus:border-brand-400 focus:ring-brand-400"
                       disabled={loading || !!isLimitReached} />
                   </div>
                   <Button onClick={() => handleQuery()}
                     disabled={!question.trim() || loading || platforms.length === 0 || !!isLimitReached}
-                    className="h-12 px-6 bg-gradient-to-r from-purple-600 to-brand-600 hover:from-purple-700 hover:to-brand-700 shadow-lg shadow-purple-500/20 disabled:opacity-50">
+                    className="h-12 px-6 bg-brand-600 hover:bg-brand-700 shadow-none disabled:opacity-50">
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : isLimitReached ? <><XCircle className="h-4 w-4 mr-1.5" />소진</> : <><Send className="h-4 w-4 mr-1.5" />질문하기</>}
                   </Button>
                 </div>
@@ -326,7 +326,7 @@ export default function LiveQueryPage() {
                     <div className="flex flex-wrap gap-2">
                       {exampleQuestions.map((q, i) => (
                         <button key={i} onClick={() => { setQuestion(q); handleQuery(q); }}
-                          className="text-xs px-3 py-1.5 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-full hover:border-purple-300 hover:bg-purple-50 text-slate-600 hover:text-purple-700 transition-all">
+                          className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-full hover:border-brand-300 hover:bg-brand-50 text-slate-600 hover:text-brand-700 transition-all">
                           {q}
                         </button>
                       ))}
@@ -338,16 +338,16 @@ export default function LiveQueryPage() {
 
             {/* 제한 도달 */}
             {limitReachedError && (
-              <Card className="border-red-200 bg-gradient-to-br from-red-50 to-orange-50/30">
+              <Card className="border-red-200 bg-red-50">
                 <CardContent className="p-6 text-center">
-                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-red-100 mb-4">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-red-100 mb-4">
                     <AlertCircle className="h-7 w-7 text-red-500" />
                   </div>
                   <h3 className="text-lg font-bold text-red-800 mb-2">오늘 사용량을 모두 소진했어요</h3>
                   <p className="text-sm text-red-600 mb-1">{limitReachedError.message}</p>
                   <p className="text-xs text-slate-500 mb-4">매일 자정(00:00)에 초기화됩니다.</p>
                   {limitReachedError.upgradeHint && (
-                    <Button size="sm" className="bg-gradient-to-r from-purple-600 to-brand-600" onClick={() => window.location.href = '/dashboard/settings'}>
+                    <Button size="sm" className="bg-brand-600" onClick={() => window.location.href = '/dashboard/settings'}>
                       <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />플랜 업그레이드
                     </Button>
                   )}
@@ -370,11 +370,11 @@ export default function LiveQueryPage() {
 
             {/* 로딩 */}
             {loading && (
-              <Card className="border-purple-100">
+              <Card className="border-brand-100">
                 <CardContent className="p-8">
                   <div className="flex flex-col items-center justify-center gap-4">
                     <div className="relative">
-                      <Loader2 className="h-12 w-12 animate-spin text-purple-500" />
+                      <Loader2 className="h-12 w-12 animate-spin text-brand-500" />
                       <Sparkles className="h-4 w-4 text-yellow-500 absolute -top-1 -right-1 animate-pulse" />
                     </div>
                     <div className="text-center">
@@ -407,11 +407,11 @@ export default function LiveQueryPage() {
             {results && !loading && (
               <div className="space-y-4">
                 {/* 요약 카드 */}
-                <Card className="border-purple-100 shadow-sm">
+                <Card className="border-brand-100 shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
-                        <Target className="h-5 w-5 text-purple-500" />
+                        <Target className="h-5 w-5 text-brand-500" />
                         <span className="font-bold text-slate-900">질문 결과</span>
                         {/* 카테고리 뱃지 */}
                         {results.category && categoryConfig[results.category] && (
@@ -428,9 +428,9 @@ export default function LiveQueryPage() {
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 mb-4">
-                      <p className="text-sm font-medium text-purple-900">Q: {results.question}</p>
-                      <p className="text-xs text-purple-600 mt-1">대상: {results.hospitalName}</p>
+                    <div className="bg-brand-50 rounded-xl p-4 mb-4">
+                      <p className="text-sm font-medium text-brand-900">Q: {results.question}</p>
+                      <p className="text-xs text-brand-600 mt-1">대상: {results.hospitalName}</p>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
@@ -449,7 +449,7 @@ export default function LiveQueryPage() {
                     </div>
 
                     {results.mentionRate > 0 && (
-                      <div className="mt-4 p-3 bg-green-50 rounded-2xl border border-green-100 flex items-start gap-2">
+                      <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-100 flex items-start gap-2">
                         <TrendingUp className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                         <p className="text-xs text-green-800">
                           {results.mentionRate >= 75 ? '대부분의 AI가 우리 병원을 추천하고 있어요!'
@@ -459,7 +459,7 @@ export default function LiveQueryPage() {
                       </div>
                     )}
                     {results.mentionRate === 0 && results.successCount > 0 && (
-                      <div className="mt-4 p-3 bg-yellow-50 rounded-2xl border border-yellow-100 flex items-start gap-2">
+                      <div className="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-100 flex items-start gap-2">
                         <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
                         <p className="text-xs text-yellow-800">이 질문에서는 아직 우리 병원이 언급되지 않고 있어요.</p>
                       </div>
@@ -470,14 +470,14 @@ export default function LiveQueryPage() {
                 {/* 플랫폼별 결과 */}
                 <div className="space-y-3">
                   <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-purple-500" />플랫폼별 응답
+                    <Sparkles className="h-4 w-4 text-brand-500" />플랫폼별 응답
                   </h3>
                   {results.responses?.map((resp: any) => (
                     <Card key={resp.platform} className={`overflow-hidden transition-all ${resp.success && resp.isMentioned ? 'border-l-4 border-l-green-400 border-green-100' : resp.success ? 'border-slate-200 hover:border-slate-300' : 'border-red-200 bg-red-50/30'}`}>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-white/60/50 transition-colors"
+                      <button className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
                         onClick={() => setExpandedPlatform(expandedPlatform === resp.platform ? null : resp.platform)}>
                         <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-2xl text-xs font-bold ${platformColors[resp.platform]}`}>{resp.platformName}</span>
+                          <span className={`px-3 py-1 rounded-lg text-xs font-bold ${platformColors[resp.platform]}`}>{resp.platformName}</span>
                           {resp.success ? (
                             resp.isMentioned ? <span className="flex items-center gap-1.5 text-sm text-green-600 font-semibold"><Award className="h-4 w-4" />{resp.mentionPosition ? `${resp.mentionPosition}위 추천` : '언급됨'}</span>
                               : <span className="text-sm text-slate-400">언급 안됨</span>
@@ -499,7 +499,7 @@ export default function LiveQueryPage() {
                             </div>
                           )}
                           {resp.citedSources?.length > 0 && (
-                            <div className="mt-3 p-3 bg-brand-50/50 rounded-2xl border border-brand-100">
+                            <div className="mt-3 p-3 bg-brand-50/50 rounded-lg border border-brand-100">
                               <p className="text-xs font-medium text-brand-700 mb-2 flex items-center gap-1"><Link2 className="h-3 w-3" />출처 ({resp.citedSources.length}개)</p>
                               <div className="space-y-1.5">
                                 {resp.citedSources.slice(0, 5).map((url: string, i: number) => (
@@ -518,7 +518,7 @@ export default function LiveQueryPage() {
 
                 <div className="flex justify-center pt-2">
                   <Button variant="outline" onClick={() => { setResults(null); setQuestion(''); setExpandedPlatform(null); setLimitReachedError(null); setCooldownError(null); inputRef.current?.focus(); }}
-                    className="text-purple-600 border-purple-200 hover:bg-purple-50">
+                    className="text-brand-600 border-brand-200 hover:bg-brand-50">
                     <Zap className="h-4 w-4 mr-2" />새 질문하기
                   </Button>
                 </div>
@@ -535,7 +535,7 @@ export default function LiveQueryPage() {
                   </div>
                   <div className="space-y-2">
                     {history.map((item, idx) => (
-                      <button key={idx} className={`w-full text-left p-3 rounded-xl transition-all border ${results === item ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
+                      <button key={idx} className={`w-full text-left p-3 rounded-xl transition-all border ${results === item ? 'bg-brand-50 border-brand-200' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
                         onClick={() => { setResults(item); setQuestion(item.question); const f = item.responses?.find((r: any) => r.success); if (f) setExpandedPlatform(f.platform); }}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-1 min-w-0">

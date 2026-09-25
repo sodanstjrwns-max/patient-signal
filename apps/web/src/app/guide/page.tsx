@@ -22,31 +22,32 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function GuidePage() {
   return (
-    <div className="min-h-screen bg-mesh">
+    <div className="min-h-screen bg-[#f6f7f9] text-[#17212e]">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
-            <ArrowLeft className="h-5 w-5" />
+      <header className="bg-white/95 backdrop-blur-xl border-b border-[#e7ecf2] sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2 text-sm font-semibold text-[#69788b] hover:text-[#285cf4]">
+            <ArrowLeft className="h-4 w-4" />
             <span>대시보드로 돌아가기</span>
           </Link>
           <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-brand-600" />
-            <span className="font-bold text-slate-900">Patient Signal 가이드</span>
+            <Sparkles className="h-4 w-4 text-[#285cf4]" />
+            <span className="text-sm font-bold text-[#17212e]">Patient Signal 가이드</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16">
         {/* Hero Section */}
-        <div className="text-center mb-12">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <Sparkles className="h-10 w-10 text-white" />
+        <div className="text-center mb-14">
+          <div className="w-14 h-14 rounded-[14px] bg-[#285cf4] flex items-center justify-center mx-auto mb-6">
+            <Sparkles className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-4">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#285cf4]">Product guide</p>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-[-0.05em] text-[#17212e] mb-4">
             Patient Signal 사용 가이드
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-base leading-7 text-[#69788b] max-w-2xl mx-auto">
             AI 시대의 병원 마케팅, Patient Signal로 시작하세요.
             <br />
             이 가이드를 통해 서비스를 100% 활용하는 방법을 알아보세요.
@@ -55,11 +56,11 @@ export default function GuidePage() {
 
         {/* What is Patient Signal */}
         <section className="mb-12">
-          <Card>
+          <Card className="!rounded-[18px] !border !border-[#e7ecf2] !bg-white !shadow-[0_1px_2px_rgba(18,33,54,0.025)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-purple-100 flex items-center justify-center">
-                  <HelpCircle className="h-5 w-5 text-purple-600" />
+                <div className="w-10 h-10 rounded-[12px] bg-[#eff4ff] flex items-center justify-center">
+                  <HelpCircle className="h-5 w-5 text-[#285cf4]" />
                 </div>
                 Patient Signal이란?
               </CardTitle>
@@ -71,7 +72,7 @@ export default function GuidePage() {
                 응답에서 우리 병원이 얼마나 자주, 긍정적으로 언급되는지 분석합니다.
               </p>
               
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+              <div className="bg-[#f7f9ff] border border-[#dce7ff] rounded-[12px] p-4">
                 <p className="text-brand-800 font-medium mb-2">💡 왜 중요한가요?</p>
                 <p className="text-brand-700 text-sm">
                   이제 환자들은 &quot;강남 병원 추천해줘&quot;라고 AI에게 물어봅니다.
@@ -85,11 +86,11 @@ export default function GuidePage() {
 
         {/* How it works */}
         <section className="mb-12">
-          <Card>
+          <Card className="!rounded-[18px] !border !border-[#e7ecf2] !bg-white !shadow-[0_1px_2px_rgba(18,33,54,0.025)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-green-100 flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-green-600" />
+                <div className="w-10 h-10 rounded-[12px] bg-[#eff4ff] flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-[#285cf4]" />
                 </div>
                 작동 방식
               </CardTitle>
@@ -97,7 +98,7 @@ export default function GuidePage() {
             <CardContent>
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-full bg-[#eff4ff] text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
                     1
                   </div>
                   <h4 className="font-semibold text-slate-900 mb-2">질문 설정</h4>
@@ -107,7 +108,7 @@ export default function GuidePage() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-full bg-[#eff4ff] text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
                     2
                   </div>
                   <h4 className="font-semibold text-slate-900 mb-2">AI 크롤링</h4>
@@ -117,7 +118,7 @@ export default function GuidePage() {
                   </p>
                 </div>
                 <div className="text-center">
-                  <div className="w-12 h-12 rounded-full bg-blue-100 text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
+                  <div className="w-12 h-12 rounded-full bg-[#eff4ff] text-brand-600 font-bold text-xl flex items-center justify-center mx-auto mb-3">
                     3
                   </div>
                   <h4 className="font-semibold text-slate-900 mb-2">분석 & 리포트</h4>
@@ -133,11 +134,11 @@ export default function GuidePage() {
 
         {/* Getting Started */}
         <section className="mb-12">
-          <Card>
+          <Card className="!rounded-[18px] !border !border-[#e7ecf2] !bg-white !shadow-[0_1px_2px_rgba(18,33,54,0.025)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-orange-100 flex items-center justify-center">
-                  <Play className="h-5 w-5 text-orange-600" />
+                <div className="w-10 h-10 rounded-[12px] bg-[#eff4ff] flex items-center justify-center">
+                  <Play className="h-5 w-5 text-[#285cf4]" />
                 </div>
                 시작하기
               </CardTitle>
@@ -145,7 +146,7 @@ export default function GuidePage() {
             <CardContent className="space-y-6">
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-green-500" />
+                  <CheckCircle className="h-6 w-6 text-[#285cf4]" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">1단계: 병원 정보 등록</h4>
@@ -158,7 +159,7 @@ export default function GuidePage() {
 
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-green-500" />
+                  <CheckCircle className="h-6 w-6 text-[#285cf4]" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">2단계: 프롬프트 설정</h4>
@@ -175,7 +176,7 @@ export default function GuidePage() {
 
               <div className="flex gap-4">
                 <div className="flex-shrink-0">
-                  <CheckCircle className="h-6 w-6 text-green-500" />
+                  <CheckCircle className="h-6 w-6 text-[#285cf4]" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-slate-900 mb-1">3단계: 크롤링 시작</h4>
@@ -191,10 +192,10 @@ export default function GuidePage() {
 
         {/* Dashboard Guide */}
         <section className="mb-12">
-          <Card>
+          <Card className="!rounded-[18px] !border !border-[#e7ecf2] !bg-white !shadow-[0_1px_2px_rgba(18,33,54,0.025)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-[12px] bg-[#eff4ff] flex items-center justify-center">
                   <BarChart3 className="h-5 w-5 text-brand-600" />
                 </div>
                 대시보드 활용법
@@ -202,7 +203,7 @@ export default function GuidePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="bg-mesh rounded-2xl p-4">
+                <div className="bg-[#fbfcfe] border border-[#e7ecf2] rounded-[12px] p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <TrendingUp className="h-5 w-5 text-brand-600" />
                     <h4 className="font-semibold text-slate-900">AI 가시성 점수</h4>
@@ -213,9 +214,9 @@ export default function GuidePage() {
                   </p>
                 </div>
 
-                <div className="bg-mesh rounded-2xl p-4">
+                <div className="bg-[#fbfcfe] border border-[#e7ecf2] rounded-[12px] p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-5 w-5 text-purple-600" />
+                    <Users className="h-5 w-5 text-[#285cf4]" />
                     <h4 className="font-semibold text-slate-900">경쟁사 비교</h4>
                   </div>
                   <p className="text-sm text-slate-600">
@@ -224,9 +225,9 @@ export default function GuidePage() {
                   </p>
                 </div>
 
-                <div className="bg-mesh rounded-2xl p-4">
+                <div className="bg-[#fbfcfe] border border-[#e7ecf2] rounded-[12px] p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <MessageSquare className="h-5 w-5 text-green-600" />
+                    <MessageSquare className="h-5 w-5 text-[#285cf4]" />
                     <h4 className="font-semibold text-slate-900">AI 응답 원문</h4>
                   </div>
                   <p className="text-sm text-slate-600">
@@ -235,9 +236,9 @@ export default function GuidePage() {
                   </p>
                 </div>
 
-                <div className="bg-mesh rounded-2xl p-4">
+                <div className="bg-[#fbfcfe] border border-[#e7ecf2] rounded-[12px] p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="h-5 w-5 text-orange-600" />
+                    <Sparkles className="h-5 w-5 text-[#285cf4]" />
                     <h4 className="font-semibold text-slate-900">인사이트</h4>
                   </div>
                   <p className="text-sm text-slate-600">
@@ -252,11 +253,11 @@ export default function GuidePage() {
 
         {/* FAQ */}
         <section className="mb-12">
-          <Card>
+          <Card className="!rounded-[18px] !border !border-[#e7ecf2] !bg-white !shadow-[0_1px_2px_rgba(18,33,54,0.025)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-pink-100 flex items-center justify-center">
-                  <HelpCircle className="h-5 w-5 text-pink-600" />
+                <div className="w-10 h-10 rounded-[12px] bg-[#eff4ff] flex items-center justify-center">
+                  <HelpCircle className="h-5 w-5 text-[#285cf4]" />
                 </div>
                 자주 묻는 질문
               </CardTitle>

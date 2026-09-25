@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsArray, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SpecialtyType } from '@prisma/client';
 
@@ -85,6 +85,15 @@ export class CreateHospitalDto {
   @IsArray()
   @IsString({ each: true })
   coreTreatments?: string[];
+
+  @ApiPropertyOptional({
+    description: '병원 소개. Patient Hub의 사실을 초안으로 가져온 뒤 Signal에서 수정할 수 있습니다.',
+    maxLength: 2000,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  clinicIntroduction?: string | null;
 
   @ApiPropertyOptional({ 
     example: ['강남역', '선릉역', '역삼동', '논현동'], 

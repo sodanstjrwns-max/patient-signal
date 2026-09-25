@@ -63,6 +63,15 @@ export class HospitalsController {
     return this.hospitalsService.getHubPrefill(userId, force === '1' || force === 'true');
   }
 
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('hub-introduction')
+  @ApiOperation({ summary: '허브 병원 소개 초안', description: '허브에서 확인된 병원 정보를 편집 가능한 소개 초안으로 가져옵니다. 저장된 Signal 소개는 변경하지 않습니다.' })
+  @ApiQuery({ name: 'force', required: false, description: '1이면 허브 캐시를 무효화하고 다시 조회' })
+  async hubIntroduction(@CurrentUser('id') userId: string, @Query('force') force?: string) {
+    return this.hospitalsService.getHubIntroduction(userId, force === '1' || force === 'true');
+  }
+
   @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
   @HospitalParam('id')
   @ApiBearerAuth()

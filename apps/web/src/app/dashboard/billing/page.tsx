@@ -58,7 +58,7 @@ const PLAN_INFO: Record<string, {
       '모니터링 질문 5개',
       '4개 AI 플랫폼 + 티저 (Grok·CLOVA X 맛보기)',
       '주 2회 크롤링',
-      '경쟁사 1개 비교 분석',
+      '경쟁사 3개 비교 분석',
       'ABHS 점수 & 주간 리포트',
     ],
     color: 'blue',
@@ -72,7 +72,7 @@ const PLAN_INFO: Record<string, {
       '모니터링 질문 15개',
       '7개 AI 플랫폼 전체 (CLOVA X·네이버 AI 브리핑 포함)',
       '매일 크롤링',
-      '경쟁사 5개 비교 분석',
+      '경쟁사 10개 비교 분석',
       'AI 질문 변형 & 액션 인텔리전스',
       '리포트 내보내기',
     ],
@@ -87,7 +87,7 @@ const PLAN_INFO: Record<string, {
       '모니터링 질문 35개',
       '7개 AI 플랫폼 전체 (CLOVA X·네이버 AI 브리핑 포함)',
       '매일 크롤링',
-      '경쟁사 10개 비교 분석',
+      '경쟁사 20개 비교 분석',
       'Content Gap & 딥리포트',
     ],
     color: 'purple',
@@ -571,7 +571,7 @@ function BillingContent() {
           className="w-full py-3 border-2 border-slate-200 text-slate-700 rounded-xl font-medium hover:border-slate-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm"
         >
           <Shield className="h-4 w-4" />
-          카드 등록 후 자동결제 시작 (첫 7일 무료)
+          카드 등록 후 자동결제 설정
         </button>
       </div>
 

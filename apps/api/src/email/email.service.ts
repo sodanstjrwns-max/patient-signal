@@ -313,7 +313,7 @@ export class EmailService {
       <a href="${this.appUrl}/dashboard" class="button">대시보드 바로가기</a>
     </div>
     
-    <p>🎁 <strong>7일 무료 체험</strong>이 시작되었습니다!</p>
+    <p>🎁 <strong>14일 무료 체험</strong>이 시작되었습니다!</p>
     
     <div class="footer">
       <p>문의사항이 있으시면 언제든 연락주세요.</p>

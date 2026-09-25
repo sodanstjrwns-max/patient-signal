@@ -1913,10 +1913,12 @@ JSON 형식으로만 답변:
     const sentimentResult = this.analyzeSentimentWithVariants(response, hospitalVariants);
     const citedSources = this.extractCitedSources(response);
     
-    // 【최적화】중복 경쟁사 제거 + 자기 자신 제거 방어
+    // 【최적화】중복 경쟁사 제거 + 자기 자신 제거 방어.
+    // L 플랜은 경쟁 병원을 20개까지 추적하므로 앞 10개만 보존하면
+    // 뒤에 등장한 등록 병원의 실측 순위가 낮게 계산된다.
     const uniqueCompetitors = [...new Set(competitorsMentioned)]
       .filter(name => !hospitalVariants.some(v => name.toLowerCase().includes(v.toLowerCase())))
-      .slice(0, 10);
+      .slice(0, 50);
 
     return {
       platform,
