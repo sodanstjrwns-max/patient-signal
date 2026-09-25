@@ -11,14 +11,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Signal workspace: carbon, cool white, electric blue and neon orange.
+        // Orange controls on black; lime is reserved for the strongest signal.
         brand: {
           50: "#fff2ec",
           100: "#ffe3d4",
           200: "#ffc1a2",
           300: "#ff9b70",
           400: "#ff7848",
-          500: "#ff5d2a",
+          500: "#ff6a24",
           600: "#c83c12",
           700: "#a72e0c",
           800: "#84280f",
@@ -26,13 +26,15 @@ const config: Config = {
           950: "#321209",
         },
         surface: {
-          0: "#ffffff",
-          50: "#f1f1eb",
-          100: "#e9ebe1",
-          200: "#d4d6cb",
+          0: "#111315",
+          50: "#08090a",
+          100: "#181b1e",
+          200: "#30343a",
         },
       },
       fontFamily: {
+        display: ["Signal Display", "Pretendard Variable", "sans-serif"],
+        numeric: ["Chakra Petch", "Signal Display", "sans-serif"],
         sans: [
           "Pretendard Variable",
           "Pretendard",
@@ -64,13 +66,11 @@ const config: Config = {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        glass:
-          "linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)",
+        glass: "linear-gradient(135deg, #181b1e, #111315)",
         "glass-dark":
           "linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.7) 100%)",
-        mesh: "radial-gradient(at 40% 20%, rgba(208,255,67,0.08) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(59,130,246,0.06) 0px, transparent 50%)",
-        sidebar:
-          "linear-gradient(180deg, #292e23 0%, #29321c 50%, #292e23 100%)",
+        mesh: "none",
+        sidebar: "linear-gradient(180deg, #08090a, #111315)",
       },
       animation: {
         "fade-in": "fadeIn 0.5s ease-out",

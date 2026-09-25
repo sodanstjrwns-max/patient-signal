@@ -52,16 +52,16 @@ interface AnalysisResult {
 }
 
 const priorityConfig: Record<string, { label: string; color: string; icon: any }> = {
-  critical: { label: '필수', color: 'bg-red-100 text-red-700 border-red-200', icon: AlertTriangle },
+  critical: { label: '필수', color: 'bg-[#3a2022] text-red-400 border-red-200', icon: AlertTriangle },
   high: { label: '강력 권장', color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Zap },
-  medium: { label: '권장', color: 'bg-[#e9ebe1] text-[#141512] border-[#d4d6cb]', icon: Target },
+  medium: { label: '권장', color: 'bg-[#181b1e] text-[#f5f5ef] border-[#30343a]', icon: Target },
 };
 
 const seoTagConfig: Record<string, { label: string; color: string }> = {
-  NAVER: { label: '네이버', color: 'bg-brand-100 text-brand-700' },
-  GOOGLE: { label: '구글', color: 'bg-[#e9ebe1] text-[#141512]' },
-  AI_ENGINE: { label: 'AI엔진', color: 'bg-[#e9ebe1] text-[#141512]' },
-  ALL: { label: '전체', color: 'bg-[#e9ebe1] text-[#525849]' },
+  NAVER: { label: '네이버', color: 'bg-[#352115] text-[#ff9565]' },
+  GOOGLE: { label: '구글', color: 'bg-[#181b1e] text-[#f5f5ef]' },
+  AI_ENGINE: { label: 'AI엔진', color: 'bg-[#181b1e] text-[#f5f5ef]' },
+  ALL: { label: '전체', color: 'bg-[#181b1e] text-[#c0c4c7]' },
 };
 
 export default function CitationAnalysisPage() {
@@ -136,41 +136,41 @@ export default function CitationAnalysisPage() {
         {/* ─── 인용 통계 카드 ─── */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-brand-600">{stats.totalCitations}</p>
-                <p className="text-xs text-[#72756a] mt-1"><TermTip term="totalCitations">총 인용 수 (30일)</TermTip></p>
+                <p className="text-2xl font-bold text-[#ff9565]">{stats.totalCitations}</p>
+                <p className="text-xs text-[#959c9f] mt-1"><TermTip term="totalCitations">총 인용 수 (30일)</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-brand-600">{stats.totalDomains}</p>
-                <p className="text-xs text-[#72756a] mt-1"><TermTip term="citationDomains">인용 도메인</TermTip></p>
+                <p className="text-2xl font-bold text-[#ff9565]">{stats.totalDomains}</p>
+                <p className="text-xs text-[#959c9f] mt-1"><TermTip term="citationDomains">인용 도메인</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-brand-600">{stats.naverCitationRate}%</p>
-                <p className="text-xs text-[#72756a] mt-1"><TermTip term="naverCitationRate">네이버 인용률</TermTip></p>
+                <p className="text-2xl font-bold text-[#ff9565]">{stats.naverCitationRate}%</p>
+                <p className="text-xs text-[#959c9f] mt-1"><TermTip term="naverCitationRate">네이버 인용률</TermTip></p>
               </CardContent>
             </Card>
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-[#44551d]">{stats.overallCompanionRate ?? 0}%</p>
-                <p className="text-xs text-[#72756a] mt-1"><TermTip term="companionRate">언급 동반율</TermTip></p>
+                <p className="text-2xl font-bold text-[#c0c4c7]">{stats.overallCompanionRate ?? 0}%</p>
+                <p className="text-xs text-[#959c9f] mt-1"><TermTip term="companionRate">언급 동반율</TermTip></p>
               </CardContent>
             </Card>
           </div>
         )}
 
         {/* ─── 검색 입력 ─── */}
-        <Card className="border border-[#d4d6cb] shadow-none bg-brand-50">
+        <Card className="border border-[#30343a] shadow-none bg-[#281a13]">
           <CardContent className="p-6">
             <div className="flex items-center gap-2 mb-3">
-              <Search className="w-5 h-5 text-brand-600" />
-              <h2 className="text-lg font-bold text-[#33372c]">키워드 역분석</h2>
+              <Search className="w-5 h-5 text-[#ff9565]" />
+              <h2 className="font-display text-lg font-bold text-[#f5f5ef]">키워드 역분석</h2>
             </div>
-            <p className="text-sm text-[#687253] mb-4">
+            <p className="text-sm text-[#c0c4c7] mb-4">
               환자가 AI에게 물어볼 법한 질문을 입력하세요. AI가 인용한 상위 페이지를 분석하여 구체적 SEO 지시어를 생성합니다.
             </p>
             <div className="flex gap-2">
@@ -180,7 +180,7 @@ export default function CitationAnalysisPage() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAnalyze()}
                 placeholder="예: 강남 임플란트 잘하는 병원 추천해줘"
-                className="flex-1 px-4 py-3 rounded-md border border-[#d4d6cb] focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
+                className="flex-1 px-4 py-3 rounded-md border border-[#30343a] focus:border-brand-400 focus:ring-2 focus:ring-brand-100 outline-none text-sm"
               />
               <Button
                 onClick={handleAnalyze}
@@ -213,30 +213,30 @@ export default function CitationAnalysisPage() {
         {analysisResult && (
           <div className="space-y-4">
             {/* 요약 + 점수 */}
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold text-[#33372c] flex items-center gap-2">
-                      <Target className="w-5 h-5 text-brand-600" />
+                    <h3 className="text-lg font-bold text-[#f5f5ef] flex items-center gap-2">
+                      <Target className="w-5 h-5 text-[#ff9565]" />
                       "{analysisResult.targetKeyword}" 역분석 결과
                     </h3>
-                    <p className="text-sm text-[#687253] mt-1">{analysisResult.summary}</p>
+                    <p className="text-sm text-[#c0c4c7] mt-1">{analysisResult.summary}</p>
                   </div>
                 </div>
 
                 {/* 인용 가능성 점수 */}
                 <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="bg-[#f1f1eb] rounded-md p-4 text-center">
-                    <p className="text-xs text-[#72756a] mb-1">현재 인용 가능성</p>
-                    <p className={`text-3xl font-bold ${analysisResult.contentScore.current >= 50 ? 'text-brand-600' : analysisResult.contentScore.current >= 30 ? 'text-amber-600' : 'text-red-600'}`}>
+                  <div className="bg-[#08090a] rounded-md p-4 text-center">
+                    <p className="text-xs text-[#959c9f] mb-1">현재 인용 가능성</p>
+                    <p className={`text-3xl font-bold ${analysisResult.contentScore.current >= 50 ? 'text-[#ff9565]' : analysisResult.contentScore.current >= 30 ? 'text-amber-600' : 'text-red-400'}`}>
                       {analysisResult.contentScore.current}
                     </p>
-                    <p className="text-xs text-[#909781]">/ 100</p>
+                    <p className="text-xs text-[#959c9f]">/ 100</p>
                   </div>
-                  <div className="bg-brand-50 rounded-md p-4 text-center">
-                    <p className="text-xs text-[#72756a] mb-1">지시어 반영 후 예상</p>
-                    <p className="text-3xl font-bold text-brand-600">
+                  <div className="bg-[#281a13] rounded-md p-4 text-center">
+                    <p className="text-xs text-[#959c9f] mb-1">지시어 반영 후 예상</p>
+                    <p className="text-3xl font-bold text-[#ff9565]">
                       {analysisResult.contentScore.potential}
                     </p>
                     <p className="text-xs text-brand-500 flex items-center justify-center gap-1">
@@ -250,14 +250,14 @@ export default function CitationAnalysisPage() {
 
             {/* 인용 페이지 분석 */}
             {analysisResult.analyzedPages.length > 0 && (
-              <Card className="border border-[#d4d6cb] shadow-none">
+              <Card className="border border-[#30343a] shadow-none">
                 <CardContent className="p-4">
                   <button
                     onClick={() => setShowPages(!showPages)}
                     className="flex items-center justify-between w-full text-left"
                   >
-                    <h4 className="text-sm font-semibold text-[#525849] flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-[#44551d]" />
+                    <h4 className="text-sm font-semibold text-[#c0c4c7] flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-[#c0c4c7]" />
                       분석된 인용 페이지 ({analysisResult.analyzedPages.length}개)
                     </h4>
                     {showPages ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -265,25 +265,25 @@ export default function CitationAnalysisPage() {
                   {showPages && (
                     <div className="mt-3 space-y-3">
                       {analysisResult.analyzedPages.map((page, i) => (
-                        <div key={i} className="bg-[#f1f1eb] rounded-lg p-3">
+                        <div key={i} className="bg-[#08090a] rounded-lg p-3">
                           <div className="flex items-start justify-between">
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-[#33372c] truncate">{page.title || page.url}</p>
-                              <p className="text-xs text-[#72756a] truncate">{page.domain}</p>
+                              <p className="text-sm font-medium text-[#f5f5ef] truncate">{page.title || page.url}</p>
+                              <p className="text-xs text-[#959c9f] truncate">{page.domain}</p>
                               <div className="flex gap-1 mt-1">
                                 {page.citedByPlatforms.map((p, j) => (
-                                  <span key={j} className="text-[10px] px-1.5 py-0.5 rounded bg-[#e9ebe1] text-[#44551d]">
+                                  <span key={j} className="text-[10px] px-1.5 py-0.5 rounded bg-[#181b1e] text-[#c0c4c7]">
                                     {p}
                                   </span>
                                 ))}
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#e9ebe1] text-[#44551d]">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#181b1e] text-[#c0c4c7]">
                                   {page.citationCount}회 인용
                                 </span>
                               </div>
                               {page.strengths?.length > 0 && (
                                 <ul className="mt-2 space-y-1">
                                   {page.strengths.map((s, k) => (
-                                    <li key={k} className="text-xs text-[#687253] flex items-start gap-1">
+                                    <li key={k} className="text-xs text-[#c0c4c7] flex items-start gap-1">
                                       <Star className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
                                       {s}
                                     </li>
@@ -292,7 +292,7 @@ export default function CitationAnalysisPage() {
                               )}
                             </div>
                             <a href={page.url} target="_blank" rel="noopener noreferrer" className="ml-2">
-                              <ExternalLink className="w-4 h-4 text-[#909781] hover:text-[#44551d]" />
+                              <ExternalLink className="w-4 h-4 text-[#959c9f] hover:text-[#c0c4c7]" />
                             </a>
                           </div>
                         </div>
@@ -304,9 +304,9 @@ export default function CitationAnalysisPage() {
             )}
 
             {/* SEO 지시어 */}
-            <Card className="border border-[#d4d6cb] shadow-none">
+            <Card className="border border-[#30343a] shadow-none">
               <CardContent className="p-6">
-                <h4 className="text-base font-bold text-[#33372c] flex items-center gap-2 mb-4">
+                <h4 className="text-base font-bold text-[#f5f5ef] flex items-center gap-2 mb-4">
                   <FileText className="w-5 h-5 text-red-500" />
                   구체 SEO 지시어 ({analysisResult.directives.length}개)
                 </h4>
@@ -321,39 +321,39 @@ export default function CitationAnalysisPage() {
                       <div key={i} className={`border rounded-md overflow-hidden ${isExpanded ? 'ring-2 ring-brand-200' : ''}`}>
                         <button
                           onClick={() => setExpandedDirective(isExpanded ? null : i)}
-                          className="w-full p-4 text-left flex items-start gap-3 hover:bg-[#f1f1eb] transition"
+                          className="w-full p-4 text-left flex items-start gap-3 hover:bg-[#08090a] transition"
                         >
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${config.color}`}>
                             {config.label}
                           </span>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-semibold text-[#72756a]">[{d.category}]</span>
+                              <span className="text-xs font-semibold text-[#959c9f]">[{d.category}]</span>
                               <span className={`text-[10px] px-1.5 py-0.5 rounded ${seoTag.color}`}>{seoTag.label}</span>
                             </div>
-                            <p className="text-sm font-medium text-[#33372c] mt-1">{d.action}</p>
+                            <p className="text-sm font-medium text-[#f5f5ef] mt-1">{d.action}</p>
                           </div>
                           {isExpanded ? <ChevronUp className="w-4 h-4 mt-1" /> : <ChevronDown className="w-4 h-4 mt-1" />}
                         </button>
                         {isExpanded && (
-                          <div className="px-4 pb-4 space-y-3 bg-[#f1f1eb] border-t">
+                          <div className="px-4 pb-4 space-y-3 bg-[#08090a] border-t">
                             {d.example && (
                               <div className="mt-3">
-                                <p className="text-xs font-semibold text-[#72756a] mb-1">📝 예시 (복사하여 사용)</p>
-                                <div className="bg-white rounded-lg p-3 text-sm text-[#525849] border font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                                <p className="text-xs font-semibold text-[#959c9f] mb-1">📝 예시 (복사하여 사용)</p>
+                                <div className="bg-[#111315] rounded-lg p-3 text-sm text-[#c0c4c7] border font-mono text-xs leading-relaxed whitespace-pre-wrap">
                                   {d.example}
                                 </div>
                               </div>
                             )}
                             <div className="flex gap-4 text-xs">
                               <div>
-                                <span className="text-[#72756a]">이유: </span>
-                                <span className="text-[#525849]">{d.reason}</span>
+                                <span className="text-[#959c9f]">이유: </span>
+                                <span className="text-[#c0c4c7]">{d.reason}</span>
                               </div>
                             </div>
                             <div className="flex items-center gap-1 text-xs">
                               <TrendingUp className="w-3 h-3 text-brand-500" />
-                              <span className="text-brand-700 font-medium">{d.estimatedImpact}</span>
+                              <span className="text-[#ff9565] font-medium">{d.estimatedImpact}</span>
                             </div>
                           </div>
                         )}
@@ -368,15 +368,15 @@ export default function CitationAnalysisPage() {
             {analysisResult.seoUpgrade && (
               <div className="grid md:grid-cols-3 gap-4">
                 {/* 네이버 */}
-                <Card className="border border-[#d4d6cb] shadow-none border-l-4 border-l-green-400">
+                <Card className="border border-[#30343a] shadow-none border-l-4 border-l-green-400">
                   <CardContent className="p-4">
-                    <h5 className="text-sm font-bold text-brand-700 flex items-center gap-2 mb-3">
+                    <h5 className="text-sm font-bold text-[#ff9565] flex items-center gap-2 mb-3">
                       <div className="w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">N</div>
                       네이버 AI 브리핑
                     </h5>
                     <ul className="space-y-2">
                       {(analysisResult.seoUpgrade.naverOptimization || []).map((item, i) => (
-                        <li key={i} className="text-xs text-[#687253] flex items-start gap-1.5">
+                        <li key={i} className="text-xs text-[#c0c4c7] flex items-start gap-1.5">
                           <CheckCircle className="w-3 h-3 text-brand-400 mt-0.5 flex-shrink-0" />
                           {item}
                         </li>
@@ -385,16 +385,16 @@ export default function CitationAnalysisPage() {
                   </CardContent>
                 </Card>
                 {/* 구글 */}
-                <Card className="border border-[#d4d6cb] shadow-none border-l-4 border-l-[#d0ff43]">
+                <Card className="border border-[#30343a] shadow-none border-l-4 border-l-[#d9ff43]">
                   <CardContent className="p-4">
-                    <h5 className="text-sm font-bold text-[#141512] flex items-center gap-2 mb-3">
-                      <div className="w-5 h-5 bg-[#d0ff43] rounded-full flex items-center justify-center text-[#141512] text-[10px] font-bold">G</div>
+                    <h5 className="text-sm font-bold text-[#f5f5ef] flex items-center gap-2 mb-3">
+                      <div className="w-5 h-5 bg-[#d9ff43] rounded-full flex items-center justify-center text-[#08090a] text-[10px] font-bold">G</div>
                       구글 AI Overview
                     </h5>
                     <ul className="space-y-2">
                       {(analysisResult.seoUpgrade.googleOptimization || []).map((item, i) => (
-                        <li key={i} className="text-xs text-[#687253] flex items-start gap-1.5">
-                          <CheckCircle className="w-3 h-3 text-[#687253] mt-0.5 flex-shrink-0" />
+                        <li key={i} className="text-xs text-[#c0c4c7] flex items-start gap-1.5">
+                          <CheckCircle className="w-3 h-3 text-[#c0c4c7] mt-0.5 flex-shrink-0" />
                           {item}
                         </li>
                       ))}
@@ -402,16 +402,16 @@ export default function CitationAnalysisPage() {
                   </CardContent>
                 </Card>
                 {/* AI 엔진 */}
-                <Card className="border border-[#d4d6cb] shadow-none border-l-4 border-l-[#989b8d]">
+                <Card className="border border-[#30343a] shadow-none border-l-4 border-l-[#989b8d]">
                   <CardContent className="p-4">
-                    <h5 className="text-sm font-bold text-[#141512] flex items-center gap-2 mb-3">
-                      <div className="w-5 h-5 bg-[#d0ff43] rounded-full flex items-center justify-center text-[#141512] text-[10px] font-bold">AI</div>
+                    <h5 className="text-sm font-bold text-[#f5f5ef] flex items-center gap-2 mb-3">
+                      <div className="w-5 h-5 bg-[#d9ff43] rounded-full flex items-center justify-center text-[#08090a] text-[10px] font-bold">AI</div>
                       ChatGPT · Perplexity
                     </h5>
                     <ul className="space-y-2">
                       {(analysisResult.seoUpgrade.aiEngineOptimization || []).map((item, i) => (
-                        <li key={i} className="text-xs text-[#687253] flex items-start gap-1.5">
-                          <CheckCircle className="w-3 h-3 text-[#687253] mt-0.5 flex-shrink-0" />
+                        <li key={i} className="text-xs text-[#c0c4c7] flex items-start gap-1.5">
+                          <CheckCircle className="w-3 h-3 text-[#c0c4c7] mt-0.5 flex-shrink-0" />
                           {item}
                         </li>
                       ))}
@@ -425,10 +425,10 @@ export default function CitationAnalysisPage() {
 
         {/* ─── 최근 분석 이력 ─── */}
         {recentAnalyses.length > 0 && (
-          <Card className="border border-[#d4d6cb] shadow-none">
+          <Card className="border border-[#30343a] shadow-none">
             <CardContent className="p-4">
-              <h4 className="text-sm font-bold text-[#525849] mb-3 flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#72756a]" />
+              <h4 className="text-sm font-bold text-[#c0c4c7] mb-3 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[#959c9f]" />
                 최근 분석 이력
               </h4>
               <div className="space-y-2">
@@ -450,11 +450,11 @@ export default function CitationAnalysisPage() {
                         });
                       }
                     }}
-                    className="w-full text-left p-3 rounded-lg hover:bg-[#f1f1eb] transition flex items-center justify-between group"
+                    className="w-full text-left p-3 rounded-lg hover:bg-[#08090a] transition flex items-center justify-between group"
                   >
                     <div>
-                      <p className="text-sm font-medium text-[#33372c]">{a.queryText}</p>
-                      <p className="text-xs text-[#72756a]">
+                      <p className="text-sm font-medium text-[#f5f5ef]">{a.queryText}</p>
+                      <p className="text-xs text-[#959c9f]">
                         {a.targetKeyword && <span className="text-brand-500">{a.targetKeyword}</span>}
                         {' · '}
                         {new Date(a.createdAt).toLocaleDateString('ko-KR')}
@@ -472,31 +472,31 @@ export default function CitationAnalysisPage() {
 
         {/* ─── 인용 도메인 통계 ─── */}
         {stats?.topDomains?.length > 0 && (
-          <Card className="border border-[#d4d6cb] shadow-none">
+          <Card className="border border-[#30343a] shadow-none">
             <CardContent className="p-4">
-              <h4 className="text-sm font-bold text-[#525849] mb-3 flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-[#44551d]" />
+              <h4 className="text-sm font-bold text-[#c0c4c7] mb-3 flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-[#c0c4c7]" />
                 상위 인용 도메인 (30일)
               </h4>
               <div className="space-y-2">
                 {stats.topDomains.slice(0, 10).map((d: any, i: number) => (
                   <div key={i} className="flex items-center gap-3">
-                    <span className="text-xs text-[#909781] w-4 text-right">{i + 1}</span>
+                    <span className="text-xs text-[#959c9f] w-4 text-right">{i + 1}</span>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-sm text-[#525849] font-medium">{d.domain}</span>
-                        <span className="text-xs text-[#72756a]">
+                        <span className="text-sm text-[#c0c4c7] font-medium">{d.domain}</span>
+                        <span className="text-xs text-[#959c9f]">
                           {d.count}회 ({d.percentage}%)
                           {d.companionRate != null && (
                             <TermTip term="companionRate" icon={false} className={`ml-2 !inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              d.companionRate >= 50 ? 'bg-brand-100 text-brand-700' : d.companionRate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500'
+                              d.companionRate >= 50 ? 'bg-[#352115] text-[#ff9565]' : d.companionRate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-[#291718] text-red-500'
                             }`}>
                               동반 {d.companionRate}%
                             </TermTip>
                           )}
                         </span>
                       </div>
-                      <div className="h-1.5 bg-[#e9ebe1] rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-[#181b1e] rounded-full overflow-hidden">
                         <div
                           className={`h-full rounded-full ${d.domain.includes('naver') ? 'bg-brand-400' : d.domain.includes('google') ? 'bg-[#989b8d]' : 'bg-slate-300'}`}
                           style={{ width: `${d.percentage}%` }}

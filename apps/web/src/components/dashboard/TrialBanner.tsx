@@ -86,16 +86,16 @@ export function TrialBanner() {
     const isCouponExpired = subInfo.isCouponUser;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
+        <div className="bg-[#111315]/80 backdrop-blur-sm rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 text-center">
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-            isCouponExpired ? 'bg-amber-100' : 'bg-red-100'
+            isCouponExpired ? 'bg-amber-100' : 'bg-[#3a2022]'
           }`}>
             {isCouponExpired
               ? <Ticket className="h-8 w-8 text-amber-600" />
-              : <AlertTriangle className="h-8 w-8 text-red-600" />
+              : <AlertTriangle className="h-8 w-8 text-red-400" />
             }
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
+          <h2 className="font-display text-xl font-bold text-[#f5f5ef] mb-2">
             {isCouponExpired
               ? '쿠폰 혜택이 종료되었습니다'
               : '체험 기간이 종료되었습니다'
@@ -106,12 +106,12 @@ export function TrialBanner() {
               {subInfo.couponName}
             </p>
           )}
-          <p className="text-slate-600 mb-2">
+          <p className="text-[#959c9f] mb-2">
             현재 <strong>FREE 플랜</strong>으로 전환되었습니다.
           </p>
-          <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left text-sm">
-            <p className="font-semibold text-slate-700 mb-2">FREE 플랜 제한:</p>
-            <ul className="space-y-1 text-slate-500">
+          <div className="bg-[#111315] rounded-lg p-4 mb-6 text-left text-sm">
+            <p className="font-semibold text-[#c0c4c7] mb-2">FREE 플랜 제한:</p>
+            <ul className="space-y-1 text-[#959c9f]">
               <li>• AI 플랫폼: Perplexity 1개만</li>
               <li>• 모니터링 질문: 1개</li>
               <li>• 크롤링: 주 1회</li>
@@ -120,14 +120,14 @@ export function TrialBanner() {
           </div>
           <Link
             href="/dashboard/billing"
-            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#141512] text-white font-bold rounded-xl hover:bg-[#282c22] transition-all mb-3"
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#08090a] text-white font-bold rounded-xl hover:bg-[#24282b] transition-all mb-3"
           >
             <CreditCard className="h-5 w-5" />
             {isCouponExpired ? '유료 결제로 계속 이용하기' : '플랜 업그레이드하기'}
           </Link>
           <button
             onClick={() => setShowExpiredModal(false)}
-            className="text-sm text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-sm text-slate-400 hover:text-[#959c9f] transition-colors"
           >
             나중에 할게요
           </button>
@@ -159,10 +159,10 @@ export function TrialBanner() {
       <div className={`
         relative px-4 py-3 text-sm flex items-center justify-between gap-3
         ${isUrgent
-          ? 'bg-[#873d31] text-white'
+          ? 'bg-[#291718] text-red-300'
           : isWarning
-            ? 'bg-[#f1e5c4] text-[#5e4d22]'
-            : 'bg-[#e9ebe1] text-[#33372c]'
+            ? 'bg-[#281a13] text-[#ff9565]'
+            : 'bg-[#181b1e] text-[#f5f5ef]'
         }
       `}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -184,10 +184,10 @@ export function TrialBanner() {
             className={`
               flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
               ${isUrgent
-                ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
+                ? 'bg-[#111315]/80 backdrop-blur-sm text-red-400 hover:bg-[#291718]'
                 : isWarning
                   ? 'bg-amber-900 text-white hover:bg-amber-800'
-                  : 'bg-white/80 backdrop-blur-sm text-[#33372c] hover:bg-[#f1f1eb]'
+                  : 'bg-[#111315]/80 backdrop-blur-sm text-[#f5f5ef] hover:bg-[#08090a]'
               }
             `}
           >
@@ -210,7 +210,7 @@ export function TrialBanner() {
   // "데이터 수집 중..."으로 오해하지 않도록 만료 사실 + 재개 경로를 명시
   if (subInfo.isExpired) {
     return (
-      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-[#33372c] text-white">
+      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-[#24282b] text-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
           <span className="font-medium text-xs leading-relaxed">
@@ -221,7 +221,7 @@ export function TrialBanner() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/dashboard/billing"
-            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-white/90 text-slate-800 hover:bg-white transition-all"
+            className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold bg-[#111315]/90 text-[#f5f5ef] hover:bg-[#111315] transition-all"
           >
             <Ticket className="h-3 w-3" />
             쿠폰 등록 / 재구독 <ArrowRight className="h-3 w-3" />
@@ -248,10 +248,10 @@ export function TrialBanner() {
     <div className={`
       relative px-4 py-3 text-sm flex items-center justify-between gap-3
       ${isUrgent
-        ? 'bg-[#873d31] text-white'
+        ? 'bg-[#291718] text-red-300'
         : isExpiring
-          ? 'bg-[#f1e5c4] text-[#5e4d22]'
-          : 'bg-[#e9ebe1] text-[#33372c]'
+          ? 'bg-[#281a13] text-[#ff9565]'
+          : 'bg-[#181b1e] text-[#f5f5ef]'
       }
     `}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -273,10 +273,10 @@ export function TrialBanner() {
           className={`
             flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
             ${isUrgent
-              ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
+              ? 'bg-[#111315]/80 backdrop-blur-sm text-red-400 hover:bg-[#291718]'
               : isExpiring
                 ? 'bg-amber-900 text-white hover:bg-amber-800'
-                : 'bg-white/80 backdrop-blur-sm text-brand-600 hover:bg-brand-50'
+                : 'bg-[#111315]/80 backdrop-blur-sm text-[#ff9565] hover:bg-[#281a13]'
             }
           `}
         >

@@ -82,11 +82,11 @@ const PLATFORM_LABELS: Record<string, { short: string; color: string }> = {
   CLAUDE: { short: 'CLD', color: '#f97316' },
   GEMINI: { short: 'GEM', color: '#bec3af' },
   GROK: { short: 'GRK', color: '#bec3af' },
-  CLOVA_X: { short: 'CLV', color: '#ff5d2a' },
+  CLOVA_X: { short: 'CLV', color: '#ff6a24' },
 };
 
 function sentimentFace(s: number | null) {
-  if (s === null) return { face: '—', cls: 'text-slate-600' };
+  if (s === null) return { face: '—', cls: 'text-[#959c9f]' };
   if (s >= 0.3) return { face: '😊 ' + s.toFixed(2), cls: 'text-brand-400' };
   if (s <= -0.1) return { face: '😟 ' + s.toFixed(2), cls: 'text-red-400' };
   return { face: '😐 ' + s.toFixed(2), cls: 'text-slate-300' };
@@ -95,7 +95,7 @@ function sentimentFace(s: number | null) {
 /** 플랫폼별 SoV 미니 바 (테이블 셀용) */
 function PlatformBars({ platforms }: { platforms: Record<string, PlatformStat> }) {
   const keys = Object.keys(PLATFORM_LABELS).filter(k => platforms[k]);
-  if (keys.length === 0) return <span className="text-slate-600 text-xs">—</span>;
+  if (keys.length === 0) return <span className="text-[#959c9f] text-xs">—</span>;
   return (
     <span className="flex items-end gap-1">
       {keys.map(k => {
@@ -106,7 +106,7 @@ function PlatformBars({ platforms }: { platforms: Record<string, PlatformStat> }
             <span className="w-4 bg-gray-800 rounded-sm overflow-hidden flex flex-col justify-end" style={{ height: 26 }}>
               <span style={{ height: `${Math.max(2, Math.min(100, p.sov))}%`, background: meta.color, display: 'block' }} />
             </span>
-            <span className="text-[8px] text-slate-500 mt-0.5">{meta.short}</span>
+            <span className="text-[8px] text-[#959c9f] mt-0.5">{meta.short}</span>
           </span>
         );
       })}
@@ -115,18 +115,18 @@ function PlatformBars({ platforms }: { platforms: Record<string, PlatformStat> }
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  FREE: 'bg-slate-100 text-slate-600',
-  STARTER: 'bg-blue-100 text-blue-700',
+  FREE: 'bg-[#181b1e] text-[#959c9f]',
+  STARTER: 'bg-[#1e2932] text-blue-400',
   STANDARD: 'bg-purple-100 text-purple-700',
   PRO: 'bg-orange-100 text-orange-700',
-  ENTERPRISE: 'bg-red-100 text-red-700',
+  ENTERPRISE: 'bg-[#3a2022] text-red-400',
 };
 
 function RankChangeBadge({ change }: { change: number | null }) {
   if (change === null)
     return <span className="inline-flex items-center gap-0.5 text-xs text-violet-600"><Sparkles className="h-3 w-3" />신규</span>;
   if (change > 0)
-    return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-600"><TrendingUp className="h-3 w-3" />+{change}</span>;
+    return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-[#ff9565]"><TrendingUp className="h-3 w-3" />+{change}</span>;
   if (change < 0)
     return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-red-500"><TrendingDown className="h-3 w-3" />{change}</span>;
   return <span className="inline-flex items-center gap-0.5 text-xs text-slate-400"><Minus className="h-3 w-3" />0</span>;
@@ -287,7 +287,7 @@ export default function AdminSovPage() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mx-auto mb-4 shadow-xl">
               <Trophy className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">SoV 랭킹 보드</h1>
+            <h1 className="font-display text-2xl font-bold text-white">SoV 랭킹 보드</h1>
             <p className="text-slate-400 text-sm mt-1">관리자 전용 — 전체 고객 병원 순위</p>
           </div>
           <div className="bg-slate-900 rounded-xl p-6 border border-gray-800">
@@ -304,7 +304,7 @@ export default function AdminSovPage() {
                 className="w-full bg-gray-950 border border-gray-700 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-amber-500"
                 placeholder="ADMIN_SECRET"
               />
-              <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+              <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#959c9f]">
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -327,8 +327,8 @@ export default function AdminSovPage() {
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-amber-400" />
-            <h1 className="font-bold">SoV 랭킹 보드</h1>
-            <span className="text-xs text-slate-500">관리자 전용</span>
+            <h1 className="font-display font-bold">SoV 랭킹 보드</h1>
+            <span className="text-xs text-[#959c9f]">관리자 전용</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* 기간 선택 */}
@@ -382,9 +382,9 @@ export default function AdminSovPage() {
               { label: '급하락 (−3↓)', value: summary.fallers, sub: `직전 ${days}일 대비`, warn: summary.fallers > 0 },
             ].map(c => (
               <article key={c.label} className={`rounded-xl border p-3 ${c.warn ? 'border-red-900/60 bg-red-950/20' : 'border-gray-800 bg-slate-900/50'}`}>
-                <p className="text-[11px] text-slate-500">{c.label}</p>
+                <p className="text-[11px] text-[#959c9f]">{c.label}</p>
                 <p className={`text-xl font-bold ${c.warn ? 'text-red-400' : c.up ? 'text-brand-400' : 'text-white'}`}>{c.value}</p>
-                <p className="text-[10px] text-slate-600">{c.sub}</p>
+                <p className="text-[10px] text-[#959c9f]">{c.sub}</p>
               </article>
             ))}
           </section>
@@ -421,7 +421,7 @@ export default function AdminSovPage() {
               />
             </div>
 
-            <p className="text-xs text-slate-500 mb-3">
+            <p className="text-xs text-[#959c9f] mb-3">
               SoV = 질문 100번 중 등판 비율 · 1위 호명 = 등판 중 첫 번째로 불린 비율 · 감성 = 언급 톤(-1~1) · 순위 변동은 직전 {days}일 대비 · 병원 클릭 → 일별 추이
             </p>
 
@@ -456,10 +456,10 @@ export default function AdminSovPage() {
                       <td className="px-3 py-2">
                         <span className="font-medium">{r.name}</span>
                         {r.lowConfidence && <span className="ml-1.5 text-[10px] text-amber-500">표본부족</span>}
-                        <span className="block text-[11px] text-slate-500">{r.region}</span>
+                        <span className="block text-[11px] text-[#959c9f]">{r.region}</span>
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-amber-300">{r.sovPercent}%</td>
-                      <td className={`px-3 py-2 text-right text-xs ${(r.sovChange ?? 0) > 0 ? 'text-brand-400' : (r.sovChange ?? 0) < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                      <td className={`px-3 py-2 text-right text-xs ${(r.sovChange ?? 0) > 0 ? 'text-brand-400' : (r.sovChange ?? 0) < 0 ? 'text-red-400' : 'text-[#959c9f]'}`}>
                         {r.sovChange === null ? '—' : `${r.sovChange > 0 ? '+' : ''}${r.sovChange}%p`}
                       </td>
                       <td className="px-3 py-2 text-right text-slate-300 font-mono text-xs">
@@ -470,14 +470,14 @@ export default function AdminSovPage() {
                           <span className={r.avgMentionPosition <= 2 ? 'text-brand-400 font-semibold' : r.avgMentionPosition <= 3 ? 'text-slate-200' : 'text-slate-400'}>
                             {r.avgMentionPosition}위
                           </span>
-                        ) : <span className="text-slate-600">—</span>}
+                        ) : <span className="text-[#959c9f]">—</span>}
                       </td>
                       <td className="px-3 py-2 text-right">
                         {r.firstPlaceRate !== null ? (
                           <span className={r.firstPlaceRate >= 50 ? 'text-amber-300 font-semibold' : 'text-slate-300'} title={`등판 ${r.mentionedResponses}회 중 ${r.firstPlaceCount}회 1위`}>
                             {r.firstPlaceRate}%
                           </span>
-                        ) : <span className="text-slate-600">—</span>}
+                        ) : <span className="text-[#959c9f]">—</span>}
                       </td>
                       <td className="px-3 py-2 text-right text-xs">
                         <span className={sentimentFace(r.avgSentiment).cls}>{sentimentFace(r.avgSentiment).face}</span>
@@ -486,7 +486,7 @@ export default function AdminSovPage() {
                         <span className="flex justify-center"><PlatformBars platforms={r.platforms} /></span>
                       </td>
                       <td className="px-3 py-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${PLAN_COLORS[r.planType ?? ''] ?? 'bg-slate-100 text-slate-600'}`}>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${PLAN_COLORS[r.planType ?? ''] ?? 'bg-[#181b1e] text-[#959c9f]'}`}>
                           {r.planType ?? '—'}
                         </span>
                       </td>
@@ -512,7 +512,7 @@ export default function AdminSovPage() {
                   <option key={d.date} value={d.date}>{d.date} ({d.hospitalCount}개 병원)</option>
                 ))}
               </select>
-              <span className="text-xs text-slate-500">그날 수집된 응답만으로 계산한 당일 순위</span>
+              <span className="text-xs text-[#959c9f]">그날 수집된 응답만으로 계산한 당일 순위</span>
             </div>
 
             {selectedDay ? (
@@ -551,7 +551,7 @@ export default function AdminSovPage() {
                 </table>
               </div>
             ) : (
-              <p className="text-slate-500 text-sm py-10 text-center">{loading ? '불러오는 중…' : '데이터가 없습니다'}</p>
+              <p className="text-[#959c9f] text-sm py-10 text-center">{loading ? '불러오는 중…' : '데이터가 없습니다'}</p>
             )}
           </section>
         )}
@@ -565,7 +565,7 @@ export default function AdminSovPage() {
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold flex items-center gap-2">
+              <h2 className="font-display font-bold flex items-center gap-2">
                 <LineChartIcon className="h-4 w-4 text-amber-400" />
                 {trendHospital.name} — 일별 순위 · SoV 추이 (최근 {Math.min(days, 90)}일)
               </h2>
@@ -589,7 +589,7 @@ export default function AdminSovPage() {
                     { label: '순위 변동', v: row.rankChange === null ? '신규' : row.rankChange > 0 ? `+${row.rankChange}` : `${row.rankChange}` },
                   ].map(c => (
                     <div key={c.label} className="bg-gray-950 border border-gray-800 rounded-lg p-2 text-center">
-                      <p className="text-[10px] text-slate-500">{c.label}</p>
+                      <p className="text-[10px] text-[#959c9f]">{c.label}</p>
                       <p className="text-sm font-bold">{c.v}</p>
                     </div>
                   ))}
@@ -610,7 +610,7 @@ export default function AdminSovPage() {
             })()}
 
             {trendLoading ? (
-              <p className="text-slate-500 text-sm py-16 text-center">불러오는 중…</p>
+              <p className="text-[#959c9f] text-sm py-16 text-center">불러오는 중…</p>
             ) : (
               <>
                 <h3 className="text-xs text-slate-400 mb-1">일별 순위 (낮을수록 상위 — 축 반전)</h3>
@@ -621,7 +621,7 @@ export default function AdminSovPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#687253' }} tickFormatter={v => v.slice(5)} />
                       <YAxis reversed allowDecimals={false} tick={{ fontSize: 10, fill: '#687253' }} domain={[1, 'dataMax']} />
                       <Tooltip
-                        contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                        contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
                         formatter={(v) => [`${v}위`, '순위']}
                       />
                       <Line type="monotone" dataKey="rank" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
@@ -637,7 +637,7 @@ export default function AdminSovPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#687253' }} tickFormatter={v => v.slice(5)} />
                       <YAxis tick={{ fontSize: 10, fill: '#687253' }} unit="%" />
                       <Tooltip
-                        contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                        contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
                         formatter={(v) => [`${v}%`, 'SoV']}
                       />
                       <Line type="monotone" dataKey="sovPercent" stroke="#73766b" strokeWidth={2} dot={{ r: 2 }} connectNulls />

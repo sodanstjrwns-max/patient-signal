@@ -64,11 +64,11 @@ interface CouponData {
 }
 
 const PLAN_COLORS: Record<string, string> = {
-  FREE: 'bg-slate-100 text-slate-700',
-  STARTER: 'bg-blue-100 text-brand-700',
+  FREE: 'bg-[#181b1e] text-[#c0c4c7]',
+  STARTER: 'bg-[#1e2932] text-[#ff9565]',
   STANDARD: 'bg-purple-100 text-purple-700',
   PRO: 'bg-orange-100 text-orange-700',
-  ENTERPRISE: 'bg-red-100 text-red-700',
+  ENTERPRISE: 'bg-[#3a2022] text-red-400',
 };
 
 const SPECIALTY_NAMES: Record<string, string> = {
@@ -163,7 +163,7 @@ export default function AdminPage() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-xl">
               <Shield className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-white">Patient Signal</h1>
+            <h1 className="font-display text-2xl font-bold text-white">Patient Signal</h1>
             <p className="text-slate-400 text-sm mt-1">관리자 대시보드</p>
           </div>
           
@@ -178,7 +178,7 @@ export default function AdminPage() {
                 placeholder="비밀번호 입력"
                 className="w-full bg-slate-800 text-white border border-gray-700 rounded-lg px-4 py-3 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
-              <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">
+              <button onClick={() => setShowSecret(!showSecret)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#959c9f]">
                 {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -204,7 +204,7 @@ export default function AdminPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-purple-600 flex items-center justify-center">
               <Shield className="h-4 w-4 text-white" />
             </div>
-            <h1 className="font-bold text-lg">Patient Signal Admin</h1>
+            <h1 className="font-display font-bold text-lg">Patient Signal Admin</h1>
           </div>
           <button onClick={() => fetchData(activeTab)} className="text-slate-400 hover:text-white transition-colors" disabled={loading}>
             <RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`} />
@@ -260,7 +260,7 @@ export default function AdminPage() {
               <div className="flex gap-3 flex-wrap">
                 {Object.entries(dashboard.stats.planDistribution).map(([plan, count]) => (
                   <div key={plan} className="flex items-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${PLAN_COLORS[plan] || 'bg-slate-100 text-slate-700'}`}>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${PLAN_COLORS[plan] || 'bg-[#181b1e] text-[#c0c4c7]'}`}>
                       {plan}
                     </span>
                     <span className="text-2xl font-bold">{count}</span>
@@ -278,9 +278,9 @@ export default function AdminPage() {
                     <div key={u.id} className="flex items-center justify-between py-2 border-b border-gray-800 last:border-0">
                       <div>
                         <p className="font-medium text-sm">{u.name}</p>
-                        <p className="text-xs text-slate-500">{u.email}</p>
+                        <p className="text-xs text-[#959c9f]">{u.email}</p>
                       </div>
-                      <span className="text-xs text-slate-500">{timeAgo(u.createdAt)}</span>
+                      <span className="text-xs text-[#959c9f]">{timeAgo(u.createdAt)}</span>
                     </div>
                   ))}
                 </div>
@@ -294,11 +294,11 @@ export default function AdminPage() {
                       <div>
                         <p className="font-medium text-sm">{h.name}</p>
                         <div className="flex gap-1.5 mt-0.5">
-                          <span className="text-xs text-slate-500">{SPECIALTY_NAMES[h.specialtyType] || h.specialtyType}</span>
+                          <span className="text-xs text-[#959c9f]">{SPECIALTY_NAMES[h.specialtyType] || h.specialtyType}</span>
                           <span className={`text-xs px-1.5 rounded ${PLAN_COLORS[h.planType]}`}>{h.planType}</span>
                         </div>
                       </div>
-                      <span className="text-xs text-slate-500">{timeAgo(h.createdAt)}</span>
+                      <span className="text-xs text-[#959c9f]">{timeAgo(h.createdAt)}</span>
                     </div>
                   ))}
                 </div>
@@ -311,7 +311,7 @@ export default function AdminPage() {
         {!loading && activeTab === 'users' && users && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">전체 유저 <span className="text-blue-400">{users.total}명</span></h2>
+              <h2 className="font-display text-lg font-bold">전체 유저 <span className="text-blue-400">{users.total}명</span></h2>
             </div>
             <div className="bg-slate-900 rounded-xl border border-gray-800 overflow-hidden">
               <div className="overflow-x-auto">
@@ -335,10 +335,10 @@ export default function AdminPage() {
                           {u.hospital ? (
                             <div>
                               <p className="text-sm">{u.hospital.name}</p>
-                              <p className="text-xs text-slate-500">{u.hospital.regionSido} {u.hospital.regionSigungu}</p>
+                              <p className="text-xs text-[#959c9f]">{u.hospital.regionSido} {u.hospital.regionSigungu}</p>
                             </div>
                           ) : (
-                            <span className="text-slate-600">미등록</span>
+                            <span className="text-[#959c9f]">미등록</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -350,10 +350,10 @@ export default function AdminPage() {
                           {u.isPfMember ? (
                             <span className="text-brand-400 text-xs font-medium">✓ 수강생</span>
                           ) : (
-                            <span className="text-slate-600 text-xs">-</span>
+                            <span className="text-[#959c9f] text-xs">-</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(u.createdAt)}</td>
+                        <td className="px-4 py-3 text-[#959c9f] text-xs">{formatDate(u.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -367,7 +367,7 @@ export default function AdminPage() {
         {!loading && activeTab === 'hospitals' && hospitals && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">전체 병원 <span className="text-brand-400">{hospitals.total}개</span></h2>
+              <h2 className="font-display text-lg font-bold">전체 병원 <span className="text-brand-400">{hospitals.total}개</span></h2>
             </div>
             <div className="bg-slate-900 rounded-xl border border-gray-800 overflow-hidden">
               <div className="overflow-x-auto">
@@ -398,7 +398,7 @@ export default function AdminPage() {
                         <td className="px-4 py-3 text-center">{h._count.prompts}</td>
                         <td className="px-4 py-3 text-center">{h._count.competitors}</td>
                         <td className="px-4 py-3 text-center">{h._count.crawlJobs}</td>
-                        <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(h.createdAt)}</td>
+                        <td className="px-4 py-3 text-[#959c9f] text-xs">{formatDate(h.createdAt)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -412,7 +412,7 @@ export default function AdminPage() {
         {!loading && activeTab === 'coupons' && coupons && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">쿠폰 현황 <span className="text-purple-400">{coupons.total}개</span></h2>
+              <h2 className="font-display text-lg font-bold">쿠폰 현황 <span className="text-purple-400">{coupons.total}개</span></h2>
             </div>
             <div className="space-y-4">
               {coupons.coupons.map((c) => (
@@ -434,18 +434,18 @@ export default function AdminPage() {
                       <div className="text-right">
                         <p className="text-sm font-mono">
                           <span className="text-blue-400">{c.currentUses}</span>
-                          <span className="text-slate-600"> / </span>
+                          <span className="text-[#959c9f]"> / </span>
                           <span className="text-slate-400">{c.maxUses > 0 ? c.maxUses : '∞'}</span>
                         </p>
-                        <p className="text-xs text-slate-500">사용 / 한도</p>
+                        <p className="text-xs text-[#959c9f]">사용 / 한도</p>
                       </div>
-                      {expandedCoupon === c.code ? <ChevronUp className="h-4 w-4 text-slate-500" /> : <ChevronDown className="h-4 w-4 text-slate-500" />}
+                      {expandedCoupon === c.code ? <ChevronUp className="h-4 w-4 text-[#959c9f]" /> : <ChevronDown className="h-4 w-4 text-[#959c9f]" />}
                     </div>
                   </button>
 
                   {expandedCoupon === c.code && c.redemptions.length > 0 && (
                     <div className="border-t border-gray-800 px-5 py-3">
-                      <p className="text-xs text-slate-500 mb-2">사용 내역</p>
+                      <p className="text-xs text-[#959c9f] mb-2">사용 내역</p>
                       {c.redemptions.map((r, i) => (
                         <div key={i} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
                           <div className="flex items-center gap-3">
@@ -454,14 +454,14 @@ export default function AdminPage() {
                             </div>
                             <div>
                               <p className="text-sm font-medium">{r.user}</p>
-                              <p className="text-xs text-slate-500 flex items-center gap-1">
+                              <p className="text-xs text-[#959c9f] flex items-center gap-1">
                                 <Mail className="h-3 w-3" />{r.email}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-slate-400">{r.hospital}</p>
-                            <p className="text-xs text-slate-600 flex items-center gap-1 justify-end">
+                            <p className="text-xs text-[#959c9f] flex items-center gap-1 justify-end">
                               <Clock className="h-3 w-3" />{formatDate(r.date)}
                             </p>
                           </div>
@@ -472,7 +472,7 @@ export default function AdminPage() {
 
                   {expandedCoupon === c.code && c.redemptions.length === 0 && (
                     <div className="border-t border-gray-800 px-5 py-6 text-center">
-                      <p className="text-sm text-slate-600">아직 사용 내역이 없습니다</p>
+                      <p className="text-sm text-[#959c9f]">아직 사용 내역이 없습니다</p>
                     </div>
                   )}
                 </div>

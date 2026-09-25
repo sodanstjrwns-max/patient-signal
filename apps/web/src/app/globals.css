@@ -3,20 +3,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Patient Signal — working desk */
+@font-face {
+  font-family: "Signal Display";
+  src: url("/fonts/SignalDisplay-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Chakra Petch";
+  src: url("/fonts/ChakraPetch-Bold.woff2") format("woff2");
+  font-weight: 700 900;
+  font-style: normal;
+  font-display: swap;
+}
+/* Patient Signal — black canvas, orange controls, fluorescent signal. */
 :root {
-  --background: #f1f1eb;
-  --foreground: #141512;
+  --background: #08090a;
+  --foreground: #f5f5ef;
   --sidebar-width: 88px;
-  --brand-primary: #d0ff43;
-  --brand-secondary: #48542b;
-  --brand-accent: #ff5d2a;
+  --brand-primary: #ff6a24;
+  --brand-secondary: #d9ff43;
+  --brand-accent: #ff6a24;
   --signal-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --glass-bg: #ffffff;
-  --glass-bg-strong: #ffffff;
-  --glass-bg-solid: #ffffff;
-  --glass-border: #d4d6cb;
-  --glass-border-subtle: #e9ebe1;
+  --glass-bg: #111315;
+  --glass-bg-strong: #181b1e;
+  --glass-bg-solid: #111315;
+  --glass-border: #30343a;
+  --glass-border-subtle: #24282b;
   --glass-blur: 0px;
   --glass-blur-strong: 0px;
   --shadow-xs: 0 1px 2px #14151205;
@@ -33,6 +47,7 @@
   box-sizing: border-box;
 }
 html {
+  color-scheme: dark;
   scroll-behavior: smooth;
 }
 body {
@@ -49,14 +64,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 ::selection {
-  color: #141512;
-  background: #ff5d2a;
-}
-button,
-input,
-textarea,
-select {
-  font: inherit;
+  color: #08090a;
+  background: #ff6a24;
 }
 button,
 a,
@@ -74,7 +83,7 @@ select {
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #b8bcab;
+  background: #41474b;
   border-radius: 6px;
 }
 ::-webkit-scrollbar-track {
@@ -84,58 +93,58 @@ select {
 @layer components {
   .signal-eyebrow {
     @apply text-[10px] font-bold uppercase tracking-[0.18em];
-    color: #72756a;
+    color: #959c9f;
   }
   .signal-panel {
-    @apply border bg-white;
-    border-color: #d4d6cb;
+    @apply border bg-[#111315];
+    border-color: #30343a;
   }
   .signal-rule {
     @apply border-t;
-    border-color: #d4d6cb;
+    border-color: #30343a;
   }
   .signal-display {
-    @apply font-semibold tracking-[-0.065em];
+    @apply font-display font-bold tracking-[-0.05em];
     line-height: 1.05;
   }
   .signal-link {
     @apply inline-flex items-center gap-2 text-xs font-semibold transition-colors;
-    color: #141512;
+    color: #f5f5ef;
   }
   .signal-link:hover {
-    color: #141512;
+    color: #f5f5ef;
   }
   .glass,
   .glass-strong,
   .glass-solid,
   .glass-frosted,
   .glass-bento {
-    background: #fff;
-    border: 1px solid #d4d6cb;
+    background: #111315;
+    border: 1px solid #30343a;
     border-radius: 2px;
     box-shadow: none;
   }
   .glass-dark,
   .glass-bento-dark,
   .glass-sidebar {
-    background: #141512;
-    border: 1px solid #33372c;
+    background: #08090a;
+    border: 1px solid #30343a;
     border-radius: 2px;
     color: #fff;
   }
   .bg-mesh,
   .bg-mesh-strong,
   .bg-aurora {
-    background: #f1f1eb;
+    background: #08090a;
   }
   .text-gradient,
   .text-gradient-aurora {
-    color: #141512;
+    color: #f5f5ef;
     background: none;
     -webkit-text-fill-color: currentColor;
   }
   .text-gradient-gold {
-    color: #887338;
+    color: #d9ff43;
     background: none;
     -webkit-text-fill-color: currentColor;
   }
@@ -148,12 +157,12 @@ select {
   }
   .hover-lift:hover,
   .hover-glow:hover {
-    border-color: #141512;
-    box-shadow: 3px 3px 0 #141512;
+    border-color: #f5f5ef;
+    box-shadow: 3px 3px 0 #ff6a24;
     transform: translate(-2px, -2px);
   }
   .gradient-border {
-    border: 1px solid #d4d6cb;
+    border: 1px solid #30343a;
   }
   .inner-light {
     box-shadow: inset 0 1px 0 #ffffff18;
@@ -161,11 +170,11 @@ select {
   .glow-dot {
     width: 6px;
     height: 6px;
-    background: #ff5d2a;
+    background: #ff6a24;
     border-radius: 50%;
   }
   .shimmer {
-    background: #e9ebe1;
+    background: #24282b;
     animation: signal-pulse 1.8s ease-in-out infinite;
   }
   .chat-bubble-in {
@@ -179,8 +188,8 @@ select {
   }
 }
 .dashboard-shell {
-  color: #141512;
-  background: #f1f1eb;
+  color: #f5f5ef;
+  background: #08090a;
 }
 .dashboard-shell main {
   overflow-x: clip;
@@ -217,9 +226,9 @@ select {
   isolation: isolate;
 }
 .desk-panel {
-  border: 1px solid #141512;
+  border: 1px solid #30343a;
   border-radius: 0;
-  background: #fafaf6;
+  background: #111315;
 }
 .desk-label {
   font-size: 10px;
@@ -228,10 +237,10 @@ select {
   letter-spacing: 0.05em;
 }
 .desk-number {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Chakra Petch", "Signal Display", sans-serif;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.075em;
+  letter-spacing: -0.065em;
   line-height: 0.85;
 }
 .desk-tab {
@@ -245,13 +254,13 @@ select {
     border-color 150ms;
 }
 .desk-tab:hover {
-  background: #d0ff43;
-  color: #141512;
+  background: #ff6a24;
+  color: #08090a;
 }
 .desk-tab-active {
-  border-bottom-color: #141512;
-  background: #d0ff43;
-  color: #141512;
+  border-bottom-color: #f5f5ef;
+  background: #ff6a24;
+  color: #08090a;
 }
 .desk-action {
   transition:
@@ -261,7 +270,7 @@ select {
     transform 160ms;
 }
 .desk-action:not(:disabled):hover {
-  box-shadow: 3px 3px 0 #141512;
+  box-shadow: 3px 3px 0 #ff6a24;
   transform: translate(-1px, -1px);
 }
 .desk-action:not(:disabled):active {
@@ -281,7 +290,7 @@ select {
   bottom: 0;
   left: -8px;
   width: 3px;
-  background: #ff5d2a;
+  background: #ff6a24;
 }
 .desk-rail-item svg {
   transition: transform 220ms var(--signal-ease);
@@ -325,7 +334,7 @@ select {
   transform: translateX(3px);
 }
 .signal-nav-link[aria-current="page"] {
-  box-shadow: inset 3px 0 0 #ff5d2a;
+  box-shadow: inset 3px 0 0 #ff6a24;
 }
 .signal-nav-link[aria-current="page"] > svg:last-child {
   animation: signal-arrow-in 300ms var(--signal-ease);
@@ -391,6 +400,7 @@ select {
 }
 @media (prefers-reduced-motion: reduce) {
   html {
+    color-scheme: dark;
     scroll-behavior: auto;
   }
   *,

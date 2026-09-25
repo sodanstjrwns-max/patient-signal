@@ -103,50 +103,45 @@ export default function HomePage() {
   const step = steps[activeStep];
 
   return (
-    <div className="min-h-screen bg-[#f1f1eb] text-[#141512]">
-      <PublicHeader loggedIn={loggedIn} />
+    <div className="min-h-screen bg-[#08090a] text-[#f5f5ef]">
+      <PublicHeader loggedIn={loggedIn} dark />
       <main>
-        <section id="hero-section" className="border-b border-[#141512]">
-          <div className="bg-[#ff5d2a]">
-            <div className="relative mx-auto grid max-w-[1440px] grid-cols-[1fr_auto] items-end gap-3 px-5 py-6 sm:px-8 sm:py-7 lg:px-10">
-              <div>
-                <p className="mb-4 font-mono text-[8px] font-semibold tracking-[0.14em] sm:text-[9px]">
-                  PATIENT / AI SEARCH OBSERVATORY
-                </p>
-                <SignalWordmark className="text-[clamp(5.5rem,12vw,10.5rem)]" />
-              </div>
-              <div className="flex flex-col items-end self-stretch justify-between border-l border-[#141512]/35 pl-4 sm:pl-8">
-                <span
-                  aria-hidden="true"
-                  className="font-mono text-2xl font-light leading-none"
-                >
-                  +
+        <section id="hero-section" className="border-b border-[#30343a]">
+          <div className="mx-auto max-w-[1440px] px-5 pb-8 pt-7 sm:px-8 lg:px-10 lg:pt-9">
+            <div className="flex items-center justify-between border-b border-[#30343a] pb-4 font-numeric text-[9px] tracking-[0.14em] text-[#959c9f]">
+              <span>PATIENT / AI SEARCH OBSERVATORY</span>
+              <span className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 bg-[#d9ff43]" aria-hidden="true" />
+                <span className="hidden sm:inline">
+                  PROFILE — QUESTION — RESPONSE
                 </span>
-                <div className="hidden text-right font-mono text-[9px] leading-5 sm:block">
-                  PROFILE
-                  <br />
-                  QUESTION
-                  <br />
-                  RESPONSE
-                </div>
-                <SignalMark className="!h-10 !w-10 !bg-[#141512] !text-[#d0ff43] sm:!h-14 sm:!w-14" />
+              </span>
+            </div>
+            <div className="relative py-7 sm:py-9">
+              <SignalWordmark
+                outlined
+                className="text-[clamp(5.75rem,16vw,14.5rem)] text-[#ff6a24]"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute bottom-8 right-0 hidden border-b border-r border-[#ff6a24] pb-3 pr-3 lg:block"
+              >
+                <SignalMark className="!h-12 !w-12 !border-0" />
               </div>
             </div>
-          </div>
-          <div className="mx-auto max-w-[1440px] px-5 pb-7 pt-6 sm:px-8 lg:px-10">
-            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+            <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
-                <h1 className="text-[23px] font-semibold leading-tight tracking-[-0.06em] sm:text-3xl">
+                <h1 className="font-display text-[22px] leading-[1.45] tracking-[-0.045em] sm:text-3xl">
                   우리 병원, AI는 뭐라고 할까.
                 </h1>
-                <p className="mt-2 text-xs leading-6 text-[#606259]">
+                <p className="mt-3 max-w-2xl text-xs leading-6 text-[#959c9f]">
                   병원 소개에서 핵심 질문으로. 질문마다 실제 답변과 경쟁 병원의
                   위치를 확인하세요.
                 </p>
               </div>
               <Link
                 href={startHref}
-                className="group inline-flex shrink-0 items-center justify-between gap-7 bg-[#141512] px-5 py-3.5 text-xs font-semibold text-[#f1f1eb] transition-colors hover:bg-[#d0ff43] hover:text-[#141512]"
+                className="group inline-flex shrink-0 items-center justify-between gap-7 border border-[#ff6a24] px-5 py-3.5 text-xs font-semibold text-[#ff6a24] transition-colors hover:bg-[#ff6a24] hover:text-[#08090a]"
               >
                 {startLabel}
                 <ArrowRight className="h-4 w-4 transition-transform motion-safe:group-hover:translate-x-1" />
@@ -155,22 +150,21 @@ export default function HomePage() {
 
             <div
               id="signal-demo"
-              className="mt-6 scroll-mt-6 border border-[#141512]"
+              className="mt-7 scroll-mt-6 border border-[#30343a]"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 bg-[#141512] px-4 py-3 text-[#f1f1eb] sm:px-5">
-                <div className="flex items-center gap-2 font-mono text-[10px] font-semibold tracking-[0.1em]">
-                  <span className="h-2 w-2 bg-[#d0ff43]" />
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#30343a] bg-[#111315] px-4 py-3 sm:px-5">
+                <div className="font-numeric text-[11px] font-semibold tracking-[0.08em] text-[#ff6a24]">
                   QUESTION / RESPONSE
                 </div>
-                <p className="text-[10px] text-[#f1f1eb]/65">
+                <p className="text-[10px] text-[#959c9f]">
                   설명용 예시 · 실제 측정 결과가 아닙니다
                 </p>
               </div>
               <div className="grid lg:grid-cols-[0.9fr_1.6fr]">
-                <div className="min-w-0 border-b border-[#141512] lg:border-b-0 lg:border-r">
-                  <div className="flex items-center justify-between border-b border-[#d4d6cb] px-4 py-3 sm:px-5">
+                <div className="min-w-0 border-b border-[#30343a] bg-[#111315] lg:border-b-0 lg:border-r">
+                  <div className="flex items-center justify-between border-b border-[#30343a] px-4 py-3 sm:px-5">
                     <span className="text-xs font-semibold">질문 목록</span>
-                    <span className="font-mono text-[9px] text-[#74766d]">
+                    <span className="font-numeric text-[10px] text-[#959c9f]">
                       SELECT A QUESTION
                     </span>
                   </div>
@@ -185,37 +179,39 @@ export default function HomePage() {
                         type="button"
                         aria-pressed={questionIndex === index}
                         onClick={() => setQuestionIndex(index)}
-                        className={`relative flex min-h-[88px] flex-col items-start gap-3 border-b border-r border-[#d4d6cb] px-3 py-4 text-left transition-colors last:border-r-0 sm:px-5 lg:min-h-[101px] lg:flex-row lg:gap-4 lg:border-r-0 ${questionIndex === index ? "bg-[#d0ff43]" : "hover:bg-white"}`}
+                        className={`relative flex min-h-[88px] flex-col items-start gap-3 border-b border-r border-[#30343a] px-3 py-4 text-left transition-colors last:border-r-0 sm:px-5 lg:min-h-[101px] lg:flex-row lg:gap-4 lg:border-r-0 ${questionIndex === index ? "bg-[#181b1e] shadow-[inset_3px_0_0_#ff6a24]" : "hover:bg-[#181b1e]"}`}
                       >
-                        <span className="shrink-0 font-mono text-[10px]">
+                        <span
+                          className={`shrink-0 font-numeric text-[11px] ${questionIndex === index ? "text-[#ff6a24]" : "text-[#959c9f]"}`}
+                        >
                           Q.0{index + 1}
                         </span>
                         <span className="min-w-0">
                           <span className="block text-[12px] font-semibold sm:text-sm">
                             {item.label}
                           </span>
-                          <span className="mt-2 hidden text-[11px] leading-5 text-[#606259] lg:block">
+                          <span className="mt-2 hidden text-[11px] leading-5 text-[#959c9f] lg:block">
                             {item.question}
                           </span>
                         </span>
                         {questionIndex === index && (
                           <span
-                            className="absolute bottom-3 right-3 h-1.5 w-1.5 bg-[#141512] lg:bottom-auto lg:right-4 lg:top-5"
+                            className="absolute bottom-3 right-3 h-1 w-1 bg-[#d9ff43] lg:bottom-auto lg:right-4 lg:top-5"
                             aria-hidden="true"
                           />
                         )}
                       </button>
                     ))}
                   </div>
-                  <p className="hidden px-5 py-4 text-[10px] leading-5 text-[#74766d] lg:block">
+                  <p className="hidden px-5 py-4 text-[10px] leading-5 text-[#959c9f] lg:block">
                     질문을 선택하면 연결된 답변이 바뀝니다.
                     <br />
                     아래 답변은 사용 방식 설명을 위해 작성했습니다.
                   </p>
                 </div>
-                <div className="min-w-0 bg-white">
+                <div className="min-w-0 bg-[#08090a]">
                   <div
-                    className="flex border-b border-[#141512]"
+                    className="flex border-b border-[#30343a]"
                     role="group"
                     aria-label="예시 플랫폼 선택"
                   >
@@ -225,61 +221,61 @@ export default function HomePage() {
                         type="button"
                         aria-pressed={platformIndex === index}
                         onClick={() => setPlatformIndex(index)}
-                        className={`flex-1 border-r border-[#d4d6cb] px-2 py-3 text-[11px] font-semibold transition-colors last:border-r-0 sm:px-5 sm:text-xs ${platformIndex === index ? "bg-[#ff5d2a] text-[#141512]" : "text-[#606259] hover:bg-[#f1f1eb]"}`}
+                        className={`flex-1 border-r border-[#30343a] px-2 py-3 font-numeric text-[13px] font-semibold transition-colors last:border-r-0 sm:px-5 ${platformIndex === index ? "bg-[#181b1e] text-[#ff6a24] shadow-[inset_0_-2px_0_#ff6a24]" : "text-[#959c9f] hover:bg-[#111315] hover:text-[#f5f5ef]"}`}
                       >
-                        <span className="mr-2 hidden font-mono text-[9px] sm:inline">
+                        <span className="mr-2 hidden text-[10px] sm:inline">
                           0{index + 1}
                         </span>
                         {platform}
                       </button>
                     ))}
                   </div>
-                  <div
-                    key={`${questionIndex}-${platformIndex}`}
-                    className="signal-panel-enter"
-                    aria-live="polite"
-                    aria-atomic="true"
-                  >
-                    <div className="border-b border-[#d4d6cb] px-5 py-4 sm:px-7">
-                      <p className="font-mono text-[9px] text-[#74766d]">
-                        Q.0{questionIndex + 1} / {example.tag}
-                      </p>
-                      <h2 className="mt-2 text-[17px] font-medium leading-7 tracking-[-0.035em] sm:text-xl">
-                        {example.question}
-                      </h2>
-                    </div>
-                    <div className="px-5 py-5 sm:px-7">
-                      <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-[10px] font-semibold">
-                          <CornerDownRight className="h-3.5 w-3.5" />
-                          {demoPlatforms[platformIndex]} · 답변 예시
-                        </span>
-                        <span className="font-mono text-[9px] text-[#74766d]">
-                          DEMO TEXT
-                        </span>
+                  <div aria-live="polite" aria-atomic="true">
+                    <div
+                      key={`${questionIndex}-${platformIndex}`}
+                      className="signal-panel-enter"
+                    >
+                      <div className="border-b border-[#30343a] px-5 py-4 sm:px-7">
+                        <p className="font-numeric text-[10px] text-[#959c9f]">
+                          Q.0{questionIndex + 1} / {example.tag}
+                        </p>
+                        <h2 className="mt-3 font-display text-[15px] leading-7 tracking-[-0.025em] sm:text-lg">
+                          {example.question}
+                        </h2>
                       </div>
-                      <p className="mt-4 min-h-[108px] text-[13px] leading-[1.9] text-[#4d5047] sm:min-h-[100px] sm:text-sm">
-                        {example.answers[platformIndex]}
-                      </p>
-                      <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#d4d6cb] pt-4 text-[10px] text-[#606259]">
-                        <span className="flex items-center gap-1.5">
-                          <Check className="h-3 w-3" />
-                          질문과 답변 연결
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <Check className="h-3 w-3" />
-                          플랫폼별 확인
-                        </span>
-                        <span className="ml-auto font-mono text-[#74766d]">
-                          READ / COMPARE
-                        </span>
+                      <div className="px-5 py-5 sm:px-7">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-2 text-[10px] font-semibold text-[#ff6a24]">
+                            <CornerDownRight className="h-3.5 w-3.5" />
+                            {demoPlatforms[platformIndex]} · 답변 예시
+                          </span>
+                          <span className="font-numeric text-[10px] text-[#959c9f]">
+                            DEMO TEXT
+                          </span>
+                        </div>
+                        <p className="mt-4 min-h-[108px] text-[13px] leading-[1.9] text-[#c3c8ca] sm:min-h-[100px] sm:text-sm">
+                          {example.answers[platformIndex]}
+                        </p>
+                        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#30343a] pt-4 text-[10px] text-[#959c9f]">
+                          <span className="flex items-center gap-1.5">
+                            <Check className="h-3 w-3" />
+                            질문과 답변 연결
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Check className="h-3 w-3" />
+                            플랫폼별 확인
+                          </span>
+                          <span className="ml-auto font-numeric">
+                            READ / COMPARE
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[10px] text-[#606259]">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[10px] text-[#959c9f]">
               <span>질문과 플랫폼을 눌러 답변 탐색을 체험해 보세요.</span>
               <span>카드 등록 없이 14일 무료 체험</span>
             </div>
@@ -291,20 +287,22 @@ export default function HomePage() {
           className="scroll-mt-6 px-5 py-12 sm:px-8 lg:px-10 lg:py-16"
         >
           <div className="mx-auto max-w-[1360px]">
-            <Reveal className="mb-7 flex flex-col justify-between gap-4 border-b border-[#141512] pb-6 sm:flex-row sm:items-end">
+            <Reveal className="mb-7 flex flex-col justify-between gap-4 border-b border-[#30343a] pb-6 sm:flex-row sm:items-end">
               <div>
-                <p className="font-mono text-[9px] font-semibold tracking-[0.15em]">
+                <p className="font-numeric text-[11px] tracking-[0.13em] text-[#ff6a24]">
                   WORKING INDEX / 01—03
                 </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-[-0.05em] sm:text-3xl">
+                <h2 className="mt-4 font-display text-xl leading-[1.7] tracking-[-0.045em] sm:text-[27px]">
                   소개를 연결하고, 질문을 좁히고, 답변을 읽고.
                 </h2>
               </div>
-              <span className="font-mono text-xs">PATIENT SIGNAL</span>
+              <span className="font-numeric text-xs text-[#959c9f]">
+                PATIENT SIGNAL
+              </span>
             </Reveal>
-            <div className="grid border border-[#141512] lg:grid-cols-[0.75fr_1.25fr]">
+            <div className="grid border border-[#30343a] lg:grid-cols-[0.75fr_1.25fr]">
               <div
-                className="border-b border-[#141512] lg:border-b-0 lg:border-r"
+                className="border-b border-[#30343a] lg:border-b-0 lg:border-r"
                 role="group"
                 aria-label="사용 단계 선택"
               >
@@ -314,84 +312,86 @@ export default function HomePage() {
                     type="button"
                     onClick={() => setActiveStep(index)}
                     aria-pressed={activeStep === index}
-                    className={`flex w-full items-center gap-4 border-b border-[#141512] px-5 py-5 text-left transition-colors last:border-b-0 sm:px-6 ${activeStep === index ? "bg-[#141512] text-[#d0ff43]" : "hover:bg-[#d0ff43]"}`}
+                    className={`flex w-full items-center gap-4 border-b border-[#30343a] px-5 py-5 text-left transition-colors last:border-b-0 sm:px-6 ${activeStep === index ? "bg-[#181b1e] text-[#ff6a24]" : "bg-[#111315] text-[#959c9f] hover:text-[#f5f5ef]"}`}
                   >
-                    <span className="font-mono text-[10px]">0{index + 1}</span>
+                    <span className="font-numeric text-[13px]">
+                      0{index + 1}
+                    </span>
                     <span className="flex-1 text-sm font-semibold">
                       {item.title}
                     </span>
-                    <span className="hidden font-mono text-[9px] sm:block">
+                    <span className="hidden font-numeric text-[10px] sm:block">
                       {item.label}
                     </span>
                     <ArrowRight
-                      className={`h-4 w-4 transition-transform ${activeStep === index ? "translate-x-1" : ""}`}
+                      className={`h-4 w-4 transition-transform ${activeStep === index ? "text-[#d9ff43] motion-safe:translate-x-1" : ""}`}
                     />
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col justify-between bg-white p-5 sm:p-7">
-                <div
-                  key={activeStep}
-                  className="signal-panel-enter"
-                  aria-live="polite"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="bg-[#ff5d2a] px-2.5 py-1.5 font-mono text-[10px] font-semibold">
-                      FILE / 0{activeStep + 1}
-                    </span>
-                    <span className="font-mono text-[10px] text-[#74766d]">
-                      {step.label}
-                    </span>
-                  </div>
-                  <p className="mt-5 max-w-2xl text-sm leading-7 text-[#4d5047]">
-                    {step.description}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                    {step.chips.map((chip) => (
-                      <span
-                        key={chip}
-                        className="border-b border-[#d4d6cb] pb-1 text-[10px] text-[#606259]"
-                      >
-                        {chip}
+              <div className="flex flex-col justify-between bg-[#111315] p-5 sm:p-7">
+                <div aria-live="polite">
+                  <div key={activeStep} className="signal-panel-enter">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="font-numeric text-[13px] font-semibold text-[#ff6a24]">
+                        FILE / 0{activeStep + 1}
                       </span>
-                    ))}
+                      <span className="font-numeric text-[11px] text-[#959c9f]">
+                        {step.label}
+                      </span>
+                    </div>
+                    <p className="mt-5 max-w-2xl text-sm leading-7 text-[#c3c8ca]">
+                      {step.description}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                      {step.chips.map((chip) => (
+                        <span
+                          key={chip}
+                          className="border-b border-[#30343a] pb-1 text-[10px] text-[#959c9f]"
+                        >
+                          {chip}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <Link
                   href={loggedIn ? step.href : "/register"}
-                  className="mt-6 flex w-fit items-center gap-7 text-xs font-semibold underline decoration-[#d4d6cb] underline-offset-4 hover:decoration-[#141512]"
+                  className="mt-6 flex w-fit items-center gap-7 text-xs font-semibold text-[#ff6a24] underline decoration-[#30343a] underline-offset-4 hover:decoration-[#ff6a24]"
                 >
                   {step.link}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             </div>
-            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] text-[#606259]">
-              <span className="mr-auto font-mono text-[9px]">PLATFORMS</span>
+            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-[11px] text-[#959c9f]">
+              <span className="mr-auto font-numeric text-[10px] text-[#ff6a24]">
+                PLATFORMS
+              </span>
               {platforms.map((platform) => (
                 <span key={platform}>{platform}</span>
               ))}
             </div>
-            <p className="mt-3 text-[10px] text-[#74766d]">
+            <p className="mt-3 text-[10px] text-[#959c9f]">
               지원 플랫폼과 측정 주기는 플랜에 따라 다릅니다.
             </p>
           </div>
         </section>
 
-        <section className="border-y border-[#141512] bg-[#d0ff43] px-5 py-9 sm:px-8 lg:px-10">
+        <section className="border-y border-[#30343a] bg-[#08090a] px-5 py-10 sm:px-8 lg:px-10">
           <div className="mx-auto grid max-w-[1360px] gap-7 sm:grid-cols-[1fr_auto] sm:items-center">
             <div>
-              <p className="font-mono text-[9px] font-semibold tracking-[0.12em]">
-                READY TO OPEN YOUR WORKSPACE?
+              <p className="font-numeric text-[clamp(2rem,4.5vw,4rem)] font-bold leading-none tracking-[-0.05em] text-[#ff6a24]">
+                OPEN YOUR SIGNAL<span className="text-[#d9ff43]">.</span>
               </p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.05em] sm:text-3xl">
+              <h2 className="mt-4 font-display text-base tracking-[-0.04em] sm:text-xl">
                 우리 병원의 질문부터 시작하세요.
               </h2>
             </div>
             <div>
               <Link
                 href={startHref}
-                className="group flex items-center justify-between gap-12 bg-[#141512] px-5 py-3.5 text-xs font-semibold text-[#f1f1eb] hover:bg-[#ff5d2a] hover:text-[#141512]"
+                className="group flex items-center justify-between gap-12 border border-[#ff6a24] px-5 py-3.5 text-xs font-semibold text-[#ff6a24] transition-colors hover:bg-[#ff6a24] hover:text-[#08090a]"
               >
                 {startLabel}
                 <ArrowRight className="h-4 w-4 transition-transform motion-safe:group-hover:translate-x-1" />
@@ -399,7 +399,7 @@ export default function HomePage() {
               {!loggedIn && (
                 <a
                   href={HUB_SSO_START_URL}
-                  className="mt-4 flex items-center gap-2 text-[11px] font-medium"
+                  className="mt-4 flex items-center gap-2 text-[11px] font-medium text-[#959c9f] hover:text-[#f5f5ef]"
                 >
                   <Link2 className="h-3.5 w-3.5" />
                   Patient Hub 계정으로 연결

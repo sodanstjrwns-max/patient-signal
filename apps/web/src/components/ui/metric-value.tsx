@@ -65,7 +65,7 @@ export function MetricValue({
     return (
       <span
         className={`inline-block h-[1em] ${skeletonWidth} rounded-lg animate-pulse align-middle ${
-          dark ? 'bg-white/10' : 'bg-slate-200/70'
+          dark ? 'bg-white/10' : 'bg-[#24282b]/70'
         } ${className}`}
         aria-label="불러오는 중"
       />

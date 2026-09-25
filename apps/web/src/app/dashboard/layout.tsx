@@ -45,9 +45,9 @@ export default function DashboardLayout({
       <div className="min-h-screen bg-mesh flex items-center justify-center">
         <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-brand-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[#30343a] border-t-brand-600 mx-auto mb-4"></div>
           </div>
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-[#959c9f] font-medium">
             {!_hasHydrated ? '로딩 중...' : 
              !isAuthenticated ? '로그인 확인 중...' : 
              '병원 정보 확인 중...'}
@@ -58,7 +58,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="dashboard-shell flex min-h-screen bg-[#f1f1eb]">
+    <div className="dashboard-shell flex min-h-screen bg-[#08090a]">
       <Sidebar />
       <main className="min-w-0 flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen">
         <div>

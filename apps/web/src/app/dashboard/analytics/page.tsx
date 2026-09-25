@@ -46,7 +46,7 @@ const platformNames: Record<string, string> = {
 const platformColors: Record<string, string> = {
   CHATGPT: "#525849",
   CLAUDE: "#CC785C",
-  PERPLEXITY: "#d0ff43",
+  PERPLEXITY: "#d9ff43",
   GEMINI: "#989b8d",
 };
 
@@ -81,11 +81,11 @@ const depthColors: Record<string, string> = {
 };
 
 const sentimentLabel = (v: number) => {
-  if (v >= 1.5) return { text: "매우 긍정", color: "text-brand-600" };
+  if (v >= 1.5) return { text: "매우 긍정", color: "text-[#ff9565]" };
   if (v >= 0.5) return { text: "긍정", color: "text-brand-500" };
-  if (v >= -0.5) return { text: "중립", color: "text-[#72756a]" };
+  if (v >= -0.5) return { text: "중립", color: "text-[#959c9f]" };
   if (v >= -1.5) return { text: "부정", color: "text-red-500" };
-  return { text: "매우 부정", color: "text-red-600" };
+  return { text: "매우 부정", color: "text-red-400" };
 };
 
 export default function AnalyticsPage() {
@@ -106,7 +106,7 @@ export default function AnalyticsPage() {
     historyLoading || platformsLoading || weeklyLoading || abhsLoading;
 
   const getTrendIcon = (change: number | undefined) => {
-    if (!change) return <Minus className="h-4 w-4 text-[#989b8d]" />;
+    if (!change) return <Minus className="h-4 w-4 text-[#959c9f]" />;
     if (change > 0) return <TrendingUp className="h-4 w-4 text-brand-500" />;
     return <TrendingDown className="h-4 w-4 text-red-500" />;
   };
@@ -121,11 +121,11 @@ export default function AnalyticsPage() {
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <BarChart3 className="h-12 w-12 text-[#989b8d] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#141512] mb-2">
+              <BarChart3 className="h-12 w-12 text-[#959c9f] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#f5f5ef] mb-2">
                 병원 등록이 필요합니다
               </h3>
-              <p className="text-[#72756a] mb-4">
+              <p className="text-[#959c9f] mb-4">
                 ABHS 분석 리포트를 확인하려면 먼저 병원 정보를 등록해주세요.
               </p>
             </CardContent>
@@ -145,23 +145,23 @@ export default function AnalyticsPage() {
       <div className="mx-auto max-w-[1480px] space-y-7 px-5 pb-12 pt-7 sm:px-8 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#72756a]">
+            <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#959c9f]">
               PERFORMANCE REPORT
             </p>
-            <h1 className="text-3xl font-semibold tracking-[-0.05em] text-[#141512] sm:text-[38px]">
+            <h1 className="font-display text-3xl font-semibold tracking-[-0.05em] text-[#f5f5ef] sm:text-[38px]">
               숫자로 읽는 병원의 존재감.
             </h1>
-            <p className="mt-3 text-sm text-[#72756a]">
+            <p className="mt-3 text-sm text-[#959c9f]">
               AI가 얼마나 자주, 어떤 맥락으로 우리 병원을 추천하는지 확인하세요.
             </p>
           </div>
-          <span className="flex items-center gap-2 text-xs text-[#73766b]">
+          <span className="flex items-center gap-2 text-xs text-[#959c9f]">
             <Calendar className="h-4 w-4" /> 최근 30일
           </span>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#ff9565]" />
           </div>
         ) : (
           <>
@@ -171,7 +171,7 @@ export default function AnalyticsPage() {
                 className={`border-l-4 ${
                   mentionInsight.confidenceSummary.lowConfidenceCount > 0
                     ? "border-l-amber-400 bg-amber-50/50"
-                    : "border-l-green-400 bg-brand-50/50"
+                    : "border-l-green-400 bg-[#281a13]/50"
                 }`}
               >
                 <CardContent className="p-4">
@@ -184,13 +184,13 @@ export default function AnalyticsPage() {
                         <CheckCircle2 className="h-5 w-5 text-brand-500" />
                       )}
                       <div>
-                        <p className="text-sm font-semibold text-[#141512]">
+                        <p className="text-sm font-semibold text-[#f5f5ef]">
                           AI 응답 신뢰도:{" "}
                           {mentionInsight.confidenceSummary.avgConfidence
                             ? `${Math.round(mentionInsight.confidenceSummary.avgConfidence * 100)}%`
                             : "측정 중"}
                         </p>
-                        <p className="text-xs text-[#72756a]">
+                        <p className="text-xs text-[#959c9f]">
                           전체 {mentionInsight.totalResponses}건 중 저신뢰{" "}
                           {mentionInsight.confidenceSummary.lowConfidenceCount}
                           건
@@ -205,7 +205,7 @@ export default function AnalyticsPage() {
                       </div>
                     </div>
                     <Link href="/dashboard/insights">
-                      <span className="text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1">
+                      <span className="text-xs text-[#ff9565] hover:text-[#ff9565] flex items-center gap-1">
                         상세 <ChevronRight className="h-3 w-3" />
                       </span>
                     </Link>
@@ -214,7 +214,7 @@ export default function AnalyticsPage() {
               </Card>
             )}
 
-            <section className="overflow-hidden rounded-sm bg-[#141512] text-white">
+            <section className="overflow-hidden rounded-sm bg-[#08090a] text-white">
               <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
                 <div>
                   <p className="text-xs text-[#b8bcab]">
@@ -223,20 +223,20 @@ export default function AnalyticsPage() {
                     </TermTip>
                   </p>
                   <div className="mt-4 flex items-baseline gap-3">
-                    <strong className="text-[88px] font-medium leading-none tracking-[-0.08em] text-[#ff5d2a] sm:text-[112px]">
+                    <strong className="text-[88px] font-medium leading-none tracking-[-0.08em] text-[#ff6a24] sm:text-[112px]">
                       {abhs?.abhsScore ?? 0}
                     </strong>
-                    <span className="text-xl text-[#989b8d]">/ 100</span>
+                    <span className="text-xl text-[#959c9f]">/ 100</span>
                   </div>
                   <div className="mt-6 h-1 w-full max-w-xs overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-[#ff5d2a]"
+                      className="h-full rounded-full bg-[#ff6a24]"
                       style={{
                         width: `${Math.min(100, Math.max(0, abhs?.abhsScore ?? 0))}%`,
                       }}
                     />
                   </div>
-                  <p className="mt-3 text-[10px] tracking-wide text-[#989b8d]">
+                  <p className="mt-3 text-[10px] tracking-wide text-[#959c9f]">
                     SoV × Sentiment × Depth × Weight × Intent
                   </p>
                 </div>
@@ -244,13 +244,13 @@ export default function AnalyticsPage() {
                   <div className="flex items-center justify-between gap-4 py-5">
                     <div>
                       <dt className="text-xs text-[#b8bcab]">Voice Share</dt>
-                      <dd className="mt-1 text-[10px] text-[#989b8d]">
+                      <dd className="mt-1 text-[10px] text-[#959c9f]">
                         <TermTip term="sov">언급 점유율</TermTip>
                       </dd>
                     </div>
                     <dd className="text-3xl font-medium tabular-nums tracking-tight">
                       {abhs?.sovPercent ?? 0}
-                      <span className="ml-1 text-sm text-[#989b8d]">%</span>
+                      <span className="ml-1 text-sm text-[#959c9f]">%</span>
                     </dd>
                   </div>
                   <div className="flex items-center justify-between gap-4 py-5">
@@ -258,7 +258,7 @@ export default function AnalyticsPage() {
                       <dt className="text-xs text-[#b8bcab]">
                         <TermTip term="sentiment">평균 감성</TermTip>
                       </dt>
-                      <dd className="mt-1 text-[10px] text-[#989b8d]">
+                      <dd className="mt-1 text-[10px] text-[#959c9f]">
                         {sentimentLabel(abhs?.avgSentimentV2 ?? 0).text} · -2 ~
                         +2
                       </dd>
@@ -275,13 +275,13 @@ export default function AnalyticsPage() {
                       <dt className="text-xs text-[#b8bcab]">
                         <TermTip term="competitorShare">경쟁 점유율</TermTip>
                       </dt>
-                      <dd className="mt-1 text-[10px] text-[#989b8d]">
+                      <dd className="mt-1 text-[10px] text-[#959c9f]">
                         Weighted Share
                       </dd>
                     </div>
                     <dd className="text-3xl font-medium tabular-nums tracking-tight">
                       {competitiveShare?.mySharePercent ?? 0}
-                      <span className="ml-1 text-sm text-[#989b8d]">%</span>
+                      <span className="ml-1 text-sm text-[#959c9f]">%</span>
                     </dd>
                   </div>
                 </dl>
@@ -311,12 +311,12 @@ export default function AnalyticsPage() {
                                 {platformNames[platform.toUpperCase()] ||
                                   platform}
                               </span>
-                              <span className="text-xs text-[#989b8d]">
+                              <span className="text-xs text-[#959c9f]">
                                 ×{data.weight}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-[#72756a]">
+                              <span className="text-xs text-[#959c9f]">
                                 SoV {data.sovPercent}%
                               </span>
                               <span className="font-semibold text-sm">
@@ -324,7 +324,7 @@ export default function AnalyticsPage() {
                               </span>
                             </div>
                           </div>
-                          <div className="flex-1 bg-[#e9ebe1] rounded-full h-3">
+                          <div className="flex-1 bg-[#181b1e] rounded-full h-3">
                             <div
                               className="rounded-full h-3 transition-all"
                               style={{
@@ -335,7 +335,7 @@ export default function AnalyticsPage() {
                               }}
                             />
                           </div>
-                          <div className="flex justify-between text-xs text-[#989b8d]">
+                          <div className="flex justify-between text-xs text-[#959c9f]">
                             <span>깊이: {data.avgDepth}</span>
                             <span>{data.responseCount}개 응답</span>
                           </div>
@@ -344,7 +344,7 @@ export default function AnalyticsPage() {
                     )}
                     {Object.keys(abhs?.platformContributions || {}).length ===
                       0 && (
-                      <p className="text-center text-[#989b8d] py-4">
+                      <p className="text-center text-[#959c9f] py-4">
                         아직 데이터가 없습니다
                       </p>
                     )}
@@ -382,7 +382,7 @@ export default function AnalyticsPage() {
                               <span className="text-sm font-medium">
                                 {depth}
                               </span>
-                              <span className="text-xs text-[#989b8d]">
+                              <span className="text-xs text-[#959c9f]">
                                 {depthNames[depth]}
                               </span>
                             </div>
@@ -390,7 +390,7 @@ export default function AnalyticsPage() {
                               {count}건 ({percent}%)
                             </span>
                           </div>
-                          <div className="bg-[#e9ebe1] rounded-full h-2">
+                          <div className="bg-[#181b1e] rounded-full h-2">
                             <div
                               className={`${depthColors[depth]} rounded-full h-2 transition-all`}
                               style={{ width: `${percent}%` }}
@@ -402,7 +402,7 @@ export default function AnalyticsPage() {
                   </div>
 
                   {/* 깊이 설명 */}
-                  <div className="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-[#72756a] space-y-1">
+                  <div className="mt-6 p-3 bg-[#111315] rounded-lg text-xs text-[#959c9f] space-y-1">
                     <p>
                       <TermTip term="r3">
                         <strong>R3</strong>
@@ -438,8 +438,8 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="divide-y divide-[#d4d6cb]">
-                  <div className="grid grid-cols-[minmax(0,1fr)_58px_52px] gap-4 pb-3 text-[10px] text-[#72756a] sm:grid-cols-[140px_minmax(0,1fr)_58px_52px]">
+                <div className="divide-y divide-[#30343a]">
+                  <div className="grid grid-cols-[minmax(0,1fr)_58px_52px] gap-4 pb-3 text-[10px] text-[#959c9f] sm:grid-cols-[140px_minmax(0,1fr)_58px_52px]">
                     <span>환자분의 질문 의도</span>
                     <span className="hidden sm:block">AI 가시성</span>
                     <span className="text-right">가중치</span>
@@ -453,22 +453,22 @@ export default function AnalyticsPage() {
                           key={intent}
                           className="grid grid-cols-[minmax(0,1fr)_58px_52px] items-center gap-4 py-4 sm:grid-cols-[140px_minmax(0,1fr)_58px_52px]"
                         >
-                          <span className="text-sm font-medium text-[#525849]">
+                          <span className="text-sm font-medium text-[#c0c4c7]">
                             {intentNames[intent] || intent}
                           </span>
-                          <div className="hidden h-1.5 overflow-hidden rounded-full bg-[#e9ebe1] sm:block">
+                          <div className="hidden h-1.5 overflow-hidden rounded-full bg-[#181b1e] sm:block">
                             <div
-                              className="h-full rounded-full bg-[#d0ff43]"
+                              className="h-full rounded-full bg-[#d9ff43]"
                               style={{
                                 width: `${Math.min(100, Math.max(0, score))}%`,
                               }}
                             />
                           </div>
-                          <span className="text-right text-xs text-[#72756a]">
+                          <span className="text-right text-xs text-[#959c9f]">
                             ×{weight}
                           </span>
                           <span
-                            className={`text-right text-xl font-semibold tabular-nums ${score >= 60 ? "text-[#44551d]" : score >= 30 ? "text-[#8A783F]" : "text-[#B56857]"}`}
+                            className={`text-right text-xl font-semibold tabular-nums ${score >= 60 ? "text-[#c0c4c7]" : score >= 30 ? "text-[#8A783F]" : "text-[#B56857]"}`}
                           >
                             {score}
                           </span>
@@ -477,7 +477,7 @@ export default function AnalyticsPage() {
                     },
                   )}
                   {Object.keys(abhs?.intentScores || {}).length === 0 && (
-                    <p className="py-8 text-center text-sm text-[#72756a]">
+                    <p className="py-8 text-center text-sm text-[#959c9f]">
                       아직 데이터가 없습니다
                     </p>
                   )}
@@ -501,10 +501,10 @@ export default function AnalyticsPage() {
                         key={idx}
                         className={`p-4 rounded-lg border-l-4 ${
                           action.severity === "critical"
-                            ? "border-l-red-500 bg-red-50"
+                            ? "border-l-red-500 bg-[#291718]"
                             : action.severity === "warning"
-                              ? "border-l-yellow-500 bg-yellow-50"
-                              : "border-l-[#989b8d] bg-brand-50"
+                              ? "border-l-yellow-500 bg-[#282418]"
+                              : "border-l-[#989b8d] bg-[#281a13]"
                         }`}
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -514,17 +514,17 @@ export default function AnalyticsPage() {
                             ) : (
                               <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                             )}
-                            <p className="text-sm font-medium text-[#141512]">
+                            <p className="text-sm font-medium text-[#f5f5ef]">
                               {action.message}
                             </p>
                           </div>
                           <span
                             className={`text-xs px-2 py-0.5 rounded ${
                               action.severity === "critical"
-                                ? "bg-red-100 text-red-700"
+                                ? "bg-[#3a2022] text-red-400"
                                 : action.severity === "warning"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-brand-100 text-brand-700"
+                                  ? "bg-[#352d19] text-yellow-400"
+                                  : "bg-[#352115] text-[#ff9565]"
                             }`}
                           >
                             {action.severity === "critical"
@@ -534,7 +534,7 @@ export default function AnalyticsPage() {
                                 : "참고"}
                           </span>
                         </div>
-                        <p className="text-xs text-[#73766b] mt-2 ml-6">
+                        <p className="text-xs text-[#959c9f] mt-2 ml-6">
                           {action.suggestedAction}
                         </p>
                       </div>
@@ -558,17 +558,17 @@ export default function AnalyticsPage() {
                     <div className="space-y-3">
                       {/* 내 병원 */}
                       <div className="flex items-center gap-4">
-                        <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm font-semibold text-brand-600">
+                        <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm font-semibold text-[#ff9565]">
                           우리 병원
                         </div>
-                        <div className="flex-1 bg-[#e9ebe1] rounded-full h-5">
+                        <div className="flex-1 bg-[#181b1e] rounded-full h-5">
                           <div
                             className="bg-brand-500 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
                             style={{
                               width: `${Math.max(5, competitiveShare.mySharePercent)}%`,
                             }}
                           >
-                            <span className="text-xs text-[#141512] font-medium">
+                            <span className="text-xs text-[#f5f5ef] font-medium">
                               {competitiveShare.mySharePercent}%
                             </span>
                           </div>
@@ -581,17 +581,17 @@ export default function AnalyticsPage() {
                       {competitiveShare.competitorShares.map(
                         (cs: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-4">
-                            <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm text-[#73766b] truncate">
+                            <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm text-[#959c9f] truncate">
                               {cs.name}
                             </div>
-                            <div className="flex-1 bg-[#e9ebe1] rounded-full h-5">
+                            <div className="flex-1 bg-[#181b1e] rounded-full h-5">
                               <div
                                 className="bg-slate-400 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
                                 style={{
                                   width: `${Math.max(5, cs.sharePercent)}%`,
                                 }}
                               >
-                                <span className="text-xs text-[#141512] font-medium">
+                                <span className="text-xs text-[#f5f5ef] font-medium">
                                   {cs.sharePercent}%
                                 </span>
                               </div>
@@ -628,7 +628,7 @@ export default function AnalyticsPage() {
                               platformNames[item.platform] ||
                               item.platform}
                           </div>
-                          <div className="flex-1 bg-[#e9ebe1] rounded-full h-4">
+                          <div className="flex-1 bg-[#181b1e] rounded-full h-4">
                             <div
                               className="rounded-full h-4 transition-all"
                               style={{
@@ -652,7 +652,7 @@ export default function AnalyticsPage() {
                             <div className="w-20 shrink-0 text-xs font-medium sm:w-24 sm:text-sm">
                               {platformNames[platform] || platform}
                             </div>
-                            <div className="flex-1 bg-[#e9ebe1] rounded-full h-4">
+                            <div className="flex-1 bg-[#181b1e] rounded-full h-4">
                               <div
                                 className="rounded-full h-4 transition-all"
                                 style={{
@@ -693,13 +693,13 @@ export default function AnalyticsPage() {
                         />
                       ))}
                     </div>
-                    <div className="flex justify-between mt-2 text-xs text-[#72756a]">
+                    <div className="flex justify-between mt-2 text-xs text-[#959c9f]">
                       <span>30일 전</span>
                       <span>오늘</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center text-[#72756a]">
+                  <div className="h-64 flex items-center justify-center text-[#959c9f]">
                     <p>아직 데이터가 없습니다. 크롤링을 실행해주세요.</p>
                   </div>
                 )}
@@ -717,7 +717,7 @@ export default function AnalyticsPage() {
                     {weekly.insights.map((insight: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
                         <span className="text-brand-500">•</span>
-                        <span className="text-[#73766b]">{insight}</span>
+                        <span className="text-[#959c9f]">{insight}</span>
                       </li>
                     ))}
                   </ul>
@@ -726,49 +726,49 @@ export default function AnalyticsPage() {
             )}
 
             {/* ========== 다음 단계 가이드 ========== */}
-            <Card className="border-brand-200 bg-[#fafaf6]">
+            <Card className="border-[#30343a] bg-[#111315]">
               <CardContent className="p-5">
-                <h3 className="text-sm font-semibold text-brand-700 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[#ff9565] mb-3 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4" />
                   ABHS 점수 기반 추천 다음 단계
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Link href="/dashboard/opportunities">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#989b8d] transition-all cursor-pointer">
+                    <div className="p-3 bg-[#111315] rounded-lg border border-[#30343a] hover:border-[#989b8d] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#141512]">
+                        <span className="text-sm font-medium text-[#f5f5ef]">
                           콘텐츠 갭 분석
                         </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-[#72756a]">
+                      <p className="text-xs text-[#959c9f]">
                         경쟁사는 있지만 우리가 없는 영역을 찾아 콘텐츠를
                         보강하세요.
                       </p>
                     </div>
                   </Link>
                   <Link href="/dashboard/opportunities">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#989b8d] transition-all cursor-pointer">
+                    <div className="p-3 bg-[#111315] rounded-lg border border-[#30343a] hover:border-[#989b8d] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#141512]">
+                        <span className="text-sm font-medium text-[#f5f5ef]">
                           기회 분석
                         </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-[#72756a]">
+                      <p className="text-xs text-[#959c9f]">
                         경쟁사만 추천되는 질문을 찾아 우선 공략하세요.
                       </p>
                     </div>
                   </Link>
                   <Link href="/dashboard">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#989b8d] transition-all cursor-pointer">
+                    <div className="p-3 bg-[#111315] rounded-lg border border-[#30343a] hover:border-[#989b8d] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#141512]">
+                        <span className="text-sm font-medium text-[#f5f5ef]">
                           대시보드로 돌아가기
                         </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-[#72756a]">
+                      <p className="text-xs text-[#959c9f]">
                         전체 현황을 한눈에 파악하세요.
                       </p>
                     </div>

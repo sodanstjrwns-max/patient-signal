@@ -206,7 +206,7 @@ export default function DashboardPage() {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#08090a] text-[#f5f5ef]">
       <Header
         title="한눈에 보기"
         onRefresh={refresh}
@@ -223,11 +223,11 @@ export default function DashboardPage() {
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="desk-label mb-2">최근 30일 · AI 답변 분석</p>
-            <h1 className="text-[27px] font-bold leading-tight tracking-[-.055em] sm:text-[34px]">
+            <h1 className="font-display text-[31px] leading-[1.25] tracking-[-.045em] sm:text-[42px] xl:text-[48px]">
               {name}
             </h1>
           </div>
-          <p className="flex items-center gap-2 text-[11px] text-[#72756a]">
+          <p className="flex items-center gap-2 text-[11px] text-[#959c9f]">
             <Clock3 className="h-3.5 w-3.5" />
             {hasLastCrawl
               ? `최근 측정 ${lastCrawlDate.toLocaleString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
@@ -237,15 +237,15 @@ export default function DashboardPage() {
 
         <nav
           aria-label="AI 노출 관리 흐름"
-          className="mb-5 grid grid-cols-2 border-y border-[#d4d6cb] sm:grid-cols-4"
+          className="mb-5 grid grid-cols-2 border-y border-[#30343a] sm:grid-cols-4"
         >
           {WORKFLOW.map((item, i) => (
             <Link
               key={item.name}
               href={item.href}
-              className="group flex items-center gap-3 border-[#d4d6cb] px-2 py-3 text-xs hover:bg-white sm:px-3 [&:nth-child(even)]:border-l sm:[&:not(:first-child)]:border-l"
+              className="group flex items-center gap-3 border-[#30343a] px-2 py-3 text-xs hover:bg-[#181b1e] sm:px-3 [&:nth-child(even)]:border-l sm:[&:not(:first-child)]:border-l"
             >
-              <span className="font-mono text-[10px] text-[#72756a]">
+              <span className="font-numeric text-[10px] text-[#959c9f]">
                 0{i + 1}
               </span>
               <span className="flex-1 font-semibold">{item.name}</span>
@@ -256,23 +256,24 @@ export default function DashboardPage() {
 
         <section
           aria-label="플랫폼별 AI 언급률"
-          className="border border-[#141512]"
+          className="border border-[#30343a]"
         >
-          <div className="grid lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.3fr)]">
-            <div className="flex flex-col bg-[#ff5d2a] p-5 text-[#141512] sm:p-7">
-              <div className="flex items-center justify-between gap-3 border-b border-[#141512]/25 pb-4">
-                <h2 className="text-sm font-bold">우리 병원 언급률</h2>
-                <span className="border border-[#141512]/40 px-2 py-1 text-[10px] font-semibold">
+          <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+            <div className="flex min-w-0 flex-col border-t-2 border-[#ff6a24] bg-[#08090a] p-5 text-[#f5f5ef] sm:p-7">
+              <div className="flex items-center justify-between gap-3 border-b border-[#30343a] pb-4">
+                <h2 className="font-display text-sm">우리 병원 언급률</h2>
+                <span className="border border-[#ff6a24]/50 px-2 py-1 text-[10px] font-semibold text-[#ff6a24]">
                   {selectedName}
                 </span>
               </div>
               <div
-                className="flex flex-1 items-center py-6"
+                className="flex min-h-[170px] flex-1 items-center py-5 sm:min-h-[220px]"
                 aria-live="polite"
                 aria-atomic="true"
               >
                 <MetricValue
-                  className="!rounded-none !text-[#141512]"
+                  dark
+                  className="!rounded-none !text-[#f5f5ef]"
                   state={
                     selectedRate === null && selectedMetricState === "ok"
                       ? "empty"
@@ -285,22 +286,33 @@ export default function DashboardPage() {
                   }
                   emptyLabel="아직 측정 결과가 없습니다"
                 >
-                  <span className="flex items-baseline font-semibold leading-none tracking-[-.08em]">
+                  <span className="flex items-baseline font-numeric leading-none tracking-[-.065em] text-[#d9ff43]">
                     {selectedRate !== null && (
                       <AnimatedNumber
                         value={selectedRate}
                         decimals={1}
-                        className="text-[86px] sm:text-[116px] xl:text-[136px]"
+                        className="text-[96px] sm:text-[146px] xl:text-[158px] 2xl:text-[176px]"
                       />
                     )}
-                    <span className="ml-2 text-[34px] tracking-[-.04em]">
+                    <span className="ml-2 text-[32px] tracking-[-.04em] text-[#ff6a24] sm:text-[40px]">
                       %
                     </span>
                   </span>
                 </MetricValue>
               </div>
-              <div className="border-t border-[#141512]/25 pt-4">
-                <p className="text-xs leading-6" aria-live="polite">
+              <div className="pt-4">
+                <div aria-hidden="true" className="mb-4 h-px bg-[#30343a]">
+                  <span
+                    className="block h-px bg-[#ff6a24] transition-[width] duration-500 motion-reduce:transition-none"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, selectedRate ?? 0))}%`,
+                    }}
+                  />
+                </div>
+                <p
+                  className="text-xs leading-6 text-[#959c9f] [&_strong]:font-numeric [&_strong]:text-[#f5f5ef]"
+                  aria-live="polite"
+                >
                   {selectedTotal !== null && selectedMentions !== null ? (
                     <>
                       답변 <strong>{selectedTotal.toLocaleString()}건</strong>{" "}
@@ -319,7 +331,7 @@ export default function DashboardPage() {
                   )}
                 <Link
                   href={selectedResponseHref}
-                  className="mt-4 flex items-center justify-between border border-[#141512] px-3 py-3 text-xs font-bold hover:bg-[#141512] hover:text-[#ff5d2a]"
+                  className="mt-4 flex items-center justify-between border border-[#ff6a24]/50 px-3 py-3 text-xs font-bold text-[#ff6a24] hover:bg-[#181b1e]"
                 >
                   {selectedPlatform === "ALL" ? "전체" : selectedName} 답변 원문
                   보기 <ArrowUpRight className="h-4 w-4" />
@@ -327,17 +339,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="min-w-0 bg-[#141512] p-5 text-[#f1f1eb] sm:p-7">
+            <div className="min-w-0 border-t border-[#30343a] bg-[#111315] p-5 text-[#f5f5ef] sm:p-7 xl:border-l xl:border-t-0">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-xs font-semibold">플랫폼을 선택해 비교</h3>
                 <Link
                   href="/dashboard/analytics"
-                  className="flex items-center gap-1 text-[10px] text-[#d0ff43] hover:underline"
+                  className="flex items-center gap-1 text-[10px] text-[#ff6a24] hover:underline"
                 >
                   전체 분석 <ArrowUpRight className="h-3 w-3" />
                 </Link>
               </div>
-              <div className="mb-1 grid grid-cols-[88px_minmax(0,1fr)_46px] gap-3 border-b border-white/20 pb-2 text-[9px] text-[#a8ac9e] sm:grid-cols-[100px_minmax(0,1fr)_52px_76px]">
+              <div className="mb-1 grid grid-cols-[88px_minmax(0,1fr)_46px] gap-3 border-b border-white/20 pb-2 text-[9px] text-[#959c9f] sm:grid-cols-[100px_minmax(0,1fr)_52px_76px]">
                 <span>AI 플랫폼</span>
                 <span>언급률</span>
                 <span className="text-right">%</span>
@@ -347,7 +359,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => setSelectedPlatform("ALL")}
                 aria-pressed={selectedPlatform === "ALL"}
-                className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selectedPlatform === "ALL" ? "text-[#d0ff43]" : "text-[#f1f1eb] hover:text-[#d0ff43]"}`}
+                className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selectedPlatform === "ALL" ? "text-[#ff6a24]" : "text-[#f5f5ef] hover:text-[#ff6a24]"}`}
               >
                 <span className="font-semibold">
                   전체 AI{" "}
@@ -361,22 +373,22 @@ export default function DashboardPage() {
                     style={{ width: `${Math.min(100, sov ?? 0)}%` }}
                   />
                 </span>
-                <span className="text-right font-mono tabular-nums">
+                <span className="text-right font-numeric tabular-nums">
                   {sov === null ? "—" : sov.toFixed(1)}
                 </span>
-                <span className="hidden text-right font-mono text-[10px] sm:block">
+                <span className="hidden text-right font-numeric text-[10px] sm:block">
                   {mentioned === null || totalResponses === null
                     ? "—"
                     : `${mentioned}/${totalResponses}`}
                 </span>
               </button>
               {platformQuery.isError ? (
-                <p className="py-7 text-xs leading-6 text-[#a8ac9e]">
+                <p className="py-7 text-xs leading-6 text-[#959c9f]">
                   플랫폼 데이터를 불러오지 못했습니다.{" "}
                   <button
                     type="button"
                     onClick={() => platformQuery.refetch()}
-                    className="text-[#d0ff43] underline"
+                    className="text-[#ff6a24] underline"
                   >
                     다시 시도
                   </button>
@@ -396,7 +408,7 @@ export default function DashboardPage() {
                       onClick={() => setSelectedPlatform(p.platform)}
                       aria-pressed={selected}
                       aria-label={`${PLATFORM_NAMES[p.platform] || p.platformName}, ${measured ? `언급률 ${rate.toFixed(1)}%, ${p.totalQueries}건 중 ${p.mentionedCount}건` : "측정 대기"}${p.collectionStatus === "STALLED" ? ", 수집 확인 중" : ""}`}
-                      className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors last:border-b-0 sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selected ? "text-[#d0ff43]" : "text-[#f1f1eb] hover:text-[#d0ff43]"}`}
+                      className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors last:border-b-0 sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selected ? "text-[#ff6a24]" : "text-[#f5f5ef] hover:text-[#ff6a24]"}`}
                     >
                       <span className="min-w-0">
                         <span className="font-semibold">
@@ -411,14 +423,14 @@ export default function DashboardPage() {
                       </span>
                       <span className="h-2 bg-white/10">
                         <span
-                          className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#d0ff43]" : "bg-[#7e8276]"}`}
+                          className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#ff6a24]" : "bg-[#646b70]"}`}
                           style={{ width: `${Math.min(100, rate ?? 0)}%` }}
                         />
                       </span>
-                      <span className="text-right font-mono tabular-nums">
+                      <span className="text-right font-numeric tabular-nums">
                         {rate === null ? "—" : rate.toFixed(1)}
                       </span>
-                      <span className="hidden text-right font-mono text-[10px] sm:block">
+                      <span className="hidden text-right font-numeric text-[10px] sm:block">
                         {measured
                           ? `${p.mentionedCount}/${p.totalQueries}`
                           : "대기"}
@@ -427,7 +439,7 @@ export default function DashboardPage() {
                   );
                 })
               ) : (
-                <p className="py-7 text-xs leading-6 text-[#a8ac9e]">
+                <p className="py-7 text-xs leading-6 text-[#959c9f]">
                   {platformQuery.isLoading
                     ? "플랫폼별 결과를 불러오고 있습니다."
                     : "첫 측정 후 플랫폼별 결과를 표시합니다."}
@@ -435,7 +447,7 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          <dl className="grid grid-cols-3 divide-x divide-[#d4d6cb] border-t border-[#141512] bg-white">
+          <dl className="grid grid-cols-3 divide-x divide-[#30343a] border-t border-[#30343a] bg-[#111315]">
             {[
               {
                 label: "추적 질문",
@@ -468,8 +480,8 @@ export default function DashboardPage() {
                 key={item.label}
                 className="px-3 py-4 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:px-5"
               >
-                <dt className="text-[10px] text-[#72756a]">{item.label}</dt>
-                <dd className="mt-1 text-xl font-semibold tracking-tight sm:mt-0">
+                <dt className="text-[10px] text-[#959c9f]">{item.label}</dt>
+                <dd className="mt-1 font-numeric text-[28px] leading-none tracking-tight sm:mt-0">
                   {item.value === null ? (
                     "—"
                   ) : (
@@ -478,7 +490,7 @@ export default function DashboardPage() {
                       decimals={item.decimals}
                     />
                   )}
-                  <span className="ml-1 text-[10px] font-normal text-[#72756a]">
+                  <span className="ml-1 text-[10px] font-normal text-[#959c9f]">
                     {item.suffix}
                   </span>
                 </dd>
@@ -487,11 +499,11 @@ export default function DashboardPage() {
           </dl>
         </section>
 
-        <section className="mt-7 border-y border-[#141512]">
+        <section className="mt-7 border-y border-[#30343a]">
           <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-            <h2 className="text-base font-bold tracking-tight">
+            <h2 className="font-display text-base tracking-tight">
               등록 병원 순위{" "}
-              <span className="ml-2 bg-[#d0ff43] px-2 py-1 text-xs font-semibold">
+              <span className="ml-2 border border-[#ff6a24]/40 px-2 py-1 font-numeric text-sm text-[#ff6a24]">
                 {rankingAvailable && ranking.rank != null
                   ? `${ranking.rank}위 / ${ranking.totalClinics}곳`
                   : rankLabel}
@@ -504,7 +516,7 @@ export default function DashboardPage() {
               비교 병원 관리 <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <div className="grid grid-cols-[30px_minmax(0,1fr)_65px_48px] gap-3 border-y border-[#d4d6cb] py-2 text-[9px] text-[#72756a] sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3">
+          <div className="grid grid-cols-[30px_minmax(0,1fr)_65px_48px] gap-3 border-y border-[#30343a] py-2 text-[9px] text-[#959c9f] sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3">
             <span>순위</span>
             <span>병원</span>
             <span className="hidden sm:block">공통 답변의 언급률</span>
@@ -516,31 +528,35 @@ export default function DashboardPage() {
               <Link
                 href="/dashboard/competitors"
                 key={row.id}
-                className={`grid grid-cols-[30px_minmax(0,1fr)_65px_48px] items-center gap-3 border-b border-[#d4d6cb] px-1 py-3 text-xs last:border-b-0 sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3 ${row.id === hospitalId ? "bg-[#d0ff43] font-semibold" : "hover:bg-white"}`}
+                className={`grid grid-cols-[30px_minmax(0,1fr)_65px_48px] items-center gap-3 border-b border-[#30343a] px-1 py-3 text-xs last:border-b-0 sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3 ${row.id === hospitalId ? "border-l-2 border-l-[#ff6a24] bg-[#181b1e] font-semibold" : "border-l-2 border-l-transparent hover:bg-[#181b1e]"}`}
               >
-                <span className="font-mono text-base">{row.rank ?? "—"}</span>
+                <span className="font-numeric text-base">
+                  {row.rank ?? "—"}
+                </span>
                 <span className="min-w-0 break-words">
                   {row.name}
                   {row.id === hospitalId && (
-                    <span className="ml-2 text-[9px] font-normal">
+                    <span className="ml-2 text-[9px] font-normal text-[#d9ff43]">
                       우리 병원
                     </span>
                   )}
                 </span>
-                <span className="hidden h-1.5 bg-[#d4d6cb] sm:block">
+                <span className="hidden h-1.5 bg-[#30343a] sm:block">
                   <span
-                    className="block h-full bg-[#141512]"
+                    className="block h-full bg-[#ff6a24]"
                     style={{ width: `${Math.min(100, row.mentionRate)}%` }}
                   />
                 </span>
-                <span className="text-right font-mono">
+                <span className="text-right font-numeric">
                   {row.mentionRate.toFixed(1)}%
                 </span>
-                <span className="text-right font-mono">{row.mentionCount}</span>
+                <span className="text-right font-numeric">
+                  {row.mentionCount}
+                </span>
               </Link>
             ))}
             {!rows.length && (
-              <p className="py-8 text-sm leading-6 text-[#72756a]">
+              <p className="py-8 text-sm leading-6 text-[#959c9f]">
                 {rankQuery.isError
                   ? "경쟁 순위를 불러오지 못했습니다."
                   : rankQuery.isLoading
@@ -553,7 +569,7 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
-          <p className="border-t border-[#d4d6cb] py-3 text-[10px] leading-5 text-[#72756a]">
+          <p className="border-t border-[#30343a] py-3 text-[10px] leading-5 text-[#959c9f]">
             {rankingAvailable
               ? `공통 답변 ${ranking.totalResponses}건 기준. `
               : ""}
@@ -568,7 +584,7 @@ export default function DashboardPage() {
         <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           <section>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-base font-bold">핵심 질문</h2>
+              <h2 className="font-display text-base">핵심 질문</h2>
               <Link
                 href="/dashboard/prompts"
                 className="flex items-center gap-2 text-[11px] font-semibold"
@@ -576,7 +592,7 @@ export default function DashboardPage() {
                 질문 관리 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="border-t border-[#141512]">
+            <div className="border-t border-[#30343a]">
               {coreQuestions.slice(0, 4).map((q, i) => (
                 <Link
                   key={q.query}
@@ -585,16 +601,16 @@ export default function DashboardPage() {
                       ? `/dashboard/prompts?promptId=${q.promptId}`
                       : "/dashboard/prompts"
                   }
-                  className="group flex gap-3 border-b border-[#d4d6cb] py-4 hover:bg-white"
+                  className="group flex gap-3 border-b border-[#30343a] py-4 hover:bg-[#181b1e]"
                 >
-                  <span className="pt-1 font-mono text-[10px] text-[#72756a]">
+                  <span className="pt-1 font-numeric text-[10px] text-[#959c9f]">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-[13px] font-semibold leading-6">
                       {q.query}
                     </p>
-                    <p className="mt-1 text-[10px] leading-5 text-[#72756a]">
+                    <p className="mt-1 text-[10px] leading-5 text-[#959c9f]">
                       {q.alreadyTracked ? "측정 중 · 답변 보기" : q.reason}
                     </p>
                   </div>
@@ -602,7 +618,7 @@ export default function DashboardPage() {
                 </Link>
               ))}
               {!coreQuestions.length && (
-                <p className="py-7 text-xs leading-6 text-[#72756a]">
+                <p className="py-7 text-xs leading-6 text-[#959c9f]">
                   {coreQuery.isError
                     ? "추천 질문을 불러오지 못했습니다."
                     : coreQuery.isLoading
@@ -612,18 +628,20 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
-          <section className="border border-[#d4d6cb] bg-white p-5">
+          <section className="border border-[#30343a] bg-[#111315] p-5">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold">질문 추천에 쓰는 병원 소개</h2>
+              <h2 className="font-display text-sm">
+                질문 추천에 쓰는 병원 소개
+              </h2>
               <Building2 className="h-4 w-4" />
             </div>
-            <p className="mt-4 line-clamp-5 text-xs leading-7 text-[#72756a]">
+            <p className="mt-4 line-clamp-5 text-xs leading-7 text-[#959c9f]">
               {hospital?.clinicIntroduction ||
                 "Hub의 병원 정보를 가져와 소개를 채우세요. 우리 병원의 주력 진료와 강점을 바탕으로 질문을 추천합니다."}
             </p>
             <Link
               href="/dashboard/settings"
-              className="mt-5 flex items-center justify-between border-t border-[#d4d6cb] pt-4 text-xs font-semibold"
+              className="mt-5 flex items-center justify-between border-t border-[#30343a] pt-4 text-xs font-semibold"
             >
               Hub 연동 · 소개 편집 <ArrowUpRight className="h-4 w-4" />
             </Link>
@@ -632,21 +650,21 @@ export default function DashboardPage() {
 
         {findings.length > 0 && (
           <section className="mt-7">
-            <h2 className="mb-3 text-base font-bold">확인할 변화</h2>
-            <div className="border-y border-[#141512]">
+            <h2 className="mb-3 font-display text-base">확인할 변화</h2>
+            <div className="border-y border-[#30343a]">
               {findings.slice(0, 3).map((f, i) => (
                 <Link
                   key={f.id}
                   href={f.href}
-                  className="grid gap-2 border-b border-[#d4d6cb] py-4 last:border-b-0 hover:bg-white sm:grid-cols-[24px_minmax(0,.8fr)_minmax(0,1.2fr)_auto] sm:gap-4"
+                  className="grid gap-2 border-b border-[#30343a] py-4 last:border-b-0 hover:bg-[#181b1e] sm:grid-cols-[24px_minmax(0,.8fr)_minmax(0,1.2fr)_auto] sm:gap-4"
                 >
-                  <span className="hidden pt-1 font-mono text-[10px] text-[#72756a] sm:block">
+                  <span className="hidden pt-1 font-numeric text-[10px] text-[#959c9f] sm:block">
                     0{i + 1}
                   </span>
                   <h3 className="text-xs font-semibold leading-6">
                     {f.headline}
                   </h3>
-                  <p className="text-[11px] leading-6 text-[#72756a]">
+                  <p className="text-[11px] leading-6 text-[#959c9f]">
                     {f.cause}
                   </p>
                   <span className="flex items-center gap-2 text-[11px] font-semibold">
@@ -667,12 +685,12 @@ export default function DashboardPage() {
             />
           </section>
         )}
-        <footer className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-[#d4d6cb] pt-4 text-[10px] text-[#72756a]">
+        <footer className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-[#30343a] pt-4 text-[10px] text-[#959c9f]">
           <span>실제 수집된 AI 답변 기준</span>
           <div className="flex items-center gap-5">
             <Link
               href="/dashboard/report"
-              className="flex items-center gap-2 text-xs font-semibold text-[#141512]"
+              className="flex items-center gap-2 text-xs font-semibold text-[#f5f5ef]"
             >
               리포트 보기 <ArrowRight className="h-3.5 w-3.5" />
             </Link>

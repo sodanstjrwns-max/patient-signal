@@ -11,15 +11,15 @@ function FailContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-      <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center">
+      <div className="w-24 h-24 bg-[#291718] rounded-full flex items-center justify-center">
         <AlertCircle className="h-12 w-12 text-red-500" />
       </div>
 
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-[#141512] mb-2">결제 실패</h2>
-        <p className="text-[#72756a] max-w-md">{decodeURIComponent(errorMessage)}</p>
+        <h2 className="font-display text-2xl font-bold text-[#f5f5ef] mb-2">결제 실패</h2>
+        <p className="text-[#959c9f] max-w-md">{decodeURIComponent(errorMessage)}</p>
         {errorCode && (
-          <p className="text-xs text-[#909781] mt-2">에러 코드: {errorCode}</p>
+          <p className="text-xs text-[#959c9f] mt-2">에러 코드: {errorCode}</p>
         )}
       </div>
 
@@ -33,7 +33,7 @@ function FailContent() {
         </a>
         <a
           href="/dashboard/settings"
-          className="px-6 py-2.5 border border-[#d4d6cb] rounded-lg text-[#525849] hover:bg-white"
+          className="px-6 py-2.5 border border-[#30343a] rounded-lg text-[#c0c4c7] hover:bg-[#111315]"
         >
           설정으로 돌아가기
         </a>
@@ -46,7 +46,7 @@ export default function PaymentFailPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#ff9565]" />
       </div>
     }>
       <FailContent />

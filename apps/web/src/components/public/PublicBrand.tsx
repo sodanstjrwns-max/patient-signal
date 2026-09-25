@@ -5,7 +5,7 @@ export function SignalMark({ className = "" }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center bg-[#ff5d2a] text-[#141512] ${className}`}
+      className={`inline-flex h-9 w-9 shrink-0 items-center justify-center border border-[#ff6a24]/50 bg-[#08090a] text-[#ff6a24] ${className}`}
     >
       <svg viewBox="0 0 28 28" className="h-6 w-6" fill="none">
         <path
@@ -18,15 +18,32 @@ export function SignalMark({ className = "" }: { className?: string }) {
   );
 }
 
-export function SignalWordmark({ className = "" }: { className?: string }) {
+export function SignalWordmark({
+  className = "",
+  outlined = false,
+}: {
+  className?: string;
+  outlined?: boolean;
+}) {
   return (
     <span
-      className={`block font-black leading-[0.8] tracking-[-0.095em] ${className}`}
-      style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+      className={`block whitespace-nowrap font-numeric font-bold leading-[0.8] tracking-[-0.075em] ${className}`}
     >
-      signal
+      sig
       <span
-        className="ml-[0.035em] inline-block h-[0.105em] w-[0.105em] bg-current"
+        style={
+          outlined
+            ? {
+                WebkitTextStroke: "1px #ff6a24",
+                WebkitTextFillColor: "transparent",
+              }
+            : undefined
+        }
+      >
+        nal
+      </span>
+      <span
+        className="ml-[0.035em] inline-block h-[0.075em] w-[0.075em] bg-[#d9ff43]"
         aria-hidden="true"
       />
     </span>
@@ -38,14 +55,14 @@ export function PublicBrand({ light = false }: { light?: boolean }) {
     <Link
       href="/"
       aria-label="Patient Signal 홈"
-      className={`inline-flex items-center gap-2.5 ${light ? "text-[#f1f1eb]" : "text-[#141512]"}`}
+      className={`inline-flex items-center gap-2.5 ${light ? "text-[#f5f5ef]" : "text-[#ff6a24]"}`}
     >
       <SignalMark className="!h-8 !w-8" />
       <span>
-        <span className="mb-1.5 block font-mono text-[7px] leading-none tracking-[0.18em]">
+        <span className="mb-1.5 block font-numeric text-[8px] leading-none tracking-[0.18em] text-[#959c9f]">
           PATIENT
         </span>
-        <SignalWordmark className="text-[25px]" />
+        <SignalWordmark className="text-[27px]" />
       </span>
     </Link>
   );
@@ -54,17 +71,15 @@ export function PublicBrand({ light = false }: { light?: boolean }) {
 export function PublicHeader({
   active,
   loggedIn = false,
-  dark = false,
+  dark = true,
 }: {
   active?: "pricing" | "guide";
   loggedIn?: boolean;
   dark?: boolean;
 }) {
   return (
-    <header
-      className={`relative z-10 border-b ${dark ? "border-[#f1f1eb]/25 bg-[#141512] text-[#f1f1eb]" : "border-[#141512] bg-[#f1f1eb] text-[#141512]"}`}
-    >
-      <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between gap-3 px-5 sm:px-8 lg:px-10">
+    <header className="relative z-10 border-b border-[#30343a] bg-[#08090a] text-[#f5f5ef]">
+      <div className="mx-auto flex h-[76px] max-w-[1440px] items-center justify-between gap-3 px-5 sm:px-8 lg:px-10">
         <PublicBrand light={dark} />
         <nav
           className="hidden items-center gap-7 text-xs font-semibold md:flex"
@@ -72,28 +87,28 @@ export function PublicHeader({
         >
           <Link
             href="/#how-it-works"
-            className="underline-offset-4 hover:underline"
+            className="text-[#959c9f] transition-colors hover:text-[#ff6a24]"
           >
             제품 둘러보기
           </Link>
           <Link
             href="/pricing"
             aria-current={active === "pricing" ? "page" : undefined}
-            className={`underline-offset-4 hover:underline ${active === "pricing" ? "underline" : ""}`}
+            className={`transition-colors hover:text-[#ff6a24] ${active === "pricing" ? "text-[#ff6a24]" : "text-[#959c9f]"}`}
           >
             요금제
           </Link>
           <Link
             href="/guide"
             aria-current={active === "guide" ? "page" : undefined}
-            className={`underline-offset-4 hover:underline ${active === "guide" ? "underline" : ""}`}
+            className={`transition-colors hover:text-[#ff6a24] ${active === "guide" ? "text-[#ff6a24]" : "text-[#959c9f]"}`}
           >
             사용 가이드
           </Link>
         </nav>
         <Link
           href={loggedIn ? "/dashboard" : "/login"}
-          className={`group inline-flex shrink-0 items-center gap-4 px-4 py-2.5 text-xs font-semibold transition-colors ${dark ? "bg-[#d0ff43] text-[#141512] hover:bg-[#ff5d2a]" : "bg-[#141512] text-[#f1f1eb] hover:bg-[#ff5d2a] hover:text-[#141512]"}`}
+          className="group inline-flex shrink-0 items-center gap-4 border border-[#ff6a24] px-4 py-2.5 text-xs font-semibold text-[#ff6a24] transition-colors hover:bg-[#ff6a24] hover:text-[#08090a]"
         >
           {loggedIn ? "내 대시보드" : "로그인"}
           <ArrowRight className="h-3.5 w-3.5 transition-transform motion-safe:group-hover:translate-x-0.5" />

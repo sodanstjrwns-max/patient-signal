@@ -346,21 +346,21 @@ export default function ResponsesPage() {
 
   if (!hospitalId)
     return (
-      <div className="min-h-screen bg-[#f1f1eb]">
+      <div className="min-h-screen bg-[#08090a]">
         <Header
           title="답변 보관함"
           description="AI가 작성한 답변을 원문으로 확인하세요"
         />
         <div className="mx-auto max-w-[1320px] px-5 py-14 sm:px-10">
-          <p className="text-[10px] font-bold tracking-[0.2em] text-[#72756a]">
+          <p className="text-[10px] font-bold tracking-[0.2em] text-[#959c9f]">
             답변 보관함
           </p>
-          <h1 className="mt-5 text-3xl font-semibold tracking-tight text-[#141512]">
+          <h1 className="mt-5 font-display text-3xl tracking-tight text-[#f5f5ef]">
             병원을 등록하면
             <br />
             AI 답변이 여기에 쌓입니다.
           </h1>
-          <p className="mb-7 mt-4 text-sm text-[#72756a]">
+          <p className="mb-7 mt-4 text-sm text-[#959c9f]">
             병원 소개와 모니터링 질문을 먼저 설정해 주세요.
           </p>
           <Link href="/onboarding">
@@ -373,31 +373,31 @@ export default function ResponsesPage() {
     );
 
   return (
-    <div className="min-h-screen bg-[#f1f1eb] text-[#141512]">
+    <div className="min-h-screen bg-[#08090a] text-[#f5f5ef]">
       <Header
         title="답변 보관함"
         description="질문에 돌아온 실제 답변을 모아봅니다"
       />
       <div className="mx-auto max-w-[1600px] px-4 pb-12 pt-5 sm:px-7 lg:px-8">
-        <div className="mb-5 flex flex-wrap items-end justify-between gap-4 border-b border-[#141512] pb-5">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-5 border-b border-[#30343a] pb-6">
           <div>
-            <h1 className="text-[28px] font-semibold tracking-[-0.04em]">
+            <h1 className="font-display text-[32px] leading-[1.15] tracking-[-0.065em] sm:text-[46px] lg:text-[54px]">
               답변 보관함
             </h1>
-            <p className="mt-1.5 text-xs text-[#72756a]">
+            <p className="mt-1.5 text-xs text-[#959c9f]">
               질문·플랫폼·측정 날짜별로 원문을 찾습니다.
             </p>
           </div>
           <Link
             href="/dashboard/live-query"
-            className="desk-action inline-flex min-h-9 items-center gap-2 border border-[#141512] bg-[#ff5d2a] px-3 text-xs font-semibold text-[#141512]"
+            className="desk-action inline-flex min-h-9 items-center gap-2 border border-[#30343a] bg-[#ff6a24] px-3 text-xs font-semibold text-[#08090a]"
           >
             <Plus className="h-3.5 w-3.5" /> 직접 질문하기
           </Link>
         </div>
-        <div className="desk-panel border border-[#d4d6cb] bg-white">
-          <div className="flex items-center border-b border-[#d4d6cb]">
-            <span className="hidden shrink-0 px-4 text-[10px] font-semibold text-[#72756a] sm:block">
+        <div className="desk-panel border border-[#30343a] bg-[#111315]">
+          <div className="flex items-center border-b border-[#30343a]">
+            <span className="hidden shrink-0 px-4 text-[10px] font-semibold text-[#959c9f] sm:block">
               플랫폼
             </span>
             <div
@@ -412,14 +412,14 @@ export default function ResponsesPage() {
                     setSelectedQuestion("");
                   }}
                   aria-pressed={selectedPlatform === platform}
-                  className={`desk-tab shrink-0 border-r border-[#d4d6cb] px-4 py-3 text-xs font-medium ${selectedPlatform === platform ? "desk-tab-active bg-[#d0ff43] text-[#141512]" : "text-[#72756a] hover:bg-[#f1f1eb] hover:text-[#141512]"}`}
+                  className={`desk-tab shrink-0 border-r border-[#30343a] px-4 py-3 text-xs font-medium ${selectedPlatform === platform ? "desk-tab-active !bg-[#181b1e] !text-[#ff6a24]" : "text-[#959c9f] hover:bg-[#181b1e] hover:text-[#f5f5ef]"}`}
                 >
                   {platform ? platformNames[platform] : "전체"}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex items-center justify-between border-b border-[#d4d6cb] px-4 py-2.5">
+          <div className="flex items-center justify-between border-b border-[#30343a] px-4 py-2.5">
             <button
               type="button"
               onClick={() => setShowMobileFilters((current) => !current)}
@@ -429,7 +429,7 @@ export default function ResponsesPage() {
             >
               <SlidersHorizontal className="h-3.5 w-3.5" /> 답변 필터
               {(localFiltersActive || mentionFilter !== "all") && (
-                <span className="border-l border-[#d4d6cb] pl-2 text-[10px]">
+                <span className="border-l border-[#30343a] pl-2 text-[10px]">
                   적용 중
                 </span>
               )}
@@ -440,7 +440,7 @@ export default function ResponsesPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="text-[10px] text-[#72756a] hover:text-[#141512]"
+              className="text-[10px] text-[#959c9f] hover:text-[#f5f5ef]"
             >
               초기화
             </button>
@@ -458,16 +458,16 @@ export default function ResponsesPage() {
                   내용 검색
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-3.5 w-3.5 text-[#72756a]" />
+                  <Search className="absolute left-3 top-3 h-3.5 w-3.5 text-[#959c9f]" />
                   <input
                     id="response-search"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="질문 또는 답변"
-                    className="h-10 w-full min-w-0 border border-[#d4d6cb] bg-[#fafaf6] pl-9 pr-3 text-xs outline-none focus:border-[#141512] focus:ring-2 focus:ring-[#d0ff43]"
+                    className="h-10 w-full min-w-0 border border-[#30343a] bg-[#181b1e] pl-9 pr-3 text-xs outline-none focus:border-[#30343a] focus:ring-2 focus:ring-[#d9ff43]"
                   />
                 </div>
-                <p className="mt-2 text-[10px] leading-4 text-[#72756a]">
+                <p className="mt-2 text-[10px] leading-4 text-[#959c9f]">
                   불러온 질문·답변 미리보기에서 검색
                 </p>
               </div>
@@ -491,13 +491,13 @@ export default function ResponsesPage() {
                         setSelectedQuestion("");
                       }}
                       aria-pressed={mentionFilter === value}
-                      className={`desk-tab flex min-h-9 w-full items-center gap-2 rounded-none px-2 text-left text-xs transition-colors ${mentionFilter === value ? "desk-tab-active bg-[#d0ff43] font-semibold text-[#141512]" : "text-[#72756a] hover:bg-[#f1f1eb]"}`}
+                      className={`desk-tab flex min-h-9 w-full items-center gap-2 rounded-none px-2 text-left text-xs transition-colors ${mentionFilter === value ? "desk-tab-active !bg-[#181b1e] font-semibold !text-[#ff6a24]" : "text-[#959c9f] hover:bg-[#181b1e]"}`}
                     >
                       <span
-                        className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${mentionFilter === value ? "border-[#d0ff43]" : "border-[#b8bcab]"}`}
+                        className={`flex h-3.5 w-3.5 items-center justify-center rounded-full border ${mentionFilter === value ? "border-[#d9ff43]" : "border-[#43494f]"}`}
                       >
                         {mentionFilter === value && (
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#d0ff43]" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#d9ff43]" />
                         )}
                       </span>
                       {label}
@@ -516,7 +516,7 @@ export default function ResponsesPage() {
                   id="response-question"
                   value={selectedQuestion}
                   onChange={(event) => setSelectedQuestion(event.target.value)}
-                  className="h-10 w-full min-w-0 max-w-full border border-[#d4d6cb] bg-[#fafaf6] px-2 text-xs outline-none focus:border-[#141512] focus:ring-2 focus:ring-[#d0ff43]"
+                  className="h-10 w-full min-w-0 max-w-full border border-[#30343a] bg-[#181b1e] px-2 text-xs outline-none focus:border-[#30343a] focus:ring-2 focus:ring-[#d9ff43]"
                 >
                   <option value="">불러온 모든 질문</option>
                   {questions.map((question) => (
@@ -537,7 +537,7 @@ export default function ResponsesPage() {
                     value={dateFrom}
                     max={dateTo || undefined}
                     onChange={(event) => setDateFrom(event.target.value)}
-                    className="h-10 min-w-0 max-w-full border border-[#d4d6cb] bg-[#fafaf6] px-2 text-xs outline-none focus:border-[#141512] focus:ring-2 focus:ring-[#d0ff43]"
+                    className="h-10 min-w-0 max-w-full border border-[#30343a] bg-[#181b1e] px-2 text-xs outline-none focus:border-[#30343a] focus:ring-2 focus:ring-[#d9ff43]"
                   />
                   <input
                     aria-label="측정 종료일"
@@ -545,21 +545,21 @@ export default function ResponsesPage() {
                     value={dateTo}
                     min={dateFrom || undefined}
                     onChange={(event) => setDateTo(event.target.value)}
-                    className="h-10 min-w-0 max-w-full border border-[#d4d6cb] bg-[#fafaf6] px-2 text-xs outline-none focus:border-[#141512] focus:ring-2 focus:ring-[#d0ff43]"
+                    className="h-10 min-w-0 max-w-full border border-[#30343a] bg-[#181b1e] px-2 text-xs outline-none focus:border-[#30343a] focus:ring-2 focus:ring-[#d9ff43]"
                   />
                 </div>
-                <p className="mt-2 text-[10px] leading-4 text-[#72756a]">
+                <p className="mt-2 text-[10px] leading-4 text-[#959c9f]">
                   불러온 답변 안에서 질문·날짜를 고릅니다.
                 </p>
               </fieldset>
             </div>
 
-            <div className="flex items-center justify-between border-t border-[#d4d6cb] px-4 py-2.5 text-[10px] text-[#72756a]">
+            <div className="flex items-center justify-between border-t border-[#30343a] px-4 py-2.5 text-[10px] text-[#959c9f]">
               <span>질문·날짜·내용 검색은 불러온 답변 범위에 적용됩니다.</span>
               <button
                 type="button"
                 onClick={() => setShowMobileFilters(false)}
-                className="ml-3 shrink-0 border-b border-[#141512] pb-0.5 text-[#141512] lg:hidden"
+                className="ml-3 shrink-0 border-b border-[#30343a] pb-0.5 text-[#f5f5ef] lg:hidden"
               >
                 필터 접기
               </button>
@@ -569,9 +569,9 @@ export default function ResponsesPage() {
         <section aria-label="AI 답변 목록" className="mt-5 min-w-0">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-              <h2 className="font-semibold">
+              <h2 className="flex items-baseline gap-3 font-display text-sm">
                 {localFiltersActive ? "검색 결과" : "전체 기록"}{" "}
-                <span className="ml-1 font-mono">
+                <span className="font-numeric text-[36px] leading-none text-[#ff6a24]">
                   {isLoading || error ? (
                     "—"
                   ) : (
@@ -585,7 +585,7 @@ export default function ResponsesPage() {
                   )}
                 </span>
               </h2>
-              <span className="text-[10px] text-[#72756a]">
+              <span className="text-[10px] text-[#959c9f]">
                 {responses.length.toLocaleString()}건 불러옴
                 {totalCount > responses.length
                   ? ` / ${totalCount.toLocaleString()}건`
@@ -594,39 +594,39 @@ export default function ResponsesPage() {
             </div>
             <Link
               href="/dashboard/prompts"
-              className="desk-action inline-flex items-center gap-2 border-b border-[#141512] pb-0.5 text-[11px]"
+              className="desk-action inline-flex items-center gap-2 border-b border-[#30343a] pb-0.5 text-[11px]"
             >
               질문 관리 <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
           {responses.length > 0 && (
-            <div className="flex flex-wrap gap-x-5 gap-y-1 border-x border-t border-[#d4d6cb] bg-[#f1f1eb] px-4 py-2 text-[10px] text-[#72756a]">
+            <div className="flex flex-wrap gap-x-5 gap-y-1 border-x border-t border-[#30343a] bg-[#08090a] px-4 py-2 text-[10px] text-[#959c9f]">
               <span>표시 중 {filteredResponses.length}건 기준</span>
               <span>
                 우리 병원 언급{" "}
-                <b className="ml-1 font-mono text-[#141512]">
+                <b className="ml-1 font-numeric text-[#f5f5ef]">
                   {mentionedCount}
                 </b>
               </span>
               <span>
                 웹검색 기반{" "}
-                <b className="ml-1 font-mono text-[#141512]">
+                <b className="ml-1 font-numeric text-[#f5f5ef]">
                   {webSearchCount}
                 </b>
               </span>
             </div>
           )}
           {isLoading ? (
-            <div className="flex items-center gap-2 border border-[#d4d6cb] bg-white p-10 text-sm text-[#72756a]">
+            <div className="flex items-center gap-2 border border-[#30343a] bg-[#111315] p-10 text-sm text-[#959c9f]">
               <Loader2 className="h-4 w-4 animate-spin" /> 답변을 불러오고
               있습니다.
             </div>
           ) : error ? (
-            <div className="border border-[#d4d6cb] bg-white p-8">
+            <div className="border border-[#30343a] bg-[#111315] p-8">
               <h3 className="text-base font-semibold">
                 답변을 불러오지 못했습니다.
               </h3>
-              <p className="mb-5 mt-2 text-xs text-[#72756a]">
+              <p className="mb-5 mt-2 text-xs text-[#959c9f]">
                 잠시 후 다시 시도해 주세요.
               </p>
               <Button size="sm" onClick={() => refetch()}>
@@ -634,7 +634,7 @@ export default function ResponsesPage() {
               </Button>
             </div>
           ) : filteredResponses.length === 0 ? (
-            <div className="border border-[#d4d6cb] bg-white px-6 py-12">
+            <div className="border border-[#30343a] bg-[#111315] px-6 py-12">
               <h3 className="text-base font-semibold">
                 {localFiltersActive ||
                 mentionFilter !== "all" ||
@@ -642,7 +642,7 @@ export default function ResponsesPage() {
                   ? "이 조건에 맞는 답변이 없습니다."
                   : "아직 측정된 답변이 없습니다."}
               </h3>
-              <p className="mt-2 text-xs leading-5 text-[#72756a]">
+              <p className="mt-2 text-xs leading-5 text-[#959c9f]">
                 {localFiltersActive
                   ? "검색 조건을 바꾸거나 이전 답변을 더 불러와보세요."
                   : "질문 측정이 완료되면 이곳에 답변이 저장됩니다."}
@@ -651,23 +651,23 @@ export default function ResponsesPage() {
           ) : (
             <div
               key={`${selectedPlatform || "all"}-${mentionFilter}`}
-              className="signal-enter desk-panel border border-[#d4d6cb] bg-white"
+              className="signal-enter desk-panel border border-[#30343a] bg-[#111315]"
             >
-              <div className="hidden grid-cols-[105px_105px_minmax(0,1fr)_90px_45px] gap-4 border-b border-[#141512] bg-[#141512] px-4 py-2.5 text-[10px] font-medium text-white md:grid">
+              <div className="hidden grid-cols-[105px_105px_minmax(0,1fr)_90px_45px] gap-4 border-b border-[#30343a] bg-[#08090a] px-4 py-2.5 text-[10px] font-medium text-white md:grid">
                 <span>플랫폼</span>
                 <span>측정일</span>
                 <span>질문 / 답변 미리보기</span>
                 <span>우리 병원</span>
                 <span>원문</span>
               </div>
-              <div className="divide-y divide-[#d4d6cb]">
+              <div className="divide-y divide-[#30343a]">
                 {filteredResponses.map((response, index) => (
                   <article
                     key={response.id}
-                    className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 transition-colors md:grid-cols-[105px_105px_minmax(0,1fr)_90px_45px] md:gap-x-4 ${selectedResponse?.id === response.id ? "bg-[#d0ff43] text-[#141512]" : "hover:bg-[#f1f1eb]"}`}
+                    className={`grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 transition-colors md:grid-cols-[105px_105px_minmax(0,1fr)_90px_45px] md:gap-x-4 ${selectedResponse?.id === response.id ? "bg-[#181b1e] text-[#ff6a24] shadow-[inset_3px_0_0_#ff6a24]" : "hover:bg-[#181b1e]"}`}
                   >
                     <div className="flex items-center gap-2 md:block">
-                      <span className="font-mono text-[9px] text-[#72756a] md:mb-1 md:block">
+                      <span className="font-numeric text-lg leading-none text-[#959c9f] md:mb-2 md:block">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <span className="text-xs font-semibold">
@@ -675,32 +675,32 @@ export default function ResponsesPage() {
                           response.aiPlatform}
                       </span>
                       {response.aiModelVersion && (
-                        <span className="mt-1 hidden max-w-full truncate font-mono text-[9px] text-[#72756a] md:block">
+                        <span className="mt-1 hidden max-w-full truncate font-mono text-[9px] text-[#959c9f] md:block">
                           {response.aiModelVersion}
                         </span>
                       )}
                     </div>
-                    <time className="pt-0.5 text-[10px] text-[#72756a] md:text-[11px]">
+                    <time className="pt-0.5 text-[10px] text-[#959c9f] md:text-[11px]">
                       {formatDate(response.responseDate || response.createdAt)}
                     </time>
                     <button
                       type="button"
                       onClick={() => setSelectedResponse(response)}
-                      className="col-span-2 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#141512] focus-visible:ring-offset-2 md:col-span-1"
+                      className="col-span-2 min-w-0 text-left outline-none focus-visible:ring-2 focus-visible:ring-[#ff6a24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#111315] md:col-span-1"
                     >
                       {!response.questionSnapshotAvailable && (
-                        <p className="mb-1 text-[9px] text-[#72756a]">
+                        <p className="mb-1 text-[9px] text-[#959c9f]">
                           {questionLabel(response)}
                         </p>
                       )}
                       <h3 className="text-[13px] font-medium leading-6">
                         {responseQuestion(response) || "질문 정보 없음"}
                       </h3>
-                      <p className="mt-1 line-clamp-2 break-words text-[11px] leading-5 text-[#72756a]">
+                      <p className="mt-1 line-clamp-2 break-words text-[11px] leading-5 text-[#959c9f]">
                         {response.responseText ||
                           "답변 미리보기가 없습니다. 원문을 열어 확인해 주세요."}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-[#72756a]">
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-[#959c9f]">
                         <span>{sentimentText(response.sentimentLabel)}</span>
                         {response.isWebSearch && <span>웹검색</span>}
                         {!!response.citedSources?.length && (
@@ -714,7 +714,7 @@ export default function ResponsesPage() {
                     <div className="flex items-center gap-1.5 self-start pt-1 text-[10px] md:col-start-4">
                       {response.isMentioned ? (
                         <>
-                          <span className="h-1.5 w-1.5 bg-[#ff5d2a]" />
+                          <span className="h-1.5 w-1.5 bg-[#ff6a24]" />
                           <span>
                             {response.mentionPosition
                               ? `${response.mentionPosition}번째 언급`
@@ -722,13 +722,13 @@ export default function ResponsesPage() {
                           </span>
                         </>
                       ) : (
-                        <span className="text-[#72756a]">미언급</span>
+                        <span className="text-[#959c9f]">미언급</span>
                       )}
                     </div>
                     <button
                       type="button"
                       onClick={() => setSelectedResponse(response)}
-                      className="desk-action inline-flex min-h-7 items-center justify-end gap-1 self-start border-b border-[#141512] text-[10px] md:justify-center"
+                      className="desk-action inline-flex min-h-7 items-center justify-end gap-1 self-start border-b border-[#30343a] text-[10px] md:justify-center"
                     >
                       읽기 <ArrowRight className="h-3 w-3" />
                     </button>
@@ -742,7 +742,7 @@ export default function ResponsesPage() {
               type="button"
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="desk-action mt-3 flex min-h-11 w-full items-center justify-center gap-2 border border-[#141512] bg-white text-xs font-medium hover:bg-[#d0ff43] disabled:opacity-50"
+              className="desk-action mt-3 flex min-h-11 w-full items-center justify-center gap-2 border border-[#30343a] bg-[#111315] text-xs font-medium hover:bg-[#181b1e] disabled:opacity-50"
             >
               {isFetchingNextPage ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -785,19 +785,19 @@ export default function ResponsesPage() {
             selectAdjacentResponse(1);
           }
         }}
-        className="m-auto rounded-none max-h-[92dvh] w-[calc(100%_-_24px)] max-w-[1000px] overflow-hidden border border-[#d4d6cb] bg-[#f1f1eb] p-0 text-[#141512] shadow-2xl backdrop:bg-[#141512]/60 sm:w-[calc(100%_-_64px)]"
+        className="m-auto rounded-none max-h-[92dvh] w-[calc(100%_-_24px)] max-w-[1000px] overflow-hidden border border-[#30343a] bg-[#08090a] p-0 text-[#f5f5ef] shadow-2xl backdrop:bg-[#08090a]/85 sm:w-[calc(100%_-_64px)]"
         aria-labelledby="answer-dialog-title"
       >
         {selectedResponse && (
           <div className="flex max-h-[92dvh] flex-col">
-            <div className="flex shrink-0 items-center justify-between gap-4 bg-[#141512] px-5 py-4 text-white sm:px-7">
+            <div className="flex shrink-0 items-center justify-between gap-4 bg-[#08090a] px-5 py-4 text-white sm:px-7">
               <div>
                 <p className="text-[9px] font-semibold tracking-[0.18em] text-white/65">
                   저장된 원문
                 </p>
                 <h2
                   id="answer-dialog-title"
-                  className="mt-1 text-base font-medium"
+                  className="mt-1 font-display text-xl tracking-tight"
                 >
                   {platformNames[selectedResponse.aiPlatform] ||
                     selectedResponse.aiPlatform}
@@ -808,7 +808,7 @@ export default function ResponsesPage() {
                 type="button"
                 onClick={closeDialog}
                 aria-label="답변 닫기"
-                className="signal-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-white/30 text-white hover:bg-[#d0ff43] hover:text-[#141512]"
+                className="signal-interactive flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-white/30 text-white hover:bg-[#181b1e] hover:text-[#f5f5ef]"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -817,7 +817,7 @@ export default function ResponsesPage() {
               key={selectedResponse.id}
               className="signal-enter min-h-0 overflow-y-auto p-5 sm:p-7"
             >
-              <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-[#72756a]">
+              <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-[#959c9f]">
                 <span>
                   {formatDate(
                     activeDetail?.createdAt || activeDetail?.responseDate,
@@ -832,7 +832,7 @@ export default function ResponsesPage() {
                 <span
                   className={
                     activeDetail?.isMentioned
-                      ? "font-semibold text-[#141512]"
+                      ? "font-semibold text-[#f5f5ef]"
                       : ""
                   }
                 >
@@ -848,8 +848,8 @@ export default function ResponsesPage() {
                   </span>
                 )}
               </div>
-              <blockquote className="mb-6 border-l-2 border-[#d0ff43] pl-4">
-                <p className="mb-2 text-[10px] font-semibold text-[#72756a]">
+              <blockquote className="mb-6 border-l-2 border-[#ff6a24] pl-4">
+                <p className="mb-2 text-[10px] font-semibold text-[#959c9f]">
                   {questionLabel(activeDetail)}
                 </p>
                 <p className="text-base font-medium leading-7 tracking-[-0.02em]">
@@ -858,16 +858,16 @@ export default function ResponsesPage() {
                     "질문 정보 없음"}
                 </p>
               </blockquote>
-              <div className="rounded-none border border-[#d4d6cb] bg-white p-5 sm:p-7">
+              <div className="rounded-none border border-[#30343a] bg-[#111315] p-5 sm:p-7">
                 {detailLoading ? (
-                  <div className="flex items-center gap-2 py-12 text-sm text-[#72756a]">
+                  <div className="flex items-center gap-2 py-12 text-sm text-[#959c9f]">
                     <Loader2 className="h-4 w-4 animate-spin" /> 전체 원문을
                     불러오고 있습니다
                   </div>
                 ) : (
                   <>
                     {(!fullTextAvailable || detailError) && (
-                      <div className="mb-5 border-l-2 border-[#A78544] bg-[#F7F3E9] px-4 py-3 text-xs leading-5 text-[#786745]">
+                      <div className="mb-5 border-l-2 border-[#ff6a24] bg-[#211910] px-4 py-3 text-xs leading-5 text-[#e7b889]">
                         전체 원문을 가져오지 못했습니다. 아래에는 저장된 목록
                         미리보기를 표시합니다.
                         <button
@@ -879,13 +879,13 @@ export default function ResponsesPage() {
                         </button>
                       </div>
                     )}
-                    <div className="whitespace-pre-wrap break-words text-[13px] leading-[2] text-[#33372c] sm:text-sm">
+                    <div className="whitespace-pre-wrap break-words text-[13px] leading-[2] text-[#d4d8d5] sm:text-sm">
                       {detailText || "확인할 수 있는 답변 내용이 없습니다."}
                     </div>
                   </>
                 )}
               </div>
-              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-[#72756a]">
+              <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-[#959c9f]">
                 <span>{sentimentText(activeDetail?.sentimentLabel)}</span>
                 {!!activeDetail?.totalRecommendations && (
                   <span>총 추천 {activeDetail.totalRecommendations}곳</span>
@@ -898,18 +898,18 @@ export default function ResponsesPage() {
                 )}
               </div>
               {!!activeDetail?.competitorsMentioned?.length && (
-                <div className="mt-5 border-t border-[#d4d6cb] pt-4">
-                  <p className="mb-2 text-[10px] font-semibold text-[#72756a]">
+                <div className="mt-5 border-t border-[#30343a] pt-4">
+                  <p className="mb-2 text-[10px] font-semibold text-[#959c9f]">
                     이 답변에 함께 등장한 병원
                   </p>
-                  <p className="break-words text-xs leading-6 text-[#525849]">
+                  <p className="break-words text-xs leading-6 text-[#b7bcbf]">
                     {activeDetail.competitorsMentioned.join(" · ")}
                   </p>
                 </div>
               )}
               {!!activeDetail?.citedSources?.length && (
-                <div className="mt-5 border-t border-[#d4d6cb] pt-4">
-                  <p className="mb-3 text-[10px] font-semibold text-[#72756a]">
+                <div className="mt-5 border-t border-[#30343a] pt-4">
+                  <p className="mb-3 text-[10px] font-semibold text-[#959c9f]">
                     인용 출처 · {activeDetail.citedSources.length}개
                   </p>
                   <div className="flex flex-col gap-2">
@@ -921,9 +921,9 @@ export default function ResponsesPage() {
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex max-w-full items-start gap-2 text-xs leading-5 text-[#141512] hover:underline"
+                          className="inline-flex max-w-full items-start gap-2 text-xs leading-5 text-[#f5f5ef] hover:underline"
                         >
-                          <span className="shrink-0 font-mono text-[10px] text-[#72756a]">
+                          <span className="shrink-0 font-numeric text-[10px] text-[#959c9f]">
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           <span className="break-all">{link.title}</span>
@@ -932,7 +932,7 @@ export default function ResponsesPage() {
                       ) : (
                         <span
                           key={index}
-                          className="text-[11px] text-[#72756a]"
+                          className="text-[11px] text-[#959c9f]"
                         >
                           출처 {index + 1} · 링크 정보 없음
                         </span>
@@ -942,7 +942,7 @@ export default function ResponsesPage() {
                 </div>
               )}
             </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#d4d6cb] bg-white px-5 py-4 sm:px-7">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[#30343a] bg-[#111315] px-5 py-4 sm:px-7">
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
@@ -954,7 +954,7 @@ export default function ResponsesPage() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="px-1 font-mono text-[10px] text-[#72756a]">
+                <span className="px-1 font-numeric text-[10px] text-[#959c9f]">
                   {selectedResponseIndex + 1} / {filteredResponses.length}
                 </span>
                 <Button

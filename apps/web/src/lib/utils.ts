@@ -59,14 +59,14 @@ export function getPlatformName(platform: string): string {
 export function getPlatformColor(platform: string): string {
   // Chart series use the Signal palette; platform names identify the source.
   const colors: Record<string, string> = {
-    CHATGPT: '#ff5d2a',
-    PERPLEXITY: '#b4db2f',
-    CLAUDE: '#262a21',
-    GEMINI: '#b83b17',
-    GOOGLE_AI_OVERVIEW: '#768340',
-    GROK: '#000000',      // xAI 브랜드 색상 (블랙)
+    CHATGPT: '#ff6a24',
+    PERPLEXITY: '#d9ff43',
+    CLAUDE: '#e0e4e7',
+    GEMINI: '#d77d55',
+    GOOGLE_AI_OVERVIEW: '#879296',
+    GROK: '#b6bdc1',
     CLOVA_X: '#ffac80',
-    NAVER_AI_BRIEFING: '#bec3af',
+    NAVER_AI_BRIEFING: '#959c9f',
   };
-  return colors[platform] || '#687253';
+  return colors[platform] || '#959c9f';
 }

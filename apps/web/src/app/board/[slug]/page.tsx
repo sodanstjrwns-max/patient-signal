@@ -200,14 +200,14 @@ export default function HospitalBoardPage() {
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">원장님 전용 대시보드</h1>
+              <h1 className="font-display text-lg font-bold text-white">원장님 전용 대시보드</h1>
               <p className="text-xs text-slate-400">Patient Signal — AI 검색 가시성 리포트</p>
             </div>
           </div>
           <p className="text-sm text-slate-300 mt-4 mb-5 leading-relaxed">
             발급받으신 접근코드를 입력해주세요.
             <br />
-            <span className="text-slate-500 text-xs">이 페이지는 원장님 병원의 데이터만 표시됩니다.</span>
+            <span className="text-[#959c9f] text-xs">이 페이지는 원장님 병원의 데이터만 표시됩니다.</span>
           </p>
           <div className="relative mb-4">
             <input
@@ -222,7 +222,7 @@ export default function HospitalBoardPage() {
             <button
               type="button"
               onClick={() => setShowCode(v => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#959c9f] hover:text-slate-300"
               aria-label="코드 표시 전환"
             >
               {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -232,7 +232,7 @@ export default function HospitalBoardPage() {
           <button
             onClick={() => code && fetchBoard(code, days)}
             disabled={!code || loading}
-            className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 disabled:opacity-40 text-slate-900 font-bold rounded-xl py-3 text-sm transition-all"
+            className="w-full bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 disabled:opacity-40 text-[#f5f5ef] font-bold rounded-xl py-3 text-sm transition-all"
           >
             {loading ? '확인 중… (첫 접속은 30초 정도 걸릴 수 있어요)' : '대시보드 입장'}
           </button>
@@ -257,14 +257,14 @@ export default function HospitalBoardPage() {
             <p className="text-amber-400 text-xs font-bold tracking-widest mb-1">
               PATIENT SIGNAL · 원장님 전용
             </p>
-            <h1 className="text-2xl md:text-3xl font-extrabold">
+            <h1 className="font-display text-2xl md:text-3xl font-extrabold">
               {data.hospital.name}{' '}
               <span className="text-slate-400 font-medium text-base">
                 AI 검색 가시성 대시보드
               </span>
             </h1>
             {data.hospital.region && (
-              <p className="text-slate-500 text-sm mt-1">{data.hospital.region}</p>
+              <p className="text-[#959c9f] text-sm mt-1">{data.hospital.region}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -274,7 +274,7 @@ export default function HospitalBoardPage() {
                 onClick={() => handleDays(d)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                   days === d
-                    ? 'bg-amber-400 text-slate-900'
+                    ? 'bg-amber-400 text-[#f5f5ef]'
                     : 'bg-white/5 text-slate-300 hover:bg-white/10'
                 }`}
               >
@@ -370,13 +370,13 @@ export default function HospitalBoardPage() {
         ].map(card => (
           <article
             key={card.label}
-            className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/[0.07] transition"
+            className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-[#111315]/[0.07] transition"
           >
             <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold mb-2">
               {card.icon} {card.label}
             </div>
             <p className="text-xl md:text-2xl font-extrabold">{card.value}</p>
-            <p className="text-[11px] text-slate-500 mt-1 leading-snug">{card.sub}</p>
+            <p className="text-[11px] text-[#959c9f] mt-1 leading-snug">{card.sub}</p>
           </article>
         ))}
       </section>
@@ -384,8 +384,8 @@ export default function HospitalBoardPage() {
       {/* ===== 차트: 일별 순위 + SoV ===== */}
       <section id="trend-charts" className="max-w-6xl mx-auto px-6 mb-10 grid md:grid-cols-2 gap-6">
         <article className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h2 className="text-sm font-bold text-slate-200 mb-1">일별 전국 순위 추이</h2>
-          <p className="text-[11px] text-slate-500 mb-4">위로 갈수록 상위권 (1위가 최상단)</p>
+          <h2 className="font-display text-sm font-bold text-slate-200 mb-1">일별 전국 순위 추이</h2>
+          <p className="text-[11px] text-[#959c9f] mb-4">위로 갈수록 상위권 (1위가 최상단)</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rankedDaily} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
@@ -393,7 +393,7 @@ export default function HospitalBoardPage() {
                 <XAxis dataKey="date" tick={{ fill: '#bec3af', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
                 <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#bec3af', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: '#d9ddcf' }}
                   formatter={(v) => [`${v}위`, '순위']}
                 />
@@ -403,8 +403,8 @@ export default function HospitalBoardPage() {
           </div>
         </article>
         <article className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h2 className="text-sm font-bold text-slate-200 mb-1">일별 AI 언급률 (SoV %)</h2>
-          <p className="text-[11px] text-slate-500 mb-4">AI가 우리 병원을 답변에 포함한 비율</p>
+          <h2 className="font-display text-sm font-bold text-slate-200 mb-1">일별 AI 언급률 (SoV %)</h2>
+          <p className="text-[11px] text-[#959c9f] mb-4">AI가 우리 병원을 답변에 포함한 비율</p>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data.daily} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
@@ -418,7 +418,7 @@ export default function HospitalBoardPage() {
                 <XAxis dataKey="date" tick={{ fill: '#bec3af', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
                 <YAxis domain={[0, 100]} tick={{ fill: '#bec3af', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: '#d9ddcf' }}
                   formatter={(v) => [`${v}%`, 'SoV']}
                 />
@@ -432,8 +432,8 @@ export default function HospitalBoardPage() {
       {/* ===== 플랫폼별 SoV ===== */}
       <section id="platform-breakdown" className="max-w-6xl mx-auto px-6 mb-10">
         <article className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h2 className="text-sm font-bold text-slate-200 mb-1">AI 플랫폼별 언급률</h2>
-          <p className="text-[11px] text-slate-500 mb-5">
+          <h2 className="font-display text-sm font-bold text-slate-200 mb-1">AI 플랫폼별 언급률</h2>
+          <p className="text-[11px] text-[#959c9f] mb-5">
             어떤 AI가 우리 병원을 얼마나 자주 추천하는지 — 낮은 플랫폼은 곧 성장 기회입니다
           </p>
           <div className="space-y-3">
@@ -450,7 +450,7 @@ export default function HospitalBoardPage() {
                   </div>
                   <span className="w-24 text-right text-xs text-slate-300 shrink-0">
                     <b className="text-white">{stat.sov}%</b>
-                    <span className="text-slate-500"> ({stat.mentioned}/{stat.total})</span>
+                    <span className="text-[#959c9f]"> ({stat.mentioned}/{stat.total})</span>
                   </span>
                 </div>
               );
@@ -462,14 +462,14 @@ export default function HospitalBoardPage() {
       {/* ===== 주변 경쟁 구간 ===== */}
       <section id="nearby-competitors" className="max-w-6xl mx-auto px-6 mb-10">
         <article className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h2 className="text-sm font-bold text-slate-200 mb-1">우리 병원 주변 경쟁 구간</h2>
-          <p className="text-[11px] text-slate-500 mb-4">
+          <h2 className="font-display text-sm font-bold text-slate-200 mb-1">우리 병원 주변 경쟁 구간</h2>
+          <p className="text-[11px] text-[#959c9f] mb-4">
             개인정보 보호를 위해 타 병원은 익명 처리됩니다
           </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-slate-500 text-xs border-b border-white/10">
+                <tr className="text-[#959c9f] text-xs border-b border-white/10">
                   <th className="text-left py-2 pr-4 font-semibold">순위</th>
                   <th className="text-left py-2 pr-4 font-semibold">병원</th>
                   <th className="text-right py-2 pr-4 font-semibold">SoV</th>
@@ -506,7 +506,7 @@ export default function HospitalBoardPage() {
         </article>
       </section>
 
-      <footer className="max-w-6xl mx-auto px-6 text-center text-[11px] text-slate-600">
+      <footer className="max-w-6xl mx-auto px-6 text-center text-[11px] text-[#959c9f]">
         Patient Signal · 실제 AI 응답 전수 분석 기반 · 데이터는 크롤링 주기에 따라 갱신됩니다
       </footer>
     </main>

@@ -63,7 +63,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
             <MessageSquareQuote className="h-5 w-5 text-amber-600" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-900">이번 주 언급된 질문 TOP 5</h2>
+            <h2 className="font-display text-sm font-black text-[#f5f5ef]">이번 주 언급된 질문 TOP 5</h2>
             <p className="text-[11px] text-slate-400 font-semibold">
               환자가 이렇게 물으면, AI가 우리를 말합니다 (최근 7일)
             </p>
@@ -71,7 +71,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
         </div>
         <Link
           href="/dashboard/responses?filter=mentioned"
-          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:gap-2.5 transition-all"
+          className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-[#ff9565] hover:gap-2.5 transition-all"
         >
           전체 보기 <ArrowRight className="h-3.5 w-3.5" />
         </Link>
@@ -80,26 +80,26 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
       {isLoading ? (
         <div className="space-y-2.5">
           {[0, 1, 2].map(i => (
-            <div key={i} className="h-14 rounded-2xl bg-slate-100/70 animate-pulse" />
+            <div key={i} className="h-14 rounded-2xl bg-[#181b1e]/70 animate-pulse" />
           ))}
         </div>
       ) : isError ? (
         <div className="flex items-center gap-2 py-6 justify-center text-sm text-slate-400">
           <AlertTriangle className="h-4 w-4" />
           불러오지 못했습니다
-          <button onClick={() => refetch()} className="text-brand-600 font-bold hover:underline ml-1">
+          <button onClick={() => refetch()} className="text-[#ff9565] font-bold hover:underline ml-1">
             다시 시도
           </button>
         </div>
       ) : top5.length === 0 ? (
         <div className="py-6 text-center">
-          <p className="text-sm text-slate-500 font-medium">이번 주 아직 언급된 질문이 없습니다</p>
+          <p className="text-sm text-[#959c9f] font-medium">이번 주 아직 언급된 질문이 없습니다</p>
           <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
             언급이 없는 것도 중요한 데이터입니다 — 경쟁 병원만 나오는 질문부터 공략하세요.
           </p>
           <Link
             href="/dashboard/opportunities"
-            className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-brand-600 hover:gap-2.5 transition-all"
+            className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-[#ff9565] hover:gap-2.5 transition-all"
           >
             비어 있는 질문 보기 <ArrowRight className="h-3.5 w-3.5" />
           </Link>
@@ -109,17 +109,17 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
           {top5.map((p, idx) => (
             <li
               key={`${p.promptText}-${idx}`}
-              className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white/60 px-4 py-3"
+              className="flex items-center gap-3 rounded-2xl border border-[#30343a] bg-[#111315]/60 px-4 py-3"
             >
               <span
                 className={`w-6 h-6 rounded-lg flex items-center justify-center text-[11px] font-black shrink-0 ${
-                  idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'
+                  idx === 0 ? 'bg-amber-100 text-amber-700' : 'bg-[#181b1e] text-[#959c9f]'
                 }`}
               >
                 {idx === 0 ? <Trophy className="h-3.5 w-3.5" /> : idx + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-bold text-slate-800 truncate" title={p.promptText}>
+                <p className="text-[13px] font-bold text-[#f5f5ef] truncate" title={p.promptText}>
                   “{p.promptText}”
                 </p>
                 <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
@@ -130,7 +130,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
                 </p>
               </div>
               {p.r3Rate >= 50 && (
-                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 font-black shrink-0">
+                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-[#352115] text-[#ff9565] font-black shrink-0">
                   단독추천 {Math.round(p.r3Rate)}%
                 </span>
               )}
@@ -141,7 +141,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
 
       <Link
         href="/dashboard/responses?filter=mentioned"
-        className="sm:hidden inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-brand-600"
+        className="sm:hidden inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-[#ff9565]"
       >
         전체 보기 <ArrowRight className="h-3.5 w-3.5" />
       </Link>

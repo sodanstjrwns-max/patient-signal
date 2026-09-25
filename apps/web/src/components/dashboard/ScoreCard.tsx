@@ -20,9 +20,9 @@ export function ScoreCard({ title, score, change, description, icon }: ScoreCard
   };
 
   const getTrendColor = () => {
-    if (!change || change === 0) return 'text-slate-500';
-    if (change > 0) return 'text-brand-600';
-    return 'text-red-600';
+    if (!change || change === 0) return 'text-[#959c9f]';
+    if (change > 0) return 'text-[#ff9565]';
+    return 'text-red-400';
   };
 
   return (
@@ -30,7 +30,7 @@ export function ScoreCard({ title, score, change, description, icon }: ScoreCard
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-500">{title}</p>
+            <p className="text-sm font-medium text-[#959c9f]">{title}</p>
             <div className="flex items-baseline gap-2 mt-1">
               <span className={cn('text-3xl font-bold tracking-tight', getScoreColor(score))}>
                 {score}
@@ -56,7 +56,7 @@ export function ScoreCard({ title, score, change, description, icon }: ScoreCard
           </div>
         </div>
         {description && (
-          <p className="mt-3 text-sm text-slate-500 leading-relaxed">{description}</p>
+          <p className="mt-3 text-sm text-[#959c9f] leading-relaxed">{description}</p>
         )}
       </CardContent>
     </Card>

@@ -82,8 +82,8 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
     <Card>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
-          <div className="p-1.5 rounded-xl bg-brand-100">
-            <Activity className="h-4 w-4 text-brand-600" />
+          <div className="p-1.5 rounded-xl bg-[#352115]">
+            <Activity className="h-4 w-4 text-[#ff9565]" />
           </div>
           플랫폼별 가시성
         </CardTitle>
@@ -93,7 +93,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
           {platforms.map((platform) => (
             <div key={platform.name} className={`space-y-2 relative ${platform.isLocked ? '' : ''}`}>
               {platform.isLocked && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-2xl">
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#111315]/70 backdrop-blur-[3px] rounded-2xl">
                   <Link href={`/dashboard/billing?plan=STANDARD`} className="flex items-center gap-1.5 bg-slate-800 text-white px-3 py-1.5 rounded-full text-xs shadow-lg hover:bg-slate-700 transition-colors">
                     <Lock className="w-3 h-3" />
                     <span>Standard 업그레이드</span>
@@ -109,7 +109,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
                       boxShadow: `0 0 0 2px ${platform.isLocked ? '#d9ddcf40' : `${platform.color}40`}`
                     }}
                   />
-                  <span className="text-sm font-medium text-slate-700">{platform.name}</span>
+                  <span className="text-sm font-medium text-[#c0c4c7]">{platform.name}</span>
                   {platform.isTeaser && (
                     <Link href="/dashboard/billing?plan=STANDARD" className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors whitespace-nowrap">
                       미리보기 · 질문 1개
@@ -118,7 +118,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
                 </div>
                 <span className="text-sm font-semibold">{platform.isLocked ? '—' : `${platform.score}점`}</span>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-[#181b1e] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
@@ -132,10 +132,10 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
         </div>
         {platforms.length === 0 && (
           <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#181b1e] flex items-center justify-center mx-auto mb-3">
               <Activity className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500">아직 데이터가 없습니다. 크롤링을 실행해주세요.</p>
+            <p className="text-sm text-[#959c9f]">아직 데이터가 없습니다. 크롤링을 실행해주세요.</p>
           </div>
         )}
       </CardContent>
@@ -154,20 +154,20 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg flex items-center gap-2">
-          <div className="p-1.5 rounded-xl bg-brand-100">
-            <Activity className="h-4 w-4 text-brand-600" />
+          <div className="p-1.5 rounded-xl bg-[#352115]">
+            <Activity className="h-4 w-4 text-[#ff9565]" />
           </div>
           플랫폼별 AI 가시성
         </CardTitle>
-        <span className="text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full">최근 30일</span>
+        <span className="text-xs text-[#959c9f] bg-[#111315] px-2.5 py-1 rounded-full">최근 30일</span>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
           <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#181b1e] flex items-center justify-center mx-auto mb-3">
               <AlertCircle className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500">아직 데이터가 없습니다.</p>
+            <p className="text-sm text-[#959c9f]">아직 데이터가 없습니다.</p>
             <p className="text-xs text-slate-400 mt-1">크롤링을 실행해 데이터를 수집하세요.</p>
           </div>
         ) : (
@@ -181,7 +181,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
               return (
                 <div key={platform.platform} className={`space-y-3 relative ${!hasData ? 'opacity-60' : ''}`}>
                   {isLocked && (
-                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[3px] rounded-2xl">
+                    <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#111315]/70 backdrop-blur-[3px] rounded-2xl">
                       <Link href={`/dashboard/billing?plan=STANDARD`} className="flex items-center gap-1.5 bg-slate-800 text-white px-3 py-1.5 rounded-full text-xs shadow-lg hover:bg-slate-700 transition-colors">
                         <Lock className="w-3 h-3" />
                         <span>M 플랜에서 {platform.platformName} 분석 가능</span>
@@ -194,7 +194,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: color }}
                       />
-                      <span className="font-semibold text-slate-800">{platform.platformName}</span>
+                      <span className="font-semibold text-[#f5f5ef]">{platform.platformName}</span>
                       {isTeaser && (
                         <Link href="/dashboard/billing?plan=STANDARD" className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors whitespace-nowrap">
                           미리보기 · 첫 질문 1개만
@@ -203,14 +203,14 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                       {hasData && <TrendIcon direction={platform.trend.direction} />}
                       {hasData && platform.trend.change !== 0 && (
                         <span className={`text-xs font-medium ${
-                          platform.trend.direction === 'UP' ? 'text-brand-600' :
-                          platform.trend.direction === 'DOWN' ? 'text-red-600' : 'text-slate-500'
+                          platform.trend.direction === 'UP' ? 'text-[#ff9565]' :
+                          platform.trend.direction === 'DOWN' ? 'text-red-400' : 'text-[#959c9f]'
                         }`}>
                           {platform.trend.change > 0 ? '+' : ''}{platform.trend.change}%
                         </span>
                       )}
                       {!hasData && (
-                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        <span className="text-xs text-slate-400 bg-[#181b1e] px-2 py-0.5 rounded-full">
                           크롤링 대기
                         </span>
                       )}
@@ -223,7 +223,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                     </div>
                   </div>
                   
-                  <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-[#181b1e] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
                       style={{
@@ -235,9 +235,9 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                   
                   {hasData ? (
                     <div className="grid grid-cols-4 gap-2 text-xs">
-                      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
-                        <div className="text-slate-500 mb-1">언급률</div>
-                        <div className="font-semibold text-base text-slate-800">
+                      <div className="bg-[#111315]/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-[#30343a]/80">
+                        <div className="text-[#959c9f] mb-1">언급률</div>
+                        <div className="font-semibold text-base text-[#f5f5ef]">
                           {platform.mentionRate}%
                         </div>
                         <div className="text-slate-400">
@@ -245,9 +245,9 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                         </div>
                       </div>
                       
-                      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
-                        <div className="text-slate-500 mb-1">평균 순위</div>
-                        <div className="font-semibold text-base text-slate-800">
+                      <div className="bg-[#111315]/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-[#30343a]/80">
+                        <div className="text-[#959c9f] mb-1">평균 순위</div>
+                        <div className="font-semibold text-base text-[#f5f5ef]">
                           {platform.ranking.avgPosition ? `${platform.ranking.avgPosition}위` : '-'}
                         </div>
                         <div className="text-slate-400">
@@ -255,9 +255,9 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                         </div>
                       </div>
                       
-                      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
-                        <div className="text-slate-500 mb-1">긍정률</div>
-                        <div className="font-semibold text-base text-brand-600">
+                      <div className="bg-[#111315]/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-[#30343a]/80">
+                        <div className="text-[#959c9f] mb-1">긍정률</div>
+                        <div className="font-semibold text-base text-[#ff9565]">
                           {platform.sentiment.positiveRate}%
                         </div>
                         <div className="text-slate-400">
@@ -265,8 +265,8 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                         </div>
                       </div>
                       
-                      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
-                        <div className="text-slate-500 mb-1">감성</div>
+                      <div className="bg-[#111315]/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-[#30343a]/80">
+                        <div className="text-[#959c9f] mb-1">감성</div>
                         <div className="flex items-center justify-center gap-1">
                           <CheckCircle2 className="w-3 h-3 text-brand-500" />
                           <span>{platform.sentiment.positive}</span>

@@ -10,22 +10,22 @@ export const metadata: Metadata = {
 // 2026-08-20 전 사이트 공통 법적 페이지 템플릿 적용 ({{서비스명}}=페이션트 시그널)
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#f1f1eb] flex flex-col text-[#141512]">
-      <header className="border-b border-[#d4d6cb] bg-white">
+    <div className="min-h-screen bg-[#08090a] flex flex-col text-[#f5f5ef]">
+      <header className="border-b border-[#30343a] bg-[#111315]">
         <div className="mx-auto flex h-[72px] max-w-5xl items-center justify-between px-5 sm:px-8">
-          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d0ff43] text-[#141512]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
-          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#687253] hover:text-[#44551d]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
+          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d9ff43] text-[#08090a]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
+          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#c0c4c7] hover:text-[#c0c4c7]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
         </div>
       </header>
       <main className="flex-1 max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16 w-full">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#44551d]">Legal</p>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#141512] mb-3">페이션트 시그널 이용약관</h1>
-        <p className="text-sm text-[#72756a] mb-8">시행일: 2026년 8월 20일</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#c0c4c7]">Legal</p>
+        <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#f5f5ef] mb-3">페이션트 시그널 이용약관</h1>
+        <p className="text-sm text-[#959c9f] mb-8">시행일: 2026년 8월 20일</p>
 
-        <div className="border-t border-[#141512] bg-white p-6 sm:p-9 divide-y divide-[#d4d6cb] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+        <div className="border-t border-[#30343a] bg-[#111315] p-6 sm:p-9 divide-y divide-[#30343a] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제1조 (목적)</h2>
-            <p className="text-slate-600 leading-relaxed">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제1조 (목적)</h2>
+            <p className="text-[#959c9f] leading-relaxed">
               이 약관은 페이션트퍼널(이하 &quot;회사&quot;)이 제공하는 페이션트 시그널 및 관련 제반
               서비스(이하 &quot;서비스&quot;)의 이용과 관련하여 회사와 회원 간의 권리, 의무 및
               책임사항을 규정함을 목적으로 합니다.
@@ -33,8 +33,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제2조 (정의)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제2조 (정의)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 &quot;서비스&quot;란 회사가 웹사이트를 통해 제공하는 병·의원 경영 지원 소프트웨어 및
                 부가 기능 일체를 말합니다.
@@ -48,8 +48,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제3조 (약관의 게시와 개정)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제3조 (약관의 게시와 개정)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>회사는 이 약관을 서비스 초기 화면 또는 연결 화면에 게시합니다.</li>
               <li>
                 회사는 관련 법령을 위배하지 않는 범위에서 약관을 개정할 수 있으며, 개정 시 적용일자
@@ -59,8 +59,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제4조 (이용계약의 체결)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제4조 (이용계약의 체결)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>이용계약은 가입 신청자가 약관에 동의하고 회사가 이를 승낙함으로써 체결됩니다.</li>
               <li>
                 회사는 타인 명의 도용, 허위 정보 기재 등의 경우 승낙을 거부하거나 사후에 계약을
@@ -70,8 +70,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제5조 (요금제·결제·갱신)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제5조 (요금제·결제·갱신)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 서비스 요금제와 가격은 서비스 내 요금 안내 페이지에 게시하며, 부가가치세는
                 별도입니다.
@@ -91,8 +91,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제6조 (구독 해지와 환불)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제6조 (구독 해지와 환불)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 회원은 언제든지 서비스 내 설정 또는 고객센터를 통해 구독을 해지할 수 있으며,
                 위약금은 없습니다.
@@ -100,7 +100,7 @@ export default function TermsPage() {
               <li>해지 시 이미 결제된 이용기간 종료일까지 서비스를 이용할 수 있습니다.</li>
               <li>
                 환불은 별도{' '}
-                <a href="/refund" className="text-[#44551d] hover:text-[#141512] underline">
+                <a href="/refund" className="text-[#c0c4c7] hover:text-[#f5f5ef] underline">
                   「환불규정」
                 </a>
                 에 따릅니다.
@@ -109,15 +109,15 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제7조 (회사의 의무)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제7조 (회사의 의무)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 회사는 안정적인 서비스 제공을 위해 노력하며, 설비 장애 또는 데이터 멸실 시 지체 없이
                 복구합니다.
               </li>
               <li>
                 회사는 회원의 개인정보를{' '}
-                <a href="/privacy" className="text-[#44551d] hover:text-[#141512] underline">
+                <a href="/privacy" className="text-[#c0c4c7] hover:text-[#f5f5ef] underline">
                   「개인정보처리방침」
                 </a>
                 에 따라 보호합니다.
@@ -127,8 +127,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제8조 (회원의 의무)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제8조 (회원의 의무)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 회원은 서비스 이용 시 관련 법령(의료법, 개인정보 보호법 등)을 준수해야 하며, 특히
                 환자 정보 등 제3자의 개인정보를 서비스에 입력·저장하는 경우 해당 정보 처리에 필요한
@@ -150,8 +150,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제9조 (데이터의 귀속과 보관)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제9조 (데이터의 귀속과 보관)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>회원이 서비스에 입력한 데이터의 권리는 회원에게 있습니다.</li>
               <li>
                 계약 종료 후 30일간 데이터를 보관하며, 이 기간 내 회원의 요청 시 내보내기를
@@ -161,8 +161,8 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제10조 (책임의 제한)</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제10조 (책임의 제한)</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 회사는 천재지변, 통신사업자의 귀책 등 불가항력으로 인한 손해에 대해 책임지지
                 않습니다.
@@ -178,21 +178,21 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">제11조 (분쟁 해결)</h2>
-            <p className="text-slate-600 leading-relaxed">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">제11조 (분쟁 해결)</h2>
+            <p className="text-[#959c9f] leading-relaxed">
               이 약관은 대한민국 법률에 따라 해석되며, 분쟁에 관한 소송은 민사소송법상 관할법원에
               제기합니다.
             </p>
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
-            <p className="text-slate-600">이 약관은 2026년 8월 20일부터 시행합니다.</p>
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">부칙</h2>
+            <p className="text-[#959c9f]">이 약관은 2026년 8월 20일부터 시행합니다.</p>
           </section>
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/" className="text-[#44551d] hover:text-[#141512] font-medium">
+          <a href="/" className="text-[#c0c4c7] hover:text-[#f5f5ef] font-medium">
             ← 메인으로 돌아가기
           </a>
         </div>

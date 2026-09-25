@@ -65,39 +65,39 @@ function LoginForm() {
 
   return (
     <AuthShell mode="login">
-            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#44551d]">Welcome back</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">다시, 시그널.</h1>
-            <p className="mt-2 text-sm leading-6 text-[#687253]">Patient Signal에 로그인해 우리 병원의 AI 답변을 확인하세요.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#c0c4c7]">Welcome back</p>
+            <h1 className="font-display mt-3 text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">다시, 시그널.</h1>
+            <p className="mt-2 text-sm leading-6 text-[#c0c4c7]">Patient Signal에 로그인해 우리 병원의 AI 답변을 확인하세요.</p>
 
-            <button type="button" onClick={handleHubLogin} className="mt-8 flex h-12 w-full items-center justify-center gap-2.5 rounded-none bg-[#141512] px-4 text-sm font-semibold text-white hover:bg-[#d0ff43]">
+            <button type="button" onClick={handleHubLogin} className="mt-8 flex h-12 w-full items-center justify-center gap-2.5 rounded-none bg-[#08090a] px-4 text-sm font-semibold text-white hover:bg-[#d9ff43]">
               <span className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-white/20 text-[10px] font-bold">PH</span>
               Patient Hub 계정으로 로그인 <ArrowRight className="h-4 w-4" />
             </button>
-            <p className="mt-2.5 text-center text-xs text-[#72756a]">Google 계정도 Patient Hub에서 로그인할 수 있습니다.</p>
+            <p className="mt-2.5 text-center text-xs text-[#959c9f]">Google 계정도 Patient Hub에서 로그인할 수 있습니다.</p>
 
-            <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#72756a]"><span className="h-px flex-1 bg-[#d4d6cb]" />이메일로 로그인<span className="h-px flex-1 bg-[#d4d6cb]" /></div>
+            <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#959c9f]"><span className="h-px flex-1 bg-[#30343a]" />이메일로 로그인<span className="h-px flex-1 bg-[#30343a]" /></div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {error && <div role="alert" className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+              {error && <div role="alert" className="rounded-none border border-red-200 bg-[#291718] p-3 text-sm text-red-400">{error}</div>}
               <div className="space-y-2">
-                <label htmlFor="login-email" className="text-sm font-semibold text-[#141512]">이메일</label>
+                <label htmlFor="login-email" className="text-sm font-semibold text-[#f5f5ef]">이메일</label>
                 <Input id="login-email" type="email" placeholder="doctor@clinic.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="email" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="login-password" className="text-sm font-semibold text-[#141512]">비밀번호</label>
+                <label htmlFor="login-password" className="text-sm font-semibold text-[#f5f5ef]">비밀번호</label>
                 <div className="relative">
                   <Input id="login-password" type={showPassword ? 'text' : 'password'} placeholder="비밀번호 입력" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required autoComplete="current-password" />
-                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#72756a] hover:text-[#141512]" onClick={() => setShowPassword(!showPassword)}>
+                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#959c9f] hover:text-[#f5f5ef]" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
-              <div className="text-right"><Link href="/forgot-password" className="text-xs font-semibold text-[#687253] hover:text-[#44551d]">비밀번호를 잊으셨나요?</Link></div>
-              <button type="submit" disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-none border border-[#d4d6cb] bg-white text-sm font-semibold text-[#141512] hover:bg-[#f1f1eb] disabled:opacity-50">
+              <div className="text-right"><Link href="/forgot-password" className="text-xs font-semibold text-[#c0c4c7] hover:text-[#c0c4c7]">비밀번호를 잊으셨나요?</Link></div>
+              <button type="submit" disabled={loading} className="flex h-11 w-full items-center justify-center gap-2 rounded-none border border-[#30343a] bg-[#111315] text-sm font-semibold text-[#f5f5ef] hover:bg-[#08090a] disabled:opacity-50">
                 <LockKeyhole className="h-4 w-4" />{loading ? '로그인 중...' : '이메일로 로그인'}
               </button>
             </form>
-            <div className="mt-7 border-t border-[#d4d6cb] pt-6 text-center text-sm text-[#687253]">계정이 없으신가요? <Link href="/register" className="font-semibold text-[#44551d] hover:underline">무료 회원가입</Link></div>
+            <div className="mt-7 border-t border-[#30343a] pt-6 text-center text-sm text-[#c0c4c7]">계정이 없으신가요? <Link href="/register" className="font-semibold text-[#c0c4c7] hover:underline">무료 회원가입</Link></div>
 
     </AuthShell>
   );
@@ -105,7 +105,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#f1f1eb]"><span className="h-7 w-7 animate-spin rounded-full border-2 border-[#d4d6cb] border-t-[#d0ff43]" /></div>}>
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-[#08090a]"><span className="h-7 w-7 animate-spin rounded-full border-2 border-[#30343a] border-t-[#d9ff43]" /></div>}>
       <LoginForm />
     </Suspense>
   );

@@ -104,12 +104,12 @@ function HubCallbackHandler() {
   if (status === 'error') {
     return (
       <div className="max-w-md w-full mx-auto">
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
-          <div className="rounded-full h-16 w-16 bg-red-100 flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-600 text-3xl">✕</span>
+        <div className="bg-[#111315]/80 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
+          <div className="rounded-full h-16 w-16 bg-[#3a2022] flex items-center justify-center mx-auto mb-4">
+            <span className="text-red-400 text-3xl">✕</span>
           </div>
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Patient Hub 로그인 실패</h2>
-          <p className="text-red-600 mb-6">{errorMessage}</p>
+          <h2 className="font-display text-xl font-bold text-[#f5f5ef] mb-2">Patient Hub 로그인 실패</h2>
+          <p className="text-red-400 mb-6">{errorMessage}</p>
           <a
             href="/login"
             className="inline-block w-full py-3 px-6 bg-brand-600 text-white rounded-lg hover:bg-brand-700 transition-colors font-medium"
@@ -126,13 +126,13 @@ function HubCallbackHandler() {
       <div
         className={`rounded-full h-12 w-12 mx-auto mb-4 ${
           status === 'success'
-            ? 'bg-brand-100 flex items-center justify-center'
+            ? 'bg-[#352115] flex items-center justify-center'
             : 'animate-spin border-b-2 border-brand-600'
         }`}
       >
-        {status === 'success' && <span className="text-brand-600 text-xl">✓</span>}
+        {status === 'success' && <span className="text-[#ff9565] text-xl">✓</span>}
       </div>
-      <p className="text-slate-600">
+      <p className="text-[#959c9f]">
         {status === 'processing' && 'Patient Hub 계정으로 로그인 중...'}
         {status === 'success' && '로그인 성공! 이동 중...'}
       </p>
@@ -142,12 +142,12 @@ function HubCallbackHandler() {
 
 export default function HubCallbackPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#111315] p-4">
       <Suspense
         fallback={
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">로딩 중...</p>
+            <p className="text-[#959c9f]">로딩 중...</p>
           </div>
         }
       >

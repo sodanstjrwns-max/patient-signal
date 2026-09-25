@@ -48,8 +48,8 @@ function BillingSuccessContent() {
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-12 w-12 animate-spin text-brand-600" />
-        <p className="text-[#687253] text-lg">카드를 등록하고 있습니다...</p>
+        <Loader2 className="h-12 w-12 animate-spin text-[#ff9565]" />
+        <p className="text-[#c0c4c7] text-lg">카드를 등록하고 있습니다...</p>
       </div>
     );
   }
@@ -57,11 +57,11 @@ function BillingSuccessContent() {
   if (status === 'error') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 p-6">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+        <div className="w-16 h-16 bg-[#3a2022] rounded-full flex items-center justify-center">
           <CreditCard className="h-8 w-8 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#141512]">카드 등록에 문제가 있습니다</h2>
-        <p className="text-[#72756a] text-center max-w-md">
+        <h2 className="font-display text-2xl font-bold text-[#f5f5ef]">카드 등록에 문제가 있습니다</h2>
+        <p className="text-[#959c9f] text-center max-w-md">
           다시 시도해주세요. 문제가 지속되면 고객센터로 문의해주세요.
         </p>
         <a
@@ -76,13 +76,13 @@ function BillingSuccessContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-      <div className="w-24 h-24 bg-[#f1f1eb] rounded-full flex items-center justify-center">
-        <PartyPopper className="h-12 w-12 text-brand-600" />
+      <div className="w-24 h-24 bg-[#08090a] rounded-full flex items-center justify-center">
+        <PartyPopper className="h-12 w-12 text-[#ff9565]" />
       </div>
 
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[#141512] mb-2">카드 등록 완료!</h2>
-        <p className="text-[#72756a]">
+        <h2 className="font-display text-3xl font-bold text-[#f5f5ef] mb-2">카드 등록 완료!</h2>
+        <p className="text-[#959c9f]">
           자동결제가 설정되었습니다. 무료 체험 중이라면 남은 체험 기간이 끝난 뒤 결제가 시작됩니다.
         </p>
       </div>
@@ -102,7 +102,7 @@ export default function BillingSuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#ff9565]" />
       </div>
     }>
       <BillingSuccessContent />

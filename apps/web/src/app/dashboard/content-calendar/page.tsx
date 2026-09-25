@@ -36,19 +36,19 @@ interface CalendarItem {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  PLANNED: { label: '계획', color: 'bg-[#e9ebe1] text-[#687253]', icon: Clock },
-  ANALYZED: { label: '분석 완료', color: 'bg-[#e9ebe1] text-[#141512]', icon: Search },
+  PLANNED: { label: '계획', color: 'bg-[#181b1e] text-[#c0c4c7]', icon: Clock },
+  ANALYZED: { label: '분석 완료', color: 'bg-[#181b1e] text-[#f5f5ef]', icon: Search },
   GENERATING: { label: '생성 중', color: 'bg-amber-100 text-amber-700', icon: Loader2 },
-  PUBLISHED: { label: '발행됨', color: 'bg-brand-100 text-brand-700', icon: CheckCircle },
-  SKIPPED: { label: '건너뜀', color: 'bg-red-100 text-red-600', icon: AlertTriangle },
+  PUBLISHED: { label: '발행됨', color: 'bg-[#352115] text-[#ff9565]', icon: CheckCircle },
+  SKIPPED: { label: '건너뜀', color: 'bg-[#3a2022] text-red-400', icon: AlertTriangle },
 };
 
 const funnelConfig: Record<string, { label: string; color: string; emoji: string }> = {
   AWARENESS: { label: '인지', color: 'bg-sky-100 text-sky-700', emoji: '👀' },
-  CONSIDERATION: { label: '고려', color: 'bg-[#e9ebe1] text-[#141512]', emoji: '🤔' },
-  DECISION: { label: '결정', color: 'bg-brand-100 text-brand-700', emoji: '✅' },
+  CONSIDERATION: { label: '고려', color: 'bg-[#181b1e] text-[#f5f5ef]', emoji: '🤔' },
+  DECISION: { label: '결정', color: 'bg-[#352115] text-[#ff9565]', emoji: '✅' },
   RETENTION: { label: '유지', color: 'bg-amber-100 text-amber-700', emoji: '🔄' },
-  ADVOCACY: { label: '추천', color: 'bg-[#e9ebe1] text-[#141512]', emoji: '💖' },
+  ADVOCACY: { label: '추천', color: 'bg-[#181b1e] text-[#f5f5ef]', emoji: '💖' },
 };
 
 const priorityColors: Record<string, string> = {
@@ -137,27 +137,27 @@ export default function ContentCalendarPage() {
         {/* ─── 상단 통계 + 생성 버튼 ─── */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 flex-1">
-            <div className="bg-white rounded-lg border border-[#d4d6cb] px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-[#33372c]">{calendar?.total || 0}</p>
-              <p className="text-[10px] text-[#72756a]">총 주차</p>
+            <div className="bg-[#111315] rounded-lg border border-[#30343a] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#f5f5ef]">{calendar?.total || 0}</p>
+              <p className="text-[10px] text-[#959c9f]">총 주차</p>
             </div>
-            <div className="bg-white rounded-lg border border-[#d4d6cb] px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-brand-600">{stats.PUBLISHED || 0}</p>
-              <p className="text-[10px] text-[#72756a]">발행 완료</p>
+            <div className="bg-[#111315] rounded-lg border border-[#30343a] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#ff9565]">{stats.PUBLISHED || 0}</p>
+              <p className="text-[10px] text-[#959c9f]">발행 완료</p>
             </div>
-            <div className="bg-white rounded-lg border border-[#d4d6cb] px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-[#44551d]">{stats.ANALYZED || 0}</p>
-              <p className="text-[10px] text-[#72756a]">분석 완료</p>
+            <div className="bg-[#111315] rounded-lg border border-[#30343a] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#c0c4c7]">{stats.ANALYZED || 0}</p>
+              <p className="text-[10px] text-[#959c9f]">분석 완료</p>
             </div>
-            <div className="bg-white rounded-lg border border-[#d4d6cb] px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-[#687253]">{stats.PLANNED || 0}</p>
-              <p className="text-[10px] text-[#72756a]">계획 중</p>
+            <div className="bg-[#111315] rounded-lg border border-[#30343a] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#c0c4c7]">{stats.PLANNED || 0}</p>
+              <p className="text-[10px] text-[#959c9f]">계획 중</p>
             </div>
-            <div className="bg-white rounded-lg border border-[#d4d6cb] px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-[#44551d]">
+            <div className="bg-[#111315] rounded-lg border border-[#30343a] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#c0c4c7]">
                 {calendar?.total ? Math.round(((stats.PUBLISHED || 0) / calendar.total) * 100) : 0}%
               </p>
-              <p className="text-[10px] text-[#72756a]">진행률</p>
+              <p className="text-[10px] text-[#959c9f]">진행률</p>
             </div>
           </div>
           <Button
@@ -175,9 +175,9 @@ export default function ContentCalendarPage() {
 
         {/* ─── 퍼널 분포 바 ─── */}
         {calendar?.total > 0 && (
-          <Card className="border border-[#d4d6cb] shadow-none">
+          <Card className="border border-[#30343a] shadow-none">
             <CardContent className="p-4">
-              <h4 className="text-xs font-semibold text-[#72756a] mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
+              <h4 className="text-xs font-semibold text-[#959c9f] mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
               <div className="flex h-6 rounded-full overflow-hidden">
                 {Object.entries(funnelDist).map(([stage, count]: [string, any]) => {
                   const config = funnelConfig[stage] || funnelConfig.AWARENESS;
@@ -202,7 +202,7 @@ export default function ContentCalendarPage() {
                     key={stage}
                     onClick={() => setFilterFunnel(filterFunnel === stage ? '' : stage)}
                     className={`text-[10px] px-2 py-0.5 rounded-full transition ${
-                      filterFunnel === stage ? config.color + ' ring-2 ring-offset-1' : 'text-[#909781] hover:text-[#687253]'
+                      filterFunnel === stage ? config.color + ' ring-2 ring-offset-1' : 'text-[#959c9f] hover:text-[#c0c4c7]'
                     }`}
                   >
                     {config.emoji} {config.label} {funnelDist[stage] || 0}
@@ -217,7 +217,7 @@ export default function ContentCalendarPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterStatus('')}
-            className={`text-xs px-3 py-1.5 rounded-full transition ${!filterStatus ? 'bg-brand-600 text-white' : 'bg-white text-[#687253] hover:bg-[#f1f1eb] border'}`}
+            className={`text-xs px-3 py-1.5 rounded-full transition ${!filterStatus ? 'bg-brand-600 text-white' : 'bg-[#111315] text-[#c0c4c7] hover:bg-[#08090a] border'}`}
           >
             전체
           </button>
@@ -226,7 +226,7 @@ export default function ContentCalendarPage() {
               key={key}
               onClick={() => setFilterStatus(filterStatus === key ? '' : key)}
               className={`text-xs px-3 py-1.5 rounded-full transition flex items-center gap-1 ${
-                filterStatus === key ? config.color + ' ring-2 ring-offset-1' : 'bg-white text-[#687253] hover:bg-[#f1f1eb] border'
+                filterStatus === key ? config.color + ' ring-2 ring-offset-1' : 'bg-[#111315] text-[#c0c4c7] hover:bg-[#08090a] border'
               }`}
             >
               {config.label}
@@ -236,11 +236,11 @@ export default function ContentCalendarPage() {
 
         {/* ─── 캘린더 비어있을 때 ─── */}
         {!isLoading && items.length === 0 && (
-          <Card className="border border-[#d4d6cb] shadow-none">
+          <Card className="border border-[#30343a] shadow-none">
             <CardContent className="p-12 text-center">
               <CalendarDays className="w-16 h-16 text-[#b8bcab] mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-[#525849] mb-2">콘텐츠 캘린더가 비어있습니다</h3>
-              <p className="text-sm text-[#72756a] mb-6">
+              <h3 className="text-lg font-bold text-[#c0c4c7] mb-2">콘텐츠 캘린더가 비어있습니다</h3>
+              <p className="text-sm text-[#959c9f] mb-6">
                 AI가 병원의 핵심 시술, 지역, 퍼널 단계를 고려하여<br />
                 56주치 콘텐츠 계획을 자동으로 생성합니다.
               </p>
@@ -263,7 +263,7 @@ export default function ContentCalendarPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-3" />
-            <p className="text-sm text-[#72756a]">캘린더 로딩 중...</p>
+            <p className="text-sm text-[#959c9f]">캘린더 로딩 중...</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -279,16 +279,16 @@ export default function ContentCalendarPage() {
               return (
                 <Card
                   key={item.id}
-                  className={`border border-[#d4d6cb] shadow-none border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
+                  className={`border border-[#30343a] shadow-none border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
                 >
                   <CardContent className="p-0">
                     <button
                       onClick={() => setExpandedWeek(isExpanded ? null : item.weekNumber)}
-                      className="w-full p-4 text-left flex items-center gap-3 hover:bg-[#f1f1eb]/50 transition"
+                      className="w-full p-4 text-left flex items-center gap-3 hover:bg-[#08090a]/50 transition"
                     >
                       {/* 주차 번호 */}
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                        isThisWeek ? 'bg-brand-600 text-white' : isPast ? 'bg-[#e9ebe1] text-[#909781]' : 'bg-[#e9ebe1] text-[#525849]'
+                        isThisWeek ? 'bg-brand-600 text-white' : isPast ? 'bg-[#181b1e] text-[#959c9f]' : 'bg-[#181b1e] text-[#c0c4c7]'
                       }`}>
                         {item.weekNumber}
                       </div>
@@ -298,14 +298,14 @@ export default function ContentCalendarPage() {
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${stConfig.color}`}>{stConfig.label}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${fConfig.color}`}>{fConfig.emoji} {fConfig.label}</span>
                           {item.contentType && item.contentType !== 'BLOG' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#e9ebe1] text-[#72756a]">{item.contentType}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#181b1e] text-[#959c9f]">{item.contentType}</span>
                           )}
                           {isThisWeek && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 font-bold">이번 주</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#352115] text-[#ff9565] font-bold">이번 주</span>
                           )}
                         </div>
-                        <p className="text-sm font-medium text-[#33372c] truncate">{item.topic}</p>
-                        <p className="text-xs text-[#72756a]">
+                        <p className="text-sm font-medium text-[#f5f5ef] truncate">{item.topic}</p>
+                        <p className="text-xs text-[#959c9f]">
                           {item.targetKeyword} · {scheduledDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                           {item.procedure && ` · ${item.procedure}`}
                         </p>
@@ -314,7 +314,7 @@ export default function ContentCalendarPage() {
                       {/* SEO 지시어 유무 표시 */}
                       {item.seoDirectives && (
                         <div className="flex-shrink-0">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#e9ebe1] text-[#44551d] font-medium">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#181b1e] text-[#c0c4c7] font-medium">
                             SEO 지시어 ✓
                           </span>
                         </div>
@@ -325,7 +325,7 @@ export default function ContentCalendarPage() {
 
                     {/* 확장 영역 */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 border-t bg-[#f1f1eb]/50 space-y-3">
+                      <div className="px-4 pb-4 border-t bg-[#08090a]/50 space-y-3">
                         {/* 액션 버튼 */}
                         <div className="flex gap-2 mt-3">
                           <Button
@@ -349,27 +349,27 @@ export default function ContentCalendarPage() {
 
                         {/* SEO 지시어 표시 */}
                         {item.seoDirectives && (
-                          <div className="bg-white rounded-lg p-3 border">
-                            <h5 className="text-xs font-semibold text-[#141512] mb-2 flex items-center gap-1">
+                          <div className="bg-[#111315] rounded-lg p-3 border">
+                            <h5 className="text-xs font-semibold text-[#f5f5ef] mb-2 flex items-center gap-1">
                               <Sparkles className="w-3 h-3" />
                               역분석 기반 SEO 지시어
                             </h5>
                             {(item.seoDirectives as any)?.directives?.slice(0, 3).map((d: any, i: number) => (
                               <div key={i} className="flex items-start gap-2 mb-2">
                                 <span className={`text-[10px] px-1 py-0.5 rounded font-bold ${
-                                  d.priority === 'critical' ? 'bg-red-100 text-red-600' :
+                                  d.priority === 'critical' ? 'bg-[#3a2022] text-red-400' :
                                   d.priority === 'high' ? 'bg-amber-100 text-amber-600' :
-                                  'bg-[#e9ebe1] text-[#44551d]'
+                                  'bg-[#181b1e] text-[#c0c4c7]'
                                 }`}>
                                   {d.priority === 'critical' ? '필수' : d.priority === 'high' ? '권장' : '참고'}
                                 </span>
-                                <p className="text-xs text-[#525849]">{d.action}</p>
+                                <p className="text-xs text-[#c0c4c7]">{d.action}</p>
                               </div>
                             ))}
                             {(item.seoDirectives as any)?.contentScore && (
                               <div className="mt-2 pt-2 border-t flex items-center gap-4 text-xs">
-                                <span className="text-[#72756a]">인용 가능성:</span>
-                                <span className="font-bold text-[#525849]">
+                                <span className="text-[#959c9f]">인용 가능성:</span>
+                                <span className="font-bold text-[#c0c4c7]">
                                   {(item.seoDirectives as any).contentScore.current} → {(item.seoDirectives as any).contentScore.potential}
                                 </span>
                               </div>
@@ -379,7 +379,7 @@ export default function ContentCalendarPage() {
 
                         {/* 메모 */}
                         {item.notes && (
-                          <p className="text-xs text-[#72756a] italic">📝 {item.notes}</p>
+                          <p className="text-xs text-[#959c9f] italic">📝 {item.notes}</p>
                         )}
                       </div>
                     )}

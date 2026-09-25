@@ -34,8 +34,8 @@ export function CompetitorComparison({ myHospital, competitors }: CompetitorComp
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-brand-100">
-              <Users className="h-4 w-4 text-brand-600" />
+            <div className="p-1.5 rounded-xl bg-[#352115]">
+              <Users className="h-4 w-4 text-[#ff9565]" />
             </div>
             경쟁사 비교
           </CardTitle>
@@ -53,9 +53,9 @@ export function CompetitorComparison({ myHospital, competitors }: CompetitorComp
               key={hospital.name}
               className={cn(
                 'flex items-center gap-4 p-3.5 rounded-2xl transition-all duration-200',
-                hospital.isMe 
-                  ? 'bg-brand-50/80 border border-brand-200/60 shadow-sm' 
-                  : 'bg-white/60 backdrop-blur-sm border border-slate-100/80 hover:bg-white/80 hover:shadow-card'
+                hospital.isMe
+                  ? 'bg-[#281a13]/80 border border-[#30343a]/60 shadow-sm'
+                  : 'bg-[#111315]/60 backdrop-blur-sm border border-[#30343a]/80 hover:bg-[#111315]/80 hover:shadow-card'
               )}
             >
               <div
@@ -64,10 +64,10 @@ export function CompetitorComparison({ myHospital, competitors }: CompetitorComp
                   index === 0
                     ? 'bg-gradient-to-br from-amber-200 to-yellow-300 text-amber-800 shadow-sm'
                     : index === 1
-                    ? 'bg-gradient-to-br from-slate-200 to-slate-300 text-slate-700'
+                    ? 'bg-gradient-to-br from-slate-200 to-slate-300 text-[#c0c4c7]'
                     : index === 2
                     ? 'bg-gradient-to-br from-orange-200 to-amber-200 text-orange-800'
-                    : 'bg-slate-100 text-slate-500'
+                    : 'bg-[#181b1e] text-[#959c9f]'
                 )}
               >
                 {index === 0 ? <Crown className="w-4 h-4" /> : index + 1}
@@ -77,20 +77,20 @@ export function CompetitorComparison({ myHospital, competitors }: CompetitorComp
                   <span
                     className={cn(
                       'font-medium truncate text-sm',
-                      hospital.isMe && 'text-brand-700 font-semibold'
+                      hospital.isMe && 'text-[#ff9565] font-semibold'
                     )}
                   >
                     {hospital.name}
                   </span>
                   {hospital.isMe && (
-                    <span className="px-2 py-0.5 bg-brand-100 text-brand-700 text-xs rounded-full font-medium">
+                    <span className="px-2 py-0.5 bg-[#352115] text-[#ff9565] text-xs rounded-full font-medium">
                       내 병원
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
+                  <div className="flex-1 h-1.5 bg-[#181b1e] rounded-full overflow-hidden">
+                    <div
                       className={cn(
                         'h-full rounded-full transition-all duration-500',
                         hospital.isMe ? 'bg-brand-500' : 'bg-slate-300'
@@ -114,10 +114,10 @@ export function CompetitorComparison({ myHospital, competitors }: CompetitorComp
         </div>
         {competitors.length === 0 && (
           <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#181b1e] flex items-center justify-center mx-auto mb-3">
               <Users className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500">등록된 경쟁사가 없습니다.</p>
+            <p className="text-sm text-[#959c9f]">등록된 경쟁사가 없습니다.</p>
             <p className="text-xs text-slate-400 mt-1">경쟁사를 추가해보세요.</p>
           </div>
         )}

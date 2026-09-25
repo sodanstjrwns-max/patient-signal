@@ -154,10 +154,10 @@ export function UpgradeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#141512]/55 p-4">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto border border-[#d4d6cb] bg-[#f1f1eb] shadow-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#08090a]/55 p-4">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto border border-[#30343a] bg-[#08090a] shadow-none">
         {/* Header */}
-        <div className="relative border-b border-[#d4d6cb] bg-[#141512] px-6 py-8 text-white">
+        <div className="relative border-b border-[#30343a] bg-[#08090a] px-6 py-8 text-white">
           <button
             onClick={onClose}
             aria-label="플랜 안내 닫기"
@@ -166,7 +166,7 @@ export function UpgradeModal({
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <Lock className="h-5 w-5 text-[#ff5d2a]" />
+            <Lock className="h-5 w-5 text-[#ff6a24]" />
             <h3 className="text-2xl font-semibold tracking-[-0.045em]">더 넓은 범위를 확인하세요</h3>
           </div>
           <p className="text-white/65 text-sm">
@@ -180,13 +180,13 @@ export function UpgradeModal({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-lg">{planDisplay[requiredPlan] || requiredPlan} 플랜</span>
-              <span className="text-brand-600 font-bold text-lg">
+              <span className="text-[#ff9565] font-bold text-lg">
                 {planPrices[requiredPlan] || '문의'}
               </span>
             </div>
             <ul className="space-y-2">
               {(planFeatures[requiredPlan] || []).map((feat, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#687253]">
+                <li key={i} className="flex items-start gap-2 text-sm text-[#c0c4c7]">
                   <Check className="w-4 h-4 text-brand-500 mt-0.5 flex-shrink-0" />
                   {feat}
                 </li>
@@ -194,8 +194,8 @@ export function UpgradeModal({
             </ul>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-yellow-800">
+          <div className="bg-[#282418] border border-yellow-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-yellow-400">
               <strong>14일 무료 체험</strong> 가능! 마음에 안 들면 언제든 취소하세요.
             </p>
           </div>
@@ -203,7 +203,7 @@ export function UpgradeModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-[#d7dacd] rounded-lg text-[#687253] hover:bg-white text-sm"
+              className="flex-1 px-4 py-2.5 border border-[#30343a] rounded-lg text-[#c0c4c7] hover:bg-[#111315] text-sm"
             >
               나중에
             </button>
@@ -247,8 +247,8 @@ export function LockedFeature({
         onClick={() => setShowModal(true)}
       >
         <div className="opacity-50 pointer-events-none">{children}</div>
-        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-lg ">
-          <div className="flex items-center gap-2 bg-[#141512] text-white px-4 py-2 rounded-full text-sm shadow-none">
+        <div className="absolute inset-0 flex items-center justify-center bg-[#111315] rounded-lg ">
+          <div className="flex items-center gap-2 bg-[#08090a] text-white px-4 py-2 rounded-full text-sm shadow-none">
             <Lock className="w-4 h-4" />
             <span>{getRequiredPlan(feature)} 플랜 필요</span>
           </div>
@@ -285,12 +285,12 @@ export function UsageBar({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-[#687253]">{label}</span>
-        <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-[#141512]'}`}>
+        <span className="text-[#c0c4c7]">{label}</span>
+        <span className={`font-medium ${isAtLimit ? 'text-red-400' : isNearLimit ? 'text-yellow-400' : 'text-[#f5f5ef]'}`}>
           {used}/{limit === -1 ? '∞' : limit}
         </span>
       </div>
-      <div className="w-full bg-[#d4d6cb] rounded-full h-2">
+      <div className="w-full bg-[#30343a] rounded-full h-2">
         <div
           className={`h-2 rounded-full transition-all ${
             isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-brand-500'
@@ -299,7 +299,7 @@ export function UsageBar({
         />
       </div>
       {isAtLimit && showUpgrade && (
-        <p className="text-xs text-red-600">
+        <p className="text-xs text-red-400">
           한도에 도달했습니다.{' '}
           <a href="/dashboard/settings" className="underline font-medium">
             업그레이드

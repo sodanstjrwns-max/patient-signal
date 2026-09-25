@@ -30,23 +30,23 @@ import {
 // ─────────────────────────────────────────────
 
 const STATUS_STYLE: Record<string, { ring: string; text: string; bg: string; icon: any; label: string }> = {
-  GOOD: { ring: 'border-brand-200', text: 'text-brand-700', bg: 'bg-brand-50', icon: CheckCircle2, label: '양호' },
+  GOOD: { ring: 'border-[#30343a]', text: 'text-[#ff9565]', bg: 'bg-[#281a13]', icon: CheckCircle2, label: '양호' },
   WARN: { ring: 'border-amber-200', text: 'text-amber-700', bg: 'bg-amber-50', icon: AlertTriangle, label: '주의' },
-  BAD: { ring: 'border-red-200', text: 'text-red-700', bg: 'bg-red-50', icon: AlertTriangle, label: '위험' },
-  INFO: { ring: 'border-[#d4d6cb]', text: 'text-[#687253]', bg: 'bg-[#f1f1eb]', icon: Info, label: '참고' },
+  BAD: { ring: 'border-red-200', text: 'text-red-400', bg: 'bg-[#291718]', icon: AlertTriangle, label: '위험' },
+  INFO: { ring: 'border-[#30343a]', text: 'text-[#c0c4c7]', bg: 'bg-[#08090a]', icon: Info, label: '참고' },
 };
 
 const ZONE_STYLE: Record<string, { bar: string; chip: string }> = {
-  HOME_BASE: { bar: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700 border-brand-200' },
-  SNIPER: { bar: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700 border-brand-200' },
+  HOME_BASE: { bar: 'bg-brand-500', chip: 'bg-[#281a13] text-[#ff9565] border-[#30343a]' },
+  SNIPER: { bar: 'bg-brand-500', chip: 'bg-[#281a13] text-[#ff9565] border-[#30343a]' },
   VOLUME: { bar: 'bg-amber-500', chip: 'bg-amber-50 text-amber-700 border-amber-200' },
-  AVOID: { bar: 'bg-red-500', chip: 'bg-red-50 text-red-700 border-red-200' },
+  AVOID: { bar: 'bg-red-500', chip: 'bg-[#291718] text-red-400 border-red-200' },
 };
 
 const DIFF_STYLE: Record<string, string> = {
   EASY: 'bg-slate-400',
   MEDIUM: 'bg-brand-500',
-  HARD: 'bg-[#d0ff43]',
+  HARD: 'bg-[#d9ff43]',
 };
 
 function SectionTitle({
@@ -54,19 +54,19 @@ function SectionTitle({
 }: { icon: any; tag?: string; title: string; desc: string }) {
   return (
     <div className="flex items-start gap-3 mb-4">
-      <div className="h-10 w-10 rounded-md bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
-        <Icon className="h-5 w-5 text-brand-600" />
+      <div className="h-10 w-10 rounded-md bg-[#281a13] border border-[#30343a] flex items-center justify-center flex-shrink-0">
+        <Icon className="h-5 w-5 text-[#ff9565]" />
       </div>
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="text-base font-semibold text-[#141512]">{title}</h2>
+          <h2 className="font-display text-base font-semibold text-[#f5f5ef]">{title}</h2>
           {tag && (
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#e9ebe1] text-[#72756a] tracking-wide">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#181b1e] text-[#959c9f] tracking-wide">
               {tag}
             </span>
           )}
         </div>
-        <p className="text-xs text-[#72756a] font-medium mt-0.5">{desc}</p>
+        <p className="text-xs text-[#959c9f] font-medium mt-0.5">{desc}</p>
       </div>
     </div>
   );
@@ -74,7 +74,7 @@ function SectionTitle({
 
 function Bar({ pct, className = 'bg-brand-500' }: { pct: number; className?: string }) {
   return (
-    <div className="h-2 rounded-full bg-[#e9ebe1] overflow-hidden">
+    <div className="h-2 rounded-full bg-[#181b1e] overflow-hidden">
       <div
         className={`h-full rounded-full transition-all ${className}`}
         style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
@@ -87,7 +87,7 @@ function Empty({ msg }: { msg: string }) {
   return (
     <div className="py-10 text-center">
       <Info className="h-8 w-8 text-[#b8bcab] mx-auto mb-2" />
-      <p className="text-sm text-[#909781] font-medium">{msg}</p>
+      <p className="text-sm text-[#959c9f] font-medium">{msg}</p>
     </div>
   );
 }
@@ -109,11 +109,11 @@ function VsBench({ value, bench, unit = '%', higherIsBetter = true }: {
   const Icon = diff === 0 ? Minus : good ? ArrowUpRight : ArrowDownRight;
   return (
     <span className={`inline-flex items-center gap-0.5 text-[11px] font-bold ${
-      diff === 0 ? 'text-[#909781]' : good ? 'text-brand-600' : 'text-red-500'
+      diff === 0 ? 'text-[#959c9f]' : good ? 'text-[#ff9565]' : 'text-red-500'
     }`}>
       <Icon className="h-3 w-3" />
       {diff > 0 ? '+' : ''}{diff}{unit}
-      <span className="text-[#909781] font-medium ml-0.5">vs 실측 {bench}{unit}</span>
+      <span className="text-[#959c9f] font-medium ml-0.5">vs 실측 {bench}{unit}</span>
     </span>
   );
 }
@@ -172,13 +172,13 @@ function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number })
                     {st.label}
                   </span>
                 </div>
-                <p className="text-xs font-bold text-[#72756a] mb-1 truncate">{c.title}</p>
-                <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <p className="text-xs font-bold text-[#959c9f] mb-1 truncate">{c.title}</p>
+                <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                   {c.value}
-                  {c.unit && <span className="text-sm font-bold text-[#909781] ml-0.5">{c.unit}</span>}
+                  {c.unit && <span className="text-sm font-bold text-[#959c9f] ml-0.5">{c.unit}</span>}
                 </p>
                 {c.note && (
-                  <p className="text-[11px] text-[#72756a] leading-snug mt-1.5">{c.note}</p>
+                  <p className="text-[11px] text-[#959c9f] leading-snug mt-1.5">{c.note}</p>
                 )}
               </CardContent>
             </Card>
@@ -190,12 +190,12 @@ function OverviewTab({ hospitalId, days }: { hospitalId: string; days: number })
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-3">
-              <Radar className="h-4 w-4 text-brand-600" />
-              <h3 className="text-sm font-semibold text-[#141512]">이 숫자가 말하는 것</h3>
+              <Radar className="h-4 w-4 text-[#ff9565]" />
+              <h3 className="text-sm font-semibold text-[#f5f5ef]">이 숫자가 말하는 것</h3>
             </div>
             <ul className="space-y-2.5">
               {insights.map((s, i) => (
-                <li key={i} className="text-xs text-[#687253] leading-relaxed pl-3 border-l-2 border-brand-200">
+                <li key={i} className="text-xs text-[#c0c4c7] leading-relaxed pl-3 border-l-2 border-[#30343a]">
                   {s}
                 </li>
               ))}
@@ -237,30 +237,30 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
           {eff.isLoading ? <Loading /> : !eff.data ? <Empty msg="인용 데이터가 없습니다." /> : (
             <>
               {eff.data.insight && (
-                <div className="mb-4 p-3 rounded-md bg-brand-50 border border-brand-100">
-                  <p className="text-xs text-brand-900 font-semibold leading-relaxed">{eff.data.insight}</p>
+                <div className="mb-4 p-3 rounded-md bg-[#281a13] border border-[#30343a]">
+                  <p className="text-xs text-[#ff9565] font-semibold leading-relaxed">{eff.data.insight}</p>
                 </div>
               )}
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
                 <div>
-                  <h4 className="text-xs font-semibold text-red-700 mb-2 flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5">
                     <TrendingDown className="h-3.5 w-3.5" />
                     <TermTip term="misleadingTop">착시 상위 채널</TermTip>
                   </h4>
                   {(eff.data.misleadingTop || []).length === 0 ? (
-                    <p className="text-xs text-[#909781] py-3">해당 채널이 없습니다. 물량 착시는 없는 상태입니다.</p>
+                    <p className="text-xs text-[#959c9f] py-3">해당 채널이 없습니다. 물량 착시는 없는 상태입니다.</p>
                   ) : (
                     <div className="space-y-2">
                       {eff.data.misleadingTop.map((d: any) => (
-                        <div key={d.domain} className="p-2.5 rounded-lg bg-red-50 border border-red-100">
+                        <div key={d.domain} className="p-2.5 rounded-lg bg-[#291718] border border-red-100">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#33372c] truncate">{d.label || d.domain}</span>
-                            <span className="text-[11px] font-bold text-red-600 flex-shrink-0 tabular-nums">
+                            <span className="text-xs font-bold text-[#f5f5ef] truncate">{d.label || d.domain}</span>
+                            <span className="text-[11px] font-bold text-red-400 flex-shrink-0 tabular-nums">
                               인용 {d.citationRank}위 → 효율 {d.efficiencyRank}위
                             </span>
                           </div>
-                          <p className="text-[11px] text-[#72756a] mt-1 tabular-nums">
+                          <p className="text-[11px] text-[#959c9f] mt-1 tabular-nums">
                             인용 {d.citations}건 · 공급량 {d.supplyIndex} · 효율 {d.efficiency}
                           </p>
                         </div>
@@ -270,23 +270,23 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
                 </div>
 
                 <div>
-                  <h4 className="text-xs font-semibold text-brand-700 mb-2 flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold text-[#ff9565] mb-2 flex items-center gap-1.5">
                     <TrendingUp className="h-3.5 w-3.5" />
                     <TermTip term="hiddenGem">숨은 보석</TermTip>
                   </h4>
                   {(eff.data.hiddenGems || []).length === 0 ? (
-                    <p className="text-xs text-[#909781] py-3">아직 저공급 고효율 채널을 못 잡았습니다.</p>
+                    <p className="text-xs text-[#959c9f] py-3">아직 저공급 고효율 채널을 못 잡았습니다.</p>
                   ) : (
                     <div className="space-y-2">
                       {eff.data.hiddenGems.map((d: any) => (
-                        <div key={d.domain} className="p-2.5 rounded-lg bg-brand-50 border border-brand-100">
+                        <div key={d.domain} className="p-2.5 rounded-lg bg-[#281a13] border border-[#30343a]">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-bold text-[#33372c] truncate">{d.label || d.domain}</span>
-                            <span className="text-[11px] font-bold text-brand-600 flex-shrink-0 tabular-nums">
+                            <span className="text-xs font-bold text-[#f5f5ef] truncate">{d.label || d.domain}</span>
+                            <span className="text-[11px] font-bold text-[#ff9565] flex-shrink-0 tabular-nums">
                               효율 {d.efficiencyRank}위
                             </span>
                           </div>
-                          <p className="text-[11px] text-[#72756a] mt-1 tabular-nums">
+                          <p className="text-[11px] text-[#959c9f] mt-1 tabular-nums">
                             인용 {d.citations}건 · 공급량 {d.supplyIndex} · 효율 {d.efficiency}
                           </p>
                         </div>
@@ -300,7 +300,7 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
               <div className="overflow-x-auto -mx-1">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#d4d6cb] text-[#909781]">
+                    <tr className="border-b border-[#30343a] text-[#959c9f]">
                       <th className="text-left py-2 px-2 font-bold">채널</th>
                       <th className="text-right py-2 px-2 font-bold">인용</th>
                       <th className="text-right py-2 px-2 font-bold whitespace-nowrap">
@@ -314,23 +314,23 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
                   </thead>
                   <tbody>
                     {(eff.data.domains || []).slice(0, 20).map((d: any) => (
-                      <tr key={d.domain} className="border-b border-slate-50 hover:bg-[#f1f1eb]/60">
+                      <tr key={d.domain} className="border-b border-slate-50 hover:bg-[#08090a]/60">
                         <td className="py-2 px-2">
                           <div className="flex items-center gap-1.5">
                             <span className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
                               (ZONE_STYLE[d.zone] || ZONE_STYLE.VOLUME).bar
                             }`} />
-                            <span className="font-semibold text-[#525849] truncate max-w-[180px]">
+                            <span className="font-semibold text-[#c0c4c7] truncate max-w-[180px]">
                               {d.label || d.domain}
                             </span>
                           </div>
                         </td>
-                        <td className="text-right py-2 px-2 tabular-nums text-[#687253]">{d.citations}</td>
-                        <td className="text-right py-2 px-2 tabular-nums text-[#909781]">{d.supplyIndex}</td>
-                        <td className="text-right py-2 px-2 tabular-nums font-bold text-[#33372c]">{d.efficiency}</td>
+                        <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">{d.citations}</td>
+                        <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{d.supplyIndex}</td>
+                        <td className="text-right py-2 px-2 tabular-nums font-bold text-[#f5f5ef]">{d.efficiency}</td>
                         <td className="text-right py-2 px-2 tabular-nums">
                           {d.rankDelta > 0 ? (
-                            <span className="text-brand-600 font-bold">▲ {d.rankDelta}</span>
+                            <span className="text-[#ff9565] font-bold">▲ {d.rankDelta}</span>
                           ) : d.rankDelta < 0 ? (
                             <span className="text-red-500 font-bold">▼ {Math.abs(d.rankDelta)}</span>
                           ) : (
@@ -369,42 +369,42 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
                 </div>
               )}
 
-              <h4 className="text-xs font-semibold text-[#72756a] mb-2.5">
+              <h4 className="text-xs font-semibold text-[#959c9f] mb-2.5">
                 <TermTip term="portfolioZone">포트폴리오 4구역</TermTip>
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
                 {(pf.data.zones || []).map((z: any) => {
                   const st = ZONE_STYLE[z.zone] || ZONE_STYLE.VOLUME;
                   return (
-                    <div key={z.zone} className="p-3.5 rounded-md border border-slate-150 bg-white">
+                    <div key={z.zone} className="p-3.5 rounded-md border border-[#30343a] bg-[#111315]">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${st.chip}`}>
                           {z.label}
                         </span>
-                        <span className="text-lg font-semibold text-[#141512] tabular-nums">{z.share}%</span>
+                        <span className="text-lg font-semibold text-[#f5f5ef] tabular-nums">{z.share}%</span>
                       </div>
                       <Bar pct={z.share} className={st.bar} />
-                      <p className="text-[11px] text-[#72756a] mt-2 tabular-nums">
+                      <p className="text-[11px] text-[#959c9f] mt-2 tabular-nums">
                         인용 {z.citations}건 · 도메인 {z.domainCount}종 · 동반율 {z.companionRate}%
                       </p>
                       {z.guide && (
-                        <p className="text-[11px] text-[#909781] leading-snug mt-1.5">{z.guide}</p>
+                        <p className="text-[11px] text-[#959c9f] leading-snug mt-1.5">{z.guide}</p>
                       )}
                     </div>
                   );
                 })}
               </div>
 
-              <h4 className="text-xs font-semibold text-[#72756a] mb-2.5">
+              <h4 className="text-xs font-semibold text-[#959c9f] mb-2.5">
                 <TermTip term="channelDurability">채널 수명</TermTip>
               </h4>
               <div className="space-y-2.5">
                 {(pf.data.durability || []).map((d: any) => (
                   <div key={d.durability}>
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-bold text-[#525849]">{d.label}</span>
-                      <span className="tabular-nums text-[#72756a]">
-                        {d.citations}건 · <span className="font-semibold text-[#33372c]">{d.share}%</span>
+                      <span className="font-bold text-[#c0c4c7]">{d.label}</span>
+                      <span className="tabular-nums text-[#959c9f]">
+                        {d.citations}건 · <span className="font-semibold text-[#f5f5ef]">{d.share}%</span>
                       </span>
                     </div>
                     <Bar
@@ -461,11 +461,11 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
           {rg.isLoading ? <Loading /> : !rg.data ? <Empty msg="지역 데이터가 없습니다." /> : (
             <>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3.5 rounded-md bg-brand-50 border border-brand-100">
-                  <p className="text-[11px] font-bold text-brand-700 mb-1">
+                <div className="p-3.5 rounded-md bg-[#281a13] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#ff9565] mb-1">
                     <TermTip term="regionLeverage">동 vs 시/군/구</TermTip>
                   </p>
-                  <p className="text-2xl font-semibold text-brand-900 tabular-nums">
+                  <p className="text-2xl font-semibold text-[#ff9565] tabular-nums">
                     {rg.data.dongVsSigungu ?? '—'}
                     <span className="text-sm ml-0.5">배</span>
                   </p>
@@ -477,30 +477,30 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     />
                   )}
                 </div>
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-[11px] font-bold text-[#72756a] mb-1">동 vs 시/도</p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#959c9f] mb-1">동 vs 시/도</p>
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {rg.data.dongVsSido ?? '—'}
                     <span className="text-sm ml-0.5">배</span>
                   </p>
-                  <p className="text-[11px] text-[#909781] font-medium">넓은 지역일수록 불리해지는 정도</p>
+                  <p className="text-[11px] text-[#959c9f] font-medium">넓은 지역일수록 불리해지는 정도</p>
                 </div>
               </div>
 
               {rg.data.insight && (
-                <div className="mb-4 p-3 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-xs text-[#525849] font-semibold leading-relaxed">{rg.data.insight}</p>
+                <div className="mb-4 p-3 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-xs text-[#c0c4c7] font-semibold leading-relaxed">{rg.data.insight}</p>
                 </div>
               )}
 
-              <h4 className="text-xs font-semibold text-[#72756a] mb-2.5">지역 단위별 언급률</h4>
+              <h4 className="text-xs font-semibold text-[#959c9f] mb-2.5">지역 단위별 언급률</h4>
               <div className="space-y-2.5 mb-5">
                 {(rg.data.overall || []).map((r: any) => (
                   <div key={r.level}>
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="font-bold text-[#525849]">{r.label}</span>
-                      <span className="tabular-nums text-[#72756a]">
-                        {r.mentioned}/{r.responses} · <span className="font-semibold text-[#33372c]">{r.mentionRate}%</span>
+                      <span className="font-bold text-[#c0c4c7]">{r.label}</span>
+                      <span className="tabular-nums text-[#959c9f]">
+                        {r.mentioned}/{r.responses} · <span className="font-semibold text-[#f5f5ef]">{r.mentionRate}%</span>
                       </span>
                     </div>
                     <Bar
@@ -518,11 +518,11 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
 
               {(rg.data.platforms || []).length > 0 && (
                 <>
-                  <h4 className="text-xs font-semibold text-[#72756a] mb-2.5">플랫폼별 배율</h4>
+                  <h4 className="text-xs font-semibold text-[#959c9f] mb-2.5">플랫폼별 배율</h4>
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="border-b border-[#d4d6cb] text-[#909781]">
+                        <tr className="border-b border-[#30343a] text-[#959c9f]">
                           <th className="text-left py-2 px-2 font-bold">플랫폼</th>
                           <th className="text-right py-2 px-2 font-bold whitespace-nowrap">동/구 배율</th>
                           <th className="text-right py-2 px-2 font-bold whitespace-nowrap">동/시도 배율</th>
@@ -532,20 +532,20 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                       <tbody>
                         {rg.data.platforms.map((p: any) => (
                           <tr key={p.platform} className="border-b border-slate-50">
-                            <td className="py-2 px-2 font-semibold text-[#525849]">{p.platform}</td>
+                            <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{p.platform}</td>
                             <td className="text-right py-2 px-2 tabular-nums">
                               <span className={`font-semibold ${
-                                (p.dongVsSigungu ?? 0) >= 1.7 ? 'text-brand-600'
+                                (p.dongVsSigungu ?? 0) >= 1.7 ? 'text-[#ff9565]'
                                 : (p.dongVsSigungu ?? 0) < 1 ? 'text-red-500'
-                                : 'text-[#525849]'
+                                : 'text-[#c0c4c7]'
                               }`}>
                                 {p.dongVsSigungu ?? '—'}배
                               </span>
                             </td>
-                            <td className="text-right py-2 px-2 tabular-nums text-[#72756a]">
+                            <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">
                               {p.dongVsSido ?? '—'}배
                             </td>
-                            <td className="text-right py-2 px-2 tabular-nums text-[#909781]">{p.totalResponses}</td>
+                            <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{p.totalResponses}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -579,23 +579,23 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
           {df.isLoading ? <Loading /> : !df.data ? <Empty msg="난이도 데이터가 없습니다." /> : (
             <>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-[11px] font-bold text-[#72756a] mb-1">종합 SoV</p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#959c9f] mb-1">종합 SoV</p>
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {df.data.overallSov}<span className="text-sm ml-0.5">%</span>
                   </p>
-                  <p className="text-[11px] text-[#909781] font-medium">
+                  <p className="text-[11px] text-[#959c9f] font-medium">
                     쉬운 질문 비중 {df.data.easyShare}%에 좌우됩니다
                   </p>
                 </div>
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-[#d4d6cb]">
-                  <p className="text-[11px] font-bold text-[#141512] mb-1">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#f5f5ef] mb-1">
                     <TermTip term="balancedSov">보정 SoV</TermTip>
                   </p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {df.data.balancedSov}<span className="text-sm ml-0.5">%</span>
                   </p>
-                  <p className="text-[11px] text-[#44551d] font-medium">난이도 3구간 단순평균</p>
+                  <p className="text-[11px] text-[#c0c4c7] font-medium">난이도 3구간 단순평균</p>
                 </div>
               </div>
 
@@ -610,16 +610,16 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 {(df.data.rows || []).map((r: any) => (
                   <div key={r.difficulty}>
                     <div className="flex items-center justify-between text-xs mb-1 gap-2">
-                      <span className="font-bold text-[#525849]">
+                      <span className="font-bold text-[#c0c4c7]">
                         <TermTip term="queryDifficulty" icon={false}>{r.label}</TermTip>
                       </span>
-                      <span className="tabular-nums text-[#72756a] flex-shrink-0">
+                      <span className="tabular-nums text-[#959c9f] flex-shrink-0">
                         질문 {r.promptCount}개 · 응답 {r.responses}건 ·{' '}
-                        <span className="font-semibold text-[#33372c]">SoV {r.sov}%</span>
+                        <span className="font-semibold text-[#f5f5ef]">SoV {r.sov}%</span>
                       </span>
                     </div>
                     <Bar pct={r.sov} className={DIFF_STYLE[r.difficulty] || 'bg-slate-400'} />
-                    <p className="text-[11px] text-[#909781] leading-snug mt-1.5">{r.guide}</p>
+                    <p className="text-[11px] text-[#959c9f] leading-snug mt-1.5">{r.guide}</p>
                   </div>
                 ))}
               </div>
@@ -640,14 +640,14 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
           {lg.isLoading ? <Loading /> : !lg.data ? <Empty msg="언어 데이터가 없습니다." /> : (
             <>
               {lg.data.insight && (
-                <div className="mb-4 p-3 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-xs text-[#525849] font-semibold leading-relaxed">{lg.data.insight}</p>
+                <div className="mb-4 p-3 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-xs text-[#c0c4c7] font-semibold leading-relaxed">{lg.data.insight}</p>
                 </div>
               )}
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#d4d6cb] text-[#909781]">
+                    <tr className="border-b border-[#30343a] text-[#959c9f]">
                       <th className="text-left py-2 px-2 font-bold">언어</th>
                       <th className="text-right py-2 px-2 font-bold">응답</th>
                       <th className="text-right py-2 px-2 font-bold whitespace-nowrap">언급률</th>
@@ -659,12 +659,12 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                   <tbody>
                     {(lg.data.rows || []).map((r: any) => (
                       <tr key={r.language} className="border-b border-slate-50">
-                        <td className="py-2 px-2 font-semibold text-[#525849]">{r.label}</td>
-                        <td className="text-right py-2 px-2 tabular-nums text-[#72756a]">{r.responses}</td>
-                        <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#33372c]">
+                        <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{r.label}</td>
+                        <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{r.responses}</td>
+                        <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">
                           {r.mentionRate}%
                         </td>
-                        <td className="text-right py-2 px-2 tabular-nums text-[#687253]">
+                        <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
                           {r.firstPositionShare}%
                         </td>
                       </tr>
@@ -673,9 +673,9 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 </table>
               </div>
               {lg.data.foreignAdvantage != null && (
-                <p className="text-[11px] text-[#72756a] font-medium mt-3">
+                <p className="text-[11px] text-[#959c9f] font-medium mt-3">
                   외국어 언급률 {lg.data.foreignMentionRate}% ÷ 한국어 {lg.data.koreanMentionRate}% ={' '}
-                  <span className="font-semibold text-[#33372c]">{lg.data.foreignAdvantage}배</span>
+                  <span className="font-semibold text-[#f5f5ef]">{lg.data.foreignAdvantage}배</span>
                 </p>
               )}
             </>
@@ -721,18 +721,18 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
           {db.isLoading ? <Loading /> : !db.data ? <Empty msg="브랜딩 데이터가 없습니다." /> : (
             <>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-[11px] font-bold text-[#72756a] mb-1">'원장' 직함 언급률</p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#959c9f] mb-1">'원장' 직함 언급률</p>
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {db.data.titleRate}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <VsBench value={db.data.titleRate} bench={db.data.benchmark?.titleRate ?? 25.8} />
                 </div>
-                <div className="p-3.5 rounded-md bg-brand-50 border border-brand-100">
-                  <p className="text-[11px] font-bold text-brand-700 mb-1">
+                <div className="p-3.5 rounded-md bg-[#281a13] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#ff9565] mb-1">
                     <TermTip term="directorBranding">실명 언급률</TermTip>
                   </p>
-                  <p className="text-2xl font-semibold text-brand-900 tabular-nums">
+                  <p className="text-2xl font-semibold text-[#ff9565] tabular-nums">
                     {db.data.realNameRate}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <VsBench value={db.data.realNameRate} bench={db.data.benchmark?.realNameRate ?? 0.7} />
@@ -741,10 +741,10 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
 
               {db.data.brandingGap != null && (
                 <div className="mb-4">
-                  <p className="text-[11px] font-bold text-[#72756a] mb-1.5">
+                  <p className="text-[11px] font-bold text-[#959c9f] mb-1.5">
                     직함 대비 실명 격차 {db.data.brandingGap}%p
                   </p>
-                  <div className="relative h-6 rounded-lg bg-[#e9ebe1] overflow-hidden">
+                  <div className="relative h-6 rounded-lg bg-[#181b1e] overflow-hidden">
                     <div
                       className="absolute inset-y-0 left-0 bg-slate-300"
                       style={{ width: `${Math.min(100, db.data.titleRate)}%` }}
@@ -755,10 +755,10 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     />
                   </div>
                   <div className="flex items-center gap-3 mt-1.5">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#72756a]">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#959c9f]">
                       <span className="h-2 w-2 rounded bg-slate-300" /> 직함
                     </span>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-600">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#ff9565]">
                       <span className="h-2 w-2 rounded bg-brand-500" /> 실명
                     </span>
                   </div>
@@ -768,7 +768,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               {(db.data.nameHits || []).length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-2">
                   {db.data.nameHits.map((h: any) => (
-                    <span key={h.name} className="text-[11px] font-bold px-2 py-1 rounded-lg bg-brand-50 text-brand-700 border border-brand-200 tabular-nums">
+                    <span key={h.name} className="text-[11px] font-bold px-2 py-1 rounded-lg bg-[#281a13] text-[#ff9565] border border-[#30343a] tabular-nums">
                       {h.name} {h.count}회
                     </span>
                   ))}
@@ -776,8 +776,8 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               )}
 
               {db.data.prescription && (
-                <div className="p-3 rounded-md bg-brand-50 border border-brand-100">
-                  <p className="text-xs text-brand-900 font-semibold leading-relaxed">{db.data.prescription}</p>
+                <div className="p-3 rounded-md bg-[#281a13] border border-[#30343a]">
+                  <p className="text-xs text-[#ff9565] font-semibold leading-relaxed">{db.data.prescription}</p>
                 </div>
               )}
 
@@ -785,7 +785,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="overflow-x-auto mt-4">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-[#d4d6cb] text-[#909781]">
+                      <tr className="border-b border-[#30343a] text-[#959c9f]">
                         <th className="text-left py-2 px-2 font-bold">플랫폼</th>
                         <th className="text-right py-2 px-2 font-bold">언급 응답</th>
                         <th className="text-right py-2 px-2 font-bold whitespace-nowrap">직함</th>
@@ -795,10 +795,10 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     <tbody>
                       {db.data.byPlatform.map((p: any) => (
                         <tr key={p.platform} className="border-b border-slate-50">
-                          <td className="py-2 px-2 font-semibold text-[#525849]">{p.platform}</td>
-                          <td className="text-right py-2 px-2 tabular-nums text-[#909781]">{p.responses}</td>
-                          <td className="text-right py-2 px-2 tabular-nums text-[#687253]">{p.titleRate}%</td>
-                          <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#33372c]">{p.realNameRate}%</td>
+                          <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{p.platform}</td>
+                          <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{p.responses}</td>
+                          <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">{p.titleRate}%</td>
+                          <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">{p.realNameRate}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -822,29 +822,29 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
           {ag.isLoading ? <Loading /> : !ag.data ? <Empty msg="검색모드 데이터가 없습니다." /> : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-[11px] font-bold text-[#72756a] mb-1">AEO — 실시간 검색</p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#959c9f] mb-1">AEO — 실시간 검색</p>
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {ag.data.aeo?.mentionRate}<span className="text-sm ml-0.5">%</span>
                   </p>
-                  <p className="text-[11px] text-[#909781] font-medium tabular-nums">
+                  <p className="text-[11px] text-[#959c9f] font-medium tabular-nums">
                     응답 {ag.data.aeo?.responses}건 · 반영 2~4주
                   </p>
                 </div>
-                <div className="p-3.5 rounded-md bg-[#f1f1eb] border border-[#d4d6cb]">
-                  <p className="text-[11px] font-bold text-[#141512] mb-1">GEO — 사전학습 진입</p>
-                  <p className="text-2xl font-semibold text-[#141512] tabular-nums">
+                <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#f5f5ef] mb-1">GEO — 사전학습 진입</p>
+                  <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
                     {ag.data.geo?.mentionRate}<span className="text-sm ml-0.5">%</span>
                   </p>
-                  <p className="text-[11px] text-[#44551d] font-medium tabular-nums">
+                  <p className="text-[11px] text-[#c0c4c7] font-medium tabular-nums">
                     응답 {ag.data.geo?.responses}건 · 모델이 우리를 앎
                   </p>
                 </div>
-                <div className="p-3.5 rounded-md bg-brand-50 border border-brand-100">
-                  <p className="text-[11px] font-bold text-brand-700 mb-1">
+                <div className="p-3.5 rounded-md bg-[#281a13] border border-[#30343a]">
+                  <p className="text-[11px] font-bold text-[#ff9565] mb-1">
                     <TermTip term="geoPenetration">사전학습 침투율</TermTip>
                   </p>
-                  <p className="text-2xl font-semibold text-brand-900 tabular-nums">
+                  <p className="text-2xl font-semibold text-[#ff9565] tabular-nums">
                     {ag.data.geoPenetration ?? '—'}
                   </p>
                   <p className="text-[11px] text-brand-500 font-medium">1에 가까울수록 자립</p>
@@ -852,8 +852,8 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               </div>
 
               {ag.data.insight && (
-                <div className="mb-4 p-3 rounded-md bg-[#f1f1eb] border border-slate-150">
-                  <p className="text-xs text-[#525849] font-semibold leading-relaxed">{ag.data.insight}</p>
+                <div className="mb-4 p-3 rounded-md bg-[#08090a] border border-[#30343a]">
+                  <p className="text-xs text-[#c0c4c7] font-semibold leading-relaxed">{ag.data.insight}</p>
                 </div>
               )}
 
@@ -861,7 +861,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
-                      <tr className="border-b border-[#d4d6cb] text-[#909781]">
+                      <tr className="border-b border-[#30343a] text-[#959c9f]">
                         <th className="text-left py-2 px-2 font-bold">플랫폼</th>
                         <th className="text-right py-2 px-2 font-bold whitespace-nowrap">AEO 언급률</th>
                         <th className="text-right py-2 px-2 font-bold whitespace-nowrap">GEO 언급률</th>
@@ -875,14 +875,14 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                           : null;
                         return (
                           <tr key={p.platform} className="border-b border-slate-50">
-                            <td className="py-2 px-2 font-semibold text-[#525849]">{p.platform}</td>
-                            <td className="text-right py-2 px-2 tabular-nums text-[#687253]">
+                            <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{p.platform}</td>
+                            <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
                               {p.aeoMentionRate}% <span className="text-[#b8bcab]">({p.aeoResponses})</span>
                             </td>
-                            <td className="text-right py-2 px-2 tabular-nums text-[#687253]">
+                            <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
                               {p.geoMentionRate}% <span className="text-[#b8bcab]">({p.geoResponses})</span>
                             </td>
-                            <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#33372c]">
+                            <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">
                               {pen ?? '—'}
                             </td>
                           </tr>
@@ -910,9 +910,9 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
             <>
               <div className="grid grid-cols-3 gap-3 mb-4">
                 {[
-                  { k: 'positive', label: '긍정', color: 'text-brand-700', bg: 'bg-brand-50 border-brand-100', bench: na.data.benchmark?.positive },
-                  { k: 'neutral', label: '중립', color: 'text-[#525849]', bg: 'bg-[#f1f1eb] border-slate-150', bench: na.data.benchmark?.neutral },
-                  { k: 'negative', label: '부정', color: 'text-red-700', bg: 'bg-red-50 border-red-100', bench: na.data.benchmark?.negative },
+                  { k: 'positive', label: '긍정', color: 'text-[#ff9565]', bg: 'bg-[#281a13] border-[#30343a]', bench: na.data.benchmark?.positive },
+                  { k: 'neutral', label: '중립', color: 'text-[#c0c4c7]', bg: 'bg-[#08090a] border-[#30343a]', bench: na.data.benchmark?.neutral },
+                  { k: 'negative', label: '부정', color: 'text-red-400', bg: 'bg-[#291718] border-red-100', bench: na.data.benchmark?.negative },
                 ].map((x) => {
                   const d = na.data.distribution?.[x.k];
                   return (
@@ -921,7 +921,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                       <p className={`text-2xl font-semibold tabular-nums ${x.color}`}>
                         {d?.rate ?? 0}<span className="text-sm ml-0.5">%</span>
                       </p>
-                      <p className="text-[11px] text-[#909781] font-medium tabular-nums">
+                      <p className="text-[11px] text-[#959c9f] font-medium tabular-nums">
                         {d?.count ?? 0}건 · 실측 {x.bench}%
                       </p>
                     </div>
@@ -929,21 +929,21 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 })}
               </div>
 
-              <div className="flex items-center gap-3 mb-4 p-3 rounded-md bg-[#f1f1eb] border border-slate-150">
+              <div className="flex items-center gap-3 mb-4 p-3 rounded-md bg-[#08090a] border border-[#30343a]">
                 <div className="flex-1">
-                  <p className="text-[11px] font-bold text-[#72756a]">
+                  <p className="text-[11px] font-bold text-[#959c9f]">
                     <TermTip term="negativeAlert">감시 대상 건수</TermTip>
                   </p>
-                  <p className="text-xl font-semibold text-[#141512] tabular-nums">
+                  <p className="text-xl font-semibold text-[#f5f5ef] tabular-nums">
                     {na.data.alertCount ?? 0}건
                     {(na.data.criticalCount ?? 0) > 0 && (
-                      <span className="text-xs font-bold text-red-600 ml-2">
+                      <span className="text-xs font-bold text-red-400 ml-2">
                         (심각 {na.data.criticalCount}건)
                       </span>
                     )}
                   </p>
                 </div>
-                <p className="text-[11px] text-[#72756a] font-medium leading-snug max-w-[55%]">
+                <p className="text-[11px] text-[#959c9f] font-medium leading-snug max-w-[55%]">
                   {na.data.insight}
                 </p>
               </div>
@@ -951,7 +951,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               {(na.data.alerts || []).length === 0 ? (
                 <div className="py-8 text-center">
                   <CheckCircle2 className="h-8 w-8 text-brand-400 mx-auto mb-2" />
-                  <p className="text-sm text-[#72756a] font-semibold">부정 언급이 감지되지 않았습니다.</p>
+                  <p className="text-sm text-[#959c9f] font-semibold">부정 언급이 감지되지 않았습니다.</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
@@ -959,9 +959,9 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     <div
                       key={a.responseId}
                       className={`p-3 rounded-md border ${
-                        a.severity === 'CRITICAL' ? 'bg-red-50 border-red-150'
+                        a.severity === 'CRITICAL' ? 'bg-[#291718] border-red-150'
                         : a.severity === 'WARNING' ? 'bg-amber-50 border-amber-150'
-                        : 'bg-[#f1f1eb] border-slate-150'
+                        : 'bg-[#08090a] border-[#30343a]'
                       }`}
                     >
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -972,21 +972,21 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                         }`}>
                           {a.severity}
                         </span>
-                        <span className="text-[11px] font-bold text-[#687253]">{a.platform}</span>
-                        <span className="text-[11px] text-[#909781] tabular-nums">
+                        <span className="text-[11px] font-bold text-[#c0c4c7]">{a.platform}</span>
+                        <span className="text-[11px] text-[#959c9f] tabular-nums">
                           {String(a.responseDate || '').slice(0, 10)}
                         </span>
                         {a.recommendationDepth && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white text-[#72756a] border border-[#d4d6cb]">
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#111315] text-[#959c9f] border border-[#30343a]">
                             {a.recommendationDepth}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs font-bold text-[#33372c] mb-1 leading-snug">{a.promptText}</p>
+                      <p className="text-xs font-bold text-[#f5f5ef] mb-1 leading-snug">{a.promptText}</p>
                       {(a.evidence || []).length > 0 && (
                         <ul className="space-y-1 mb-1.5">
                           {a.evidence.map((e: string, i: number) => (
-                            <li key={i} className="text-[11px] text-[#687253] leading-relaxed pl-2 border-l-2 border-[#d7dacd]">
+                            <li key={i} className="text-[11px] text-[#c0c4c7] leading-relaxed pl-2 border-l-2 border-[#30343a]">
                               {e}
                             </li>
                           ))}
@@ -995,7 +995,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                       {(a.citedDomains || []).length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {a.citedDomains.map((d: string) => (
-                            <span key={d} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-white text-[#72756a] border border-[#d4d6cb]">
+                            <span key={d} className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#111315] text-[#959c9f] border border-[#30343a]">
                               {d}
                             </span>
                           ))}
@@ -1008,10 +1008,10 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
 
               {(na.data.topNegativeSources || []).length > 0 && (
                 <div className="mt-4">
-                  <h4 className="text-xs font-semibold text-[#72756a] mb-2">부정 언급 출처 역추적</h4>
+                  <h4 className="text-xs font-semibold text-[#959c9f] mb-2">부정 언급 출처 역추적</h4>
                   <div className="flex flex-wrap gap-2">
                     {na.data.topNegativeSources.map((s: any) => (
-                      <span key={s.domain} className="text-[11px] font-bold px-2 py-1 rounded-lg bg-red-50 text-red-700 border border-red-200 tabular-nums">
+                      <span key={s.domain} className="text-[11px] font-bold px-2 py-1 rounded-lg bg-[#291718] text-red-400 border border-red-200 tabular-nums">
                         {s.domain} {s.count}회
                       </span>
                     ))}
@@ -1079,7 +1079,7 @@ export default function GrowthDiagnosisPage() {
                   className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
                     active
                       ? 'bg-brand-600 text-white'
-                      : 'bg-white text-[#72756a] border border-[#d4d6cb] hover:bg-[#f1f1eb]'
+                      : 'bg-[#111315] text-[#959c9f] border border-[#30343a] hover:bg-[#08090a]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5" />
@@ -1097,7 +1097,7 @@ export default function GrowthDiagnosisPage() {
                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
                   days === d
                     ? 'bg-brand-600 text-white'
-                    : 'bg-white text-[#72756a] border border-[#d4d6cb] hover:bg-[#f1f1eb]'
+                    : 'bg-[#111315] text-[#959c9f] border border-[#30343a] hover:bg-[#08090a]'
                 }`}
               >
                 {d}일

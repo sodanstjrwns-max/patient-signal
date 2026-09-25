@@ -11,24 +11,24 @@ export const metadata: Metadata = {
 // §2 단건 상품은 "해당 상품 판매 사이트에만 게시" — 시그널은 SaaS 구독만이므로 제외
 export default function RefundPage() {
   return (
-    <div className="min-h-screen bg-[#f1f1eb] flex flex-col text-[#141512]">
-      <header className="border-b border-[#d4d6cb] bg-white">
+    <div className="min-h-screen bg-[#08090a] flex flex-col text-[#f5f5ef]">
+      <header className="border-b border-[#30343a] bg-[#111315]">
         <div className="mx-auto flex h-[72px] max-w-5xl items-center justify-between px-5 sm:px-8">
-          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d0ff43] text-[#141512]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
-          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#687253] hover:text-[#44551d]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
+          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d9ff43] text-[#08090a]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
+          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#c0c4c7] hover:text-[#c0c4c7]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
         </div>
       </header>
       <main className="flex-1 max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16 w-full">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#44551d]">Legal</p>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#141512] mb-3">페이션트 시그널 환불규정</h1>
-        <p className="text-sm text-[#72756a] mb-8">적용일: 2026년 8월 20일</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#c0c4c7]">Legal</p>
+        <h1 className="font-display text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#f5f5ef] mb-3">페이션트 시그널 환불규정</h1>
+        <p className="text-sm text-[#959c9f] mb-8">적용일: 2026년 8월 20일</p>
 
-        <div className="border-t border-[#141512] bg-white p-6 sm:p-9 divide-y divide-[#d4d6cb] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+        <div className="border-t border-[#30343a] bg-[#111315] p-6 sm:p-9 divide-y divide-[#30343a] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
           <section id="refund-subscription">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">
               1. 구독 서비스 (월간·연간 결제)
             </h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 결제일로부터 <strong>7일 이내</strong>이고 서비스를{' '}
                 <strong>실질적으로 이용하지 않은 경우</strong>(데이터 입력·분석 실행 등 핵심 기능
@@ -50,13 +50,13 @@ export default function RefundPage() {
           </section>
 
           <section id="refund-process">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">2. 환불 절차</h2>
-            <ol className="list-decimal list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">2. 환불 절차</h2>
+            <ol className="list-decimal list-inside text-[#959c9f] space-y-2">
               <li>
                 고객센터(이메일{' '}
                 <a
                   href="mailto:patientsfunnel@gmail.com"
-                  className="text-[#44551d] hover:text-[#141512]"
+                  className="text-[#c0c4c7] hover:text-[#f5f5ef]"
                 >
                   patientsfunnel@gmail.com
                 </a>{' '}
@@ -71,8 +71,8 @@ export default function RefundPage() {
           </section>
 
           <section id="refund-misc">
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">3. 기타</h2>
-            <ul className="list-disc list-inside text-slate-600 space-y-2">
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">3. 기타</h2>
+            <ul className="list-disc list-inside text-[#959c9f] space-y-2">
               <li>
                 이 규정에서 정하지 않은 사항은 「전자상거래 등에서의 소비자보호에 관한 법률」 등
                 관련 법령에 따릅니다.
@@ -85,13 +85,13 @@ export default function RefundPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-slate-800 mb-4">부칙</h2>
-            <p className="text-slate-600">이 규정은 2026년 8월 20일부터 적용됩니다.</p>
+            <h2 className="font-display text-xl font-semibold text-[#f5f5ef] mb-4">부칙</h2>
+            <p className="text-[#959c9f]">이 규정은 2026년 8월 20일부터 적용됩니다.</p>
           </section>
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/" className="text-[#44551d] hover:text-[#141512] font-medium">
+          <a href="/" className="text-[#c0c4c7] hover:text-[#f5f5ef] font-medium">
             ← 메인으로 돌아가기
           </a>
         </div>

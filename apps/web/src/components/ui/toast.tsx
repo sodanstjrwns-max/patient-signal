@@ -11,10 +11,10 @@ const icons = {
 };
 
 const styles = {
-  success: 'bg-brand-50 border-brand-200 text-brand-800',
-  error: 'bg-red-50 border-red-200 text-red-800',
-  info: 'bg-brand-50 border-brand-200 text-brand-800',
-  warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+  success: 'bg-[#281a13] border-[#30343a] text-[#ff9565]',
+  error: 'bg-[#291718] border-red-200 text-red-400',
+  info: 'bg-[#281a13] border-[#30343a] text-[#ff9565]',
+  warning: 'bg-[#282418] border-yellow-200 text-yellow-400',
 };
 
 const iconStyles = {

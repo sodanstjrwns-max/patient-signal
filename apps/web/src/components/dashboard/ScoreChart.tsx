@@ -33,7 +33,7 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
         {subtitle && (
-          <p className="text-xs text-slate-500 font-medium mt-1">{subtitle}</p>
+          <p className="text-xs text-[#959c9f] font-medium mt-1">{subtitle}</p>
         )}
       </CardHeader>
       <CardContent>
@@ -42,38 +42,38 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#d0ff43" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#d0ff43" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#ff6a24" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#ff6a24" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e9ebe1" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#30343a" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: '#72756a' }}
+                tick={{ fontSize: 12, fill: '#959c9f' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e9ebe1' }}
+                axisLine={{ stroke: '#30343a' }}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#72756a' }}
+                tick={{ fontSize: 12, fill: '#959c9f' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e9ebe1' }}
+                axisLine={{ stroke: '#30343a' }}
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.85)',
+                  backgroundColor: '#181b1e',
                   backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(226, 232, 240, 0.6)',
-                  borderRadius: '16px',
+                  border: '1px solid #30343a', color: '#f5f5ef',
+                  borderRadius: '2px',
                   boxShadow: '0 8px 32px -4px rgba(0, 0, 0, 0.08)',
                   padding: '12px 16px',
                 }}
-                labelStyle={{ color: '#465135', fontWeight: 600 }}
+                labelStyle={{ color: '#c0c4c7', fontWeight: 600 }}
               />
               <Area
                 type="monotone"
                 dataKey="score"
-                stroke="#d0ff43"
+                stroke="#ff6a24"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#colorScore)"

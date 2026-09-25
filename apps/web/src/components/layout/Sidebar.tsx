@@ -177,15 +177,15 @@ export function Sidebar() {
   };
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/15 bg-[#141512] px-4 text-[#f1f1eb] lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/15 bg-[#08090a] px-4 text-[#f1f1eb] lg:hidden">
         <Link
           href="/dashboard"
           className="flex items-center gap-2"
           aria-label="Patient Signal 홈"
         >
           <SignalMark className="!h-7 !w-7" />
-          <span className="text-xl font-black tracking-[-.06em]">
-            signal<span className="text-[#ff5d2a]">.</span>
+          <span className="font-numeric text-2xl font-black italic tracking-[-.06em]">
+            signal<span className="text-[#ff6a24]">.</span>
           </span>
         </Link>
         <button
@@ -199,7 +199,7 @@ export function Sidebar() {
           <Menu className="h-5 w-5" />
         </button>
       </div>
-      <aside className="sticky top-0 z-30 hidden h-screen w-[88px] shrink-0 flex-col border-r border-white/15 bg-[#141512] text-[#bec3af] lg:flex">
+      <aside className="sticky top-0 z-30 hidden h-screen w-[88px] shrink-0 flex-col border-r border-white/15 bg-[#08090a] text-[#c0c4c7] lg:flex">
         <Link
           href="/dashboard"
           className="flex h-[76px] shrink-0 items-center justify-center border-b border-white/15"
@@ -220,7 +220,7 @@ export function Sidebar() {
               className={cn(
                 "desk-rail-item flex min-h-[68px] flex-col items-center justify-center gap-2 text-[10px] font-semibold",
                 pathname === item.href
-                  ? "bg-[#d0ff43] text-[#141512]"
+                  ? "bg-[#ff6a24] text-[#08090a]"
                   : "hover:bg-white/10 hover:text-[#f1f1eb]",
               )}
             >
@@ -245,7 +245,7 @@ export function Sidebar() {
                   className={cn(
                     "desk-rail-item flex min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[10px] font-medium",
                     active || expandedGroup === i + 1
-                      ? "bg-white/10 text-[#d0ff43]"
+                      ? "bg-white/10 text-[#ff9565]"
                       : "hover:bg-white/10 hover:text-white",
                   )}
                 >
@@ -258,7 +258,7 @@ export function Sidebar() {
         </nav>
         <Link
           href="/dashboard/billing"
-          className="flex min-h-14 shrink-0 items-center justify-center border-t border-white/15 text-[10px] font-bold text-[#d0ff43] hover:bg-white/10"
+          className="flex min-h-14 shrink-0 items-center justify-center border-t border-white/15 text-[10px] font-bold text-[#ff9565] hover:bg-white/10"
           aria-label="결제 및 구독"
         >
           {planLabels[user?.hospital?.planType || "FREE"] || "Free"} PLAN{" "}
@@ -277,7 +277,7 @@ export function Sidebar() {
             ref={panelRef}
             id="signal-extra-nav"
             aria-label={`${navGroups[expandedGroup].label} 메뉴`}
-            className="signal-panel-enter absolute bottom-0 left-full top-0 w-[256px] border-r border-white/15 bg-[#20231b] px-4 py-6 text-[#f1f1eb] shadow-xl"
+            className="signal-panel-enter absolute bottom-0 left-full top-0 w-[256px] border-r border-white/15 bg-[#111315] px-4 py-6 text-[#f1f1eb] shadow-xl"
           >
             <div className="mb-6 flex items-center justify-between border-b border-white/15 pb-5">
               <strong className="text-xl font-bold">
@@ -302,7 +302,7 @@ export function Sidebar() {
                 className={cn(
                   "flex items-center gap-3 border-b border-white/10 px-2 py-4 text-sm transition-colors",
                   pathname === item.href
-                    ? "bg-[#d0ff43] text-[#141512]"
+                    ? "bg-[#ff6a24] text-[#08090a]"
                     : "hover:bg-white/10",
                 )}
               >
@@ -328,15 +328,15 @@ export function Sidebar() {
             role="dialog"
             aria-modal="true"
             aria-label="시그널 탐색"
-            className="signal-drawer-enter fixed inset-y-0 left-0 z-50 flex w-[288px] flex-col bg-[#141512] text-[#f1f1eb] lg:hidden"
+            className="signal-drawer-enter fixed inset-y-0 left-0 z-50 flex w-[288px] flex-col bg-[#08090a] text-[#f1f1eb] lg:hidden"
           >
             <div className="flex h-20 shrink-0 items-center justify-between border-b border-white/15 px-5">
               <Link
                 href="/dashboard"
                 aria-label="Patient Signal 홈"
-                className="text-3xl font-black tracking-[-.07em]"
+                className="font-numeric text-3xl font-black italic tracking-[-.07em]"
               >
-                signal<span className="text-[#ff5d2a]">.</span>
+                signal<span className="text-[#ff6a24]">.</span>
               </Link>
               <button
                 onClick={() => setMobileOpen(false)}
@@ -348,7 +348,7 @@ export function Sidebar() {
             </div>
             <Link
               href="/dashboard/settings"
-              className="border-b border-white/15 bg-[#d0ff43] px-5 py-4 text-sm font-bold text-[#141512]"
+              className="border-b border-white/15 bg-[#111315] px-5 py-4 text-sm font-bold text-[#ff9565]"
             >
               {user?.hospital?.name || "병원 소개"}
             </Link>
@@ -358,7 +358,7 @@ export function Sidebar() {
             >
               {navGroups.map((group, index) => (
                 <section key={group.label} className={index ? "mt-6" : ""}>
-                  <p className="mb-2 font-mono text-[10px] text-[#989b8d]">
+                  <p className="mb-2 font-mono text-[10px] text-[#959c9f]">
                     0{index + 1} / {group.label}
                   </p>
                   {group.items.map((item) => (
@@ -369,8 +369,8 @@ export function Sidebar() {
                       className={cn(
                         "flex items-center gap-3 border-b border-white/10 px-2 py-3 text-sm",
                         pathname === item.href
-                          ? "text-[#d0ff43]"
-                          : "text-[#d7dacd]",
+                          ? "text-[#ff9565]"
+                          : "text-[#c0c4c7]",
                       )}
                     >
                       <item.icon className="h-4 w-4" />

@@ -19,6 +19,8 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        <link rel="preload" href="/fonts/SignalDisplay-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/ChakraPetch-Bold.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         {/* Google Analytics */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}

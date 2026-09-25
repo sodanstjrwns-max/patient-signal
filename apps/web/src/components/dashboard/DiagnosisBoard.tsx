@@ -62,9 +62,9 @@ export interface Finding {
 }
 
 const SEV: Record<Severity, { icon: any; ring: string; chipBg: string; chipText: string; label: string }> = {
-  critical: { icon: ShieldAlert,    ring: 'border-red-200/80 bg-red-50/50',       chipBg: 'bg-red-100',     chipText: 'text-red-700',     label: '먼저 해결' },
+  critical: { icon: ShieldAlert,    ring: 'border-red-200/80 bg-[#291718]/50',       chipBg: 'bg-[#3a2022]',     chipText: 'text-red-400',     label: '먼저 해결' },
   warn:     { icon: AlertTriangle,  ring: 'border-amber-200/80 bg-amber-50/40',   chipBg: 'bg-amber-100',   chipText: 'text-amber-700',   label: '개선 기회' },
-  good:     { icon: TrendingUp,     ring: 'border-brand-200/80 bg-brand-50/40', chipBg: 'bg-brand-100', chipText: 'text-brand-700', label: '잘 되는 중' },
+  good:     { icon: TrendingUp,     ring: 'border-[#30343a]/80 bg-[#281a13]/40', chipBg: 'bg-[#352115]', chipText: 'text-[#ff9565]', label: '잘 되는 중' },
 };
 
 /**
@@ -280,10 +280,10 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
   if (loading) {
     return (
       <section id="diagnosis-board" className="glass-bento p-6">
-        <div className="h-5 w-40 rounded-lg bg-slate-200/70 animate-pulse mb-5" />
+        <div className="h-5 w-40 rounded-lg bg-[#24282b]/70 animate-pulse mb-5" />
         <div className="space-y-3">
           {[0, 1, 2].map(i => (
-            <div key={i} className="h-24 rounded-2xl bg-slate-100/70 animate-pulse" />
+            <div key={i} className="h-24 rounded-2xl bg-[#181b1e]/70 animate-pulse" />
           ))}
         </div>
       </section>
@@ -294,19 +294,19 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
     return (
       <section id="diagnosis-board" className="glass-bento p-6">
         <div className="flex items-center gap-2.5 mb-3">
-          <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-[#181b1e] flex items-center justify-center">
             <Search className="h-5 w-5 text-slate-400" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-900">오늘의 진단</h2>
+            <h2 className="font-display text-sm font-black text-[#f5f5ef]">오늘의 진단</h2>
             <p className="text-[11px] text-slate-400 font-semibold">아직 판단할 근거가 부족합니다</p>
           </div>
         </div>
-        <p className="text-sm text-slate-500 leading-relaxed">
-          분석 데이터가 쌓이면 이 자리에 <span className="font-bold text-slate-700">무엇이 문제인지, 왜 그런지, 이번 주에 뭘 할지</span>가 표시됩니다.
+        <p className="text-sm text-[#959c9f] leading-relaxed">
+          분석 데이터가 쌓이면 이 자리에 <span className="font-bold text-[#c0c4c7]">무엇이 문제인지, 왜 그런지, 이번 주에 뭘 할지</span>가 표시됩니다.
           추측으로 채우지 않습니다.
         </p>
-        <Link href="/dashboard/prompts" className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-brand-600 hover:gap-2.5 transition-all">
+        <Link href="/dashboard/prompts" className="inline-flex items-center gap-1.5 mt-4 text-xs font-bold text-[#ff9565] hover:gap-2.5 transition-all">
           분석할 질문 설정하기 <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </section>
@@ -319,18 +319,18 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
     <section id="diagnosis-board" className="glass-bento p-6">
       <header className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-brand-100 flex items-center justify-center">
-            <Stethoscope className="h-5 w-5 text-brand-600" />
+          <div className="w-10 h-10 rounded-2xl bg-[#352115] flex items-center justify-center">
+            <Stethoscope className="h-5 w-5 text-[#ff9565]" />
           </div>
           <div>
-            <h2 className="text-sm font-black text-slate-900">오늘의 진단</h2>
+            <h2 className="font-display text-sm font-black text-[#f5f5ef]">오늘의 진단</h2>
             <p className="text-[11px] text-slate-400 font-semibold">
               숫자가 왜 이런지, 그래서 뭘 할지
             </p>
           </div>
         </div>
         {critical > 0 && (
-          <span className="text-[10px] px-2.5 py-1 rounded-full bg-red-100 text-red-700 font-black">
+          <span className="text-[10px] px-2.5 py-1 rounded-full bg-[#3a2022] text-red-400 font-black">
             먼저 해결 {critical}건
           </span>
         )}
@@ -349,11 +349,11 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${s.chipBg} ${s.chipText}`}>
                       {s.label}
                     </span>
-                    <h3 className="text-sm font-black text-slate-900">{f.headline}</h3>
+                    <h3 className="text-sm font-black text-[#f5f5ef]">{f.headline}</h3>
                   </div>
 
-                  <p className="text-[13px] text-slate-600 leading-relaxed">
-                    <span className="font-bold text-slate-500">왜 </span>
+                  <p className="text-[13px] text-[#959c9f] leading-relaxed">
+                    <span className="font-bold text-[#959c9f]">왜 </span>
                     {f.cause}
                     {f.term && (
                       <>
@@ -363,14 +363,14 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
                     )}
                   </p>
 
-                  <p className="text-[13px] text-slate-800 leading-relaxed mt-2">
-                    <span className="font-bold text-brand-600">할 일 </span>
+                  <p className="text-[13px] text-[#f5f5ef] leading-relaxed mt-2">
+                    <span className="font-bold text-[#ff9565]">할 일 </span>
                     {f.action}
                   </p>
 
                   <Link
                     href={f.href}
-                    className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-brand-600 hover:gap-2.5 transition-all"
+                    className="inline-flex items-center gap-1.5 mt-3 text-xs font-bold text-[#ff9565] hover:gap-2.5 transition-all"
                   >
                     {f.cta} <ArrowRight className="h-3.5 w-3.5" />
                   </Link>
@@ -381,7 +381,7 @@ export function DiagnosisBoard({ findings, loading }: { findings: Finding[]; loa
         })}
       </ol>
 
-      <p className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium mt-4 pt-4 border-t border-slate-100">
+      <p className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium mt-4 pt-4 border-t border-[#30343a]">
         <Sparkles className="h-3 w-3" />
         실제 수집된 응답에서만 판단합니다. 근거가 없으면 소견을 만들지 않습니다.
       </p>

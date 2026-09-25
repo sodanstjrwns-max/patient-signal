@@ -47,21 +47,15 @@ interface Suggestion {
 
 const THREAT_CONFIG = {
   HIGH: {
-    color: "text-red-600",
-    bg: "bg-red-50 border-red-200",
-    badge: "bg-red-100 text-red-700",
+    color: "text-[#ff8c75]",
     label: "높은 위협",
   },
   MEDIUM: {
-    color: "text-amber-600",
-    bg: "bg-amber-50 border-amber-200",
-    badge: "bg-amber-100 text-amber-700",
+    color: "text-[#ffb071]",
     label: "주의 필요",
   },
   LOW: {
-    color: "text-brand-600",
-    bg: "bg-brand-50 border-brand-200",
-    badge: "bg-brand-100 text-brand-700",
+    color: "text-[#959c9f]",
     label: "낮은 위협",
   },
 };
@@ -385,17 +379,17 @@ export default function CompetitorsPage() {
       .length > 1;
   if (!hospitalId) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-[#08090a] text-[#f5f5ef]">
         <Header
           title="경쟁 병원"
           description="AI 답변에서 우리 병원의 위치를 확인하세요"
         />
         <div className="mx-auto max-w-xl px-5 py-24 text-center">
-          <Users className="mx-auto mb-5 h-10 w-10 text-[#44551d]" />
-          <h2 className="text-2xl font-semibold tracking-tight">
+          <Users className="mx-auto mb-5 h-10 w-10 text-[#ff6a24]" />
+          <h2 className="font-numeric text-[32px] leading-none tracking-tight">
             병원 등록부터 시작하세요
           </h2>
-          <p className="mb-6 mt-3 text-sm text-[#72756a]">
+          <p className="mb-6 mt-3 text-sm text-[#959c9f]">
             우리 병원을 등록하면 경쟁 병원을 추가하고 비교할 수 있습니다.
           </p>
           <Button onClick={() => (window.location.href = "/onboarding")}>
@@ -420,7 +414,7 @@ export default function CompetitorsPage() {
           : "공통 비교 기간의 AI 답변이 아직 없습니다.";
 
   return (
-    <div className="min-h-screen text-[#141512]">
+    <div className="min-h-screen bg-[#08090a] text-[#f5f5ef]">
       <Header
         title="경쟁 병원"
         description="같은 질문, 같은 답변에서 비교하는 우리 병원의 위치"
@@ -432,7 +426,7 @@ export default function CompetitorsPage() {
               {hospitalData?.name || user?.hospital?.name || "우리 병원"} · 최대
               최근 {answerRanking?.periodDays || 30}일
             </p>
-            <h1 className="text-[27px] font-bold leading-tight tracking-[-.055em] sm:text-[34px]">
+            <h1 className="font-display text-[31px] leading-[1.25] tracking-[-.045em] sm:text-[42px] xl:text-[48px]">
               경쟁 병원 비교
             </h1>
           </div>
@@ -443,9 +437,9 @@ export default function CompetitorsPage() {
             병원 추가 <Plus className="h-3.5 w-3.5" />
           </a>
         </div>
-        <section className="border border-[#141512] bg-white">
-          <div className="grid border-b border-[#141512] sm:grid-cols-[1.1fr_1fr_1fr]">
-            <div className="flex items-center justify-between gap-4 bg-[#ff5d2a] px-5 py-5">
+        <section className="border border-[#30343a] bg-[#111315]">
+          <div className="grid border-b border-[#30343a] sm:grid-cols-[1.1fr_1fr_1fr]">
+            <div className="flex items-center justify-between gap-4 border-l-2 border-[#ff6a24] bg-[#08090a] px-5 py-5">
               <div>
                 <p className="text-[10px]">등록 병원 내 순위</p>
                 <p className="mt-1 text-xs font-bold">
@@ -454,7 +448,7 @@ export default function CompetitorsPage() {
                     "우리 병원"}
                 </p>
               </div>
-              <p className="shrink-0 text-3xl font-semibold tracking-tight">
+              <p className="shrink-0 font-numeric text-[56px] leading-none tracking-tight text-[#ff6a24]">
                 {rankingLoading ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
                 ) : hasRanking ? (
@@ -469,9 +463,9 @@ export default function CompetitorsPage() {
                 )}
               </p>
             </div>
-            <dl className="flex items-center justify-between gap-3 border-t border-[#d4d6cb] px-5 py-4 sm:border-l sm:border-t-0">
-              <dt className="text-[10px] text-[#72756a]">우리 병원 언급률</dt>
-              <dd className="text-2xl font-semibold tracking-tight">
+            <dl className="flex items-center justify-between gap-3 border-t border-[#30343a] px-5 py-4 sm:border-l sm:border-t-0">
+              <dt className="text-[10px] text-[#959c9f]">우리 병원 언급률</dt>
+              <dd className="font-numeric text-[32px] leading-none tracking-tight">
                 {hasRanking ? (
                   <AnimatedNumber
                     value={Number(answerRanking.myHospital?.mentionRate || 0)}
@@ -480,36 +474,36 @@ export default function CompetitorsPage() {
                 ) : (
                   "—"
                 )}
-                <span className="ml-1 text-[11px] font-normal text-[#72756a]">
+                <span className="ml-1 text-[11px] font-normal text-[#959c9f]">
                   %
                 </span>
               </dd>
             </dl>
-            <dl className="flex items-center justify-between gap-3 border-t border-[#d4d6cb] px-5 py-4 sm:border-l sm:border-t-0">
-              <dt className="text-[10px] text-[#72756a]">공통 실측 답변</dt>
-              <dd className="text-2xl font-semibold tracking-tight">
+            <dl className="flex items-center justify-between gap-3 border-t border-[#30343a] px-5 py-4 sm:border-l sm:border-t-0">
+              <dt className="text-[10px] text-[#959c9f]">공통 실측 답변</dt>
+              <dd className="font-numeric text-[32px] leading-none tracking-tight">
                 {!rankingError && answerRanking?.totalResponses != null ? (
                   <AnimatedNumber value={answerRanking.totalResponses} />
                 ) : (
                   "—"
                 )}
-                <span className="ml-1 text-[11px] font-normal text-[#72756a]">
+                <span className="ml-1 text-[11px] font-normal text-[#959c9f]">
                   건
                 </span>
               </dd>
             </dl>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d4d6cb] px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#30343a] px-4 py-4 sm:px-5">
             <div>
-              <h2 className="text-sm font-bold">AI 답변 등장 순위</h2>
-              <p className="mt-1 text-[10px] text-[#72756a]">
+              <h2 className="font-display text-sm">AI 답변 등장 순위</h2>
+              <p className="mt-1 text-[10px] text-[#959c9f]">
                 병원 행을 선택하면 우리 병원과의 차이를 확인합니다.
               </p>
             </div>
             <div
               role="group"
               aria-label="경쟁 병원 비교 지표"
-              className="flex border border-[#141512]"
+              className="flex border border-[#30343a]"
             >
               {(
                 [
@@ -522,7 +516,7 @@ export default function CompetitorsPage() {
                   type="button"
                   onClick={() => setRankingMetric(metric.key)}
                   aria-pressed={rankingMetric === metric.key}
-                  className={`px-3 py-2 text-[11px] font-semibold transition-colors ${rankingMetric === metric.key ? "bg-[#141512] text-[#d0ff43]" : "bg-white text-[#141512] hover:bg-[#f1f1eb]"}`}
+                  className={`border-b-2 px-3 py-2 text-[11px] font-semibold transition-colors ${rankingMetric === metric.key ? "border-[#ff6a24] bg-[#181b1e] text-[#ff6a24]" : "border-transparent bg-[#111315] text-[#959c9f] hover:bg-[#181b1e]"}`}
                 >
                   {metric.label}
                 </button>
@@ -530,14 +524,14 @@ export default function CompetitorsPage() {
             </div>
           </div>
           {answerRanking?.status === "LOW_SAMPLE" && (
-            <p className="border-b border-[#d4d6cb] bg-[#d0ff43] px-4 py-2.5 text-[11px] font-semibold sm:px-5">
+            <p className="border-b border-[#30343a] bg-[#181b1e] px-4 py-2.5 text-[11px] font-semibold text-[#ff6a24] sm:px-5">
               표본 {answerRanking.minRecommendedResponses}건 미만 · 임시
               순위입니다. 추가 측정에 따라 순위가 쉽게 달라질 수 있습니다.
             </p>
           )}
           {hasRanking ? (
             <>
-              <div className="grid grid-cols-[30px_minmax(0,1fr)_64px] gap-3 border-b border-[#d4d6cb] bg-[#f1f1eb] px-4 py-2 text-[9px] text-[#72756a] sm:grid-cols-[42px_minmax(0,1fr)_minmax(100px,.8fr)_84px] sm:px-5">
+              <div className="grid grid-cols-[30px_minmax(0,1fr)_64px] gap-3 border-b border-[#30343a] bg-[#181b1e] px-4 py-2 text-[9px] text-[#959c9f] sm:grid-cols-[42px_minmax(0,1fr)_minmax(100px,.8fr)_84px] sm:px-5">
                 <span>순위</span>
                 <span>비교 병원</span>
                 <span className="hidden sm:block">
@@ -566,10 +560,10 @@ export default function CompetitorsPage() {
                       onClick={() => setSelectedClinicId(row.id)}
                       aria-pressed={selected}
                       aria-label={`${row.name}, ${row.rank ?? "미산정"}위, 언급률 ${Number(row.mentionRate || 0).toFixed(1)}%, 언급 ${row.mentionCount}건. 비교 선택`}
-                      className={`grid w-full grid-cols-[30px_minmax(0,1fr)_64px] items-center gap-3 border-b border-[#d4d6cb] px-4 py-4 text-left transition-colors last:border-b-0 sm:grid-cols-[42px_minmax(0,1fr)_minmax(100px,.8fr)_84px] sm:px-5 ${selected ? "bg-[#141512] text-[#f1f1eb]" : "bg-white hover:bg-[#f1f1eb]"}`}
+                      className={`grid w-full grid-cols-[30px_minmax(0,1fr)_64px] items-center gap-3 border-b border-[#30343a] px-4 py-4 text-left transition-colors last:border-b-0 sm:grid-cols-[42px_minmax(0,1fr)_minmax(100px,.8fr)_84px] sm:px-5 ${selected ? "border-l-2 border-l-[#ff6a24] bg-[#181b1e] text-[#f5f5ef]" : "border-l-2 border-l-transparent bg-[#111315] hover:bg-[#181b1e]"}`}
                     >
                       <span
-                        className={`font-mono text-xl ${selected ? "text-[#d0ff43]" : "text-[#72756a]"}`}
+                        className={`font-numeric text-xl ${selected ? "text-[#ff6a24]" : "text-[#959c9f]"}`}
                       >
                         {row.rank ?? "—"}
                       </span>
@@ -579,23 +573,23 @@ export default function CompetitorsPage() {
                             {row.name}
                           </span>
                           {row.mine && (
-                            <span className="bg-[#ff5d2a] px-1.5 py-0.5 text-[9px] font-semibold text-[#141512]">
+                            <span className="border border-[#d9ff43]/40 px-1.5 py-0.5 text-[9px] font-semibold text-[#d9ff43]">
                               우리 병원
                             </span>
                           )}
                         </span>
                         <span
-                          className={`mt-1.5 block text-[10px] ${selected ? "text-[#a8ac9e]" : "text-[#72756a]"}`}
+                          className={`mt-1.5 block text-[10px] ${selected ? "text-[#959c9f]" : "text-[#959c9f]"}`}
                         >
                           {rankingMetric === "rate"
                             ? `${row.mentionCount}건의 답변에 등장`
                             : `공통 답변의 ${Number(row.mentionRate || 0).toFixed(1)}%`}
                         </span>
                         <span
-                          className={`mt-2 block h-1.5 sm:hidden ${selected ? "bg-white/15" : "bg-[#d4d6cb]"}`}
+                          className={`mt-2 block h-1.5 sm:hidden ${selected ? "bg-white/15" : "bg-[#30343a]"}`}
                         >
                           <span
-                            className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#d0ff43]" : "bg-[#141512]"}`}
+                            className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#ff6a24]" : "bg-[#646b70]"}`}
                             style={{
                               width: `${Math.min(100, Math.max(0, width))}%`,
                             }}
@@ -603,17 +597,17 @@ export default function CompetitorsPage() {
                         </span>
                       </span>
                       <span
-                        className={`hidden h-2 sm:block ${selected ? "bg-white/15" : "bg-[#d4d6cb]"}`}
+                        className={`hidden h-2 sm:block ${selected ? "bg-white/15" : "bg-[#30343a]"}`}
                       >
                         <span
-                          className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#d0ff43]" : row.mine ? "bg-[#ff5d2a]" : "bg-[#141512]"}`}
+                          className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#ff6a24]" : row.mine ? "bg-[#ff6a24]" : "bg-[#646b70]"}`}
                           style={{
                             width: `${Math.min(100, Math.max(0, width))}%`,
                           }}
                         />
                       </span>
                       <span
-                        className={`text-right text-xl font-semibold tabular-nums tracking-tight ${selected ? "text-[#d0ff43]" : ""}`}
+                        className={`text-right font-numeric text-[26px] tabular-nums tracking-tight ${selected ? "text-[#ff6a24]" : ""}`}
                       >
                         <AnimatedNumber
                           value={value}
@@ -629,7 +623,7 @@ export default function CompetitorsPage() {
               </div>
               {selectedClinic && (
                 <div
-                  className="flex flex-wrap items-center justify-between gap-3 border-t border-[#141512] bg-[#d0ff43] px-4 py-4 sm:px-5"
+                  className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-t border-[#30343a] border-l-[#ff6a24] bg-[#181b1e] px-4 py-4 sm:px-5"
                   aria-live="polite"
                   aria-atomic="true"
                 >
@@ -641,7 +635,7 @@ export default function CompetitorsPage() {
                         {selectedClinic.rank}위
                       </span>
                     </h3>
-                    <p className="mt-1.5 text-[11px] leading-6">
+                    <p className="mt-1.5 text-[11px] leading-6 text-[#959c9f] [&_strong]:text-[#ff6a24]">
                       {selectedClinic.mine ? (
                         `공통 답변 ${answerRanking.totalResponses}건 중 ${selectedClinic.mentionCount}건에서 우리 병원이 등장했습니다.`
                       ) : selectedMentionDifference === 0 ? (
@@ -677,12 +671,12 @@ export default function CompetitorsPage() {
                     ? "순위를 불러오지 못했습니다"
                     : rankingMessage}
               </p>
-              <p className="mt-2 text-xs leading-6 text-[#72756a]">
+              <p className="mt-2 text-xs leading-6 text-[#959c9f]">
                 모든 비교 병원이 포함된 동일한 답변이 쌓이면 순위를 표시합니다.
               </p>
             </div>
           )}
-          <p className="border-t border-[#d4d6cb] px-4 py-3 text-[10px] leading-5 text-[#72756a] sm:px-5">
+          <p className="border-t border-[#30343a] px-4 py-3 text-[10px] leading-5 text-[#959c9f] sm:px-5">
             {answerRanking?.windowStart &&
             !Number.isNaN(new Date(answerRanking.windowStart).getTime())
               ? `${new Date(answerRanking.windowStart).toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" })} 이후`
@@ -695,11 +689,11 @@ export default function CompetitorsPage() {
         <div className="mt-6 grid items-start gap-5 lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
           <section
             id="add-competitor"
-            className="scroll-mt-24 border border-[#141512] bg-[#f1f1eb] p-5"
+            className="scroll-mt-24 border border-[#30343a] bg-[#181b1e] p-5"
           >
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-base font-semibold">비교 병원 관리</h2>
-              <span className="text-xs tabular-nums text-[#72756a]">
+              <h2 className="font-display text-base">비교 병원 관리</h2>
+              <span className="text-xs tabular-nums text-[#959c9f]">
                 {competitors?.length || 0} /{" "}
                 {planLimits.maxCompetitors === -1
                   ? "무제한"
@@ -707,9 +701,9 @@ export default function CompetitorsPage() {
               </span>
             </div>
             {planLimits.maxCompetitors !== -1 && (
-              <div className="mb-5 h-1 overflow-hidden rounded-none bg-[#e9ebe1]">
+              <div className="mb-5 h-1 overflow-hidden rounded-none bg-[#30343a]">
                 <div
-                  className="h-full bg-[#d0ff43]"
+                  className="h-full bg-[#ff6a24]"
                   style={{
                     width: `${planLimits.maxCompetitors > 0 ? Math.min(100, ((competitors?.length || 0) / planLimits.maxCompetitors) * 100) : 0}%`,
                   }}
@@ -744,9 +738,9 @@ export default function CompetitorsPage() {
                 비교 병원 추가
               </Button>
             </div>
-            <div className="mt-5 border-t border-[#d4d6cb] pt-4">
+            <div className="mt-5 border-t border-[#30343a] pt-4">
               <button
-                className="flex w-full items-center justify-between gap-2 text-sm font-semibold text-[#141512] disabled:opacity-50"
+                className="flex w-full items-center justify-between gap-2 text-sm font-semibold text-[#f5f5ef] disabled:opacity-50"
                 onClick={() => {
                   if (!canUseFeature(planType, "autoDetect")) {
                     setUpgradeFeature("autoDetect");
@@ -771,22 +765,22 @@ export default function CompetitorsPage() {
                   <ArrowRight className="h-4 w-4" />
                 )}
               </button>
-              <p className="mt-2 text-[11px] leading-5 text-[#72756a]">
+              <p className="mt-2 text-[11px] leading-5 text-[#959c9f]">
                 측정된 AI 답변에 함께 등장한 병원을 찾아드립니다.
               </p>
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-none border border-[#d4d6cb] bg-white">
+          <section className="overflow-hidden rounded-none border border-[#30343a] bg-[#111315]">
             <div className="p-5">
               <div className="mb-4 flex justify-between text-xs">
                 <span className="font-semibold">등록한 경쟁 병원</span>
-                <span className="text-[#72756a]">
+                <span className="text-[#959c9f]">
                   {filteredCompetitors?.length || 0}개
                 </span>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#72756a]" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#959c9f]" />
                 <Input
                   className="pl-9"
                   aria-label="등록한 경쟁 병원 검색"
@@ -798,9 +792,9 @@ export default function CompetitorsPage() {
             </div>
             <div className="max-h-[520px] overflow-y-auto">
               {isLoading ? (
-                <Loader2 className="mx-auto my-8 h-6 w-6 animate-spin text-[#141512]" />
+                <Loader2 className="mx-auto my-8 h-6 w-6 animate-spin text-[#f5f5ef]" />
               ) : !filteredCompetitors?.length ? (
-                <p className="px-5 pb-8 pt-2 text-sm text-[#72756a]">
+                <p className="px-5 pb-8 pt-2 text-sm text-[#959c9f]">
                   {searchTerm
                     ? "검색 결과가 없습니다."
                     : "등록한 경쟁 병원이 없습니다."}
@@ -814,7 +808,7 @@ export default function CompetitorsPage() {
                   return (
                     <div
                       key={competitor.id}
-                      className="border-t border-[#e9ebe1] px-5 py-4"
+                      className="border-t border-[#30343a] px-5 py-4"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -822,14 +816,14 @@ export default function CompetitorsPage() {
                             {competitor.competitorName}
                           </h3>
                           {competitor.competitorRegion && (
-                            <p className="mt-1 text-[11px] text-[#72756a]">
+                            <p className="mt-1 text-[11px] text-[#959c9f]">
                               {competitor.competitorRegion}
                             </p>
                           )}
                         </div>
                         <button
                           aria-label={`${competitor.competitorName} 삭제`}
-                          className="shrink-0 rounded-none p-1.5 text-[#989b8d] hover:bg-[#f1f1eb] hover:text-red-600"
+                          className="shrink-0 rounded-none p-1.5 text-[#959c9f] hover:bg-[#181b1e] hover:text-red-600"
                           onClick={() => {
                             if (confirm("이 경쟁사를 삭제하시겠습니까?"))
                               deleteMutation.mutate(competitor.id);
@@ -838,10 +832,10 @@ export default function CompetitorsPage() {
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[#72756a]">
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-[#959c9f]">
                         <span
                           className={
-                            competitor.isActive ? "text-[#141512]" : ""
+                            competitor.isActive ? "text-[#f5f5ef]" : ""
                           }
                         >
                           {competitor.isActive ? "활성" : "비활성"}
@@ -859,7 +853,7 @@ export default function CompetitorsPage() {
               )}
             </div>
             <button
-              className="flex w-full items-center justify-between border-t border-[#d4d6cb] bg-[#fafaf6] px-5 py-4 text-xs text-[#72756a]"
+              className="flex w-full items-center justify-between border-t border-[#30343a] bg-[#181b1e] px-5 py-4 text-xs text-[#959c9f]"
               onClick={() => setShowInactive(!showInactive)}
             >
               <span className="flex items-center gap-2">
@@ -871,7 +865,7 @@ export default function CompetitorsPage() {
         </div>
         <div className="mt-5 space-y-5">
           {showInactive && (
-            <section className="rounded-none border border-[#d4d6cb] bg-white p-5">
+            <section className="rounded-none border border-[#30343a] bg-[#111315] p-5">
               <div className="mb-4 flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">삭제된 병원</h3>
                 <Button
@@ -889,16 +883,16 @@ export default function CompetitorsPage() {
               {inactiveLoading ? (
                 <Loader2 className="mx-auto my-5 h-5 w-5 animate-spin" />
               ) : inactiveError ? (
-                <p className="text-xs leading-6 text-[#72756a]">
+                <p className="text-xs leading-6 text-[#959c9f]">
                   목록을 불러오지 못했습니다. 전체 복구 버튼으로 복구를 시도할
                   수 있습니다.
                 </p>
               ) : !inactiveCompetitors?.length ? (
-                <p className="text-xs text-[#72756a]">
+                <p className="text-xs text-[#959c9f]">
                   복구할 병원이 없습니다.
                 </p>
               ) : (
-                <div className="divide-y divide-[#d4d6cb]">
+                <div className="divide-y divide-[#30343a]">
                   {inactiveCompetitors.map((comp: any) => (
                     <div
                       key={comp.id}
@@ -909,7 +903,7 @@ export default function CompetitorsPage() {
                           {comp.competitorName}
                         </p>
                         {comp.competitorRegion && (
-                          <p className="mt-1 text-[10px] text-[#72756a]">
+                          <p className="mt-1 text-[10px] text-[#959c9f]">
                             {comp.competitorRegion}
                           </p>
                         )}
@@ -929,10 +923,10 @@ export default function CompetitorsPage() {
             </section>
           )}
           {showSuggestions && (suggestions.length > 0 || analysisInfo) && (
-            <section className="rounded-none border border-[#d4d6cb] bg-white p-5 sm:p-7">
+            <section className="rounded-none border border-[#30343a] bg-[#111315] p-5 sm:p-7">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">함께 등장하는 병원</h2>
+                  <h2 className="font-display text-lg">함께 등장하는 병원</h2>
                 </div>
                 <Button
                   variant="ghost"
@@ -944,25 +938,25 @@ export default function CompetitorsPage() {
                 </Button>
               </div>
               {analysisInfo && (
-                <p className="mt-2 text-xs leading-6 text-[#72756a]">
+                <p className="mt-2 text-xs leading-6 text-[#959c9f]">
                   최근 {analysisInfo.periodDays}일 · AI 응답{" "}
                   {analysisInfo.totalResponsesAnalyzed}개 분석 · 우리 병원
                   언급률 {analysisInfo.myMentionRate}%
                 </p>
               )}
               {suggestions.length === 0 ? (
-                <p className="py-10 text-center text-sm text-[#72756a]">
+                <p className="py-10 text-center text-sm text-[#959c9f]">
                   현재 추가할 후보가 없습니다. 측정 데이터가 쌓이면 다시 확인해
                   주세요.
                 </p>
               ) : (
-                <div className="mt-5 divide-y divide-[#d4d6cb]">
+                <div className="mt-5 divide-y divide-[#30343a]">
                   {suggestions.map((suggestion) => {
                     const config = THREAT_CONFIG[suggestion.threatLevel];
                     return (
                       <div key={suggestion.name} className="py-5 first:pt-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h3 className="text-base font-semibold">
+                          <h3 className="font-display text-base">
                             {suggestion.name}
                           </h3>
                           <span
@@ -971,10 +965,10 @@ export default function CompetitorsPage() {
                             {config.label} · {suggestion.threatScore}점
                           </span>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-[#72756a]">
+                        <p className="mt-2 text-sm leading-6 text-[#959c9f]">
                           {suggestion.reason}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#72756a]">
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[#959c9f]">
                           <span>총 {suggestion.mentionCount}회 언급</span>
                           {suggestion.soloMentionCount > 0 && (
                             <span>
@@ -1029,19 +1023,19 @@ export default function CompetitorsPage() {
           )}
 
           {comparison && comparison.competitors?.length > 0 && (
-            <details className="group overflow-hidden rounded-none border border-[#d4d6cb] bg-white">
+            <details className="group overflow-hidden rounded-none border border-[#30343a] bg-[#111315]">
               <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-5 sm:px-7">
                 <div>
-                  <h2 className="text-base font-semibold">
+                  <h2 className="font-display text-base">
                     AI 가시성 점수 비교
                   </h2>
-                  <p className="mt-1 text-[11px] text-[#72756a]">
+                  <p className="mt-1 text-[11px] text-[#959c9f]">
                     복합 점수로 살펴보는 노출 상태 · ≈ AI 응답 기반 추정치
                   </p>
                 </div>
                 <Plus className="h-4 w-4 shrink-0 group-open:rotate-45" />
               </summary>
-              <div className="space-y-5 border-t border-[#d4d6cb] px-5 py-6 sm:px-7">
+              <div className="space-y-5 border-t border-[#30343a] px-5 py-6 sm:px-7">
                 {[
                   { ...comparison.myHospital, mine: true },
                   ...[...comparison.competitors].sort(
@@ -1051,7 +1045,7 @@ export default function CompetitorsPage() {
                   <div key={index}>
                     <div className="mb-2 flex items-center justify-between gap-3 text-xs">
                       <span
-                        className={`min-w-0 truncate ${comp.mine ? "font-semibold text-[#141512]" : "text-[#525849]"}`}
+                        className={`min-w-0 truncate ${comp.mine ? "font-semibold text-[#f5f5ef]" : "text-[#959c9f]"}`}
                       >
                         {comp.name || "우리 병원"}
                         {comp.mine && " · 우리 병원"}
@@ -1063,9 +1057,9 @@ export default function CompetitorsPage() {
                         {comp.isEstimated && " ≈"}
                       </span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-none bg-[#e9ebe1]">
+                    <div className="h-2 overflow-hidden rounded-none bg-[#30343a]">
                       <div
-                        className={`h-full rounded-none ${comp.mine ? "bg-[#d0ff43]" : "bg-[#b8bcab]"}`}
+                        className={`h-full rounded-none ${comp.mine ? "bg-[#ff6a24]" : "bg-[#646b70]"}`}
                         style={{
                           width: `${Math.min(100, Math.max(0, comp.score || 0))}%`,
                         }}

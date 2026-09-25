@@ -44,21 +44,21 @@ export function InsightCard({ insights, title = '주간 인사이트' }: Insight
           {insights.map((insight, index) => (
             <li
               key={index}
-              className="flex items-start gap-3 p-3.5 rounded-2xl bg-white/60 backdrop-blur-sm border border-slate-100/80 hover:bg-white/80 hover:shadow-card transition-all duration-200"
+              className="flex items-start gap-3 p-3.5 rounded-2xl bg-[#111315]/60 backdrop-blur-sm border border-[#30343a]/80 hover:bg-[#111315]/80 hover:shadow-card transition-all duration-200"
             >
               <div className="flex-shrink-0 mt-0.5">
                 {getIcon(insight)}
               </div>
-              <span className="text-sm text-slate-700 leading-relaxed">{removeEmoji(insight)}</span>
+              <span className="text-sm text-[#c0c4c7] leading-relaxed">{removeEmoji(insight)}</span>
             </li>
           ))}
         </ul>
         {insights.length === 0 && (
           <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-2xl bg-[#181b1e] flex items-center justify-center mx-auto mb-3">
               <Lightbulb className="w-6 h-6 text-slate-400" />
             </div>
-            <p className="text-sm text-slate-500">아직 인사이트가 없습니다.</p>
+            <p className="text-sm text-[#959c9f]">아직 인사이트가 없습니다.</p>
           </div>
         )}
       </CardContent>

@@ -16,7 +16,7 @@ export default function ReportRedirectPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <div className="flex items-center gap-2 text-[#72756a] text-sm">
+      <div className="flex items-center gap-2 text-[#959c9f] text-sm">
         <Loader2 className="h-4 w-4 animate-spin" />
         ABHS 분석 리포트로 이동 중...
       </div>
