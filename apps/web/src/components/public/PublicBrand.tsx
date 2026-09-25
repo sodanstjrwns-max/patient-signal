@@ -21,31 +21,44 @@ export function SignalMark({ className = "" }: { className?: string }) {
 export function SignalWordmark({
   className = "",
   outlined = false,
+  compact = false,
 }: {
   className?: string;
   outlined?: boolean;
+  compact?: boolean;
 }) {
   return (
     <span
+      role="img"
+      aria-label="Patient Signal"
       className={`block whitespace-nowrap font-numeric font-bold leading-[0.8] tracking-[-0.075em] ${className}`}
     >
-      sig
       <span
-        style={
-          outlined
-            ? {
-                WebkitTextStroke: "1px #ff6a24",
-                WebkitTextFillColor: "transparent",
-              }
-            : undefined
+        aria-hidden="true"
+        className={
+          compact
+            ? "mb-[0.12em] block"
+            : "mb-[0.18em] block text-[0.56em] tracking-[-0.055em]"
         }
       >
-        nal
+        patient
       </span>
-      <span
-        className="ml-[0.035em] inline-block h-[0.075em] w-[0.075em] bg-[#d9ff43]"
-        aria-hidden="true"
-      />
+      <span aria-hidden="true" className="block">
+        sig
+        <span
+          style={
+            outlined
+              ? {
+                  WebkitTextStroke: "1px #ff6a24",
+                  WebkitTextFillColor: "transparent",
+                }
+              : undefined
+          }
+        >
+          nal
+        </span>
+        <span className="ml-[0.035em] inline-block h-[0.075em] w-[0.075em] bg-[#d9ff43]" />
+      </span>
     </span>
   );
 }
@@ -58,12 +71,7 @@ export function PublicBrand({ light = false }: { light?: boolean }) {
       className={`inline-flex items-center gap-2.5 ${light ? "text-[#f5f5ef]" : "text-[#ff6a24]"}`}
     >
       <SignalMark className="!h-8 !w-8" />
-      <span>
-        <span className="mb-1.5 block font-numeric text-[8px] leading-none tracking-[0.18em] text-[#959c9f]">
-          PATIENT
-        </span>
-        <SignalWordmark className="text-[27px]" />
-      </span>
+      <SignalWordmark compact className="text-[22px]" />
     </Link>
   );
 }

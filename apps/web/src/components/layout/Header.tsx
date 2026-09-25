@@ -24,9 +24,9 @@ export function Header({
         <div className="flex min-w-0 items-center gap-4">
           <Link
             href="/dashboard"
-            className="hidden font-numeric text-[36px] font-bold italic leading-none tracking-[-.07em] text-[#ff6a24] lg:block"
+            className="hidden font-numeric text-[28px] font-bold italic whitespace-nowrap leading-none tracking-[-.055em] text-[#ff6a24] lg:block"
           >
-            signal<span className="text-[#d9ff43]">.</span>
+            patient signal<span className="text-[#d9ff43]">.</span>
           </Link>
           <span className="hidden h-5 border-l border-[#30343a]/25 lg:block" />
           <h1 className="font-display truncate text-[13px] font-semibold text-[#f5f5ef]">

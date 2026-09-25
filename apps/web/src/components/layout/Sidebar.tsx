@@ -184,8 +184,8 @@ export function Sidebar() {
           aria-label="Patient Signal 홈"
         >
           <SignalMark className="!h-7 !w-7" />
-          <span className="font-numeric text-2xl font-black italic tracking-[-.06em]">
-            signal<span className="text-[#ff6a24]">.</span>
+          <span className="font-numeric text-[23px] font-black italic tracking-[-.06em]">
+            patient signal<span className="text-[#d9ff43]">.</span>
           </span>
         </Link>
         <button
@@ -334,9 +334,9 @@ export function Sidebar() {
               <Link
                 href="/dashboard"
                 aria-label="Patient Signal 홈"
-                className="font-numeric text-3xl font-black italic tracking-[-.07em]"
+                className="font-numeric text-[26px] font-black italic tracking-[-.07em]"
               >
-                signal<span className="text-[#ff6a24]">.</span>
+                patient signal<span className="text-[#d9ff43]">.</span>
               </Link>
               <button
                 onClick={() => setMobileOpen(false)}
