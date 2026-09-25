@@ -58,7 +58,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="dashboard-shell flex min-h-screen bg-[#f4f4f8]">
+    <div className="dashboard-shell flex min-h-screen bg-[#f1f1eb]">
       <Sidebar />
       <main className="min-w-0 flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen">
         <div>

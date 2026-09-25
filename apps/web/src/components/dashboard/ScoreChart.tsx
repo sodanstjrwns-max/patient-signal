@@ -42,22 +42,22 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#5b4dff" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#5b4dff" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#d0ff43" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#d0ff43" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ededf6" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e9ebe1" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: '#737382' }}
+                tick={{ fontSize: 12, fill: '#72756a' }}
                 tickLine={false}
-                axisLine={{ stroke: '#ededf6' }}
+                axisLine={{ stroke: '#e9ebe1' }}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#737382' }}
+                tick={{ fontSize: 12, fill: '#72756a' }}
                 tickLine={false}
-                axisLine={{ stroke: '#ededf6' }}
+                axisLine={{ stroke: '#e9ebe1' }}
               />
               <Tooltip
                 contentStyle={{
@@ -68,12 +68,12 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
                   boxShadow: '0 8px 32px -4px rgba(0, 0, 0, 0.08)',
                   padding: '12px 16px',
                 }}
-                labelStyle={{ color: '#334155', fontWeight: 600 }}
+                labelStyle={{ color: '#465135', fontWeight: 600 }}
               />
               <Area
                 type="monotone"
                 dataKey="score"
-                stroke="#5b4dff"
+                stroke="#d0ff43"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#colorScore)"

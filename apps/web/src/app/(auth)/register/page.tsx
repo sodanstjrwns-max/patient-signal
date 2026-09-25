@@ -41,47 +41,47 @@ export default function RegisterPage() {
 
   return (
     <AuthShell mode="register">
-            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#5b4dff]">Create account</p>
+            <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#44551d]">Create account</p>
             <h1 className="mt-3 text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">첫 시그널을 켜세요.</h1>
-            <p className="mt-2 text-sm leading-6 text-[#606070]">계정을 만든 뒤 병원 정보를 연결할 수 있습니다.</p>
+            <p className="mt-2 text-sm leading-6 text-[#687253]">계정을 만든 뒤 병원 정보를 연결할 수 있습니다.</p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-4">
               {error && <div role="alert" className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
               <div className="space-y-2">
-                <label htmlFor="register-name" className="text-sm font-semibold text-[#111118]">이름</label>
+                <label htmlFor="register-name" className="text-sm font-semibold text-[#141512]">이름</label>
                 <Input id="register-name" type="text" placeholder="홍길동" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required autoComplete="name" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="register-email" className="text-sm font-semibold text-[#111118]">이메일</label>
+                <label htmlFor="register-email" className="text-sm font-semibold text-[#141512]">이메일</label>
                 <Input id="register-email" type="email" placeholder="doctor@clinic.com" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required autoComplete="email" />
               </div>
               <div className="space-y-2">
-                <label htmlFor="register-password" className="text-sm font-semibold text-[#111118]">비밀번호</label>
+                <label htmlFor="register-password" className="text-sm font-semibold text-[#141512]">비밀번호</label>
                 <div className="relative">
                   <Input id="register-password" type={showPassword ? 'text' : 'password'} placeholder="8자 이상 입력해주세요" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required minLength={8} autoComplete="new-password" />
-                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#737382] hover:text-[#111118]" onClick={() => setShowPassword(!showPassword)}>
+                  <button type="button" aria-label={showPassword ? '비밀번호 숨기기' : '비밀번호 보기'} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#72756a] hover:text-[#141512]" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
               <div className="space-y-2">
-                <label htmlFor="register-phone" className="text-sm font-semibold text-[#111118]">전화번호 <span className="font-normal text-[#737382]">(선택)</span></label>
+                <label htmlFor="register-phone" className="text-sm font-semibold text-[#141512]">전화번호 <span className="font-normal text-[#72756a]">(선택)</span></label>
                 <Input id="register-phone" type="tel" placeholder="010-1234-5678" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} autoComplete="tel" />
               </div>
 
-              <label className="flex cursor-pointer items-start gap-3 rounded-none border border-[#dedee8] bg-[#f4f4f8] p-4 hover:bg-[#ededf6]">
-                <input type="checkbox" checked={formData.isPfMember} onChange={(e) => setFormData({ ...formData, isPfMember: e.target.checked })} className="mt-0.5 h-4 w-4 rounded border-[#d9d8e6] text-[#5b4dff] focus:ring-[#5b4dff]" />
-                <span><span className="block text-sm font-semibold text-[#111118]">페이션트퍼널 수강생입니다</span><span className="mt-1 block text-xs leading-5 text-[#606070]">수강생은 Starter 기능을 무료로 이용할 수 있습니다.</span></span>
+              <label className="flex cursor-pointer items-start gap-3 rounded-none border border-[#d4d6cb] bg-[#f1f1eb] p-4 hover:bg-[#e9ebe1]">
+                <input type="checkbox" checked={formData.isPfMember} onChange={(e) => setFormData({ ...formData, isPfMember: e.target.checked })} className="mt-0.5 h-4 w-4 rounded border-[#d7dacd] text-[#44551d] focus:ring-[#d0ff43]" />
+                <span><span className="block text-sm font-semibold text-[#141512]">페이션트퍼널 수강생입니다</span><span className="mt-1 block text-xs leading-5 text-[#687253]">수강생은 Starter 기능을 무료로 이용할 수 있습니다.</span></span>
               </label>
 
-              <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-none bg-[#111118] text-sm font-semibold text-white hover:bg-[#5b4dff] disabled:opacity-50">
+              <button type="submit" disabled={loading} className="flex h-12 w-full items-center justify-center gap-2 rounded-none bg-[#141512] text-sm font-semibold text-white hover:bg-[#d0ff43] disabled:opacity-50">
                 {loading ? '가입 중...' : '무료로 시작하기'} {!loading && <ArrowRight className="h-4 w-4" />}
               </button>
-              <p className="text-center text-xs leading-5 text-[#737382]">
-                가입 시 <Link href="/terms" className="underline hover:text-[#5b4dff]">이용약관</Link> 및 <Link href="/privacy" className="underline hover:text-[#5b4dff]">개인정보처리방침</Link>에 동의합니다.
+              <p className="text-center text-xs leading-5 text-[#72756a]">
+                가입 시 <Link href="/terms" className="underline hover:text-[#44551d]">이용약관</Link> 및 <Link href="/privacy" className="underline hover:text-[#44551d]">개인정보처리방침</Link>에 동의합니다.
               </p>
             </form>
-            <div className="mt-7 border-t border-[#dedee8] pt-6 text-center text-sm text-[#606070]">이미 계정이 있으신가요? <Link href="/login" className="font-semibold text-[#5b4dff] hover:underline">로그인</Link></div>
+            <div className="mt-7 border-t border-[#d4d6cb] pt-6 text-center text-sm text-[#687253]">이미 계정이 있으신가요? <Link href="/login" className="font-semibold text-[#44551d] hover:underline">로그인</Link></div>
 
     </AuthShell>
   );

@@ -77,12 +77,12 @@ interface TrendPoint {
 type SortKey = 'sov' | 'mentions' | 'avgPos' | 'firstPlace' | 'sentiment' | 'rankChange';
 
 const PLATFORM_LABELS: Record<string, { short: string; color: string }> = {
-  CHATGPT: { short: 'GPT', color: '#545067' },
-  PERPLEXITY: { short: 'PPX', color: '#38bdf8' },
+  CHATGPT: { short: 'GPT', color: '#525849' },
+  PERPLEXITY: { short: 'PPX', color: '#909781' },
   CLAUDE: { short: 'CLD', color: '#f97316' },
-  GEMINI: { short: 'GEM', color: '#a78bfa' },
-  GROK: { short: 'GRK', color: '#e879f9' },
-  CLOVA_X: { short: 'CLV', color: '#ff6b3d' },
+  GEMINI: { short: 'GEM', color: '#bec3af' },
+  GROK: { short: 'GRK', color: '#bec3af' },
+  CLOVA_X: { short: 'CLV', color: '#ff5d2a' },
 };
 
 function sentimentFace(s: number | null) {
@@ -617,11 +617,11 @@ export default function AdminSovPage() {
                 <div className="h-44 mb-5">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trend} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={v => v.slice(5)} />
-                      <YAxis reversed allowDecimals={false} tick={{ fontSize: 10, fill: '#64748b' }} domain={[1, 'dataMax']} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#292e23" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#687253' }} tickFormatter={v => v.slice(5)} />
+                      <YAxis reversed allowDecimals={false} tick={{ fontSize: 10, fill: '#687253' }} domain={[1, 'dataMax']} />
                       <Tooltip
-                        contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
+                        contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
                         formatter={(v) => [`${v}위`, '순위']}
                       />
                       <Line type="monotone" dataKey="rank" stroke="#f59e0b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
@@ -633,14 +633,14 @@ export default function AdminSovPage() {
                 <div className="h-44">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trend} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={v => v.slice(5)} />
-                      <YAxis tick={{ fontSize: 10, fill: '#64748b' }} unit="%" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#292e23" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#687253' }} tickFormatter={v => v.slice(5)} />
+                      <YAxis tick={{ fontSize: 10, fill: '#687253' }} unit="%" />
                       <Tooltip
-                        contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
+                        contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
                         formatter={(v) => [`${v}%`, 'SoV']}
                       />
-                      <Line type="monotone" dataKey="sovPercent" stroke="#777489" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                      <Line type="monotone" dataKey="sovPercent" stroke="#73766b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

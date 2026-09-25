@@ -85,16 +85,16 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
       <div
         className={`relative border border-l-4 p-4 sm:p-5 overflow-hidden ${
           !hasResults
-            ? 'bg-white border-[#dedee8] border-l-[#5b4dff]'
+            ? 'bg-white border-[#d4d6cb] border-l-[#d0ff43]'
             : anyMention
-              ? 'bg-white border-[#dedee8] border-l-[#5b4dff]'
+              ? 'bg-white border-[#d4d6cb] border-l-[#d0ff43]'
               : 'bg-amber-50 border-amber-200'
         }`}
       >
         <button
           onClick={handleDismiss}
           aria-label="배너 닫기"
-          className="absolute top-3 right-3 p-1 rounded-full text-[#858592] hover:text-[#606070] hover:bg-white transition-colors"
+          className="absolute top-3 right-3 p-1 rounded-full text-[#909781] hover:text-[#687253] hover:bg-white transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -106,16 +106,16 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
               <Loader2 className="h-5 w-5 text-brand-600 animate-spin" />
             </div>
             <div className="flex-1 min-w-0 pr-6">
-              <p className="text-sm font-semibold text-[#353143]">
+              <p className="text-sm font-semibold text-[#33372c]">
                 첫 AI 분석이 지금 진행 중입니다 <Sparkles className="inline h-4 w-4 text-brand-500 -mt-0.5" />
               </p>
-              <p className="text-xs text-[#737382] mt-0.5">
+              <p className="text-xs text-[#72756a] mt-0.5">
                 AI 플랫폼에 실제 질문을 던지고 있어요. 몇 분 안에 첫 결과가 여기에 표시됩니다.
               </p>
               <div className="mt-2.5 flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#5b4dff] rounded-full transition-all duration-700"
+                    className="h-full bg-[#d0ff43] rounded-full transition-all duration-700"
                     style={{ width: `${Math.max(progressPct, 5)}%` }}
                   />
                 </div>
@@ -142,7 +142,7 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
               )}
             </div>
             <div className="flex-1 min-w-0 pr-6">
-              <p className="text-sm font-semibold text-[#353143]">
+              <p className="text-sm font-semibold text-[#33372c]">
                 {anyMention ? (
                   <>
                     첫 분석 결과: AI가 우리 병원을{' '}
@@ -152,7 +152,7 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
                   <>첫 분석 결과: 아직 AI 응답에서 우리 병원이 언급되지 않았습니다</>
                 )}
               </p>
-              <p className="text-xs text-[#737382] mt-0.5">
+              <p className="text-xs text-[#72756a] mt-0.5">
                 {anyMention
                   ? '좋은 출발이에요. 어떤 질문에서 어떻게 언급됐는지 확인해보세요.'
                   : '지극히 정상입니다 — 여기서부터가 시작이에요. AEO 개선 액션으로 언급을 만들어갑니다.'}
@@ -167,7 +167,7 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${
                         p.mentioned > 0
                           ? 'bg-brand-100 text-brand-700'
-                          : 'bg-white text-[#737382]'
+                          : 'bg-white text-[#72756a]'
                       }`}
                     >
                       {p.mentioned > 0 ? (
@@ -205,12 +205,12 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
         {/* ── 잡 실패 ── */}
         {!isRunning && !hasResults && job.status === 'FAILED' && (
           <div className="flex items-start gap-3 pr-6">
-            <div className="w-10 h-10 rounded-md bg-[#ededf4] flex items-center justify-center shrink-0">
-              <Search className="h-5 w-5 text-[#737382]" />
+            <div className="w-10 h-10 rounded-md bg-[#e9ebe1] flex items-center justify-center shrink-0">
+              <Search className="h-5 w-5 text-[#72756a]" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#353143]">첫 분석이 아직 준비 중입니다</p>
-              <p className="text-xs text-[#737382] mt-0.5">
+              <p className="text-sm font-semibold text-[#33372c]">첫 분석이 아직 준비 중입니다</p>
+              <p className="text-xs text-[#72756a] mt-0.5">
                 다음 정기 분석에서 자동으로 다시 시도합니다. 조금만 기다려주세요.
               </p>
             </div>

@@ -36,12 +36,12 @@ interface PlatformStatsProps {
 }
 
 const platformColors: Record<string, string> = {
-  CHATGPT: '#545067',
-  PERPLEXITY: '#1E88E5',
+  CHATGPT: '#525849',
+  PERPLEXITY: '#909781',
   CLAUDE: '#D97706',
-  GEMINI: '#8B5CF6',
+  GEMINI: '#bec3af',
   GROK: '#000000',
-  CLOVA_X: '#545067',
+  CLOVA_X: '#525849',
 };
 
 const platformNames: Record<string, string> = {
@@ -73,7 +73,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
     key: platform,
     name: platformNames[platform] || platform,
     score: scoreData[platform.toLowerCase()] ?? scoreData[platform] ?? 0,
-    color: platformColors[platform] || '#6B7280',
+    color: platformColors[platform] || '#687253',
     isLocked: !allowedPlatforms.includes(platform) && !teaserPlatforms.includes(platform),
     isTeaser: !allowedPlatforms.includes(platform) && teaserPlatforms.includes(platform),
   }));
@@ -105,8 +105,8 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{ 
-                      backgroundColor: platform.isLocked ? '#D1D5DB' : platform.color,
-                      boxShadow: `0 0 0 2px ${platform.isLocked ? '#D1D5DB40' : `${platform.color}40`}`
+                      backgroundColor: platform.isLocked ? '#d9ddcf' : platform.color,
+                      boxShadow: `0 0 0 2px ${platform.isLocked ? '#d9ddcf40' : `${platform.color}40`}`
                     }}
                   />
                   <span className="text-sm font-medium text-slate-700">{platform.name}</span>
@@ -123,7 +123,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
                   className="h-full rounded-full transition-all duration-500"
                   style={{
                     width: platform.isLocked ? '35%' : `${platform.score}%`,
-                    backgroundColor: platform.isLocked ? '#D1D5DB' : platform.color,
+                    backgroundColor: platform.isLocked ? '#d9ddcf' : platform.color,
                   }}
                 />
               </div>
@@ -173,7 +173,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
         ) : (
           <div className="space-y-6">
             {data.map((platform) => {
-              const color = platformColors[platform.platform] || '#6B7280';
+              const color = platformColors[platform.platform] || '#687253';
               const hasData = (platform as any).hasData !== false && platform.totalQueries > 0;
               const isTeaser = !allowedPlatforms.includes(platform.platform) && teaserPlatforms.includes(platform.platform);
               const isLocked = !allowedPlatforms.includes(platform.platform) && !isTeaser;
@@ -216,7 +216,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                       )}
                     </div>
                     <div className="text-right">
-                      <span className="text-2xl font-bold" style={{ color: hasData ? color : '#D1D5DB' }}>
+                      <span className="text-2xl font-bold" style={{ color: hasData ? color : '#d9ddcf' }}>
                         {hasData ? platform.visibilityScore : '-'}
                       </span>
                       {hasData && <span className="text-sm text-slate-400 ml-0.5">점</span>}

@@ -290,12 +290,12 @@ export default function OnboardingPage() {
   // 분석 시작 애니메이션 화면
   if (analyzingAnimation) {
     return (
-      <div className="min-h-screen bg-[#f4f4f8] flex items-center justify-center p-5">
+      <div className="min-h-screen bg-[#f1f1eb] flex items-center justify-center p-5">
         <div className="text-center max-w-md">
           <div className="relative w-24 h-24 mx-auto mb-8">
-            <div className="absolute inset-0 rounded-[22px] bg-[#ff6b3d]" />
-            <div className="absolute inset-2 rounded-[16px] bg-white flex items-center justify-center">
-              <Search className="h-9 w-9 text-[#5b4dff]" />
+            <div className="absolute inset-0 rounded-sm bg-[#ff5d2a]" />
+            <div className="absolute inset-2 rounded-sm bg-white flex items-center justify-center">
+              <Search className="h-9 w-9 text-[#44551d]" />
             </div>
           </div>
           <h2 className="text-2xl font-bold text-slate-900 mb-3">
@@ -324,21 +324,21 @@ export default function OnboardingPage() {
     : specialtyOptions.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-[#f4f4f8] text-[#111118]">
-      <header className="flex h-[76px] items-center justify-between border-b border-[#dedee8] px-5 sm:px-10 lg:px-14"><PublicBrand /><span className="text-[10px] font-medium tracking-[0.14em] text-[#737382]">WORKSPACE SETUP</span></header>
+    <div className="min-h-screen bg-[#f1f1eb] text-[#141512]">
+      <header className="flex h-[76px] items-center justify-between border-b border-[#d4d6cb] px-5 sm:px-10 lg:px-14"><PublicBrand /><span className="text-[10px] font-medium tracking-[0.14em] text-[#72756a]">WORKSPACE SETUP</span></header>
       <div className="mx-auto grid max-w-[1320px] lg:grid-cols-[0.8fr_1.2fr]">
-        <aside className="border-b border-[#dedee8] px-5 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:py-14">
+        <aside className="border-b border-[#d4d6cb] px-5 py-8 sm:px-10 lg:border-b-0 lg:border-r lg:py-14">
           <div className="lg:sticky lg:top-12">
-            <p className="mb-5 text-[10px] font-semibold tracking-[0.18em] text-[#5b4dff]">LET'S FIND YOUR SIGNAL</p>
+            <p className="mb-5 text-[10px] font-semibold tracking-[0.18em] text-[#44551d]">LET'S FIND YOUR SIGNAL</p>
             <h1 className="text-3xl font-semibold leading-tight tracking-[-0.065em] sm:text-4xl lg:text-5xl">우리 병원을<br className="hidden lg:block" /> 알려주세요.</h1>
-            <p className="mt-4 max-w-xs text-sm leading-7 text-[#606070]">병원 소개를 바탕으로 의미 있는 질문을 찾습니다. 입력한 내용은 언제든 수정할 수 있습니다.</p>
+            <p className="mt-4 max-w-xs text-sm leading-7 text-[#687253]">병원 소개를 바탕으로 의미 있는 질문을 찾습니다. 입력한 내용은 언제든 수정할 수 있습니다.</p>
             <ol className="mt-7 grid grid-cols-3 gap-3 lg:mt-12 lg:block lg:space-y-0">
-              {['병원 기본 정보', '주력 진료와 경쟁 병원', '확인하고 시작'].map((label, i) => <li key={label} aria-current={step === i + 1 ? 'step' : undefined} className={`flex flex-col gap-2 border-t py-4 lg:flex-row lg:items-center lg:gap-5 lg:py-6 ${step === i + 1 ? 'border-[#111118] text-[#111118]' : 'border-[#dedee8] text-[#737382]'}`}><span className={`flex h-7 w-7 items-center justify-center text-xs font-medium ${step === i + 1 ? 'bg-[#ff6b3d]' : ''}`}>{step > i + 1 ? <Check className="h-4 w-4" /> : `0${i + 1}`}</span><span className="text-[11px] font-medium lg:text-sm">{label}</span>{step === i + 1 && <ArrowRight className="ml-auto hidden h-4 w-4 lg:block" />}</li>)}
+              {['병원 기본 정보', '주력 진료와 경쟁 병원', '확인하고 시작'].map((label, i) => <li key={label} aria-current={step === i + 1 ? 'step' : undefined} className={`flex flex-col gap-2 border-t py-4 lg:flex-row lg:items-center lg:gap-5 lg:py-6 ${step === i + 1 ? 'border-[#141512] text-[#141512]' : 'border-[#d4d6cb] text-[#72756a]'}`}><span className={`flex h-7 w-7 items-center justify-center text-xs font-medium ${step === i + 1 ? 'bg-[#ff5d2a]' : ''}`}>{step > i + 1 ? <Check className="h-4 w-4" /> : `0${i + 1}`}</span><span className="text-[11px] font-medium lg:text-sm">{label}</span>{step === i + 1 && <ArrowRight className="ml-auto hidden h-4 w-4 lg:block" />}</li>)}
             </ol>
           </div>
         </aside>
         <main className="min-w-0 bg-white px-5 py-8 sm:px-10 lg:px-14 lg:py-14">
-          <div className="mb-8 border-b border-[#dedee8] pb-7"><p className="text-[10px] font-semibold tracking-[0.16em] text-[#737382]">STEP {String(step).padStart(2, '0')} / {String(TOTAL_STEPS).padStart(2, '0')}</p><h2 className="mt-3 text-2xl font-semibold tracking-[-0.05em]">{step === 1 ? '병원의 이야기부터.' : step === 2 ? '어떤 진료에 집중할까요?' : '이제 시그널을 켤 준비가 됐어요.'}</h2></div>
+          <div className="mb-8 border-b border-[#d4d6cb] pb-7"><p className="text-[10px] font-semibold tracking-[0.16em] text-[#72756a]">STEP {String(step).padStart(2, '0')} / {String(TOTAL_STEPS).padStart(2, '0')}</p><h2 className="mt-3 text-2xl font-semibold tracking-[-0.05em]">{step === 1 ? '병원의 이야기부터.' : step === 2 ? '어떤 진료에 집중할까요?' : '이제 시그널을 켤 준비가 됐어요.'}</h2></div>
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl mb-4">
               {error}
@@ -350,9 +350,9 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               {/* 허브 프리필 안내 — 빈 필드만 채웠고 모두 수정 가능 */}
               {hubPrefilled && (
-                <div className="flex items-center gap-2 rounded-[4px] border border-[#dedee8] bg-[#f4f4f8] p-3">
-                  <Sparkles className="h-4 w-4 text-[#5b4dff] shrink-0" />
-                  <p className="text-xs text-[#5b4dff]">
+                <div className="flex items-center gap-2 rounded-[4px] border border-[#d4d6cb] bg-[#f1f1eb] p-3">
+                  <Sparkles className="h-4 w-4 text-[#44551d] shrink-0" />
+                  <p className="text-xs text-[#44551d]">
                     Patient Hub 프로필에서 가져와 미리 채웠어요. 수정할 수 있어요.
                   </p>
                 </div>
@@ -387,11 +387,11 @@ export default function OnboardingPage() {
                       onClick={() => setFormData({ ...formData, specialtyType: option.value, coreTreatments: [] })}
                       className={`p-2.5 rounded-[4px] border text-center transition-colors ${
                         formData.specialtyType === option.value
-                          ? 'border-[#5b4dff] bg-[#ededf6] text-[#101016]'
-                          : 'border-[#dedee8] bg-white hover:border-[#b9b8c9]'
+                          ? 'border-[#d0ff43] bg-[#e9ebe1] text-[#141512]'
+                          : 'border-[#d4d6cb] bg-white hover:border-[#b8bcab]'
                       }`}
                     >
-                      <span className={`mx-auto mb-2 block h-1 w-5 ${formData.specialtyType === option.value ? 'bg-[#5b4dff]' : 'bg-[#dedee8]'}`} />
+                      <span className={`mx-auto mb-2 block h-1 w-5 ${formData.specialtyType === option.value ? 'bg-[#d0ff43]' : 'bg-[#d4d6cb]'}`} />
                       <p className="text-[11px] mt-0.5 font-medium">{option.label}</p>
                     </button>
                   ))}
@@ -419,7 +419,7 @@ export default function OnboardingPage() {
                     aria-label="시/도"
                     value={formData.regionSido}
                     onChange={(e) => setFormData({ ...formData, regionSido: e.target.value })}
-                    className="w-full h-11 px-3 rounded-[4px] border border-[#dedee8] bg-white text-sm focus:border-[#5b4dff] focus:outline-none focus:ring-2 focus:ring-[#5b4dff]/15"
+                    className="w-full h-11 px-3 rounded-[4px] border border-[#d4d6cb] bg-white text-sm focus:border-[#d0ff43] focus:outline-none focus:ring-2 focus:ring-[#d0ff43]/15"
                   >
                     <option value="">시/도 선택</option>
                     {SIDO_LIST.map(sido => (
@@ -460,17 +460,17 @@ export default function OnboardingPage() {
                 </p>
               </div>
 
-              <div className="space-y-2 border-t border-[#dedee8] pt-5">
+              <div className="space-y-2 border-t border-[#d4d6cb] pt-5">
                 <div className="flex items-center justify-between gap-3">
-                  <label htmlFor="clinic-introduction" className="flex items-center gap-2 text-sm font-semibold text-[#111118]">
-                    <Sparkles className="h-4 w-4 text-[#5b4dff]" />
+                  <label htmlFor="clinic-introduction" className="flex items-center gap-2 text-sm font-semibold text-[#141512]">
+                    <Sparkles className="h-4 w-4 text-[#44551d]" />
                     병원 소개
                   </label>
                   {hubIntroductionConnected && (
-                    <span className="rounded-full bg-[#ededf6] px-2.5 py-1 text-[11px] font-semibold text-[#5b4dff]">Hub 연결됨</span>
+                    <span className="rounded-full bg-[#e9ebe1] px-2.5 py-1 text-[11px] font-semibold text-[#44551d]">Hub 연결됨</span>
                   )}
                 </div>
-                <p className="text-xs leading-5 text-[#606070]">
+                <p className="text-xs leading-5 text-[#687253]">
                   {hubIntroductionConnected
                     ? 'Patient Hub의 정보를 초안으로 가져왔습니다. 내용은 이곳에서 자유롭게 수정할 수 있습니다.'
                     : '병원의 진료와 특징을 적어 주세요. 이 정보를 바탕으로 더 관련 있는 핵심 질문을 추천합니다.'}
@@ -485,13 +485,13 @@ export default function OnboardingPage() {
                   maxLength={2000}
                   rows={5}
                   placeholder="주력 진료, 환자분께 설명하고 싶은 특징, 진료 방식을 적어 주세요."
-                  className="w-full resize-y rounded-[4px] border border-[#dedee8] bg-white px-3.5 py-3 text-sm leading-6 text-[#111118] placeholder:text-[#737382] focus:border-[#5b4dff] focus:outline-none focus:ring-2 focus:ring-[#5b4dff]/15"
+                  className="w-full resize-y rounded-[4px] border border-[#d4d6cb] bg-white px-3.5 py-3 text-sm leading-6 text-[#141512] placeholder:text-[#72756a] focus:border-[#d0ff43] focus:outline-none focus:ring-2 focus:ring-[#d0ff43]/15"
                 />
-                <p className="text-right text-[11px] text-[#737382]">{formData.clinicIntroduction.length}/2000</p>
+                <p className="text-right text-[11px] text-[#72756a]">{formData.clinicIntroduction.length}/2000</p>
               </div>
 
               <Button
-                className="w-full bg-[#5b4dff] hover:bg-[#101016] text-white"
+                className="w-full bg-[#d0ff43] text-[#141512] hover:bg-[#141512] hover:text-white"
                 onClick={() => setStep(2)}
                 disabled={!canProceed()}
               >
@@ -510,7 +510,7 @@ export default function OnboardingPage() {
                   주력 진료 / 시술
                   <span className="text-xs text-slate-400 font-normal">(1~10개 선택)</span>
                 </label>
-                <div className="rounded-[4px] border border-[#dedee8] bg-[#f4f4f8] p-3 mb-2">
+                <div className="rounded-[4px] border border-[#d4d6cb] bg-[#f1f1eb] p-3 mb-2">
                   <p className="text-xs text-brand-700">
                     <Lightbulb className="inline h-3 w-3 mr-1" />
                     선택한 진료별로 AI 모니터링 질문이 자동 생성됩니다.
@@ -526,8 +526,8 @@ export default function OnboardingPage() {
                       onClick={() => handleTreatmentToggle(treatment)}
                       className={`px-3 py-1.5 text-sm rounded-full border transition-all ${
                         formData.coreTreatments.includes(treatment)
-                          ? 'border-[#5b4dff] bg-[#5b4dff] text-white'
-                          : 'border-[#dedee8] bg-white hover:border-[#b9b8c9] hover:bg-[#ededf6]'
+                          ? 'border-[#d0ff43] bg-[#d0ff43] text-[#141512]'
+                          : 'border-[#d4d6cb] bg-white hover:border-[#b8bcab] hover:bg-[#e9ebe1]'
                       }`}
                     >
                       {formData.coreTreatments.includes(treatment) && (
@@ -584,8 +584,8 @@ export default function OnboardingPage() {
                       }}
                       className={`px-2.5 py-1 text-xs rounded-full border transition-all ${
                         formData.hospitalStrengths.includes(strength)
-                          ? 'border-[#5b4dff] bg-[#ededf6] text-[#101016]'
-                          : 'border-[#dedee8] bg-white hover:border-[#b9b8c9] hover:bg-[#ededf6]'
+                          ? 'border-[#d0ff43] bg-[#e9ebe1] text-[#141512]'
+                          : 'border-[#d4d6cb] bg-white hover:border-[#b8bcab] hover:bg-[#e9ebe1]'
                       }`}
                     >
                       {formData.hospitalStrengths.includes(strength) && (
@@ -633,7 +633,7 @@ export default function OnboardingPage() {
                     {formData.competitorNames.map((name) => (
                       <span
                         key={name}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#ededf6] text-[#101016] text-sm rounded-full border border-[#dedee8]"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#e9ebe1] text-[#141512] text-sm rounded-full border border-[#d4d6cb]"
                       >
                         {name}
                         <button aria-label={`${name} 삭제`} onClick={() => handleRemoveCompetitor(name)}>
@@ -650,7 +650,7 @@ export default function OnboardingPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" /> 이전
                 </Button>
                 <Button
-                  className="flex-1 bg-[#5b4dff] hover:bg-[#101016] text-white"
+                  className="flex-1 bg-[#d0ff43] text-[#141512] hover:bg-[#141512] hover:text-white"
                   onClick={() => setStep(3)}
                   disabled={!canProceed()}
                 >
@@ -665,7 +665,7 @@ export default function OnboardingPage() {
             <div className="space-y-4">
               {/* 등록 요약 */}
               <div className="space-y-3">
-                <div className="rounded-[4px] border border-[#dedee8] bg-[#f4f4f8] p-4">
+                <div className="rounded-[4px] border border-[#d4d6cb] bg-[#f1f1eb] p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold text-slate-900">{formData.name}</p>
@@ -685,11 +685,11 @@ export default function OnboardingPage() {
                 </div>
 
                 {formData.coreTreatments.length > 0 && (
-                  <div className="rounded-[4px] border border-[#dedee8] bg-[#f4f4f8] p-4">
-                    <p className="text-xs text-[#5b4dff] mb-1.5 font-semibold">주력 진료 ({formData.coreTreatments.length}개)</p>
+                  <div className="rounded-[4px] border border-[#d4d6cb] bg-[#f1f1eb] p-4">
+                    <p className="text-xs text-[#44551d] mb-1.5 font-semibold">주력 진료 ({formData.coreTreatments.length}개)</p>
                     <div className="flex flex-wrap gap-1">
                       {formData.coreTreatments.map((t) => (
-                        <span key={t} className="rounded-full border border-[#dedee8] bg-white px-2 py-0.5 text-xs text-[#101016]">
+                        <span key={t} className="rounded-full border border-[#d4d6cb] bg-white px-2 py-0.5 text-xs text-[#141512]">
                           {t}
                         </span>
                       ))}
@@ -697,26 +697,26 @@ export default function OnboardingPage() {
                   </div>
                 )}
                 {formData.clinicIntroduction.trim() && (
-                  <div className="rounded-[4px] border border-[#dedee8] bg-white p-3">
+                  <div className="rounded-[4px] border border-[#d4d6cb] bg-white p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold text-[#526175]">병원 소개</p>
-                      <button onClick={() => setStep(1)} className="text-xs font-semibold text-[#5b4dff] hover:underline">수정</button>
+                      <p className="text-xs font-semibold text-[#687253]">병원 소개</p>
+                      <button onClick={() => setStep(1)} className="text-xs font-semibold text-[#44551d] hover:underline">수정</button>
                     </div>
-                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-5 text-[#606070]">{formData.clinicIntroduction}</p>
+                    <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-xs leading-5 text-[#687253]">{formData.clinicIntroduction}</p>
                   </div>
                 )}
               </div>
 
               {/* AI 분석 미리보기 */}
-              <div className="rounded-[14px] border border-[#dedee8] bg-[#f4f4f8] p-4">
+              <div className="rounded-sm border border-[#d4d6cb] bg-[#f1f1eb] p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Zap className="h-4 w-4 text-brand-600" />
-                  <p className="text-sm font-bold text-[#111118]">시작하면 이런 질문을 추적합니다</p>
+                  <p className="text-sm font-bold text-[#141512]">시작하면 이런 질문을 추적합니다</p>
                 </div>
 
                 <div className="space-y-2.5">
                   {/* 자동 생성 질문 미리보기 */}
-                  <div className="rounded-[4px] border border-[#dedee8] bg-white p-3">
+                  <div className="rounded-[4px] border border-[#d4d6cb] bg-white p-3">
                     <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
                       <Sparkles className="h-3 w-3 text-brand-500" />
                       입력한 정보로 만든 질문 예시
@@ -724,7 +724,7 @@ export default function OnboardingPage() {
                     <div className="space-y-1">
                       {generatePreviewQuestions(formData).slice(0, 5).map((q, i) => (
                         <p key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-                          <span className="text-[#5b4dff] mt-0.5">•</span>
+                          <span className="text-[#44551d] mt-0.5">•</span>
                           <span>"{q}"</span>
                         </p>
                       ))}
@@ -736,12 +736,12 @@ export default function OnboardingPage() {
 
                   {/* 분석 항목 */}
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-[4px] border border-[#dedee8] bg-white p-2.5 text-center">
+                    <div className="rounded-[4px] border border-[#d4d6cb] bg-white p-2.5 text-center">
                       <BarChart3 className="h-5 w-5 text-brand-500 mx-auto mb-1" />
                       <p className="text-[11px] font-medium text-slate-700">6개 AI 플랫폼</p>
                       <p className="text-[10px] text-slate-400">ChatGPT·Perplexity·Claude·Gemini·Grok·CLOVA X</p>
                     </div>
-                    <div className="rounded-[4px] border border-[#dedee8] bg-white p-2.5 text-center">
+                    <div className="rounded-[4px] border border-[#d4d6cb] bg-white p-2.5 text-center">
                       <Target className="h-5 w-5 text-brand-500 mx-auto mb-1" />
                       <p className="text-[11px] font-medium text-slate-700">SoV 점수 산출</p>
                       <p className="text-[10px] text-slate-400">Voice Share 기반 가시성</p>
@@ -755,7 +755,7 @@ export default function OnboardingPage() {
                   <ArrowLeft className="mr-2 h-4 w-4" /> 이전
                 </Button>
                 <Button
-                  className="flex-1 bg-[#5b4dff] hover:bg-[#101016] text-white"
+                  className="flex-1 bg-[#d0ff43] text-[#141512] hover:bg-[#141512] hover:text-white"
                   onClick={handleSubmit}
                   disabled={loading}
                 >

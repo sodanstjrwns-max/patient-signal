@@ -5,15 +5,15 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'signal-button inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'signal-button inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-none text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-[#111118] text-white hover:bg-[#282433] focus-visible:ring-[#5b4dff] ',
+        default: 'bg-[#141512] text-white hover:bg-[#282c22] focus-visible:ring-[#ff5d2a] ',
         destructive: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600 shadow-sm',
-        outline: 'border border-[#dedee8] bg-white hover:bg-[#f4f4f8] text-[#111118] focus-visible:ring-[#8694a7]',
-        secondary: 'bg-[#ff6b3d] text-[#111118] hover:bg-[#ff845d] focus-visible:ring-[#5b4dff]',
-        ghost: 'hover:bg-[#ededf4] text-[#777489] focus-visible:ring-[#8694a7]',
+        outline: 'border border-[#d4d6cb] bg-white hover:bg-[#f1f1eb] text-[#141512] focus-visible:ring-[#909781]',
+        secondary: 'bg-[#ff5d2a] text-[#141512] hover:bg-[#ff845d] focus-visible:ring-[#ff5d2a]',
+        ghost: 'hover:bg-[#e9ebe1] text-[#73766b] focus-visible:ring-[#909781]',
         link: 'text-brand-600 underline-offset-4 hover:underline',
       },
       size: {

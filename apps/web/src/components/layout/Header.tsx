@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useAuthStore } from "@/stores/auth";
 interface HeaderProps {
   title: string;
   description?: string;
@@ -16,27 +17,39 @@ export function Header({
   onRefresh,
   refreshing,
 }: HeaderProps) {
+  const hospital = useAuthStore((state) => state.user?.hospital);
   return (
-    <header className="flex min-h-[76px] items-center justify-between gap-5 border-b border-[#dedee8] bg-white/60 px-5 py-4 sm:px-8 xl:px-10">
+    <header className="flex min-h-[44px] items-center justify-between gap-4 border-b border-[#d4d6cb] px-5 py-2 sm:px-8 lg:min-h-[76px] lg:py-3 xl:px-10">
       <div className="min-w-0">
-        <div className="mb-1 flex items-center gap-2 text-[9px] font-medium uppercase tracking-[.16em] text-[#858592]">
-          <span>Workspace</span>
-          <span>/</span>
-          <span className="text-[#5b4dff]">Signal</span>
+        <div className="flex min-w-0 items-center gap-4">
+          <Link
+            href="/dashboard"
+            className="hidden text-[28px] font-black leading-none tracking-[-.075em] lg:block"
+          >
+            signal<span className="text-[#ff5d2a]">.</span>
+          </Link>
+          <span className="hidden h-5 border-l border-[#141512]/25 lg:block" />
+          <h1 className="truncate text-[13px] font-semibold text-[#141512]">
+            {title}
+          </h1>
         </div>
-        <h1 className="text-sm font-semibold tracking-[-.025em] text-[#111118]">
-          {title}
-        </h1>
         {(description || subtitle) && (
-          <p className="mt-1 hidden text-[11px] text-[#737382] sm:block">
-            {description || subtitle}
-          </p>
+          <p className="sr-only">{description || subtitle}</p>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-5">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+        {hospital?.name && (
+          <Link
+            href="/dashboard/settings"
+            className="hidden max-w-[220px] items-center gap-2 truncate text-[11px] font-medium md:flex"
+          >
+            <span className="h-2 w-2 shrink-0 bg-[#ff5d2a]" />
+            {hospital.name}
+          </Link>
+        )}
         <Link
           href="/dashboard/guide"
-          className="hidden items-center gap-1 text-[11px] text-[#737382] hover:text-[#111118] md:flex"
+          className="hidden items-center gap-1 border-l border-[#d4d6cb] pl-5 text-[11px] text-[#72756a] hover:text-[#141512] xl:flex"
         >
           이용 가이드
           <ArrowUpRight className="h-3 w-3" />
@@ -46,7 +59,7 @@ export function Header({
             type="button"
             onClick={onRefresh}
             disabled={refreshing}
-            className="signal-button flex items-center gap-2 rounded-lg border border-[#d9d8e6] bg-white px-3 py-2 text-[11px] font-medium text-[#545067] hover:border-[#5b4dff] hover:text-[#5b4dff] disabled:opacity-50"
+            className="desk-action flex shrink-0 items-center gap-2 border border-[#141512] px-3 py-2 text-[11px] font-semibold text-[#141512] hover:bg-[#d0ff43] disabled:opacity-50"
           >
             <RefreshCw
               className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}

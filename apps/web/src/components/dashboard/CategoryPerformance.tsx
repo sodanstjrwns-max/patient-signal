@@ -100,7 +100,7 @@ export function CategoryPerformance() {
             <p className="text-sm text-slate-500 mb-6">
               실시간 질문을 하거나, 정기 크롤링이 실행되면<br/>자동으로 카테고리가 분류되고 성과가 쌓여요!
             </p>
-            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-[#111118] hover:bg-[#282433]">
+            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-[#141512] hover:bg-[#282c22]">
               <Zap className="h-4 w-4 mr-2" />실시간 질문 하러 가기
             </Button>
           </CardContent>
@@ -204,7 +204,7 @@ export function CategoryPerformance() {
 
           {/* 진료별 드릴다운 */}
           {data.myProcedures?.length > 0 && (
-            <Card className="border-[#dedee8] bg-[#f4f4f8]">
+            <Card className="border-[#d4d6cb] bg-[#f1f1eb]">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -442,7 +442,7 @@ export function CategoryPerformance() {
           </div>
 
           {/* CTA: 실시간 질문으로 이동 */}
-          <Card className="border-[#dedee8] bg-[#eeedff]">
+          <Card className="border-[#d4d6cb] bg-[#fafaf6]">
             <CardContent className="p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-900">더 많은 데이터로 정확한 분석을</p>
@@ -450,7 +450,7 @@ export function CategoryPerformance() {
               </div>
               <Button
                 size="sm"
-                className="bg-[#111118] hover:bg-[#282433]"
+                className="bg-[#141512] hover:bg-[#282c22]"
                 onClick={() => window.location.href = '/dashboard/live-query'}
               >
                 <Zap className="h-3.5 w-3.5 mr-1.5" />

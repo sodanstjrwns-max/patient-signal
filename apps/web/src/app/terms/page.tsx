@@ -10,19 +10,19 @@ export const metadata: Metadata = {
 // 2026-08-20 전 사이트 공통 법적 페이지 템플릿 적용 ({{서비스명}}=페이션트 시그널)
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-[#f4f4f8] flex flex-col text-[#111118]">
-      <header className="border-b border-[#dedee8] bg-white">
+    <div className="min-h-screen bg-[#f1f1eb] flex flex-col text-[#141512]">
+      <header className="border-b border-[#d4d6cb] bg-white">
         <div className="mx-auto flex h-[72px] max-w-5xl items-center justify-between px-5 sm:px-8">
-          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#5b4dff] text-white"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
-          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#606070] hover:text-[#5b4dff]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
+          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d0ff43] text-[#141512]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
+          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#687253] hover:text-[#44551d]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
         </div>
       </header>
       <main className="flex-1 max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16 w-full">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#5b4dff]">Legal</p>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#111118] mb-3">페이션트 시그널 이용약관</h1>
-        <p className="text-sm text-[#737382] mb-8">시행일: 2026년 8월 20일</p>
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#44551d]">Legal</p>
+        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#141512] mb-3">페이션트 시그널 이용약관</h1>
+        <p className="text-sm text-[#72756a] mb-8">시행일: 2026년 8월 20일</p>
 
-        <div className="border-t border-[#111118] bg-white p-6 sm:p-9 divide-y divide-[#dedee8] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+        <div className="border-t border-[#141512] bg-white p-6 sm:p-9 divide-y divide-[#d4d6cb] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">제1조 (목적)</h2>
             <p className="text-slate-600 leading-relaxed">
@@ -100,7 +100,7 @@ export default function TermsPage() {
               <li>해지 시 이미 결제된 이용기간 종료일까지 서비스를 이용할 수 있습니다.</li>
               <li>
                 환불은 별도{' '}
-                <a href="/refund" className="text-[#5b4dff] hover:text-[#101016] underline">
+                <a href="/refund" className="text-[#44551d] hover:text-[#141512] underline">
                   「환불규정」
                 </a>
                 에 따릅니다.
@@ -117,7 +117,7 @@ export default function TermsPage() {
               </li>
               <li>
                 회사는 회원의 개인정보를{' '}
-                <a href="/privacy" className="text-[#5b4dff] hover:text-[#101016] underline">
+                <a href="/privacy" className="text-[#44551d] hover:text-[#141512] underline">
                   「개인정보처리방침」
                 </a>
                 에 따라 보호합니다.
@@ -192,7 +192,7 @@ export default function TermsPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/" className="text-[#5b4dff] hover:text-[#101016] font-medium">
+          <a href="/" className="text-[#44551d] hover:text-[#141512] font-medium">
             ← 메인으로 돌아가기
           </a>
         </div>

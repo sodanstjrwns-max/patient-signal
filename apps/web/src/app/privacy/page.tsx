@@ -11,21 +11,21 @@ export const metadata: Metadata = {
 // 위탁 표는 시그널 실제 수탁자 반영: 토스페이먼츠·Cloudflare + Supabase(DB)·Resend(이메일), 카카오 알림톡 미사용으로 제외
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#f4f4f8] flex flex-col text-[#111118]">
-      <header className="border-b border-[#dedee8] bg-white">
+    <div className="min-h-screen bg-[#f1f1eb] flex flex-col text-[#141512]">
+      <header className="border-b border-[#d4d6cb] bg-white">
         <div className="mx-auto flex h-[72px] max-w-5xl items-center justify-between px-5 sm:px-8">
-          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#5b4dff] text-white"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
-          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#606070] hover:text-[#5b4dff]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
+          <a href="/" className="flex items-center gap-3 text-sm font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-sm bg-[#d0ff43] text-[#141512]"><ScanSearch className="h-4 w-4" /></span>Patient Signal</a>
+          <a href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-[#687253] hover:text-[#44551d]"><ArrowLeft className="h-4 w-4" /> 홈으로</a>
         </div>
       </header>
       <main className="flex-1 max-w-5xl mx-auto px-5 sm:px-8 py-12 sm:py-16 w-full">
-        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#5b4dff]">Legal</p>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#111118] mb-3">
+        <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-[#44551d]">Legal</p>
+        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.06em] text-[#141512] mb-3">
           페이션트 시그널 개인정보처리방침
         </h1>
-        <p className="text-sm text-[#737382] mb-8">적용일: 2026년 8월 20일</p>
+        <p className="text-sm text-[#72756a] mb-8">적용일: 2026년 8월 20일</p>
 
-        <div className="border-t border-[#111118] bg-white p-6 sm:p-9 divide-y divide-[#dedee8] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
+        <div className="border-t border-[#141512] bg-white p-6 sm:p-9 divide-y divide-[#d4d6cb] [&>section]:py-7 [&>section:first-child]:pt-0 [&>section:last-child]:pb-0">
           <section>
             <p className="text-slate-600 leading-relaxed">
               페이션트퍼널(이하 &quot;회사&quot;)은 「개인정보 보호법」에 따라 이용자의 개인정보를
@@ -78,7 +78,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-semibold text-slate-800 mb-4">4. 개인정보의 처리 위탁</h2>
             <div className="overflow-x-auto">
               <table className="min-w-full border border-slate-200 rounded-lg">
-                <thead className="bg-[#f4f4f8]">
+                <thead className="bg-[#f1f1eb]">
                   <tr>
                     <th className="px-4 py-2 text-left text-sm font-medium text-slate-700 border-b">
                       수탁자
@@ -139,7 +139,7 @@ export default function PrivacyPage() {
 
           <section>
             <h2 className="text-xl font-semibold text-slate-800 mb-4">8. 개인정보 보호책임자</h2>
-            <div className="text-slate-600 bg-[#f4f4f8] rounded-[11px] p-4">
+            <div className="text-slate-600 bg-[#f1f1eb] rounded-sm p-4">
               <p>성명: 문석준 (대표)</p>
               <p>이메일: patientsfunnel@gmail.com</p>
               <p>연락처: 010-4445-1873</p>
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
         </div>
 
         <div className="mt-8 text-center">
-          <a href="/" className="text-[#5b4dff] hover:text-[#101016] font-medium">
+          <a href="/" className="text-[#44551d] hover:text-[#141512] font-medium">
             ← 메인으로 돌아가기
           </a>
         </div>

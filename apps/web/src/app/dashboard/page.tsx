@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   ArrowUpRight,
-  Activity,
   Building2,
   Clock3,
   Loader2,
@@ -28,11 +27,7 @@ import {
 import { competitorsApi, crawlerApi, queryTemplatesApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "@/hooks/useToast";
-import {
-  AnimatedNumber,
-  Reveal,
-  SignalSurface,
-} from "@/components/motion/SignalMotion";
+import { AnimatedNumber } from "@/components/motion/SignalMotion";
 
 const PLATFORM_NAMES: Record<string, string> = {
   CHATGPT: "ChatGPT",
@@ -136,9 +131,7 @@ export default function DashboardPage() {
       : resolveState({
           isLoading: platformQuery.isLoading,
           isError: platformQuery.isError,
-          hasData:
-            platformHasMeasurement &&
-            selectedPlatformRate !== null,
+          hasData: platformHasMeasurement && selectedPlatformRate !== null,
         });
   const selectedRate =
     selectedPlatform === "ALL"
@@ -226,110 +219,60 @@ export default function DashboardPage() {
         />
       )}
       <FirstCrawlBanner hospitalId={hospitalId} />
-      <div className="mx-auto max-w-[1600px] px-5 pb-12 pt-8 sm:px-8 xl:px-10 xl:pt-10">
-        <Reveal className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="mx-auto max-w-[1560px] px-4 pb-10 pt-6 sm:px-7 lg:px-9">
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-[.2em] text-[#5b4dff]">
-              LIVE SIGNAL / YOUR CLINIC
-            </p>
-            <h2 className="text-[36px] font-semibold leading-[1.04] tracking-[-.065em] sm:text-[48px] xl:text-[56px]">
-              AI 속 우리 병원,
-              <br className="sm:hidden" /> 지금 어디에
-              <span className="text-[#ff6b3d]">.</span>
-            </h2>
-            <p className="mt-4 text-xs text-[#737382] sm:text-sm">
-              {name} · 플랫폼을 골라 실제 답변 속 존재감을 확인하세요.
-            </p>
+            <p className="desk-label mb-2">최근 30일 · AI 답변 분석</p>
+            <h1 className="text-[27px] font-bold leading-tight tracking-[-.055em] sm:text-[34px]">
+              {name}
+            </h1>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-[#dedee8] bg-white px-3 py-2 text-[10px] text-[#737382] sm:self-auto">
+          <p className="flex items-center gap-2 text-[11px] text-[#72756a]">
             <Clock3 className="h-3.5 w-3.5" />
             {hasLastCrawl
               ? `최근 측정 ${lastCrawlDate.toLocaleString("ko-KR", { month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
               : "첫 측정 대기"}
-          </div>
-        </Reveal>
+          </p>
+        </div>
+
         <nav
           aria-label="AI 노출 관리 흐름"
-          className="mb-7 grid grid-cols-2 border-y border-[#d9d8e6] lg:grid-cols-4"
+          className="mb-5 grid grid-cols-2 border-y border-[#d4d6cb] sm:grid-cols-4"
         >
           {WORKFLOW.map((item, i) => (
             <Link
               key={item.name}
               href={item.href}
-              className="group flex items-center gap-3 border-[#d9d8e6] px-2 py-4 transition-colors hover:bg-white sm:px-4 [&:nth-child(even)]:border-l lg:[&:not(:first-child)]:border-l"
+              className="group flex items-center gap-3 border-[#d4d6cb] px-2 py-3 text-xs hover:bg-white sm:px-3 [&:nth-child(even)]:border-l sm:[&:not(:first-child)]:border-l"
             >
-              <span className="self-start pt-0.5 font-mono text-[10px] text-[#777489]">
+              <span className="font-mono text-[10px] text-[#72756a]">
                 0{i + 1}
               </span>
-              <span className="flex-1">
-                <strong className="block text-[13px] font-semibold">
-                  {item.name}
-                </strong>
-                <span className="mt-1 block text-[10px] text-[#737382]">
-                  {item.detail}
-                </span>
-              </span>
-              <ArrowUpRight className="h-4 w-4 text-[#777489] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              <span className="flex-1 font-semibold">{item.name}</span>
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           ))}
         </nav>
-        <div className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-          <SignalSurface className="relative overflow-hidden rounded-[26px] bg-[#101016] p-6 text-white sm:p-8">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border-[36px] border-[#5b4dff]/20"
-            />
-            <div className="relative z-10">
-              <div className="mb-6 flex items-center justify-between gap-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#b9b8c9]">
-                  01 / AI VISIBILITY
-                </p>
-                <span className="flex items-center gap-1.5 text-[9px] text-[#b9b8c9]">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b3d]" />
-                  실제 수집 답변
+
+        <section
+          aria-label="플랫폼별 AI 언급률"
+          className="border border-[#141512]"
+        >
+          <div className="grid lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.3fr)]">
+            <div className="flex flex-col bg-[#ff5d2a] p-5 text-[#141512] sm:p-7">
+              <div className="flex items-center justify-between gap-3 border-b border-[#141512]/25 pb-4">
+                <h2 className="text-sm font-bold">우리 병원 언급률</h2>
+                <span className="border border-[#141512]/40 px-2 py-1 text-[10px] font-semibold">
+                  {selectedName}
                 </span>
               </div>
               <div
-                role="group"
-                aria-label="언급률을 볼 AI 플랫폼 선택"
-                className="flex flex-wrap gap-1.5"
-              >
-                {[{ platform: "ALL", platformName: "전체" }, ...platforms].map(
-                  (platform) => (
-                    <button
-                      key={platform.platform}
-                      type="button"
-                      onClick={() => setSelectedPlatform(platform.platform)}
-                      aria-pressed={selectedPlatform === platform.platform}
-                      className={`rounded-full border px-3 py-2 text-[10px] font-semibold transition-all duration-200 hover:-translate-y-0.5 motion-reduce:transform-none ${selectedPlatform === platform.platform ? "border-[#ff6b3d] bg-[#ff6b3d] text-[#101016] shadow-[0_0_26px_#ff6b3d26]" : "border-white/15 bg-white/[.03] text-[#b9b8c9] hover:border-white/40 hover:text-white"}`}
-                    >
-                      {platform.platform === "ALL"
-                        ? "전체"
-                        : PLATFORM_NAMES[platform.platform] ||
-                          platform.platformName ||
-                          platform.platform}
-                    </button>
-                  ),
-                )}
-              </div>
-              <div className="mt-7 flex items-center justify-between gap-3">
-                <h3 className="text-sm font-medium text-[#d9d8e6]">
-                  {selectedName}의 우리 병원 언급률
-                </h3>
-                {selectedPlatform !== "ALL" &&
-                  selectedPlatformData?.collectionStatus === "STALLED" && (
-                    <span className="text-[10px] text-[#ffab8d]">
-                      수집 상태 확인 중
-                    </span>
-                  )}
-              </div>
-              <div
-                className="my-5 flex min-h-[106px] items-baseline font-medium leading-none tracking-[-.075em] sm:min-h-[130px]"
+                className="flex flex-1 items-center py-6"
                 aria-live="polite"
                 aria-atomic="true"
               >
                 <MetricValue
-                  dark
+                  className="!rounded-none !text-[#141512]"
                   state={
                     selectedRate === null && selectedMetricState === "ok"
                       ? "empty"
@@ -340,303 +283,301 @@ export default function DashboardPage() {
                       ? abhsQuery.refetch()
                       : platformQuery.refetch()
                   }
-                  emptyLabel="아직 이 플랫폼의 측정 결과가 없습니다"
+                  emptyLabel="아직 측정 결과가 없습니다"
                 >
-                  {selectedRate !== null && (
-                    <AnimatedNumber
-                      value={selectedRate}
-                      decimals={1}
-                      className="text-[88px] tabular-nums text-[#ff6b3d] sm:text-[114px]"
-                    />
-                  )}
-                  <span className="ml-1 text-[34px] text-[#777489] sm:text-[46px]">
-                    %
+                  <span className="flex items-baseline font-semibold leading-none tracking-[-.08em]">
+                    {selectedRate !== null && (
+                      <AnimatedNumber
+                        value={selectedRate}
+                        decimals={1}
+                        className="text-[86px] sm:text-[116px] xl:text-[136px]"
+                      />
+                    )}
+                    <span className="ml-2 text-[34px] tracking-[-.04em]">
+                      %
+                    </span>
                   </span>
                 </MetricValue>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-[#ff6b3d] shadow-[0_0_16px_#ff6b3d55] transition-[width] duration-700 ease-out motion-reduce:transition-none"
-                  style={{
-                    width: `${Math.max(0, Math.min(100, selectedRate ?? 0))}%`,
-                  }}
-                />
-              </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <p
-                  className="text-[11px] leading-6 text-[#a5a3ba]"
-                  aria-live="polite"
-                >
+              <div className="border-t border-[#141512]/25 pt-4">
+                <p className="text-xs leading-6" aria-live="polite">
                   {selectedTotal !== null && selectedMentions !== null ? (
                     <>
-                      답변{" "}
-                      <strong className="font-semibold text-white">
-                        {selectedTotal.toLocaleString()}건
-                      </strong>{" "}
-                      중{" "}
-                      <strong className="font-semibold text-[#ff9a7a]">
-                        {selectedMentions.toLocaleString()}건
-                      </strong>
-                      에서 등장
+                      답변 <strong>{selectedTotal.toLocaleString()}건</strong>{" "}
+                      중 <strong>{selectedMentions.toLocaleString()}건</strong>
+                      에 등장
                     </>
                   ) : (
-                    "측정 결과가 있어야 언급률을 계산할 수 있습니다."
+                    "측정한 답변이 쌓이면 언급률을 표시합니다."
                   )}
                 </p>
+                {selectedPlatform !== "ALL" &&
+                  selectedPlatformData?.collectionStatus === "STALLED" && (
+                    <p className="mt-1 text-xs font-semibold">
+                      이 플랫폼의 수집 상태를 확인 중입니다.
+                    </p>
+                  )}
                 <Link
                   href={selectedResponseHref}
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white hover:text-[#ff6b3d]"
+                  className="mt-4 flex items-center justify-between border border-[#141512] px-3 py-3 text-xs font-bold hover:bg-[#141512] hover:text-[#ff5d2a]"
                 >
-                  {selectedPlatform === "ALL" ? "전체" : "선택한 AI"} 답변 보기
-                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  {selectedPlatform === "ALL" ? "전체" : selectedName} 답변 원문
+                  보기 <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="mt-7 grid grid-cols-3 border-t border-white/15 pt-5">
-                {[
-                  {
-                    label: "추적 질문",
-                    value:
-                      dashboardQuery.isError || !dashboard
-                        ? null
-                        : number(dashboard.stats?.totalPrompts),
-                    suffix: "개",
-                    decimals: 0,
-                  },
-                  {
-                    label: "브랜드 건강 점수",
-                    value: abhsOk ? number(abhs?.abhsScore) : null,
-                    suffix: "/ 100",
-                    decimals: 1,
-                  },
-                  {
-                    label: "측정된 플랫폼",
-                    value:
-                      platformQuery.isError || platformQuery.isLoading
-                        ? null
-                        : platforms.filter(
-                            (p) => p.hasData !== false && p.totalQueries > 0,
-                          ).length,
-                    suffix: "개",
-                    decimals: 0,
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={item.label}
-                    className={i ? "border-l border-white/15 pl-4" : ""}
-                  >
-                    <p className="text-[9px] text-[#9997ad] sm:text-[10px]">
-                      {item.label}
-                    </p>
-                    <p className="mt-2 text-2xl font-medium tracking-[-.045em] text-white sm:text-3xl">
-                      {item.value === null ? (
-                        "—"
-                      ) : (
-                        <AnimatedNumber
-                          value={item.value}
-                          decimals={item.decimals}
-                        />
-                      )}
-                      <span className="ml-1 text-[9px] font-normal tracking-normal text-[#9997ad]">
-                        {item.suffix}
-                      </span>
-                    </p>
-                  </div>
-                ))}
-              </div>
             </div>
-          </SignalSurface>
-          <SignalSurface className="flex flex-col rounded-[26px] bg-[#5b4dff] p-6 text-white sm:p-8">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[.17em] text-white/55">
-                02 / Competitive position
-              </p>
-              <Activity className="h-4 w-4 text-white" />
-            </div>
-            <div className="mb-6 mt-5 flex items-end justify-between gap-3">
-              <div>
-                <h3 className="text-sm text-white/85">
-                  등록 경쟁 병원 사이에서
-                </h3>
-                <p className="mt-2 font-medium leading-none tracking-[-.075em]">
-                  <span className="text-[82px] text-white sm:text-[96px]">
-                    {rankingAvailable && ranking.rank != null ? (
-                      <AnimatedNumber value={ranking.rank} />
-                    ) : (
-                      "—"
-                    )}
-                  </span>
-                  <span className="ml-2 text-xl tracking-[-.025em] text-white/55">
-                    {rankingAvailable && ranking.rank != null
-                      ? `위 / ${ranking.totalClinics}곳`
-                      : rankLabel}
-                  </span>
-                </p>
-              </div>
-              <Link
-                href="/dashboard/competitors"
-                aria-label="경쟁 순위 상세 보기"
-                className="mb-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 text-white hover:bg-white/10"
-              >
-                <ArrowUpRight className="h-5 w-5" />
-              </Link>
-            </div>
-            <div className="flex-1 space-y-4">
-              {rows.slice(0, 3).map((row) => (
-                <div key={row.id}>
-                  <div className="mb-1.5 flex items-center gap-3 text-[11px]">
-                    <span className="w-3 font-mono text-white/55">
-                      {row.rank ?? "—"}
-                    </span>
-                    <span
-                      className={`flex-1 ${row.id === hospitalId ? "text-white" : "text-white/85"}`}
-                    >
-                      {row.name}
-                      {row.id === hospitalId && (
-                        <span className="ml-1 text-[9px]">/ 우리 병원</span>
-                      )}
-                    </span>
-                    <span className="tabular-nums">
-                      {row.mentionRate.toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="ml-6 h-1.5 bg-white/[.08]">
-                    <div
-                      className={`h-full ${row.id === hospitalId ? "bg-[#ff9a7a]" : "bg-white/35"}`}
-                      style={{ width: `${Math.min(100, row.mentionRate)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              {!rows.length && (
-                <p className="py-3 text-xs leading-6 text-white/55">
-                  {rankQuery.isError
-                    ? "경쟁 순위를 불러오지 못했습니다."
-                    : rankQuery.isLoading
-                      ? "비교 데이터를 불러오는 중입니다."
-                      : ranking?.status === "NO_COMPETITORS"
-                        ? "경쟁 병원을 등록하면, 같은 AI 답변에서 등장 빈도를 비교합니다."
-                        : ranking?.status === "NO_MENTIONS"
-                          ? `공통 답변 ${ranking.totalResponses}건에서 등록 병원이 모두 미언급되어 순위를 매기지 않습니다.`
-                        : "등록 병원을 함께 비교할 수 있는 실측 답변이 쌓이면 순위를 표시합니다."}
-                </p>
-              )}
-            </div>
-            <p className="mt-6 border-t border-white/10 pt-4 text-[10px] leading-5 text-white/55">
-              {rankingAvailable
-                ? `공통 답변 ${ranking.totalResponses}건 · `
-                : ""}
-              {ranking?.status === "LOW_SAMPLE"
-                ? "표본이 적어 순위가 쉽게 달라질 수 있습니다. "
-                : ""}
-              플랫폼 선택과 별개인 전체 공통 답변의 순위입니다. 동률은 공동
-              순위이며 의료 품질이나 지역 전체 순위가 아닙니다.
-            </p>
-          </SignalSurface>
-        </div>
-        <section className="mt-9">
-          <div className="mb-4 flex items-end justify-between gap-4">
-            <div>
-              <p className="signal-eyebrow mb-2">Channel breakdown</p>
-              <h3 className="text-xl font-semibold tracking-[-.04em]">
-                어떤 AI에서 보이고 있나요?
-              </h3>
-            </div>
-            <Link href="/dashboard/analytics" className="signal-link shrink-0">
-              전체 분석
-              <ArrowUpRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="overflow-hidden rounded-xl border border-[#dedee8] bg-white">
-            <div className="grid grid-cols-[1fr_80px_78px] gap-3 border-b border-[#dedee8] px-5 py-3 text-[9px] uppercase tracking-[.1em] text-[#9997ad] sm:grid-cols-[1fr_1.4fr_100px_100px] sm:px-6">
-              <span>AI 플랫폼</span>
-              <span className="hidden sm:block">언급률</span>
-              <span className="text-right">언급 / 답변</span>
-              <span className="text-right">수집 상태</span>
-            </div>
-            {platformQuery.isError ? (
-              <div className="p-6 text-sm text-[#737382]">
-                플랫폼 데이터를 불러오지 못했습니다.{" "}
-                <button
-                  onClick={() => platformQuery.refetch()}
-                  className="underline"
+
+            <div className="min-w-0 bg-[#141512] p-5 text-[#f1f1eb] sm:p-7">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-xs font-semibold">플랫폼을 선택해 비교</h3>
+                <Link
+                  href="/dashboard/analytics"
+                  className="flex items-center gap-1 text-[10px] text-[#d0ff43] hover:underline"
                 >
-                  다시 시도
-                </button>
+                  전체 분석 <ArrowUpRight className="h-3 w-3" />
+                </Link>
               </div>
-            ) : platforms.length ? (
-              platforms.map((p, i) => {
-                const rate = p.hasData !== false
-                  ? mentionRate(p.mentionedCount, p.totalQueries)
-                  : null;
-                const measured = rate !== null;
-                const stalled = p.collectionStatus === "STALLED";
-                return (
-                  <Link
-                    key={p.platform}
-                    href={`/dashboard/responses?platform=${p.platform}`}
-                    className={`grid grid-cols-[1fr_80px_78px] items-center gap-3 border-b border-[#ededf6] px-5 py-4 transition-colors last:border-0 hover:bg-[#fafafe] sm:grid-cols-[1fr_1.4fr_100px_100px] sm:px-6 ${selectedPlatform === p.platform ? "bg-[#5b4dff]/[.05]" : ""}`}
+              <div className="mb-1 grid grid-cols-[88px_minmax(0,1fr)_46px] gap-3 border-b border-white/20 pb-2 text-[9px] text-[#a8ac9e] sm:grid-cols-[100px_minmax(0,1fr)_52px_76px]">
+                <span>AI 플랫폼</span>
+                <span>언급률</span>
+                <span className="text-right">%</span>
+                <span className="hidden text-right sm:block">언급 / 답변</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPlatform("ALL")}
+                aria-pressed={selectedPlatform === "ALL"}
+                className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selectedPlatform === "ALL" ? "text-[#d0ff43]" : "text-[#f1f1eb] hover:text-[#d0ff43]"}`}
+              >
+                <span className="font-semibold">
+                  전체 AI{" "}
+                  <span aria-hidden="true">
+                    {selectedPlatform === "ALL" ? "↗" : ""}
+                  </span>
+                </span>
+                <span className="h-2 bg-white/10">
+                  <span
+                    className="block h-full bg-current transition-[width] duration-500 motion-reduce:transition-none"
+                    style={{ width: `${Math.min(100, sov ?? 0)}%` }}
+                  />
+                </span>
+                <span className="text-right font-mono tabular-nums">
+                  {sov === null ? "—" : sov.toFixed(1)}
+                </span>
+                <span className="hidden text-right font-mono text-[10px] sm:block">
+                  {mentioned === null || totalResponses === null
+                    ? "—"
+                    : `${mentioned}/${totalResponses}`}
+                </span>
+              </button>
+              {platformQuery.isError ? (
+                <p className="py-7 text-xs leading-6 text-[#a8ac9e]">
+                  플랫폼 데이터를 불러오지 못했습니다.{" "}
+                  <button
+                    type="button"
+                    onClick={() => platformQuery.refetch()}
+                    className="text-[#d0ff43] underline"
                   >
-                    <span className="flex min-w-0 items-center gap-3">
-                      <span className="hidden font-mono text-[10px] text-[#9997ad] md:block">
-                        0{i + 1}
+                    다시 시도
+                  </button>
+                </p>
+              ) : platforms.length ? (
+                platforms.map((p) => {
+                  const rate =
+                    p.hasData !== false
+                      ? mentionRate(p.mentionedCount, p.totalQueries)
+                      : null;
+                  const measured = rate !== null;
+                  const selected = selectedPlatform === p.platform;
+                  return (
+                    <button
+                      key={p.platform}
+                      type="button"
+                      onClick={() => setSelectedPlatform(p.platform)}
+                      aria-pressed={selected}
+                      aria-label={`${PLATFORM_NAMES[p.platform] || p.platformName}, ${measured ? `언급률 ${rate.toFixed(1)}%, ${p.totalQueries}건 중 ${p.mentionedCount}건` : "측정 대기"}${p.collectionStatus === "STALLED" ? ", 수집 확인 중" : ""}`}
+                      className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors last:border-b-0 sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selected ? "text-[#d0ff43]" : "text-[#f1f1eb] hover:text-[#d0ff43]"}`}
+                    >
+                      <span className="min-w-0">
+                        <span className="font-semibold">
+                          {PLATFORM_NAMES[p.platform] || p.platformName}{" "}
+                          <span aria-hidden="true">{selected ? "↗" : ""}</span>
+                        </span>
+                        {p.collectionStatus === "STALLED" && (
+                          <span className="mt-1 block text-[9px] text-[#ff9a7a]">
+                            수집 확인 중
+                          </span>
+                        )}
                       </span>
-                      <strong className="text-[13px] font-medium">
-                        {PLATFORM_NAMES[p.platform] || p.platformName}
-                      </strong>
-                    </span>
-                    <span className="hidden items-center gap-5 pr-5 sm:flex">
-                      <span className="h-1.5 flex-1 bg-[#ededf6]">
+                      <span className="h-2 bg-white/10">
                         <span
-                          className="block h-full bg-[#5b4dff] transition-[width] duration-700 motion-reduce:transition-none"
+                          className={`block h-full transition-[width,background-color] duration-500 motion-reduce:transition-none ${selected ? "bg-[#d0ff43]" : "bg-[#7e8276]"}`}
                           style={{ width: `${Math.min(100, rate ?? 0)}%` }}
                         />
                       </span>
-                      <span className="w-10 text-right text-xs tabular-nums">
-                        {rate === null ? "—" : `${rate.toFixed(1)}%`}
+                      <span className="text-right font-mono tabular-nums">
+                        {rate === null ? "—" : rate.toFixed(1)}
                       </span>
-                    </span>
-                    <span className="text-right text-[11px] tabular-nums text-[#737382]">
-                      {measured
-                        ? `${p.mentionedCount} / ${p.totalQueries}`
-                        : "—"}
-                    </span>
-                    <span
-                      className={`text-right text-[10px] ${stalled ? "text-[#a1643a]" : "text-[#737382]"}`}
-                    >
-                      {stalled
-                        ? "수집 확인 중"
-                        : measured
-                          ? "측정됨"
-                          : "측정 대기"}
-                    </span>
-                  </Link>
-                );
-              })
-            ) : (
-              <div className="px-6 py-8 text-sm text-[#737382]">
-                {platformQuery.isLoading
-                  ? "플랫폼별 결과를 불러오고 있습니다."
-                  : "첫 측정이 완료되면 플랫폼별 결과가 여기에 표시됩니다."}
+                      <span className="hidden text-right font-mono text-[10px] sm:block">
+                        {measured
+                          ? `${p.mentionedCount}/${p.totalQueries}`
+                          : "대기"}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="py-7 text-xs leading-6 text-[#a8ac9e]">
+                  {platformQuery.isLoading
+                    ? "플랫폼별 결과를 불러오고 있습니다."
+                    : "첫 측정 후 플랫폼별 결과를 표시합니다."}
+                </p>
+              )}
+            </div>
+          </div>
+          <dl className="grid grid-cols-3 divide-x divide-[#d4d6cb] border-t border-[#141512] bg-white">
+            {[
+              {
+                label: "추적 질문",
+                value:
+                  dashboardQuery.isError || !dashboard
+                    ? null
+                    : number(dashboard.stats?.totalPrompts),
+                suffix: "개",
+                decimals: 0,
+              },
+              {
+                label: "브랜드 건강 점수",
+                value: abhsOk ? number(abhs?.abhsScore) : null,
+                suffix: "/100",
+                decimals: 1,
+              },
+              {
+                label: "측정된 플랫폼",
+                value:
+                  platformQuery.isError || platformQuery.isLoading
+                    ? null
+                    : platforms.filter(
+                        (p) => p.hasData !== false && p.totalQueries > 0,
+                      ).length,
+                suffix: "개",
+                decimals: 0,
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="px-3 py-4 sm:flex sm:items-center sm:justify-between sm:gap-3 sm:px-5"
+              >
+                <dt className="text-[10px] text-[#72756a]">{item.label}</dt>
+                <dd className="mt-1 text-xl font-semibold tracking-tight sm:mt-0">
+                  {item.value === null ? (
+                    "—"
+                  ) : (
+                    <AnimatedNumber
+                      value={item.value}
+                      decimals={item.decimals}
+                    />
+                  )}
+                  <span className="ml-1 text-[10px] font-normal text-[#72756a]">
+                    {item.suffix}
+                  </span>
+                </dd>
               </div>
+            ))}
+          </dl>
+        </section>
+
+        <section className="mt-7 border-y border-[#141512]">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-4">
+            <h2 className="text-base font-bold tracking-tight">
+              등록 병원 순위{" "}
+              <span className="ml-2 bg-[#d0ff43] px-2 py-1 text-xs font-semibold">
+                {rankingAvailable && ranking.rank != null
+                  ? `${ranking.rank}위 / ${ranking.totalClinics}곳`
+                  : rankLabel}
+              </span>
+            </h2>
+            <Link
+              href="/dashboard/competitors"
+              className="flex items-center gap-2 text-[11px] font-semibold"
+            >
+              비교 병원 관리 <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+          <div className="grid grid-cols-[30px_minmax(0,1fr)_65px_48px] gap-3 border-y border-[#d4d6cb] py-2 text-[9px] text-[#72756a] sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3">
+            <span>순위</span>
+            <span>병원</span>
+            <span className="hidden sm:block">공통 답변의 언급률</span>
+            <span className="text-right">언급률</span>
+            <span className="text-right">건수</span>
+          </div>
+          <div className="max-h-[328px] overflow-y-auto">
+            {rows.map((row) => (
+              <Link
+                href="/dashboard/competitors"
+                key={row.id}
+                className={`grid grid-cols-[30px_minmax(0,1fr)_65px_48px] items-center gap-3 border-b border-[#d4d6cb] px-1 py-3 text-xs last:border-b-0 sm:grid-cols-[40px_minmax(0,1fr)_minmax(100px,.7fr)_74px_66px] sm:px-3 ${row.id === hospitalId ? "bg-[#d0ff43] font-semibold" : "hover:bg-white"}`}
+              >
+                <span className="font-mono text-base">{row.rank ?? "—"}</span>
+                <span className="min-w-0 break-words">
+                  {row.name}
+                  {row.id === hospitalId && (
+                    <span className="ml-2 text-[9px] font-normal">
+                      우리 병원
+                    </span>
+                  )}
+                </span>
+                <span className="hidden h-1.5 bg-[#d4d6cb] sm:block">
+                  <span
+                    className="block h-full bg-[#141512]"
+                    style={{ width: `${Math.min(100, row.mentionRate)}%` }}
+                  />
+                </span>
+                <span className="text-right font-mono">
+                  {row.mentionRate.toFixed(1)}%
+                </span>
+                <span className="text-right font-mono">{row.mentionCount}</span>
+              </Link>
+            ))}
+            {!rows.length && (
+              <p className="py-8 text-sm leading-6 text-[#72756a]">
+                {rankQuery.isError
+                  ? "경쟁 순위를 불러오지 못했습니다."
+                  : rankQuery.isLoading
+                    ? "비교 데이터를 불러오는 중입니다."
+                    : ranking?.status === "NO_COMPETITORS"
+                      ? "경쟁 병원을 등록하면 같은 AI 답변에서 등장 빈도를 비교합니다."
+                      : ranking?.status === "NO_MENTIONS"
+                        ? `공통 답변 ${ranking.totalResponses}건에서 등록 병원이 모두 미언급되어 순위를 매기지 않습니다.`
+                        : "등록 병원을 함께 비교할 수 있는 실측 답변을 기다리고 있습니다."}
+              </p>
             )}
           </div>
+          <p className="border-t border-[#d4d6cb] py-3 text-[10px] leading-5 text-[#72756a]">
+            {rankingAvailable
+              ? `공통 답변 ${ranking.totalResponses}건 기준. `
+              : ""}
+            {ranking?.status === "LOW_SAMPLE"
+              ? "표본이 적어 순위가 쉽게 달라질 수 있습니다. "
+              : ""}
+            플랫폼 선택과 별개인 전체 공통 답변의 순위입니다. 동률은 공동
+            순위이며 의료 품질이나 지역 전체 순위가 아닙니다.
+          </p>
         </section>
-        <div className="mt-9 grid gap-7 xl:grid-cols-[1.28fr_1fr]">
+
+        <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
           <section>
-            <div className="mb-4 flex items-end justify-between gap-4">
-              <div>
-                <p className="signal-eyebrow mb-2">Questions that matter</p>
-                <h3 className="text-xl font-semibold tracking-[-.04em]">
-                  우리 병원에 필요한 질문
-                </h3>
-              </div>
-              <Link href="/dashboard/prompts" className="signal-link shrink-0">
-                질문 관리
-                <ArrowUpRight className="h-4 w-4" />
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold">핵심 질문</h2>
+              <Link
+                href="/dashboard/prompts"
+                className="flex items-center gap-2 text-[11px] font-semibold"
+              >
+                질문 관리 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="border-t border-[#d9d8e6]">
-              {coreQuestions.slice(0, 3).map((q, i) => (
+            <div className="border-t border-[#141512]">
+              {coreQuestions.slice(0, 4).map((q, i) => (
                 <Link
                   key={q.query}
                   href={
@@ -644,22 +585,24 @@ export default function DashboardPage() {
                       ? `/dashboard/prompts?promptId=${q.promptId}`
                       : "/dashboard/prompts"
                   }
-                  className="group flex gap-4 border-b border-[#d9d8e6] py-5"
+                  className="group flex gap-3 border-b border-[#d4d6cb] py-4 hover:bg-white"
                 >
-                  <span className="pt-1 font-mono text-[10px] text-[#9997ad]">
-                    0{i + 1}
+                  <span className="pt-1 font-mono text-[10px] text-[#72756a]">
+                    {String(i + 1).padStart(2, "0")}
                   </span>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium leading-6">{q.query}</p>
-                    <p className="mt-1 text-[10px] text-[#737382]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold leading-6">
+                      {q.query}
+                    </p>
+                    <p className="mt-1 text-[10px] leading-5 text-[#72756a]">
                       {q.alreadyTracked ? "측정 중 · 답변 보기" : q.reason}
                     </p>
                   </div>
-                  <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-[#777489] group-hover:text-[#111118]" />
+                  <ArrowUpRight className="mt-1 h-4 w-4 shrink-0" />
                 </Link>
               ))}
               {!coreQuestions.length && (
-                <p className="py-7 text-sm leading-6 text-[#737382]">
+                <p className="py-7 text-xs leading-6 text-[#72756a]">
                   {coreQuery.isError
                     ? "추천 질문을 불러오지 못했습니다."
                     : coreQuery.isLoading
@@ -669,64 +612,54 @@ export default function DashboardPage() {
               )}
             </div>
           </section>
-          <section className="rounded-xl border border-[#d9d8e6] bg-[#eeedff] p-6 sm:p-7">
-            <div className="flex items-center justify-between">
-              <p className="signal-eyebrow">Your starting point</p>
-              <Building2 className="h-4 w-4 text-[#777489]" />
+          <section className="border border-[#d4d6cb] bg-white p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-bold">질문 추천에 쓰는 병원 소개</h2>
+              <Building2 className="h-4 w-4" />
             </div>
-            <h3 className="mt-4 text-xl font-semibold tracking-[-.04em]">
-              좋은 질문은
-              <br />
-              병원을 아는 데서 시작됩니다.
-            </h3>
-            <p className="mt-4 line-clamp-3 text-xs leading-6 text-[#777489]">
+            <p className="mt-4 line-clamp-5 text-xs leading-7 text-[#72756a]">
               {hospital?.clinicIntroduction ||
-                "Hub의 병원 정보를 불러오고, 우리 병원을 가장 잘 설명하는 소개를 완성하세요. 소개는 언제든 직접 수정할 수 있습니다."}
+                "Hub의 병원 정보를 가져와 소개를 채우세요. 우리 병원의 주력 진료와 강점을 바탕으로 질문을 추천합니다."}
             </p>
             <Link
               href="/dashboard/settings"
-              className="mt-5 inline-flex items-center gap-2 border-b border-[#9997ad] pb-1 text-xs font-semibold"
+              className="mt-5 flex items-center justify-between border-t border-[#d4d6cb] pt-4 text-xs font-semibold"
             >
-              병원 소개 편집
-              <ArrowUpRight className="h-4 w-4" />
+              Hub 연동 · 소개 편집 <ArrowUpRight className="h-4 w-4" />
             </Link>
           </section>
         </div>
+
         {findings.length > 0 && (
-          <section className="mt-9">
-            <div className="mb-4">
-              <p className="signal-eyebrow mb-2">Next moves</p>
-              <h3 className="text-xl font-semibold tracking-[-.04em]">
-                지금 살펴볼 변화
-              </h3>
-            </div>
-            <div className="signal-panel divide-y divide-[#ededf6]">
+          <section className="mt-7">
+            <h2 className="mb-3 text-base font-bold">확인할 변화</h2>
+            <div className="border-y border-[#141512]">
               {findings.slice(0, 3).map((f, i) => (
                 <Link
                   key={f.id}
                   href={f.href}
-                  className="flex items-start gap-4 p-5 transition-colors hover:bg-[#fafafe] sm:p-6"
+                  className="grid gap-2 border-b border-[#d4d6cb] py-4 last:border-b-0 hover:bg-white sm:grid-cols-[24px_minmax(0,.8fr)_minmax(0,1.2fr)_auto] sm:gap-4"
                 >
-                  <span className="mt-0.5 font-mono text-xs text-[#9997ad]">
+                  <span className="hidden pt-1 font-mono text-[10px] text-[#72756a] sm:block">
                     0{i + 1}
                   </span>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold">{f.headline}</h4>
-                    <p className="mt-2 text-xs leading-6 text-[#737382]">
-                      {f.cause}
-                    </p>
-                    <p className="mt-2 text-[11px] font-medium text-[#5b4dff]">
-                      {f.cta}
-                    </p>
-                  </div>
-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-[#777489]" />
+                  <h3 className="text-xs font-semibold leading-6">
+                    {f.headline}
+                  </h3>
+                  <p className="text-[11px] leading-6 text-[#72756a]">
+                    {f.cause}
+                  </p>
+                  <span className="flex items-center gap-2 text-[11px] font-semibold">
+                    {f.cta}
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  </span>
                 </Link>
               ))}
             </div>
           </section>
         )}
         {dashboard?.scoreHistory?.length > 0 && (
-          <section className="mt-9">
+          <section className="mt-7">
             <ScoreChart
               data={dashboard.scoreHistory}
               title="가시성 점수의 흐름"
@@ -734,15 +667,14 @@ export default function DashboardPage() {
             />
           </section>
         )}
-        <footer className="mt-9 flex flex-wrap items-center justify-between gap-4 border-t border-[#d9d8e6] pt-5">
-          <p className="text-[10px] text-[#9997ad]">
-            PATIENT SIGNAL <span className="mx-2">/</span> 병원의 다음 선택을
-            위한 데이터
-          </p>
+        <footer className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-[#d4d6cb] pt-4 text-[10px] text-[#72756a]">
+          <span>실제 수집된 AI 답변 기준</span>
           <div className="flex items-center gap-5">
-            <Link href="/dashboard/report" className="signal-link">
-              리포트 보기
-              <ArrowRight className="h-3.5 w-3.5" />
+            <Link
+              href="/dashboard/report"
+              className="flex items-center gap-2 text-xs font-semibold text-[#141512]"
+            >
+              리포트 보기 <ArrowRight className="h-3.5 w-3.5" />
             </Link>
             <CrawlControl
               hospitalId={hospitalId}

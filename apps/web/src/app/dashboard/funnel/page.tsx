@@ -95,7 +95,7 @@ interface ActionImpactData {
 }
 
 const OUTCOME_STYLE: Record<string, { label: string; bg: string; icon: any }> = {
-  MEASURING: { label: '측정 중', bg: 'bg-[#ededf4] text-[#606070]', icon: FlaskConical },
+  MEASURING: { label: '측정 중', bg: 'bg-[#e9ebe1] text-[#687253]', icon: FlaskConical },
   IMPROVED: { label: '개선됨 ↑', bg: 'bg-brand-100 text-brand-700', icon: TrendingUp },
   FLAT: { label: '변화 없음', bg: 'bg-amber-100 text-amber-700', icon: Minus },
   DECLINED: { label: '하락 ↓', bg: 'bg-red-100 text-red-700', icon: TrendingDown },
@@ -121,7 +121,7 @@ const STATUS_STYLE = {
 const PRIORITY_STYLE = {
   critical: { label: '🔴 긴급', bg: 'bg-red-100 text-red-700' },
   high: { label: '🟠 중요', bg: 'bg-amber-100 text-amber-700' },
-  medium: { label: '🔵 권장', bg: 'bg-[#ededf4] text-[#111118]' },
+  medium: { label: '🔵 권장', bg: 'bg-[#e9ebe1] text-[#141512]' },
 } as const;
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -194,7 +194,7 @@ export default function FunnelPage() {
         <main className="p-6 flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <Loader2 className="w-10 h-10 animate-spin text-brand-500 mx-auto mb-4" />
-            <p className="text-[#737382] font-medium">환자 여정 데이터를 분석하는 중...</p>
+            <p className="text-[#72756a] font-medium">환자 여정 데이터를 분석하는 중...</p>
           </div>
         </main>
       </div>
@@ -208,9 +208,9 @@ export default function FunnelPage() {
         <main className="p-6">
           <Card>
             <CardContent className="py-16 text-center">
-              <Filter className="w-12 h-12 text-[#b9b8c9] mx-auto mb-4" />
-              <p className="text-[#606070] font-semibold mb-2">아직 퍼널 진단 데이터가 없습니다</p>
-              <p className="text-sm text-[#858592]">{data?.message || '첫 AI 크롤링이 완료되면 환자 여정 분석이 시작됩니다.'}</p>
+              <Filter className="w-12 h-12 text-[#b8bcab] mx-auto mb-4" />
+              <p className="text-[#687253] font-semibold mb-2">아직 퍼널 진단 데이터가 없습니다</p>
+              <p className="text-sm text-[#909781]">{data?.message || '첫 AI 크롤링이 완료되면 환자 여정 분석이 시작됩니다.'}</p>
             </CardContent>
           </Card>
         </main>
@@ -237,12 +237,12 @@ export default function FunnelPage() {
           {/* 건강 점수 */}
           <Card className="lg:col-span-1">
             <CardContent className="p-6 text-center">
-              <p className="text-xs font-bold text-[#858592] uppercase tracking-wider mb-2"><TermTip term="funnelHealth">퍼널 건강 점수</TermTip></p>
+              <p className="text-xs font-bold text-[#909781] uppercase tracking-wider mb-2"><TermTip term="funnelHealth">퍼널 건강 점수</TermTip></p>
               <div className="flex items-end justify-center gap-2">
                 <span className={`text-6xl font-semibold tabular-nums ${healthScore >= 60 ? 'text-brand-600' : healthScore >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
                   {healthScore}
                 </span>
-                <span className="text-2xl font-bold text-[#858592] mb-2">/ 100</span>
+                <span className="text-2xl font-bold text-[#909781] mb-2">/ 100</span>
               </div>
               <span className={`inline-block mt-2 px-3 py-1 rounded-full text-sm font-bold ${
                 healthGrade === 'A' ? 'bg-brand-100 text-brand-700' :
@@ -266,7 +266,7 @@ export default function FunnelPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <p className="text-xs font-bold text-red-400 uppercase tracking-wider mb-1">이번 달 추정 기회 손실</p>
-                  <p className="text-sm text-[#737382]"><TermTip term="funnelLeak">전환 직결 단계(비교·결정)에서 AI 미노출로 놓치는 잠재 신환</TermTip></p>
+                  <p className="text-sm text-[#72756a]"><TermTip term="funnelLeak">전환 직결 단계(비교·결정)에서 AI 미노출로 놓치는 잠재 신환</TermTip></p>
                 </div>
                 <Banknote className="w-8 h-8 text-red-300" />
               </div>
@@ -290,7 +290,7 @@ export default function FunnelPage() {
                   </p>
                 </div>
               </div>
-              <p className="mt-3 text-[11px] text-[#858592]">
+              <p className="mt-3 text-[11px] text-[#909781]">
                 기준: {impactEstimate.revenueBasis} 객단가 {formatKRW(impactEstimate.revenuePerPatient)} · {impactEstimate.disclaimer}
               </p>
             </CardContent>
@@ -300,7 +300,7 @@ export default function FunnelPage() {
         {/* ─── 퍼널 시각화 ─── */}
         <section id="funnel-stages">
           <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
-            <h2 className="text-lg font-semibold text-[#353143] flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[#33372c] flex items-center gap-2">
               <Filter className="w-5 h-5 text-brand-500" />
               환자 여정 4단계 × AI 가시성
             </h2>
@@ -309,7 +309,7 @@ export default function FunnelPage() {
                 className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
                   data.benchmarkInfo.mode === 'MEASURED'
                     ? 'bg-brand-50 text-brand-600'
-                    : 'bg-[#ededf4] text-[#737382]'
+                    : 'bg-[#e9ebe1] text-[#72756a]'
                 }`}
                 title={data.benchmarkInfo.description}
               >
@@ -329,7 +329,7 @@ export default function FunnelPage() {
               return (
                 <div key={stage.stage} className="flex justify-center">
                   <Card
-                    className={`cursor-pointer transition-all hover:border-[#dedee8] ${style.border} border-2`}
+                    className={`cursor-pointer transition-all hover:border-[#d4d6cb] ${style.border} border-2`}
                     style={{ width: `${widthPct}%`, minWidth: '280px' }}
                     onClick={() => setExpandedStage(isExpanded ? null : stage.stage)}
                   >
@@ -341,12 +341,12 @@ export default function FunnelPage() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-semibold text-[#353143]">{idx + 1}. {stage.label}</span>
+                              <span className="font-semibold text-[#33372c]">{idx + 1}. {stage.label}</span>
                               <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${style.bg} ${style.text}`}>
                                 {style.label}
                               </span>
                             </div>
-                            <p className="text-xs text-[#858592] truncate">{stage.patientVoice}</p>
+                            <p className="text-xs text-[#909781] truncate">{stage.patientVoice}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
@@ -355,48 +355,48 @@ export default function FunnelPage() {
                               <span className={`text-xl font-semibold ${style.text}`}>{stage.sov}%</span>
                               {stage.trend === 'up' && <TrendingUp className="w-4 h-4 text-brand-500" />}
                               {stage.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
-                              {stage.trend === 'flat' && <Minus className="w-4 h-4 text-[#b9b8c9]" />}
+                              {stage.trend === 'flat' && <Minus className="w-4 h-4 text-[#b8bcab]" />}
                             </div>
-                            <p className="text-[10px] text-[#858592]">
+                            <p className="text-[10px] text-[#909781]">
                               목표 {stage.benchmark}%
                               {stage.benchmarkSource === 'MEASURED' && (
                                 <span className="ml-1 px-1 py-px bg-brand-50 text-brand-600 rounded font-bold" title={`동일 진료과 ${stage.peerSampleHospitals}개 병원 실측 분포 기반`}>실측</span>
                               )}
                               {stage.peerPosition && (
-                                <span className="ml-1 font-semibold text-[#737382]">· 동료 중 {stage.peerPosition}</span>
+                                <span className="ml-1 font-semibold text-[#72756a]">· 동료 중 {stage.peerPosition}</span>
                               )}
                               {' '}· {stage.totalQueries}개 질문
                             </p>
                           </div>
-                          {isExpanded ? <ChevronUp className="w-4 h-4 text-[#858592]" /> : <ChevronDown className="w-4 h-4 text-[#858592]" />}
+                          {isExpanded ? <ChevronUp className="w-4 h-4 text-[#909781]" /> : <ChevronDown className="w-4 h-4 text-[#909781]" />}
                         </div>
                       </div>
 
                       {/* SoV 게이지 */}
-                      <div className="mt-3 h-2 bg-[#ededf4] rounded-full overflow-hidden relative">
+                      <div className="mt-3 h-2 bg-[#e9ebe1] rounded-full overflow-hidden relative">
                         <div className={`h-full ${style.bar} rounded-full transition-all bar-shine`} style={{ width: `${Math.min(100, stage.sov)}%` }} />
                         <div className="absolute top-0 h-full w-0.5 bg-slate-400" style={{ left: `${Math.min(100, stage.benchmark)}%` }} title={`벤치마크 ${stage.benchmark}%`} />
                       </div>
 
                       {/* 펼침 상세 */}
                       {isExpanded && (
-                        <div className="mt-4 pt-4 border-t border-[#ededf6] grid grid-cols-1 md:grid-cols-2 gap-4" onClick={(e) => e.stopPropagation()}>
+                        <div className="mt-4 pt-4 border-t border-[#e9ebe1] grid grid-cols-1 md:grid-cols-2 gap-4" onClick={(e) => e.stopPropagation()}>
                           <div>
-                            <p className="text-xs font-bold text-[#737382] mb-2">플랫폼별 노출률</p>
+                            <p className="text-xs font-bold text-[#72756a] mb-2">플랫폼별 노출률</p>
                             <div className="space-y-1.5">
                               {Object.entries(stage.platformBreakdown).map(([p, b]) => (
                                 <div key={p} className="flex items-center gap-2 text-xs">
-                                  <span className="w-20 text-[#606070] font-medium flex-shrink-0">{PLATFORM_LABELS[p] || p}</span>
-                                  <div className="flex-1 h-1.5 bg-[#ededf4] rounded-full overflow-hidden">
+                                  <span className="w-20 text-[#687253] font-medium flex-shrink-0">{PLATFORM_LABELS[p] || p}</span>
+                                  <div className="flex-1 h-1.5 bg-[#e9ebe1] rounded-full overflow-hidden">
                                     <div className="h-full bg-brand-400 rounded-full" style={{ width: `${b.sov}%` }} />
                                   </div>
-                                  <span className="w-12 text-right font-bold text-[#545067]">{b.sov}%</span>
+                                  <span className="w-12 text-right font-bold text-[#525849]">{b.sov}%</span>
                                 </div>
                               ))}
                             </div>
                             {stage.topCompetitors.length > 0 && (
                               <div className="mt-3">
-                                <p className="text-xs font-bold text-[#737382] mb-1.5">이 단계 위협 경쟁사</p>
+                                <p className="text-xs font-bold text-[#72756a] mb-1.5">이 단계 위협 경쟁사</p>
                                 <div className="flex flex-wrap gap-1.5">
                                   {stage.topCompetitors.map((c) => (
                                     <span key={c.name} className="px-2 py-0.5 bg-red-50 text-red-600 rounded-md text-[11px] font-semibold">
@@ -408,7 +408,7 @@ export default function FunnelPage() {
                             )}
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-[#737382] mb-2">대표 질문 (미언급 우선)</p>
+                            <p className="text-xs font-bold text-[#72756a] mb-2">대표 질문 (미언급 우선)</p>
                             <div className="space-y-1.5">
                               {stage.samplePrompts.map((sp, i) => (
                                 <div key={i} className={`text-xs p-2 rounded-lg flex items-start gap-1.5 ${sp.mentioned ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-red-600'}`}>
@@ -417,9 +417,9 @@ export default function FunnelPage() {
                                 </div>
                               ))}
                             </div>
-                            <div className="mt-3 flex gap-3 text-xs text-[#737382]">
-                              <span>감성 <b className="text-[#545067]">{stage.avgSentiment ?? '—'}</b></span>
-                              <span>단독추천(R3) <b className="text-[#545067]">{stage.r3Rate}%</b></span>
+                            <div className="mt-3 flex gap-3 text-xs text-[#72756a]">
+                              <span>감성 <b className="text-[#525849]">{stage.avgSentiment ?? '—'}</b></span>
+                              <span>단독추천(R3) <b className="text-[#525849]">{stage.r3Rate}%</b></span>
                             </div>
                           </div>
                         </div>
@@ -435,7 +435,7 @@ export default function FunnelPage() {
         {/* ─── 【본질 강화 1】액션 임팩트 트래커 ─── */}
         {impactData && impactData.actions.length > 0 && (
           <section id="action-impact-tracker">
-            <h2 className="text-lg font-semibold text-[#353143] mb-3 flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-[#33372c] mb-3 flex items-center gap-2">
               <Target className="w-5 h-5 text-brand-500" />
               액션 임팩트 트래커 — 처방이 실제로 효과가 있었나?
             </h2>
@@ -469,34 +469,34 @@ export default function FunnelPage() {
                               <OIcon className="w-3 h-3" />{os.label}
                             </span>
                             {a.funnelStage && (
-                              <span className="text-[10px] font-bold text-[#858592] bg-[#ededf4] px-2 py-0.5 rounded-full">
+                              <span className="text-[10px] font-bold text-[#909781] bg-[#e9ebe1] px-2 py-0.5 rounded-full">
                                 {STAGE_LABELS[a.funnelStage] || a.funnelStage} 단계
                               </span>
                             )}
                             {a.daysSinceStart !== null && a.status === 'IN_PROGRESS' && (
-                              <span className="text-[10px] text-[#858592]">{a.daysSinceStart}일째 추적 중</span>
+                              <span className="text-[10px] text-[#909781]">{a.daysSinceStart}일째 추적 중</span>
                             )}
                             {a.status === 'COMPLETED' && (
                               <span className="text-[10px] text-brand-600 font-bold">완료</span>
                             )}
                           </div>
-                          <p className="font-bold text-[#353143] text-sm truncate">{a.title}</p>
+                          <p className="font-bold text-[#33372c] text-sm truncate">{a.title}</p>
                         </div>
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
-                            <p className="text-[10px] text-[#858592]">시작 시점</p>
-                            <p className="font-semibold text-[#606070] tabular-nums">{a.baseline.sov ?? '—'}%</p>
+                            <p className="text-[10px] text-[#909781]">시작 시점</p>
+                            <p className="font-semibold text-[#687253] tabular-nums">{a.baseline.sov ?? '—'}%</p>
                           </div>
-                          <ArrowRight className="w-4 h-4 text-[#b9b8c9]" />
+                          <ArrowRight className="w-4 h-4 text-[#b8bcab]" />
                           <div className="text-right">
-                            <p className="text-[10px] text-[#858592]">현재</p>
-                            <p className="font-semibold text-[#353143] tabular-nums">{a.outcome.sov ?? '—'}%</p>
+                            <p className="text-[10px] text-[#909781]">현재</p>
+                            <p className="font-semibold text-[#33372c] tabular-nums">{a.outcome.sov ?? '—'}%</p>
                           </div>
                           {a.outcome.deltaSov !== null && (
                             <span className={`px-2 py-1 rounded-lg text-sm font-semibold tabular-nums ${
                               a.outcome.deltaSov >= 3 ? 'bg-brand-100 text-brand-700'
                               : a.outcome.deltaSov <= -3 ? 'bg-red-100 text-red-700'
-                              : 'bg-[#ededf4] text-[#606070]'
+                              : 'bg-[#e9ebe1] text-[#687253]'
                             }`}>
                               {a.outcome.deltaSov > 0 ? '+' : ''}{a.outcome.deltaSov}%p
                             </span>
@@ -512,7 +512,7 @@ export default function FunnelPage() {
                               </button>
                               <button
                                 onClick={() => updateStatus.mutate({ actionId: a.id, status: 'DISMISSED' })}
-                                className="p-1.5 rounded-lg hover:bg-[#ededf4] text-[#858592]"
+                                className="p-1.5 rounded-lg hover:bg-[#e9ebe1] text-[#909781]"
                                 title="추적 중단"
                               >
                                 <XCircle className="w-4 h-4" />
@@ -522,7 +522,7 @@ export default function FunnelPage() {
                         </div>
                       </div>
                       {a.outcome.status === 'MEASURING' && a.status === 'IN_PROGRESS' && (
-                        <p className="mt-2 text-[11px] text-[#858592]">
+                        <p className="mt-2 text-[11px] text-[#909781]">
                           ⏳ 효과 판정까지 최소 14일 + 표본 10개 필요 — 매일 크롤링 후 자동 재측정됩니다
                         </p>
                       )}
@@ -536,13 +536,13 @@ export default function FunnelPage() {
 
         {/* ─── 액션 플레이북 ─── */}
         <section id="funnel-playbook">
-          <h2 className="text-lg font-semibold text-[#353143] mb-3 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-[#33372c] mb-3 flex items-center gap-2">
             <CheckCircle2 className="w-5 h-5 text-brand-500" />
             이번 주 처방전 — 퍼널 누수 막기
           </h2>
           {playbook.length === 0 ? (
             <Card>
-              <CardContent className="py-10 text-center text-[#737382]">
+              <CardContent className="py-10 text-center text-[#72756a]">
                 <CheckCircle2 className="w-10 h-10 text-brand-400 mx-auto mb-3" />
                 <p className="font-semibold">모든 퍼널 단계가 건강합니다! 현 상태 유지에 집중하세요. 🎉</p>
               </CardContent>
@@ -552,31 +552,31 @@ export default function FunnelPage() {
               {playbook.map((action, i) => {
                 const ps = PRIORITY_STYLE[action.priority];
                 return (
-                  <Card key={i} className="hover:border-[#dedee8] transition-shadow">
+                  <Card key={i} className="hover:border-[#d4d6cb] transition-shadow">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-3">
                         <span className={`px-2 py-1 rounded-md text-[11px] font-bold flex-shrink-0 ${ps.bg}`}>{ps.label}</span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="text-[11px] font-bold text-[#858592] bg-[#ededf4] px-2 py-0.5 rounded-full">{action.stageLabel} 단계</span>
-                            <span className="text-[11px] text-[#858592]">실행 난이도: {action.effort}</span>
+                            <span className="text-[11px] font-bold text-[#909781] bg-[#e9ebe1] px-2 py-0.5 rounded-full">{action.stageLabel} 단계</span>
+                            <span className="text-[11px] text-[#909781]">실행 난이도: {action.effort}</span>
                           </div>
-                          <h3 className="font-bold text-[#353143] mb-1.5">{action.title}</h3>
-                          <p className="text-sm text-[#606070] leading-relaxed mb-2">{action.description}</p>
+                          <h3 className="font-bold text-[#33372c] mb-1.5">{action.title}</h3>
+                          <p className="text-sm text-[#687253] leading-relaxed mb-2">{action.description}</p>
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <p className="text-xs font-semibold text-brand-600 flex items-center gap-1">
                               <TrendingUp className="w-3.5 h-3.5" />
                               기대 효과: {action.expectedEffect}
                             </p>
                             {trackedTitles.has(action.title) ? (
-                              <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-500 bg-brand-50 px-3 py-1.5 rounded-lg">
+                              <span className="inline-flex items-center gap-1 text-xs font-bold text-brand-700 bg-brand-50 px-3 py-1.5 rounded-lg">
                                 <FlaskConical className="w-3.5 h-3.5" /> 효과 추적 중
                               </span>
                             ) : (
                               <button
                                 onClick={() => startTracking.mutate(action)}
                                 disabled={startTracking.isPending}
-                                className="inline-flex items-center gap-1 text-xs font-bold text-white bg-brand-500 hover:bg-brand-600 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1 text-xs font-bold text-[#141512] bg-brand-500 hover:bg-brand-600 hover:text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                                 title="현재 단계 SoV를 베이스라인으로 동결하고 효과 측정을 시작합니다"
                               >
                                 <Play className="w-3.5 h-3.5" /> 실행 시작 — 효과 측정하기

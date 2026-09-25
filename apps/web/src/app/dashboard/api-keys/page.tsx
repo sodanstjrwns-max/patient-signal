@@ -93,9 +93,9 @@ export default function ApiKeysPage() {
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <Key className="h-12 w-12 text-[#858592] mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-[#111118] mb-2">병원 등록이 필요합니다</h3>
-              <p className="text-[#737382] mb-4">API Key를 발급받으려면 먼저 병원 정보를 등록해주세요.</p>
+              <Key className="h-12 w-12 text-[#909781] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#141512] mb-2">병원 등록이 필요합니다</h3>
+              <p className="text-[#72756a] mb-4">API Key를 발급받으려면 먼저 병원 정보를 등록해주세요.</p>
               <Button onClick={() => window.location.href = '/onboarding'}>병원 등록하기</Button>
             </CardContent>
           </Card>
@@ -131,7 +131,7 @@ export default function ApiKeysPage() {
                     이 키는 <strong>지금 이 화면에서만</strong> 확인할 수 있습니다. 안전한 곳에 반드시 복사해두세요.
                   </p>
                   <div className="flex items-center gap-2 p-3 bg-white rounded-md border border-amber-200">
-                    <code className="flex-1 text-sm font-mono text-[#353143] break-all select-all">
+                    <code className="flex-1 text-sm font-mono text-[#33372c] break-all select-all">
                       {newlyCreatedKey}
                     </code>
                     <Button
@@ -172,7 +172,7 @@ export default function ApiKeysPage() {
           <CardContent>
             <div className="flex items-end gap-3">
               <div className="flex-1">
-                <label className="text-sm font-medium text-[#545067] mb-1.5 block">
+                <label className="text-sm font-medium text-[#525849] mb-1.5 block">
                   키 이름 (선택)
                 </label>
                 <Input
@@ -190,7 +190,7 @@ export default function ApiKeysPage() {
               <Button
                 onClick={() => createMutation.mutate(keyName)}
                 disabled={createMutation.isPending || meta.remaining <= 0}
-                className="bg-[#5b4dff] hover:bg-[#101016] flex-shrink-0"
+                className="bg-[#d0ff43] hover:bg-[#141512] flex-shrink-0"
               >
                 {createMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -200,7 +200,7 @@ export default function ApiKeysPage() {
                 API Key 발급
               </Button>
             </div>
-            <p className="text-xs text-[#858592] mt-2">
+            <p className="text-xs text-[#909781] mt-2">
               병원당 최대 {meta.maxAllowed}개 · 현재 {meta.active}개 사용 중 · {meta.remaining}개 남음
             </p>
           </CardContent>
@@ -224,9 +224,9 @@ export default function ApiKeysPage() {
               </div>
             ) : keys.length === 0 ? (
               <div className="text-center py-12">
-                <Key className="h-10 w-10 text-[#b9b8c9] mx-auto mb-3" />
-                <p className="text-[#737382]">아직 발급된 API Key가 없습니다</p>
-                <p className="text-sm text-[#858592] mt-1">위에서 키를 발급해주세요</p>
+                <Key className="h-10 w-10 text-[#b8bcab] mx-auto mb-3" />
+                <p className="text-[#72756a]">아직 발급된 API Key가 없습니다</p>
+                <p className="text-sm text-[#909781] mt-1">위에서 키를 발급해주세요</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -235,29 +235,29 @@ export default function ApiKeysPage() {
                     key={key.id}
                     className={`p-4 rounded-md border transition-all ${
                       key.isActive
-                        ? 'border-[#dedee8] bg-white hover:border-[#d9d8e6]'
-                        : 'border-[#ededf6] bg-[#f4f4f8]/50 opacity-60'
+                        ? 'border-[#d4d6cb] bg-white hover:border-[#d7dacd]'
+                        : 'border-[#e9ebe1] bg-[#f1f1eb]/50 opacity-60'
                     }`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-semibold text-[#111118] text-sm">{key.name}</h4>
+                          <h4 className="font-semibold text-[#141512] text-sm">{key.name}</h4>
                           <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
                             key.isActive
                               ? 'bg-brand-100 text-brand-700'
-                              : 'bg-[#ededf4] text-[#737382]'
+                              : 'bg-[#e9ebe1] text-[#72756a]'
                           }`}>
                             {key.isActive ? '활성' : '비활성'}
                           </span>
                         </div>
                         <div className="flex items-center gap-1.5 mb-2">
-                          <code className="text-xs font-mono text-[#737382] bg-[#ededf4] px-2 py-0.5 rounded">
+                          <code className="text-xs font-mono text-[#72756a] bg-[#e9ebe1] px-2 py-0.5 rounded">
                             {key.keyPrefix}••••••••
                           </code>
                           <button
                             onClick={() => copyToClipboard(key.keyPrefix + '••••••••', key.id)}
-                            className="text-[#858592] hover:text-[#606070]"
+                            className="text-[#909781] hover:text-[#687253]"
                             title="프리픽스 복사"
                           >
                             {copiedKeyId === key.id ? (
@@ -267,7 +267,7 @@ export default function ApiKeysPage() {
                             )}
                           </button>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-[#858592]">
+                        <div className="flex items-center gap-4 text-xs text-[#909781]">
                           <span className="flex items-center gap-1">
                             <Activity className="h-3 w-3" />
                             {key.usageCount.toLocaleString()}회 사용
@@ -331,7 +331,7 @@ export default function ApiKeysPage() {
         </Card>
 
         {/* ==================== API 사용 가이드 ==================== */}
-        <Card className="border-[#dedee8]">
+        <Card className="border-[#d4d6cb]">
           <CardHeader>
             <button
               onClick={() => setShowDocs(!showDocs)}
@@ -339,7 +339,7 @@ export default function ApiKeysPage() {
             >
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-[#606070]" />
+                  <BookOpen className="h-5 w-5 text-[#687253]" />
                   API 사용 가이드
                 </CardTitle>
                 <CardDescription>
@@ -347,7 +347,7 @@ export default function ApiKeysPage() {
                 </CardDescription>
               </div>
               <div className={`transition-transform ${showDocs ? 'rotate-180' : ''}`}>
-                <svg className="h-5 w-5 text-[#858592]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-5 w-5 text-[#909781]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -357,14 +357,14 @@ export default function ApiKeysPage() {
             <CardContent className="pt-0 space-y-6">
               {/* Base URL */}
               <div>
-                <h4 className="text-sm font-semibold text-[#353143] mb-2">📡 Base URL</h4>
-                <div className="flex items-center gap-2 p-3 bg-[#101016] rounded-md">
+                <h4 className="text-sm font-semibold text-[#33372c] mb-2">📡 Base URL</h4>
+                <div className="flex items-center gap-2 p-3 bg-[#141512] rounded-md">
                   <code className="text-sm font-mono text-brand-400 flex-1">
                     https://api.patientsignal.kr/api/public/v1
                   </code>
                   <button
                     onClick={() => copyToClipboard('https://api.patientsignal.kr/api/public/v1', 'base')}
-                    className="text-[#858592] hover:text-white"
+                    className="text-[#909781] hover:text-white"
                   >
                     {copiedKeyId === 'base' ? <Check className="h-4 w-4 text-brand-400" /> : <Copy className="h-4 w-4" />}
                   </button>
@@ -373,13 +373,13 @@ export default function ApiKeysPage() {
 
               {/* 인증 방법 */}
               <div>
-                <h4 className="text-sm font-semibold text-[#353143] mb-2">🔐 인증 방법</h4>
-                <p className="text-sm text-[#606070] mb-2">
-                  모든 API 요청에 <code className="bg-[#ededf4] px-1.5 py-0.5 rounded text-xs font-mono">X-API-Key</code> 헤더를 포함합니다.
+                <h4 className="text-sm font-semibold text-[#33372c] mb-2">🔐 인증 방법</h4>
+                <p className="text-sm text-[#687253] mb-2">
+                  모든 API 요청에 <code className="bg-[#e9ebe1] px-1.5 py-0.5 rounded text-xs font-mono">X-API-Key</code> 헤더를 포함합니다.
                   키에 연결된 병원의 데이터만 자동으로 반환됩니다.
                 </p>
-                <div className="p-3 bg-[#101016] rounded-md overflow-x-auto">
-                  <pre className="text-sm font-mono text-[#b9b8c9]">
+                <div className="p-3 bg-[#141512] rounded-md overflow-x-auto">
+                  <pre className="text-sm font-mono text-[#b8bcab]">
 {`curl -H "X-API-Key: YOUR_API_KEY" \\
   https://api.patientsignal.kr/api/public/v1/my/aeo-status`}
                   </pre>
@@ -388,7 +388,7 @@ export default function ApiKeysPage() {
 
               {/* 엔드포인트 목록 */}
               <div>
-                <h4 className="text-sm font-semibold text-[#353143] mb-3">📋 엔드포인트</h4>
+                <h4 className="text-sm font-semibold text-[#33372c] mb-3">📋 엔드포인트</h4>
                 <div className="space-y-2">
                   {[
                     { method: 'GET', path: '/my/aeo-status', desc: '현재 AEO 점수, 순위, 뱃지, 플랫폼별 요약' },
@@ -398,13 +398,13 @@ export default function ApiKeysPage() {
                     { method: 'GET', path: '/my/competitors', desc: '경쟁사 비교 분석' },
                     { method: 'GET', path: '/rankings?limit=20', desc: '전체 병원 랭킹 (필터 가능)' },
                   ].map((ep) => (
-                    <div key={ep.path} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-[#f4f4f8]">
+                    <div key={ep.path} className="flex items-start gap-3 p-2.5 rounded-lg hover:bg-[#f1f1eb]">
                       <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-brand-100 text-brand-700 flex-shrink-0 mt-0.5">
                         {ep.method}
                       </span>
                       <div className="min-w-0 flex-1">
                         <code className="text-xs font-mono text-brand-600">{ep.path}</code>
-                        <p className="text-xs text-[#737382] mt-0.5">{ep.desc}</p>
+                        <p className="text-xs text-[#72756a] mt-0.5">{ep.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -413,9 +413,9 @@ export default function ApiKeysPage() {
 
               {/* 응답 예시 */}
               <div>
-                <h4 className="text-sm font-semibold text-[#353143] mb-2">💡 응답 예시 — /my/aeo-status</h4>
-                <div className="p-3 bg-[#101016] rounded-md overflow-x-auto">
-                  <pre className="text-xs font-mono text-[#b9b8c9]">
+                <h4 className="text-sm font-semibold text-[#33372c] mb-2">💡 응답 예시 — /my/aeo-status</h4>
+                <div className="p-3 bg-[#141512] rounded-md overflow-x-auto">
+                  <pre className="text-xs font-mono text-[#b8bcab]">
 {`{
   "hospital": {
     "id": "uuid",

@@ -472,11 +472,11 @@ export default function SettingsPage() {
           description="질문 추천의 기준이 되는 병원 정보"
         />
         <div className="mx-auto max-w-xl px-5 py-24 text-center">
-          <Building className="mx-auto mb-5 h-10 w-10 text-[#5b4dff]" />
+          <Building className="mx-auto mb-5 h-10 w-10 text-[#44551d]" />
           <h2 className="text-2xl font-semibold tracking-tight">
             병원 등록부터 시작하세요
           </h2>
-          <p className="mb-6 mt-3 text-sm text-[#737382]">
+          <p className="mb-6 mt-3 text-sm text-[#72756a]">
             병원 정보를 등록하면 소개와 질문 추천을 설정할 수 있습니다.
           </p>
           <Button onClick={() => (window.location.href = "/onboarding")}>
@@ -489,56 +489,56 @@ export default function SettingsPage() {
   if (isLoading)
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#5b4dff]" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#44551d]" />
       </div>
     );
 
   return (
-    <div className="min-h-screen text-[#111118]">
+    <div className="min-h-screen text-[#141512]">
       <Header
         title="병원 프로필"
-        description="우리 병원을 잘 이해할수록, 더 좋은 질문이 시작됩니다"
+        description="질문 추천에 사용할 병원 정보"
       />
       <div className="mx-auto max-w-[1480px] space-y-8 px-5 pb-12 pt-7 sm:px-8 lg:px-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
-            <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#737382]">
-              CLINIC PROFILE
+            <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#72756a]">
+              01 / 병원 정보
             </p>
             <h1 className="text-3xl font-semibold tracking-[-0.05em] sm:text-[38px]">
-              우리 병원을 정의하는 곳.
+              병원 소개
             </h1>
-            <p className="mt-3 text-sm text-[#737382]">
+            <p className="mt-3 text-sm text-[#72756a]">
               병원 소개와 주력 진료를 연결해 환자분의 핵심 질문을 찾습니다.
             </p>
           </div>
           <Link
             href="/dashboard/prompts"
-            className="inline-flex items-center gap-2 border-b border-[#111118] pb-1.5 text-sm font-semibold"
+            className="inline-flex items-center gap-2 border-b border-[#141512] pb-1.5 text-sm font-semibold"
           >
             추천 질문 확인 <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
 
         <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <section className="overflow-hidden rounded-[24px] border border-[#dedee8] bg-white">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#dedee8] px-6 py-6 sm:px-8">
+          <section className="overflow-hidden border border-[#141512] bg-white">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#d4d6cb] px-6 py-6 sm:px-8">
               <div>
-                <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#737382]">
-                  01 / INTRODUCTION
+                <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#72756a]">
+                  추천에 사용할 정보
                 </p>
                 <h2 className="text-xl font-semibold tracking-tight">
-                  우리 병원 이야기
+                  소개 원문
                 </h2>
               </div>
-              <span className="rounded-full bg-[#ededf6] px-3 py-1.5 text-[10px] font-medium text-[#777489]">
+              <span className="bg-[#d0ff43] px-3 py-1.5 text-[10px] font-medium text-[#73766b]">
                 핵심 질문 추천의 기준
               </span>
             </div>
             <div className="px-6 py-6 sm:px-8">
               <label
                 htmlFor="clinic-introduction"
-                className="mb-3 block text-xs font-medium text-[#737382]"
+                className="mb-3 block text-xs font-medium text-[#72756a]"
               >
                 주요 진료 · 진료 철학 · 지역 환자분께 알려야 할 특징
               </label>
@@ -550,19 +550,19 @@ export default function SettingsPage() {
                   maxLength={2000}
                   rows={9}
                   placeholder="우리 병원의 주요 진료와 특징을 사실에 맞게 작성하세요."
-                  className="min-h-[280px] w-full resize-y rounded-xl border border-[#b9b8c9] bg-[#fafafe] p-5 text-base leading-8 text-[#111118] outline-none placeholder:text-[#9997ad] focus:border-[#5b4dff] focus:ring-2 focus:ring-[#5b4dff]/10"
+                  className="min-h-[280px] w-full resize-y rounded-xl border border-[#b8bcab] bg-[#fafaf6] p-5 text-base leading-8 text-[#141512] outline-none placeholder:text-[#989b8d] focus:border-[#141512] focus:ring-2 focus:ring-[#d0ff43]/50"
                 />
               ) : (
                 <div
                   id="clinic-introduction"
-                  className="min-h-[260px] whitespace-pre-wrap break-words py-2 text-base leading-8 text-[#545067] sm:text-lg sm:leading-9"
+                  className="min-h-[140px] whitespace-pre-wrap break-words py-2 text-base leading-8 text-[#525849] sm:text-lg sm:leading-9"
                 >
                   {introDraft || (
-                    <div className="flex min-h-[240px] flex-col items-start justify-center">
-                      <p className="text-xl font-medium text-[#111118]">
+                    <div className="flex min-h-[140px] flex-col items-start justify-center">
+                      <p className="text-xl font-medium text-[#141512]">
                         병원 소개를 채워주세요.
                       </p>
-                      <p className="mt-3 max-w-md text-sm leading-7 text-[#737382]">
+                      <p className="mt-3 max-w-md text-sm leading-7 text-[#72756a]">
                         Hub에 입력한 정보를 가져오거나, 우리 병원의 진료와
                         특징을 직접 작성할 수 있습니다.
                       </p>
@@ -570,7 +570,7 @@ export default function SettingsPage() {
                   )}
                 </div>
               )}
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#737382]">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#72756a]">
                 <span>
                   {hubPrefilledFields.includes("clinicIntroduction")
                     ? "Hub에서 가져온 초안 · 저장 전"
@@ -581,7 +581,7 @@ export default function SettingsPage() {
                 {introEditing && <span>{introDraft.length} / 2,000자</span>}
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#dedee8] bg-[#fafafe] px-6 py-4 sm:px-8">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#d4d6cb] bg-[#fafaf6] px-6 py-4 sm:px-8">
               <Button
                 variant="ghost"
                 onClick={() => importIntroductionMutation.mutate()}
@@ -627,24 +627,22 @@ export default function SettingsPage() {
             </div>
           </section>
           <aside className="space-y-5">
-            <section className="rounded-[24px] bg-[#101016] p-6 text-white">
-              <p className="mb-7 flex items-center gap-2 text-xs font-medium text-[#ff6b3d]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b3d]" />{" "}
+            <section className="border border-[#141512] bg-[#141512] p-6 text-white">
+              <p className="mb-7 flex items-center gap-2 text-xs font-medium text-[#ff5d2a]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ff5d2a]" />{" "}
                 PATIENT HUB
               </p>
               <h2 className="text-xl font-medium leading-8 tracking-tight">
-                흩어진 병원 정보를,
-                <br />
-                하나의 소개로.
+                Hub 연결
               </h2>
-              <p className="mt-4 text-xs leading-6 text-[#b9b8c9]">
+              <p className="mt-4 text-xs leading-6 text-[#b8bcab]">
                 Hub의 병원 정보에서 소개 초안을 가져옵니다. 우리 병원에 맞게
                 확인하고 수정한 내용이 질문 추천의 기준이 됩니다.
               </p>
               <div className="mt-6 border-t border-white/15 pt-4">
-                <p className="flex items-center gap-2 text-xs text-[#d9d8e6]">
+                <p className="flex items-center gap-2 text-xs text-[#d7dacd]">
                   <span
-                    className={`h-1.5 w-1.5 rounded-full ${hubIntroStatus?.connected ? "bg-[#ff6b3d]" : "bg-[#9997ad]"}`}
+                    className={`h-1.5 w-1.5 rounded-full ${hubIntroStatus?.connected ? "bg-[#ff5d2a]" : "bg-[#989b8d]"}`}
                   />
                   {hubIntroStatus?.connected
                     ? "병원 정보 수신 완료"
@@ -658,7 +656,7 @@ export default function SettingsPage() {
             </section>
             <div className="px-1">
               <p className="text-xs font-semibold">
-                좋은 질문을 만드는 세 가지
+                작성 기준
               </p>
               <ol className="mt-4 space-y-4">
                 {[
@@ -668,9 +666,9 @@ export default function SettingsPage() {
                 ].map((item, index) => (
                   <li
                     key={item}
-                    className="flex gap-3 text-xs leading-6 text-[#737382]"
+                    className="flex gap-3 text-xs leading-6 text-[#72756a]"
                   >
-                    <span className="font-medium tabular-nums text-[#5b4dff]">
+                    <span className="font-medium tabular-nums text-[#44551d]">
                       0{index + 1}
                     </span>
                     {item}
@@ -679,7 +677,7 @@ export default function SettingsPage() {
               </ol>
               <Link
                 href="/dashboard/competitors"
-                className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-[#5b4dff]"
+                className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-[#44551d]"
               >
                 경쟁 병원도 설정하기 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
@@ -687,22 +685,22 @@ export default function SettingsPage() {
           </aside>
         </div>
 
-        <section className="grid gap-6 border-t border-[#d9d8e6] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <section className="grid gap-6 border-t border-[#d7dacd] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
-            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#737382]">
+            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#72756a]">
               02 / CLINIC DETAILS
             </p>
             <h2 className="text-xl font-semibold tracking-tight">
               병원 기본 정보
             </h2>
-            <p className="mt-3 text-xs leading-6 text-[#737382]">
+            <p className="mt-3 text-xs leading-6 text-[#72756a]">
               지역과 진료과를 정확히 알려주면
               <br className="hidden lg:block" /> 질문 추천이 더 구체적이 됩니다.
             </p>
           </div>
-          <div className="min-w-0 rounded-[22px] border border-[#dedee8] bg-white p-5 sm:p-7">
+          <div className="min-w-0 rounded-sm border border-[#d4d6cb] bg-white p-5 sm:p-7">
             {hubPrefilledFields.length > 0 && (
-              <div className="mb-6 border-l-2 border-[#9997ad] bg-[#fafafe] p-4 text-xs leading-6 text-[#545067]">
+              <div className="mb-6 border-l-2 border-[#989b8d] bg-[#fafaf6] p-4 text-xs leading-6 text-[#525849]">
                 <p className="font-semibold">
                   Hub에서 가져온 정보를 확인해 주세요.
                 </p>
@@ -736,7 +734,7 @@ export default function SettingsPage() {
                         specialtyType: e.target.value,
                       })
                     }
-                    className="flex h-10 w-full rounded-xl border border-[#dedee8] bg-white px-3 py-2 text-sm outline-none focus:border-[#5b4dff]"
+                    className="flex h-10 w-full rounded-xl border border-[#d4d6cb] bg-white px-3 py-2 text-sm outline-none focus:border-[#d0ff43]"
                   >
                     <option value="" disabled>
                       진료과목 선택
@@ -827,7 +825,7 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#dedee8] pt-5">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#d4d6cb] pt-5">
               <Button
                 variant="ghost"
                 size="sm"
@@ -895,13 +893,13 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 border-t border-[#d9d8e6] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <section className="grid gap-6 border-t border-[#d7dacd] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
-            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#737382]">
+            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#72756a]">
               03 / FOCUS AREAS
             </p>
             <h2 className="text-xl font-semibold tracking-tight">핵심 시술</h2>
-            <p className="mt-3 text-xs leading-6 text-[#737382]">
+            <p className="mt-3 text-xs leading-6 text-[#72756a]">
               주력 시술을 최대 3개 선택하세요.
               <br />
               시술별 {hospital?.planType === "PRO" ? "34" : "14"}개 모니터링
@@ -909,10 +907,10 @@ export default function SettingsPage() {
             </p>
             <p className="mt-4 text-3xl font-medium tracking-tight">
               {selectedProcedures.length}
-              <span className="ml-2 text-sm text-[#737382]">/ 3 선택</span>
+              <span className="ml-2 text-sm text-[#72756a]">/ 3 선택</span>
             </p>
           </div>
-          <div className="min-w-0 rounded-[22px] border border-[#dedee8] bg-white p-5 sm:p-7">
+          <div className="min-w-0 rounded-sm border border-[#d4d6cb] bg-white p-5 sm:p-7">
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
               {(procedures || []).map((proc: any) => {
                 const isSelected = selectedProcedures.includes(proc.name);
@@ -920,19 +918,19 @@ export default function SettingsPage() {
                   <button
                     key={proc.name}
                     onClick={() => toggleProcedure(proc.name)}
-                    className={`rounded-xl border p-3.5 text-left transition-colors ${isSelected ? "border-[#5b4dff] bg-[#ededf6]" : "border-[#dedee8] bg-white hover:bg-[#f7f7fb]"}`}
+                    className={`rounded-xl border p-3.5 text-left transition-colors ${isSelected ? "border-[#d0ff43] bg-[#e9ebe1]" : "border-[#d4d6cb] bg-white hover:bg-[#fafaf6]"}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`text-sm font-medium ${isSelected ? "text-[#353143]" : "text-[#545067]"}`}
+                        className={`text-sm font-medium ${isSelected ? "text-[#33372c]" : "text-[#525849]"}`}
                       >
                         {proc.name}
                       </span>
                       {isSelected && (
-                        <Check className="h-3.5 w-3.5 shrink-0 text-[#5b4dff]" />
+                        <Check className="h-3.5 w-3.5 shrink-0 text-[#44551d]" />
                       )}
                     </div>
-                    <p className="mt-2 text-[10px] text-[#737382]">
+                    <p className="mt-2 text-[10px] text-[#72756a]">
                       {proc.category === "core"
                         ? "핵심 진료"
                         : proc.category === "cosmetic"
@@ -945,15 +943,15 @@ export default function SettingsPage() {
               })}
             </div>
             {selectedProcedures.length > 0 && (
-              <p className="mt-5 text-xs leading-6 text-[#777489]">
+              <p className="mt-5 text-xs leading-6 text-[#73766b]">
                 {selectedProcedures.join(" · ")}{" "}
-                <span className="text-[#9997ad]">/</span> 총{" "}
+                <span className="text-[#989b8d]">/</span> 총{" "}
                 {selectedProcedures.length *
                   (hospital?.planType === "PRO" ? 34 : 14)}
                 개 질문 생성
               </p>
             )}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#dedee8] pt-5">
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#d4d6cb] pt-5">
               <Button
                 variant="ghost"
                 size="sm"
@@ -981,28 +979,28 @@ export default function SettingsPage() {
               </Button>
             </div>
             {showQueryPreview && queryPreview && (
-              <div className="mt-5 max-h-96 overflow-y-auto rounded-xl border border-[#dedee8] bg-[#fafafe] p-4">
+              <div className="mt-5 max-h-96 overflow-y-auto rounded-xl border border-[#d4d6cb] bg-[#fafaf6] p-4">
                 <h3 className="mb-4 text-sm font-semibold">
                   생성될 질문 {queryPreview.total}개
                 </h3>
-                <div className="divide-y divide-[#dedee8]">
+                <div className="divide-y divide-[#d4d6cb]">
                   {queryPreview.queries
                     ?.slice(0, 30)
                     .map((q: any, idx: number) => (
                       <div key={idx} className="py-3 first:pt-0">
-                        <p className="mb-1 text-[10px] text-[#5b4dff]">
+                        <p className="mb-1 text-[10px] text-[#44551d]">
                           {intentNames[q.intent] || q.intent}
                           {intentWeights[q.intent] > 1 &&
                             ` ×${intentWeights[q.intent]}`}
                           {q.platform && ` · ${q.platform}`}
                         </p>
-                        <p className="text-sm leading-6 text-[#545067]">
+                        <p className="text-sm leading-6 text-[#525849]">
                           {q.query}
                         </p>
                       </div>
                     ))}
                   {queryPreview.total > 30 && (
-                    <p className="pt-4 text-center text-xs text-[#737382]">
+                    <p className="pt-4 text-center text-xs text-[#72756a]">
                       외 {queryPreview.total - 30}개
                     </p>
                   )}
@@ -1012,26 +1010,26 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 border-t border-[#d9d8e6] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <section className="grid gap-6 border-t border-[#d7dacd] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
-            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#737382]">
+            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#72756a]">
               04 / NAME RECOGNITION
             </p>
             <h2 className="text-xl font-semibold tracking-tight">병원 별칭</h2>
-            <p className="mt-3 text-xs leading-6 text-[#737382]">
+            <p className="mt-3 text-xs leading-6 text-[#72756a]">
               AI가 다른 이름으로 답변해도
               <br className="hidden lg:block" /> 우리 병원으로 알아볼 수 있게
               합니다.
             </p>
           </div>
-          <div className="rounded-[22px] border border-[#dedee8] bg-white p-5 sm:p-7">
-            <p className="text-xs text-[#737382]">
+          <div className="rounded-sm border border-[#d4d6cb] bg-white p-5 sm:p-7">
+            <p className="text-xs text-[#72756a]">
               공식 이름{" "}
-              <strong className="ml-2 font-semibold text-[#111118]">
+              <strong className="ml-2 font-semibold text-[#141512]">
                 {hospital?.name}
               </strong>
             </p>
-            <p className="mt-3 text-xs leading-6 text-[#737382]">
+            <p className="mt-3 text-xs leading-6 text-[#72756a]">
               약칭이나 자주 쓰는 변형 명칭을 등록하세요. 예를 들어 공식 이름이
               &quot;바른얼굴치과교정과치과의원&quot;이면
               &quot;바른얼굴교정치과&quot;를 별칭으로 사용할 수 있습니다.
@@ -1041,13 +1039,13 @@ export default function SettingsPage() {
                 {nameAliases.map((alias) => (
                   <span
                     key={alias}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#d9d8e6] bg-[#ededf6] px-3 py-1.5 text-xs text-[#545067]"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#d7dacd] bg-[#e9ebe1] px-3 py-1.5 text-xs text-[#525849]"
                   >
                     {alias}
                     <button
                       onClick={() => removeAlias(alias)}
                       aria-label={`${alias} 별칭 삭제`}
-                      className="rounded-full p-0.5 hover:bg-[#d9d8e6]"
+                      className="rounded-full p-0.5 hover:bg-[#d7dacd]"
                     >
                       <X className="h-3 w-3" />
                     </button>
@@ -1076,8 +1074,8 @@ export default function SettingsPage() {
                 <Plus className="h-4 w-4" /> 추가
               </Button>
             </div>
-            <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#dedee8] pt-5">
-              <p className="text-xs text-[#737382]">
+            <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#d4d6cb] pt-5">
+              <p className="text-xs text-[#72756a]">
                 {nameAliases.length} / 10개 등록
               </p>
               <Button
@@ -1096,25 +1094,25 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        <section className="grid gap-6 border-t border-[#d9d8e6] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <section className="grid gap-6 border-t border-[#d7dacd] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
-            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#737382]">
+            <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#72756a]">
               05 / WORKSPACE
             </p>
             <h2 className="text-xl font-semibold tracking-tight">
               구독과 계정
             </h2>
-            <p className="mt-3 text-xs leading-6 text-[#737382]">
+            <p className="mt-3 text-xs leading-6 text-[#72756a]">
               사용 범위와 연결 계정을
               <br className="hidden lg:block" /> 한곳에서 관리합니다.
             </p>
           </div>
           <div className="min-w-0 space-y-4">
-            <details className="group overflow-hidden rounded-[22px] border border-[#dedee8] bg-white">
+            <details className="group overflow-hidden border border-[#141512] bg-white">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 sm:px-7">
                 <div>
                   <p className="text-sm font-semibold">요금제</p>
-                  <p className="mt-1 text-xs text-[#737382]">
+                  <p className="mt-1 text-xs text-[#72756a]">
                     현재{" "}
                     {PLANS.find((p) => p.id === (hospital?.planType || "FREE"))
                       ?.name || hospital?.planType}{" "}
@@ -1123,7 +1121,7 @@ export default function SettingsPage() {
                 </div>
                 <Plus className="h-4 w-4 shrink-0 group-open:rotate-45" />
               </summary>
-              <div className="grid border-t border-[#dedee8] sm:grid-cols-2">
+              <div className="grid border-t border-[#d4d6cb] sm:grid-cols-2">
                 {PLANS.map((plan) => {
                   const isCurrent = plan.id === (hospital?.planType || "FREE");
                   const isActiveSub =
@@ -1132,17 +1130,17 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={plan.id}
-                      className={`border-b border-r border-[#dedee8] p-5 sm:p-6 ${isCurrent && isActiveSub ? "bg-[#fafafe]" : ""}`}
+                      className={`border-b border-r border-[#d4d6cb] p-5 sm:p-6 ${isCurrent && isActiveSub ? "bg-[#fafaf6]" : ""}`}
                     >
                       <div className="flex items-center justify-between">
                         <h3 className="text-lg font-semibold">{plan.name}</h3>
                         {isCurrent && isActiveSub ? (
-                          <span className="text-[10px] font-semibold text-[#5b4dff]">
+                          <span className="text-[10px] font-semibold text-[#44551d]">
                             현재 이용 중
                           </span>
                         ) : (
                           plan.isPopular && (
-                            <span className="rounded-full bg-[#ff6b3d] px-2.5 py-1 text-[10px] font-semibold">
+                            <span className="rounded-full bg-[#ff5d2a] px-2.5 py-1 text-[10px] font-semibold">
                               추천 플랜
                             </span>
                           )
@@ -1151,23 +1149,23 @@ export default function SettingsPage() {
                       <p className="mt-3 text-2xl font-semibold tracking-tight">
                         {plan.priceText}
                       </p>
-                      <p className="mt-2 text-[11px] text-[#737382]">
+                      <p className="mt-2 text-[11px] text-[#72756a]">
                         {plan.description}
                       </p>
                       <ul className="my-5 space-y-2">
                         {plan.features.map((feature, idx) => (
                           <li
                             key={idx}
-                            className="flex gap-2 text-xs leading-5 text-[#545067]"
+                            className="flex gap-2 text-xs leading-5 text-[#525849]"
                           >
-                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5b4dff]" />
+                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#44551d]" />
                             {feature}
                           </li>
                         ))}
                         {plan.notIncluded.map((feature, idx) => (
                           <li
                             key={`no-${idx}`}
-                            className="flex gap-2 text-[11px] leading-5 text-[#9997ad]"
+                            className="flex gap-2 text-[11px] leading-5 text-[#989b8d]"
                           >
                             <span className="w-3.5 shrink-0 text-center">
                               −
@@ -1197,7 +1195,7 @@ export default function SettingsPage() {
                       </Button>
                       <a
                         href={`/dashboard/billing?plan=${plan.id}&coupon=true`}
-                        className="mt-3 block text-center text-[11px] text-[#777489] underline underline-offset-4"
+                        className="mt-3 block text-center text-[11px] text-[#73766b] underline underline-offset-4"
                       >
                         쿠폰 적용
                       </a>
@@ -1207,14 +1205,14 @@ export default function SettingsPage() {
               </div>
             </details>
             <HubLinkCard />
-            <section className="rounded-[22px] border border-[#dedee8] bg-white p-5 sm:p-7">
+            <section className="rounded-sm border border-[#d4d6cb] bg-white p-5 sm:p-7">
               <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-                <Shield className="h-4 w-4 text-[#777489]" /> 계정 보안
+                <Shield className="h-4 w-4 text-[#73766b]" /> 계정 보안
               </h3>
-              <div className="divide-y divide-[#dedee8]">
+              <div className="divide-y divide-[#d4d6cb]">
                 <div className="flex items-center justify-between gap-3 py-3">
                   <div className="min-w-0">
-                    <p className="text-xs text-[#737382]">이메일</p>
+                    <p className="text-xs text-[#72756a]">이메일</p>
                     <p className="mt-1 break-all text-sm">{user?.email}</p>
                   </div>
                   <Button variant="outline" size="sm" disabled>
@@ -1223,7 +1221,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center justify-between gap-3 py-3">
                   <div>
-                    <p className="text-xs text-[#737382]">비밀번호</p>
+                    <p className="text-xs text-[#72756a]">비밀번호</p>
                     <p className="mt-1 text-sm tracking-widest">••••••••</p>
                   </div>
                   <Button variant="outline" size="sm">
@@ -1271,13 +1269,13 @@ function HubLinkCard() {
     process.env.NEXT_PUBLIC_API_URL || "https://api.patientsignal.kr/api"
   ).replace(/\/+$/, "");
   return (
-    <section className="rounded-[22px] border border-[#dedee8] bg-white p-5 sm:p-7">
+    <section className="rounded-sm border border-[#d4d6cb] bg-white p-5 sm:p-7">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <Globe className="h-4 w-4 text-[#777489]" /> Patient Hub 계정
+            <Globe className="h-4 w-4 text-[#73766b]" /> Patient Hub 계정
           </h3>
-          <p className="mt-2 break-all text-xs leading-6 text-[#737382]">
+          <p className="mt-2 break-all text-xs leading-6 text-[#72756a]">
             {profileQ.isLoading
               ? "연결 상태 확인 중"
               : linked
@@ -1313,11 +1311,11 @@ function HubLinkCard() {
         )}
       </div>
       {notice && (
-        <p className="mt-4 rounded-xl bg-[#ededf6] p-3 text-xs leading-6 text-[#5b4dff]">
+        <p className="mt-4 rounded-xl bg-[#e9ebe1] p-3 text-xs leading-6 text-[#44551d]">
           {notice}
         </p>
       )}
-      <p className="mt-4 border-t border-[#dedee8] pt-3 text-[11px] leading-6 text-[#737382]">
+      <p className="mt-4 border-t border-[#d4d6cb] pt-3 text-[11px] leading-6 text-[#72756a]">
         다른 이메일로 가입했어도 연결할 수 있습니다. 연결 중 Hub 로그인이
         표시되면 해당 계정으로 로그인하세요. 계정이 없다면
         hub.patientfunnel.kr에서 먼저 만들어 주세요. 기존 리포트·설정·구독은

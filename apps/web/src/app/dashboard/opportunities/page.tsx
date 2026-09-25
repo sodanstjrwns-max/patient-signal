@@ -169,8 +169,8 @@ export default function OpportunitiesPage() {
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-[#353143]">일부 분석 데이터를 확인할 수 없습니다</p>
-              <p className="text-xs text-[#737382] mt-1">표시되지 않은 항목은 집계에서 제외했습니다. 새로고침 후 다시 확인해 주세요.</p>
+              <p className="text-sm font-semibold text-[#33372c]">일부 분석 데이터를 확인할 수 없습니다</p>
+              <p className="text-xs text-[#72756a] mt-1">표시되지 않은 항목은 집계에서 제외했습니다. 새로고침 후 다시 확인해 주세요.</p>
             </div>
           </CardContent>
         </Card>
@@ -185,7 +185,7 @@ export default function OpportunitiesPage() {
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-[#737382]">긴급 기회</p>
+                <p className="text-sm text-[#72756a]">긴급 기회</p>
                 <p className="text-2xl font-bold text-red-600">{analysisAvailable ? highCount : '—'}</p>
               </div>
             </div>
@@ -198,7 +198,7 @@ export default function OpportunitiesPage() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-[#737382]">중요 기회</p>
+                <p className="text-sm text-[#72756a]">중요 기회</p>
                 <p className="text-2xl font-bold text-amber-600">{analysisAvailable ? mediumCount : '—'}</p>
               </div>
             </div>
@@ -207,12 +207,12 @@ export default function OpportunitiesPage() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#ededf4] flex items-center justify-center">
-                <Target className="h-5 w-5 text-[#5b4dff]" />
+              <div className="w-10 h-10 rounded-lg bg-[#e9ebe1] flex items-center justify-center">
+                <Target className="h-5 w-5 text-[#44551d]" />
               </div>
               <div>
-                <p className="text-sm text-[#737382]"><TermTip term="contentGap">Content Gap</TermTip></p>
-                <p className="text-2xl font-bold text-[#111118]">{gapsAvailable ? contentGaps.length : '—'}</p>
+                <p className="text-sm text-[#72756a]"><TermTip term="contentGap">Content Gap</TermTip></p>
+                <p className="text-2xl font-bold text-[#141512]">{gapsAvailable ? contentGaps.length : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -224,8 +224,8 @@ export default function OpportunitiesPage() {
                 <TrendingUp className="h-5 w-5 text-brand-600" />
               </div>
               <div>
-                <p className="text-sm text-[#737382]">전체 기회</p>
-                <p className="text-2xl font-bold text-[#111118]">{gapsAvailable && analysisAvailable ? opportunities.length + contentGaps.length : '—'}</p>
+                <p className="text-sm text-[#72756a]">전체 기회</p>
+                <p className="text-2xl font-bold text-[#141512]">{gapsAvailable && analysisAvailable ? opportunities.length + contentGaps.length : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -261,7 +261,7 @@ export default function OpportunitiesPage() {
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'opportunities'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
-              : 'text-[#737382] hover:bg-white'
+              : 'text-[#72756a] hover:bg-white'
           }`}
         >
           <Zap className="h-4 w-4" />
@@ -272,7 +272,7 @@ export default function OpportunitiesPage() {
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'gaps'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
-              : 'text-[#737382] hover:bg-white'
+              : 'text-[#72756a] hover:bg-white'
           }`}
         >
           <Target className="h-4 w-4" />
@@ -282,8 +282,8 @@ export default function OpportunitiesPage() {
           onClick={() => setActiveSection('category')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'category'
-              ? 'bg-[#f4f4f8] text-[#111118] border border-[#dedee8]'
-              : 'text-[#737382] hover:bg-white'
+              ? 'bg-[#f1f1eb] text-[#141512] border border-[#d4d6cb]'
+              : 'text-[#72756a] hover:bg-white'
           }`}
         >
           <PieChart className="h-4 w-4" />
@@ -301,8 +301,8 @@ export default function OpportunitiesPage() {
             <Card>
               <CardContent className="p-8 text-center">
                 {analysisAvailable ? <CheckCircle className="h-12 w-12 text-brand-300 mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
-                <p className="text-[#737382] font-medium">{analysisAvailable ? '현재 발견된 노출 기회가 없습니다' : '노출 기회 데이터를 확인할 수 없습니다'}</p>
-                <p className="text-[#858592] text-sm mt-1">
+                <p className="text-[#72756a] font-medium">{analysisAvailable ? '현재 발견된 노출 기회가 없습니다' : '노출 기회 데이터를 확인할 수 없습니다'}</p>
+                <p className="text-[#909781] text-sm mt-1">
                   {analysisAvailable ? 'AI 크롤링 데이터가 쌓이면 경쟁사 대비 우리 병원의 노출 기회가 자동으로 감지됩니다' : '잠시 후 새로고침해 주세요.'}
                 </p>
                 {contentGaps.length > 0 && (
@@ -321,7 +321,7 @@ export default function OpportunitiesPage() {
               const config = urgencyConfig[opp.urgency];
               const isExpanded = expandedId === `opp-${i}`;
               return (
-                <Card key={i} className={`${config.border} border hover:border-[#dedee8] transition-all`}>
+                <Card key={i} className={`${config.border} border hover:border-[#d4d6cb] transition-all`}>
                   <CardContent className="p-4">
                     <div
                       className="flex items-start justify-between cursor-pointer"
@@ -337,22 +337,22 @@ export default function OpportunitiesPage() {
                               {config.label}
                             </span>
                             {opp.platforms.map(p => (
-                              <span key={p} className="px-1.5 py-0.5 text-[10px] bg-[#ededf4] text-[#737382] rounded">
+                              <span key={p} className="px-1.5 py-0.5 text-[10px] bg-[#e9ebe1] text-[#72756a] rounded">
                                 {platformNames[p] || p}
                               </span>
                             ))}
                           </div>
-                          <p className="text-sm font-medium text-[#111118] leading-snug">
+                          <p className="text-sm font-medium text-[#141512] leading-snug">
                             "{opp.promptText}"
                           </p>
-                          <p className="text-xs text-[#858592] mt-1">
+                          <p className="text-xs text-[#909781] mt-1">
                             경쟁사 {opp.competitorCount}개 언급 · {opp.competitorsMentioned.slice(0, 3).join(', ')}
                             {opp.competitorsMentioned.length > 3 && ` 외 ${opp.competitorsMentioned.length - 3}개`}
                           </p>
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-2">
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#858592]" /> : <ChevronDown className="h-4 w-4 text-[#858592]" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#909781]" /> : <ChevronDown className="h-4 w-4 text-[#909781]" />}
                       </div>
                     </div>
 
@@ -367,13 +367,13 @@ export default function OpportunitiesPage() {
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-[#f4f4f8] rounded-lg p-3">
-                            <p className="text-[10px] text-[#858592] mb-1"><TermTip term="queryIntent">질문 의도</TermTip></p>
-                            <p className="text-xs font-medium text-[#545067]">{opp.intent || '정보 탐색'}</p>
+                          <div className="bg-[#f1f1eb] rounded-lg p-3">
+                            <p className="text-[10px] text-[#909781] mb-1"><TermTip term="queryIntent">질문 의도</TermTip></p>
+                            <p className="text-xs font-medium text-[#525849]">{opp.intent || '정보 탐색'}</p>
                           </div>
-                          <div className="bg-[#f4f4f8] rounded-lg p-3">
-                            <p className="text-[10px] text-[#858592] mb-1">감지일</p>
-                            <p className="text-xs font-medium text-[#545067]">
+                          <div className="bg-[#f1f1eb] rounded-lg p-3">
+                            <p className="text-[10px] text-[#909781] mb-1">감지일</p>
+                            <p className="text-xs font-medium text-[#525849]">
                               {opp.lastDetectedAt ? new Date(opp.lastDetectedAt).toLocaleDateString('ko-KR') : '-'}
                             </p>
                           </div>
@@ -394,9 +394,9 @@ export default function OpportunitiesPage() {
           {contentGaps.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                {gapsAvailable ? <Target className="h-12 w-12 text-[#b9b8c9] mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
-                <p className="text-[#737382] font-medium">{gapsAvailable ? 'Content Gap이 아직 없습니다' : 'Content Gap 데이터를 확인할 수 없습니다'}</p>
-                <p className="text-[#858592] text-sm mt-1">
+                {gapsAvailable ? <Target className="h-12 w-12 text-[#b8bcab] mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
+                <p className="text-[#72756a] font-medium">{gapsAvailable ? 'Content Gap이 아직 없습니다' : 'Content Gap 데이터를 확인할 수 없습니다'}</p>
+                <p className="text-[#909781] text-sm mt-1">
                   {gapsAvailable ? '크롤링 데이터가 쌓이면 경쟁사가 노출되는 주제에서 우리가 빠진 영역을 자동으로 발견합니다' : '잠시 후 새로고침해 주세요.'}
                 </p>
               </CardContent>
@@ -405,7 +405,7 @@ export default function OpportunitiesPage() {
             contentGaps.map((gap) => {
               const isExpanded = expandedId === gap.id;
               return (
-                <Card key={gap.id} className="hover:border-[#dedee8] transition-all">
+                <Card key={gap.id} className="hover:border-[#d4d6cb] transition-all">
                   <CardContent className="p-4">
                     <div
                       className="flex items-start justify-between cursor-pointer"
@@ -422,30 +422,30 @@ export default function OpportunitiesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`px-2 py-0.5 text-[10px] rounded-full border ${
-                              gap.gapType === 'CONTENT' ? 'bg-[#f4f4f8] text-[#5b4dff] border-[#dedee8]'
+                              gap.gapType === 'CONTENT' ? 'bg-[#f1f1eb] text-[#44551d] border-[#d4d6cb]'
                               : gap.gapType === 'KEYWORD' ? 'bg-brand-50 text-brand-600 border-brand-200'
-                              : 'bg-[#f4f4f8] text-[#606070] border-[#dedee8]'
+                              : 'bg-[#f1f1eb] text-[#687253] border-[#d4d6cb]'
                             }`}>
                               {gap.gapType === 'CONTENT' ? '콘텐츠' : gap.gapType === 'KEYWORD' ? '키워드' : '주제'}
                             </span>
                             <div className="flex items-center gap-1">
                               {Array.from({ length: 10 }, (_, i) => (
                                 <div key={i} className={`w-1.5 h-1.5 rounded-full ${
-                                  i < gap.priorityScore ? 'bg-brand-500' : 'bg-[#dedee8]'
+                                  i < gap.priorityScore ? 'bg-brand-500' : 'bg-[#d4d6cb]'
                                 }`} />
                               ))}
                             </div>
                           </div>
-                          <p className="text-sm font-medium text-[#111118]">{gap.topic}</p>
+                          <p className="text-sm font-medium text-[#141512]">{gap.topic}</p>
                           {gap.competitorNames.length > 0 && (
-                            <p className="text-xs text-[#858592] mt-1">
+                            <p className="text-xs text-[#909781] mt-1">
                               경쟁사: {gap.competitorNames.slice(0, 3).join(', ')}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-2">
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#858592]" /> : <ChevronDown className="h-4 w-4 text-[#858592]" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#909781]" /> : <ChevronDown className="h-4 w-4 text-[#909781]" />}
                       </div>
                     </div>
 

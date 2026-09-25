@@ -38,12 +38,12 @@ const SLUG_MAP: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
-  CHATGPT: { label: 'ChatGPT', color: '#545067' },
-  PERPLEXITY: { label: 'Perplexity', color: '#0ea5e9' },
+  CHATGPT: { label: 'ChatGPT', color: '#525849' },
+  PERPLEXITY: { label: 'Perplexity', color: '#687253' },
   CLAUDE: { label: 'Claude', color: '#f97316' },
-  GEMINI: { label: 'Gemini', color: '#8b5cf6' },
-  GROK: { label: 'Grok', color: '#d946ef' },
-  CLOVA_X: { label: 'CLOVA X', color: '#777489' },
+  GEMINI: { label: 'Gemini', color: '#bec3af' },
+  GROK: { label: 'Grok', color: '#909781' },
+  CLOVA_X: { label: 'CLOVA X', color: '#73766b' },
 };
 
 interface PlatformStat {
@@ -390,11 +390,11 @@ export default function HospitalBoardPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rankedDaily} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff14" />
-                <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
-                <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#94a3b8', fontSize: 10 }} allowDecimals={false} />
+                <XAxis dataKey="date" tick={{ fill: '#bec3af', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
+                <YAxis reversed domain={[1, 'dataMax']} tick={{ fill: '#bec3af', fontSize: 10 }} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: '#cbd5e1' }}
+                  contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#d9ddcf' }}
                   formatter={(v) => [`${v}위`, '순위']}
                 />
                 <Line type="monotone" dataKey="rank" stroke="#fbbf24" strokeWidth={2.5} dot={{ r: 3, fill: '#fbbf24' }} />
@@ -410,19 +410,19 @@ export default function HospitalBoardPage() {
               <AreaChart data={data.daily} margin={{ top: 5, right: 10, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="sovFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#909781" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#909781" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#ffffff14" />
-                <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
-                <YAxis domain={[0, 100]} tick={{ fill: '#94a3b8', fontSize: 10 }} />
+                <XAxis dataKey="date" tick={{ fill: '#bec3af', fontSize: 10 }} tickFormatter={(v) => String(v).slice(5)} />
+                <YAxis domain={[0, 100]} tick={{ fill: '#bec3af', fontSize: 10 }} />
                 <Tooltip
-                  contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: '#cbd5e1' }}
+                  contentStyle={{ background: '#292e23', border: '1px solid #465135', borderRadius: 8, fontSize: 12 }}
+                  labelStyle={{ color: '#d9ddcf' }}
                   formatter={(v) => [`${v}%`, 'SoV']}
                 />
-                <Area type="monotone" dataKey="sovPercent" stroke="#38bdf8" strokeWidth={2} fill="url(#sovFill)" />
+                <Area type="monotone" dataKey="sovPercent" stroke="#909781" strokeWidth={2} fill="url(#sovFill)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -438,7 +438,7 @@ export default function HospitalBoardPage() {
           </p>
           <div className="space-y-3">
             {platformEntries.map(([key, stat]) => {
-              const meta = PLATFORM_LABELS[key] ?? { label: key, color: '#64748b' };
+              const meta = PLATFORM_LABELS[key] ?? { label: key, color: '#687253' };
               return (
                 <div key={key} className="flex items-center gap-3">
                   <span className="w-24 text-xs font-semibold text-slate-300 shrink-0">{meta.label}</span>

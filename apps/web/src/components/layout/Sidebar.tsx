@@ -108,211 +108,289 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const groupButtonRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     setMobileOpen(false);
+    setExpandedGroup(null);
   }, [pathname]);
   useEffect(() => {
-    if (!mobileOpen) return;
-    const prior = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    drawerRef.current?.querySelector<HTMLElement>("a,button")?.focus();
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
-      if (event.key === "Tab") {
-        const items = drawerRef.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled])');
-        if (!items?.length) return;
-        const first = items[0];
-        const last = items[items.length - 1];
-        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    if (expandedGroup === null) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExpandedGroup(null);
+        groupButtonRef.current?.focus();
       }
     };
-    document.addEventListener("keydown", close);
+    const outside = (event: PointerEvent) => {
+      if (
+        !panelRef.current?.contains(event.target as Node) &&
+        !groupButtonRef.current?.contains(event.target as Node)
+      )
+        setExpandedGroup(null);
+    };
+    document.addEventListener("keydown", escape);
+    document.addEventListener("pointerdown", outside);
     return () => {
-      document.body.style.overflow = prior;
-      document.removeEventListener("keydown", close);
+      document.removeEventListener("keydown", escape);
+      document.removeEventListener("pointerdown", outside);
+    };
+  }, [expandedGroup]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.querySelector<HTMLElement>("a,button")?.focus();
+    const keys = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+      if (event.key !== "Tab") return;
+      const items = drawerRef.current?.querySelectorAll<HTMLElement>(
+        "a[href],button:not([disabled])",
+      );
+      if (!items?.length) return;
+      const first = items[0],
+        last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", keys);
+    return () => {
+      document.body.style.overflow = previous;
+      document.removeEventListener("keydown", keys);
       menuRef.current?.focus();
     };
   }, [mobileOpen]);
-  const plan = planLabels[user?.hospital?.planType || "FREE"] || "Free";
-  const content = (
-    <div className="flex h-full flex-col text-[#b9b8c9]">
-      <div className="flex h-[88px] shrink-0 items-center justify-between px-6">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2.5"
-          aria-label="Patient Signal 홈"
-        >
-          <SignalMark className="!h-8 !w-8" />
-          <span className="text-[17px] font-semibold tracking-[-0.06em] text-white">patient<span className="font-normal">signal</span></span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(false)}
-          aria-label="메뉴 닫기"
-          className="p-2 lg:hidden"
-        >
-          <X className="h-4 w-4" />
-        </button>
-
-      </div>
-      <Link
-        href="/dashboard/settings"
-        className="signal-interactive mx-4 mb-7 flex items-center gap-3 rounded-xl border border-[#5b4dff]/30 bg-[#5b4dff]/10 px-3 py-3.5 hover:border-[#5b4dff]/60 hover:bg-[#5b4dff]/20"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#353143] text-[#ff6b3d]">
-          <Building2 className="h-4 w-4" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <strong className="block truncate text-xs font-semibold text-[#ededf6]">
-            {user?.hospital?.name || "병원 프로필"}
-          </strong>
-          <span className="mt-1 block text-[10px] text-[#9997ad]">
-            {plan} PLAN / WORKSPACE
-          </span>
-        </span>
-        <ChevronRight className="h-3 w-3 shrink-0" />
-      </Link>
-      <nav
-        className="min-h-0 flex-1 overflow-y-auto px-4 pb-5"
-        aria-label="시그널 메뉴"
-      >
-        {navGroups.map((group, idx) => {
-          const open =
-            idx === 0 ||
-            (openGroups[group.label] ??
-              group.items.some((item) => item.href === pathname));
-          return (
-            <section
-              key={group.label}
-              className={idx ? "mt-6 border-t border-white/10 pt-4" : ""}
-            >
-              {idx === 0 ? (
-                <h2 className="mb-3 px-3 text-[9px] font-semibold uppercase tracking-[.2em] text-[#777489]">
-                  WORKSPACE
-                </h2>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setOpenGroups((prev) => ({ ...prev, [group.label]: !open }))
-                  }
-                  aria-expanded={open}
-                  className="mb-2 flex w-full items-center justify-between px-3 py-1 text-[11px] font-medium text-[#9997ad] hover:text-white"
-                >
-                  {group.label}
-                  <ChevronDown
-                    className={cn(
-                      "h-3 w-3 transition-transform",
-                      open && "rotate-180",
-                    )}
-                  />
-                </button>
-              )}
-              {open && (
-                <div className="signal-enter space-y-1">
-                  {group.items.map((item) => {
-                    const active = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "signal-nav-link group flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px]",
-                          active
-                            ? "bg-[#ff6b3d] font-semibold text-[#111118]"
-                            : "text-[#b9b8c9] hover:bg-white/[.06] hover:text-white",
-                        )}
-                      >
-                        <item.icon
-                          className="h-[17px] w-[17px] shrink-0"
-                          strokeWidth={1.7}
-                        />
-                        <span className="flex-1">{item.label}</span>
-                        {active && <ArrowUpRight className="h-3.5 w-3.5" />}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </nav>
-      <div className="shrink-0 px-4 pb-5 pt-3">
-        <Link
-          href="/dashboard/billing"
-          className="mb-5 flex items-center justify-between border-b border-white/10 px-2 pb-4 text-[11px] text-[#b9b8c9] hover:text-[#ff6b3d]"
-        >
-          <span>측정 범위 확장하기</span>
-          <ArrowUpRight className="h-4 w-4" />
-        </Link>
-        <div className="flex items-center gap-2.5 px-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 text-xs text-[#ff6b3d]">
-            {user?.name?.charAt(0) || "U"}
-          </span>
-          <span className="min-w-0 flex-1">
-            <strong className="block truncate text-xs font-medium text-[#ededf6]">
-              {user?.name}
-            </strong>
-            <span className="block truncate text-[10px] text-[#9997ad]">
-              {user?.email}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={logout}
-            aria-label="로그아웃"
-            className="rounded p-2 hover:bg-white/10"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const railLabels: Record<string, string> = {
+    "/dashboard": "개요",
+    "/dashboard/settings": "병원 소개",
+    "/dashboard/prompts": "질문",
+    "/dashboard/responses": "AI 답변",
+    "/dashboard/competitors": "경쟁 병원",
+  };
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-[#101016] px-4 text-white lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between border-b border-white/15 bg-[#141512] px-4 text-[#f1f1eb] lg:hidden">
         <Link
           href="/dashboard"
-          className="flex items-center gap-2 text-[17px] font-semibold tracking-[-.06em]"
+          className="flex items-center gap-2"
+          aria-label="Patient Signal 홈"
         >
-          <SignalMark className="!h-7 !w-7" /><span>patient<span className="font-normal">signal</span></span>
+          <SignalMark className="!h-7 !w-7" />
+          <span className="text-xl font-black tracking-[-.06em]">
+            signal<span className="text-[#ff5d2a]">.</span>
+          </span>
         </Link>
         <button
+          ref={menuRef}
           type="button"
           onClick={() => setMobileOpen(true)}
           aria-label="메뉴 열기"
           aria-expanded={mobileOpen}
-          ref={menuRef}
           className="p-2"
         >
           <Menu className="h-5 w-5" />
         </button>
       </div>
-      {mobileOpen && (
+      <aside className="sticky top-0 z-30 hidden h-screen w-[88px] shrink-0 flex-col border-r border-white/15 bg-[#141512] text-[#bec3af] lg:flex">
+        <Link
+          href="/dashboard"
+          className="flex h-[76px] shrink-0 items-center justify-center border-b border-white/15"
+          aria-label="Patient Signal 홈"
+        >
+          <SignalMark className="!h-10 !w-10" />
+        </Link>
+        <nav
+          aria-label="시그널 메뉴"
+          className="min-h-0 flex-1 space-y-1 overflow-y-auto px-2 py-5"
+        >
+          {navGroups[0].items.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-label={item.label}
+              aria-current={pathname === item.href ? "page" : undefined}
+              className={cn(
+                "desk-rail-item flex min-h-[68px] flex-col items-center justify-center gap-2 text-[10px] font-semibold",
+                pathname === item.href
+                  ? "bg-[#d0ff43] text-[#141512]"
+                  : "hover:bg-white/10 hover:text-[#f1f1eb]",
+              )}
+            >
+              <item.icon className="h-5 w-5" strokeWidth={1.6} />
+              <span>{railLabels[item.href]}</span>
+            </Link>
+          ))}
+          <div className="!mt-5 border-t border-white/15 pt-4">
+            {navGroups.slice(1).map((group, i) => {
+              const active = group.items.some((item) => item.href === pathname);
+              const Icon = i === 0 ? Activity : Filter;
+              return (
+                <button
+                  key={group.label}
+                  type="button"
+                  aria-expanded={expandedGroup === i + 1}
+                  aria-controls="signal-extra-nav"
+                  onClick={(event) => {
+                    groupButtonRef.current = event.currentTarget;
+                    setExpandedGroup(expandedGroup === i + 1 ? null : i + 1);
+                  }}
+                  className={cn(
+                    "desk-rail-item flex min-h-[64px] w-full flex-col items-center justify-center gap-2 text-[10px] font-medium",
+                    active || expandedGroup === i + 1
+                      ? "bg-white/10 text-[#d0ff43]"
+                      : "hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  <Icon className="h-5 w-5" strokeWidth={1.6} />
+                  <span>{group.label} +</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+        <Link
+          href="/dashboard/billing"
+          className="flex min-h-14 shrink-0 items-center justify-center border-t border-white/15 text-[10px] font-bold text-[#d0ff43] hover:bg-white/10"
+          aria-label="결제 및 구독"
+        >
+          {planLabels[user?.hospital?.planType || "FREE"] || "Free"} PLAN{" "}
+          <ArrowUpRight className="ml-1 h-3 w-3" />
+        </Link>
         <button
           type="button"
-          aria-label="메뉴 닫기"
-          onClick={() => setMobileOpen(false)}
-          className="signal-route-enter fixed inset-0 z-50 bg-[#101016]/65 backdrop-blur-sm lg:hidden"
-        />
-      )}
-      <>
-        {mobileOpen && (
-          <aside ref={drawerRef} role="dialog" aria-modal="true" aria-label="시그널 탐색" className="signal-drawer-enter fixed inset-y-0 left-0 z-50 w-[272px] border-r border-white/10 bg-[#101016] lg:hidden">
-            {content}
-          </aside>
+          onClick={logout}
+          aria-label="로그아웃"
+          className="flex min-h-14 shrink-0 items-center justify-center border-t border-white/15 hover:bg-white/10"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+        {expandedGroup !== null && (
+          <nav
+            ref={panelRef}
+            id="signal-extra-nav"
+            aria-label={`${navGroups[expandedGroup].label} 메뉴`}
+            className="signal-panel-enter absolute bottom-0 left-full top-0 w-[256px] border-r border-white/15 bg-[#20231b] px-4 py-6 text-[#f1f1eb] shadow-xl"
+          >
+            <div className="mb-6 flex items-center justify-between border-b border-white/15 pb-5">
+              <strong className="text-xl font-bold">
+                {navGroups[expandedGroup].label}
+              </strong>
+              <button
+                aria-label="추가 메뉴 닫기"
+                onClick={() => {
+                  setExpandedGroup(null);
+                  groupButtonRef.current?.focus();
+                }}
+                className="p-2"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {navGroups[expandedGroup].items.map((item, i) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={pathname === item.href ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 border-b border-white/10 px-2 py-4 text-sm transition-colors",
+                  pathname === item.href
+                    ? "bg-[#d0ff43] text-[#141512]"
+                    : "hover:bg-white/10",
+                )}
+              >
+                <span className="font-mono text-[10px] opacity-50">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="flex-1">{item.label}</span>
+                <ArrowUpRight className="h-3 w-3" />
+              </Link>
+            ))}
+          </nav>
         )}
-      </>
-      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 border-r border-white/10 bg-[#101016] lg:block">
-        {content}
       </aside>
+      {mobileOpen && (
+        <>
+          <button
+            aria-label="메뉴 닫기"
+            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 z-50 bg-black/65 lg:hidden"
+          />
+          <aside
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="시그널 탐색"
+            className="signal-drawer-enter fixed inset-y-0 left-0 z-50 flex w-[288px] flex-col bg-[#141512] text-[#f1f1eb] lg:hidden"
+          >
+            <div className="flex h-20 shrink-0 items-center justify-between border-b border-white/15 px-5">
+              <Link
+                href="/dashboard"
+                aria-label="Patient Signal 홈"
+                className="text-3xl font-black tracking-[-.07em]"
+              >
+                signal<span className="text-[#ff5d2a]">.</span>
+              </Link>
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label="메뉴 닫기"
+                className="p-2"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <Link
+              href="/dashboard/settings"
+              className="border-b border-white/15 bg-[#d0ff43] px-5 py-4 text-sm font-bold text-[#141512]"
+            >
+              {user?.hospital?.name || "병원 소개"}
+            </Link>
+            <nav
+              aria-label="시그널 메뉴"
+              className="flex-1 overflow-y-auto px-5 py-4"
+            >
+              {navGroups.map((group, index) => (
+                <section key={group.label} className={index ? "mt-6" : ""}>
+                  <p className="mb-2 font-mono text-[10px] text-[#989b8d]">
+                    0{index + 1} / {group.label}
+                  </p>
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={pathname === item.href ? "page" : undefined}
+                      className={cn(
+                        "flex items-center gap-3 border-b border-white/10 px-2 py-3 text-sm",
+                        pathname === item.href
+                          ? "text-[#d0ff43]"
+                          : "text-[#d7dacd]",
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                </section>
+              ))}
+            </nav>
+            <button
+              type="button"
+              onClick={logout}
+              className="flex items-center justify-between border-t border-white/15 px-5 py-4 text-xs"
+            >
+              로그아웃
+              <LogOut className="h-4 w-4" />
+            </button>
+          </aside>
+        </>
+      )}
     </>
   );
 }
