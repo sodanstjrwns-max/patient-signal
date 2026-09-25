@@ -11,6 +11,7 @@
  */
 
 import { Header } from '@/components/layout/Header';
+import { WorkspaceIntro } from '@/components/dashboard/WorkspaceIntro';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import {
@@ -39,7 +40,7 @@ import {
 const CORE_TERMS = [
   {
     icon: Percent,
-    color: 'text-blue-600 bg-blue-50',
+    color: 'text-[#36765A] bg-[#F4F5EF]',
     name: '언급률 / SoV',
     oneLiner: '출석률',
     desc: 'AI에게 100번 물었을 때 우리 병원 이름이 답변에 등장한 비율입니다. SoV 9%는 "100번 중 9번 등판, 91번은 이름조차 없었다"는 뜻입니다.',
@@ -63,7 +64,7 @@ const CORE_TERMS = [
   },
   {
     icon: TrendingUp,
-    color: 'text-indigo-600 bg-indigo-50',
+    color: 'text-[#36765A] bg-[#F4F5EF]',
     name: 'AI 가시성 점수 (0~100)',
     oneLiner: '내신 종합등급',
     desc: '대시보드 추이 차트에 그려지는 점수입니다. 언급률 35% + 추천순서 25% + 감성 15% + 플랫폼 커버리지 20% + 인용 5%를 합산합니다.',
@@ -225,29 +226,31 @@ const WEEKLY_ROUTINE = [
 
 export default function GuidePage() {
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F4F5EF]">
       <Header
         title="이용 가이드"
         description="Patient Signal을 처음 보는 원장님을 위한 5분 사용 설명서"
       />
 
-      <main className="p-4 sm:p-6 max-w-5xl mx-auto space-y-8">
+      <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 xl:px-10">
+        <WorkspaceIntro eyebrow="WORKSPACE GUIDE" title="시그널을 읽는 방법." description="주요 화면과 지표의 의미를 확인하고 우리 병원의 운영 루틴을 만드세요." />
+
         {/* ═══ 0. 이 서비스가 하는 일 ═══ */}
         <section id="intro-section">
-          <Card className="border-indigo-200 bg-indigo-50">
+          <Card className="border-[#DEE4D9] bg-[#F4F5EF]">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
-                <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
+                <div className="p-3 rounded-md bg-[#ECEFE6] text-[#36765A] shrink-0">
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-slate-900 mb-2">
+                  <h2 className="text-lg font-semibold text-[#15231B] mb-2">
                     Patient Signal은 &quot;AI 검색 시대의 건강검진&quot;입니다
                   </h2>
-                  <p className="text-sm text-slate-600 leading-relaxed">
+                  <p className="text-sm text-[#637167] leading-relaxed">
                     이제 환자들은 네이버 대신 ChatGPT·Gemini에게 &quot;○○동 임플란트 잘하는 병원&quot;을 묻습니다.
                     Patient Signal은 AI 7개 플랫폼(ChatGPT·Claude·Gemini·Perplexity·Grok·CLOVA X·네이버 AI 브리핑)에 등록된 질문을 자동으로 던지고,
-                    <strong className="text-slate-900"> 우리 병원이 등판하는지 · 몇 번째로 불리는지 · 어떤 톤으로 소개되는지</strong>를
+                    <strong className="text-[#15231B]"> 우리 병원이 등판하는지 · 몇 번째로 불리는지 · 어떤 톤으로 소개되는지</strong>를
                     추적해 점수로 보여줍니다. 광고비를 태우기 전에, AI가 우리를 어떻게 보고 있는지부터 아는 것이 순서입니다.
                   </p>
                 </div>
@@ -268,7 +271,7 @@ export default function GuidePage() {
                 </div>
                 <div>
                   <span className="block">처음이라면, 이 3가지부터 보세요</span>
-                  <span className="block text-[11px] font-semibold text-slate-400 mt-0.5">
+                  <span className="block text-[11px] font-semibold text-[#87917E] mt-0.5">
                     5분이면 &quot;AI가 우리를 어떻게 보는지&quot; 감이 잡힙니다
                   </span>
                 </div>
@@ -301,14 +304,14 @@ export default function GuidePage() {
                 <Link
                   key={item.step}
                   href={item.href}
-                  className="flex items-start gap-3.5 rounded-lg border border-amber-100 bg-white/70 p-4 hover:border-amber-300 hover:shadow-sm transition-all group"
+                  className="flex items-start gap-3.5 rounded-lg border border-amber-100 bg-white p-4 hover:border-amber-300 hover:shadow-sm transition-all group"
                 >
-                  <span className="w-7 h-7 rounded-xl bg-amber-500 text-white text-sm font-black flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="w-7 h-7 rounded-md bg-amber-500 text-white text-sm font-semibold flex items-center justify-center shrink-0 mt-0.5">
                     {item.step}
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mt-1">{item.desc}</p>
+                    <h3 className="text-sm font-semibold text-[#15231B]">{item.title}</h3>
+                    <p className="text-xs text-[#778378] leading-relaxed mt-1">{item.desc}</p>
                     <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 mt-2 group-hover:gap-2 transition-all">
                       {item.cta} →
                     </span>
@@ -321,11 +324,11 @@ export default function GuidePage() {
 
         {/* ═══ 1. 핵심 용어 4총사 ═══ */}
         <section id="core-terms-section">
-          <h2 className="text-xl font-black text-slate-900 mb-1">1. 숫자 읽는 법 — 핵심 4총사</h2>
-          <p className="text-sm text-slate-500 mb-4">이 네 가지만 구분하면 대시보드의 80%가 읽힙니다.</p>
+          <h2 className="text-xl font-semibold text-[#15231B] mb-1">1. 숫자 읽는 법 — 핵심 4총사</h2>
+          <p className="text-sm text-[#778378] mb-4">이 네 가지만 구분하면 대시보드의 80%가 읽힙니다.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {CORE_TERMS.map((t) => (
-              <Card key={t.name} className="hover:border-blue-200 transition-shadow">
+              <Card key={t.name} className="hover:border-[#DEE4D9] transition-shadow">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg shrink-0 ${t.color}`}>
@@ -333,13 +336,13 @@ export default function GuidePage() {
                     </div>
                     <div>
                       <CardTitle className="text-base">{t.name}</CardTitle>
-                      <span className="text-xs font-bold text-slate-400">한 줄 요약: &quot;{t.oneLiner}&quot;</span>
+                      <span className="text-xs font-bold text-[#87917E]">한 줄 요약: &quot;{t.oneLiner}&quot;</span>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <p className="text-sm text-slate-600 leading-relaxed">{t.desc}</p>
-                  <div className="flex items-start gap-2 text-xs bg-slate-50 rounded-lg p-2.5 text-slate-500">
+                  <p className="text-sm text-[#637167] leading-relaxed">{t.desc}</p>
+                  <div className="flex items-start gap-2 text-xs bg-[#F4F5EF] rounded-lg p-2.5 text-[#778378]">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                     <span>{t.caution}</span>
                   </div>
@@ -349,9 +352,9 @@ export default function GuidePage() {
           </div>
 
           {/* 30초 요약 박스 */}
-          <div className="mt-4 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 p-4">
-            <p className="text-sm font-bold text-indigo-900">
-              💡 30초 요약: <span className="font-medium text-indigo-800">
+          <div className="mt-4 rounded-md border-2 border-dashed border-[#DEE4D9] bg-[#F4F5EF]/50 p-4">
+            <p className="text-sm font-bold text-[#15231B]">
+              💡 30초 요약: <span className="font-medium text-[#15231B]">
                 SoV는 출석률, 1위 점유율은 주연 비율, R0~R3는 추천의 온도, 가시성 점수는 이걸 다 합친 내신등급입니다.
                 차트의 점수가 SoV%보다 높아 보이는 건 — 자주 불리진 못해도 불릴 때 앞자리에서 좋은 톤으로 불리고 있다는 뜻입니다.
               </span>
@@ -361,14 +364,14 @@ export default function GuidePage() {
 
         {/* ═══ 2. 심화 용어 ═══ */}
         <section id="advanced-terms-section">
-          <h2 className="text-xl font-black text-slate-900 mb-1">2. 리포트에 나오는 심화 용어</h2>
-          <p className="text-sm text-slate-500 mb-4">ABHS 리포트·인사이트 페이지에서 만나는 개념들. 각 지표 옆 ⓘ 아이콘에서도 같은 설명을 볼 수 있습니다.</p>
+          <h2 className="text-xl font-semibold text-[#15231B] mb-1">2. 리포트에 나오는 심화 용어</h2>
+          <p className="text-sm text-[#778378] mb-4">ABHS 리포트·인사이트 페이지에서 만나는 개념들. 각 지표 옆 ⓘ 아이콘에서도 같은 설명을 볼 수 있습니다.</p>
           <Card>
             <CardContent className="pt-6 divide-y divide-slate-100">
               {ADVANCED_TERMS.map((t) => (
                 <div key={t.name} className="py-3 first:pt-0 last:pb-0">
-                  <h3 className="text-sm font-bold text-slate-900 mb-1">{t.name}</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">{t.desc}</p>
+                  <h3 className="text-sm font-bold text-[#15231B] mb-1">{t.name}</h3>
+                  <p className="text-sm text-[#637167] leading-relaxed">{t.desc}</p>
                 </div>
               ))}
             </CardContent>
@@ -377,23 +380,23 @@ export default function GuidePage() {
 
         {/* ═══ 3. 메뉴 안내 ═══ */}
         <section id="menu-guide-section">
-          <h2 className="text-xl font-black text-slate-900 mb-1">3. 메뉴별 안내 — 어디서 뭘 보나</h2>
-          <p className="text-sm text-slate-500 mb-4">각 카드를 누르면 해당 메뉴로 이동합니다.</p>
+          <h2 className="text-xl font-semibold text-[#15231B] mb-1">3. 메뉴별 안내 — 어디서 뭘 보나</h2>
+          <p className="text-sm text-[#778378] mb-4">각 카드를 누르면 해당 메뉴로 이동합니다.</p>
           <div className="space-y-6">
             {MENU_GUIDE.map((group) => (
               <div key={group.group}>
-                <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider mb-2">{group.group}</h3>
+                <h3 className="text-xs font-semibold text-[#87917E] uppercase tracking-wider mb-2">{group.group}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {group.items.map((item) => (
                     <Link key={item.name} href={item.href} className="block group">
                       <Card className="h-full hover:border-brand-200 transition-colors">
                         <CardContent className="pt-4 pb-4">
                           <div className="flex items-center gap-2 mb-2">
-                            <item.icon className="w-4 h-4 text-indigo-500" />
-                            <span className="font-bold text-sm text-slate-900 group-hover:text-indigo-600 transition-colors">{item.name}</span>
+                            <item.icon className="w-4 h-4 text-[#36765A]" />
+                            <span className="font-bold text-sm text-[#15231B] group-hover:text-[#36765A] transition-colors">{item.name}</span>
                           </div>
-                          <p className="text-xs text-slate-600 leading-relaxed mb-2">{item.what}</p>
-                          <p className="text-[11px] font-semibold text-emerald-600">🕐 {item.when}</p>
+                          <p className="text-xs text-[#637167] leading-relaxed mb-2">{item.what}</p>
+                          <p className="text-[11px] font-semibold text-brand-600">🕐 {item.when}</p>
                         </CardContent>
                       </Card>
                     </Link>
@@ -406,8 +409,8 @@ export default function GuidePage() {
 
         {/* ═══ 4. 56주 캘린더 사용법 ═══ */}
         <section id="calendar-guide-section">
-          <h2 className="text-xl font-black text-slate-900 mb-1">4. 56주 캘린더 — 이렇게 쓰세요</h2>
-          <p className="text-sm text-slate-500 mb-4">1년치 콘텐츠 계획을 대신 짜주는 기능입니다.</p>
+          <h2 className="text-xl font-semibold text-[#15231B] mb-1">4. 56주 캘린더 — 이렇게 쓰세요</h2>
+          <p className="text-sm text-[#778378] mb-4">1년치 콘텐츠 계획을 대신 짜주는 기능입니다.</p>
           <Card>
             <CardContent className="pt-6 space-y-4">
               <ol className="space-y-3">
@@ -418,17 +421,17 @@ export default function GuidePage() {
                   { step: '4', title: '발행 후에는 지표로 검증', desc: '발행 2~4주 후 해당 주제 관련 질문의 언급률 변화를 대시보드에서 확인합니다. 오르면 그 결의 콘텐츠를 늘리는 겁니다.' },
                 ].map((s) => (
                   <li key={s.step} className="flex gap-3">
-                    <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs font-black flex items-center justify-center shrink-0 mt-0.5">{s.step}</span>
+                    <span className="w-6 h-6 rounded-full bg-[#36765A] text-white text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">{s.step}</span>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{s.title}</p>
-                      <p className="text-sm text-slate-600 leading-relaxed">{s.desc}</p>
+                      <p className="text-sm font-bold text-[#15231B]">{s.title}</p>
+                      <p className="text-sm text-[#637167] leading-relaxed">{s.desc}</p>
                     </div>
                   </li>
                 ))}
               </ol>
 
               {/* 정직 고지 */}
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
                 <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-bold text-amber-900 mb-1">솔직하게 말씀드리면 🙏</p>
@@ -446,17 +449,17 @@ export default function GuidePage() {
 
         {/* ═══ 5. 주간 루틴 ═══ */}
         <section id="routine-section">
-          <h2 className="text-xl font-black text-slate-900 mb-1">5. 추천 주간 루틴 — 주 37분이면 충분합니다</h2>
-          <p className="text-sm text-slate-500 mb-4">매일 다 볼 필요 없습니다. 이 루틴대로만 보세요.</p>
+          <h2 className="text-xl font-semibold text-[#15231B] mb-1">5. 추천 주간 루틴 — 주 37분이면 충분합니다</h2>
+          <p className="text-sm text-[#778378] mb-4">매일 다 볼 필요 없습니다. 이 루틴대로만 보세요.</p>
           <Card>
             <CardContent className="pt-6">
               <div className="space-y-3">
                 {WEEKLY_ROUTINE.map((r) => (
                   <div key={r.day} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-sm font-bold text-slate-900">{r.day}</span>
-                      <p className="text-sm text-slate-600 leading-relaxed">{r.task}</p>
+                      <span className="text-sm font-bold text-[#15231B]">{r.day}</span>
+                      <p className="text-sm text-[#637167] leading-relaxed">{r.task}</p>
                     </div>
                   </div>
                 ))}
@@ -468,7 +471,7 @@ export default function GuidePage() {
         {/* ═══ 마무리 ═══ */}
         <section id="closing-section" className="pb-8">
           <div className="rounded-lg border border-brand-100 bg-brand-50 p-6 text-center">
-            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+            <p className="text-sm font-medium text-[#637167] leading-relaxed">
               지표가 이해되지 않을 때는 각 숫자 옆의 <span className="text-brand-700 font-bold">ⓘ 아이콘</span>을 눌러보세요.
               그래도 궁금하면 언제든 문의 주세요 — 질문 주신 내용은 이 가이드에 계속 반영됩니다.
             </p>

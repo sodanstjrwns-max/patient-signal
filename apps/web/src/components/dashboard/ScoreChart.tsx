@@ -42,22 +42,22 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
             <AreaChart data={chartData}>
               <defs>
                 <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#36765a" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#36765a" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e1e6d9" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: '#64748b' }}
+                tick={{ fontSize: 12, fill: '#778378' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
+                axisLine={{ stroke: '#e1e6d9' }}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#64748b' }}
+                tick={{ fontSize: 12, fill: '#778378' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e2e8f0' }}
+                axisLine={{ stroke: '#e1e6d9' }}
               />
               <Tooltip
                 contentStyle={{
@@ -73,7 +73,7 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
               <Area
                 type="monotone"
                 dataKey="score"
-                stroke="#6366f1"
+                stroke="#36765a"
                 strokeWidth={2.5}
                 fillOpacity={1}
                 fill="url(#colorScore)"

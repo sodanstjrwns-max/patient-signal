@@ -389,6 +389,7 @@ export class AICrawlerController {
           aiPlatform: true,
           aiModelVersion: true,
           responseText: true,
+          archivedPromptText: true,
           responseDate: true,
           isMentioned: true,
           mentionPosition: true,
@@ -412,6 +413,8 @@ export class AICrawlerController {
       // responseText를 미리보기 길이로 제한 (메모리/전송량 최적화)
       const trimmedResponses = responsesFilled.map(r => ({
         ...r,
+        measuredQuestion: r.archivedPromptText ?? r.prompt?.promptText ?? '',
+        questionSnapshotAvailable: r.archivedPromptText !== null && r.archivedPromptText !== undefined,
         responseText: r.responseText?.length > 800
           ? r.responseText.substring(0, 800) + '...'
           : r.responseText,
@@ -447,6 +450,7 @@ export class AICrawlerController {
         aiPlatform: true,
         aiModelVersion: true,
         responseText: true,
+        archivedPromptText: true,
         responseDate: true,
         isMentioned: true,
         mentionPosition: true,
@@ -472,7 +476,12 @@ export class AICrawlerController {
     if (!response) {
       throw new NotFoundException('응답을 찾을 수 없습니다');
     }
-    return response;
+    const [filled] = await fillArchivedTexts(this.prisma, [response]);
+    return {
+      ...filled,
+      measuredQuestion: response.archivedPromptText ?? response.prompt?.promptText ?? '',
+      questionSnapshotAvailable: response.archivedPromptText !== null && response.archivedPromptText !== undefined,
+    };
   }
 
   // ==================== Phase 1: 인사이트 분석 API ====================

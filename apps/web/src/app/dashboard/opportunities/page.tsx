@@ -4,13 +4,14 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
+import { WorkspaceIntro } from '@/components/dashboard/WorkspaceIntro';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
 import { api, crawlerApi } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
-import { 
-  Zap, Target, TrendingUp, AlertTriangle, CheckCircle, 
+import {
+  Zap, Target, TrendingUp, AlertTriangle, CheckCircle,
   ArrowRight, Eye, Users, MessageSquare, Lightbulb,
   ChevronDown, ChevronUp, Star, BarChart3, Shield,
   ThumbsUp, ThumbsDown, Minus, Clock, Loader2, PenTool,
@@ -152,22 +153,24 @@ export default function OpportunitiesPage() {
 
   return (
     <div className="flex-1 min-h-screen">
-      <Header 
-        title="기회 분석" 
-        subtitle="경쟁사는 AI에서 추천되지만 우리 병원은 빠져있는 기회를 발견합니다" 
+      <Header
+        title="기회 분석"
+        subtitle="경쟁사는 AI에서 추천되지만 우리 병원은 빠져있는 기회를 발견합니다"
         onRefresh={() => refetch()}
         refreshing={isRefetching}
       />
 
-      <main className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 xl:px-10">
+        <WorkspaceIntro eyebrow="OPPORTUNITIES" title="아직 닿지 못한 질문." description="경쟁 병원이 등장하는 질문과 콘텐츠의 빈틈을 살펴보세요." />
+
 
       {(!gapsAvailable || !analysisAvailable) && (
         <Card className="border-amber-200">
           <CardContent className="p-4 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-slate-800">일부 분석 데이터를 확인할 수 없습니다</p>
-              <p className="text-xs text-slate-500 mt-1">표시되지 않은 항목은 집계에서 제외했습니다. 새로고침 후 다시 확인해 주세요.</p>
+              <p className="text-sm font-semibold text-[#20372A]">일부 분석 데이터를 확인할 수 없습니다</p>
+              <p className="text-xs text-[#778378] mt-1">표시되지 않은 항목은 집계에서 제외했습니다. 새로고침 후 다시 확인해 주세요.</p>
             </div>
           </CardContent>
         </Card>
@@ -182,7 +185,7 @@ export default function OpportunitiesPage() {
                 <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">긴급 기회</p>
+                <p className="text-sm text-[#778378]">긴급 기회</p>
                 <p className="text-2xl font-bold text-red-600">{analysisAvailable ? highCount : '—'}</p>
               </div>
             </div>
@@ -195,7 +198,7 @@ export default function OpportunitiesPage() {
                 <Clock className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">중요 기회</p>
+                <p className="text-sm text-[#778378]">중요 기회</p>
                 <p className="text-2xl font-bold text-amber-600">{analysisAvailable ? mediumCount : '—'}</p>
               </div>
             </div>
@@ -204,12 +207,12 @@ export default function OpportunitiesPage() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Target className="h-5 w-5 text-purple-600" />
+              <div className="w-10 h-10 rounded-lg bg-[#ECEFE6] flex items-center justify-center">
+                <Target className="h-5 w-5 text-[#36765A]" />
               </div>
               <div>
-                <p className="text-sm text-slate-500"><TermTip term="contentGap">Content Gap</TermTip></p>
-                <p className="text-2xl font-bold text-slate-900">{gapsAvailable ? contentGaps.length : '—'}</p>
+                <p className="text-sm text-[#778378]"><TermTip term="contentGap">Content Gap</TermTip></p>
+                <p className="text-2xl font-bold text-[#15231B]">{gapsAvailable ? contentGaps.length : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -217,12 +220,12 @@ export default function OpportunitiesPage() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-green-600" />
+              <div className="w-10 h-10 rounded-lg bg-brand-100 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-brand-600" />
               </div>
               <div>
-                <p className="text-sm text-slate-500">전체 기회</p>
-                <p className="text-2xl font-bold text-slate-900">{gapsAvailable && analysisAvailable ? opportunities.length + contentGaps.length : '—'}</p>
+                <p className="text-sm text-[#778378]">전체 기회</p>
+                <p className="text-2xl font-bold text-[#15231B]">{gapsAvailable && analysisAvailable ? opportunities.length + contentGaps.length : '—'}</p>
               </div>
             </div>
           </CardContent>
@@ -258,7 +261,7 @@ export default function OpportunitiesPage() {
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'opportunities'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
-              : 'text-slate-500 hover:bg-white/60'
+              : 'text-[#778378] hover:bg-white'
           }`}
         >
           <Zap className="h-4 w-4" />
@@ -269,7 +272,7 @@ export default function OpportunitiesPage() {
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'gaps'
               ? 'bg-brand-50 text-brand-700 border border-brand-200'
-              : 'text-slate-500 hover:bg-white/60'
+              : 'text-[#778378] hover:bg-white'
           }`}
         >
           <Target className="h-4 w-4" />
@@ -279,8 +282,8 @@ export default function OpportunitiesPage() {
           onClick={() => setActiveSection('category')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             effectiveSection === 'category'
-              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-              : 'text-slate-500 hover:bg-white/60'
+              ? 'bg-[#F4F5EF] text-[#15231B] border border-[#DEE4D9]'
+              : 'text-[#778378] hover:bg-white'
           }`}
         >
           <PieChart className="h-4 w-4" />
@@ -297,9 +300,9 @@ export default function OpportunitiesPage() {
           {sortedOpportunities.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                {analysisAvailable ? <CheckCircle className="h-12 w-12 text-green-300 mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
-                <p className="text-slate-500 font-medium">{analysisAvailable ? '현재 발견된 노출 기회가 없습니다' : '노출 기회 데이터를 확인할 수 없습니다'}</p>
-                <p className="text-slate-400 text-sm mt-1">
+                {analysisAvailable ? <CheckCircle className="h-12 w-12 text-brand-300 mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
+                <p className="text-[#778378] font-medium">{analysisAvailable ? '현재 발견된 노출 기회가 없습니다' : '노출 기회 데이터를 확인할 수 없습니다'}</p>
+                <p className="text-[#87917E] text-sm mt-1">
                   {analysisAvailable ? 'AI 크롤링 데이터가 쌓이면 경쟁사 대비 우리 병원의 노출 기회가 자동으로 감지됩니다' : '잠시 후 새로고침해 주세요.'}
                 </p>
                 {contentGaps.length > 0 && (
@@ -318,9 +321,9 @@ export default function OpportunitiesPage() {
               const config = urgencyConfig[opp.urgency];
               const isExpanded = expandedId === `opp-${i}`;
               return (
-                <Card key={i} className={`${config.border} border hover:border-blue-200 transition-all`}>
+                <Card key={i} className={`${config.border} border hover:border-[#DEE4D9] transition-all`}>
                   <CardContent className="p-4">
-                    <div 
+                    <div
                       className="flex items-start justify-between cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : `opp-${i}`)}
                     >
@@ -334,22 +337,22 @@ export default function OpportunitiesPage() {
                               {config.label}
                             </span>
                             {opp.platforms.map(p => (
-                              <span key={p} className="px-1.5 py-0.5 text-[10px] bg-slate-100 text-slate-500 rounded">
+                              <span key={p} className="px-1.5 py-0.5 text-[10px] bg-[#ECEFE6] text-[#778378] rounded">
                                 {platformNames[p] || p}
                               </span>
                             ))}
                           </div>
-                          <p className="text-sm font-medium text-slate-900 leading-snug">
+                          <p className="text-sm font-medium text-[#15231B] leading-snug">
                             "{opp.promptText}"
                           </p>
-                          <p className="text-xs text-slate-400 mt-1">
+                          <p className="text-xs text-[#87917E] mt-1">
                             경쟁사 {opp.competitorCount}개 언급 · {opp.competitorsMentioned.slice(0, 3).join(', ')}
                             {opp.competitorsMentioned.length > 3 && ` 외 ${opp.competitorsMentioned.length - 3}개`}
                           </p>
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-2">
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#87917E]" /> : <ChevronDown className="h-4 w-4 text-[#87917E]" />}
                       </div>
                     </div>
 
@@ -364,13 +367,13 @@ export default function OpportunitiesPage() {
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="bg-slate-50 rounded-lg p-3">
-                            <p className="text-[10px] text-slate-400 mb-1"><TermTip term="queryIntent">질문 의도</TermTip></p>
-                            <p className="text-xs font-medium text-slate-700">{opp.intent || '정보 탐색'}</p>
+                          <div className="bg-[#F4F5EF] rounded-lg p-3">
+                            <p className="text-[10px] text-[#87917E] mb-1"><TermTip term="queryIntent">질문 의도</TermTip></p>
+                            <p className="text-xs font-medium text-[#405345]">{opp.intent || '정보 탐색'}</p>
                           </div>
-                          <div className="bg-slate-50 rounded-lg p-3">
-                            <p className="text-[10px] text-slate-400 mb-1">감지일</p>
-                            <p className="text-xs font-medium text-slate-700">
+                          <div className="bg-[#F4F5EF] rounded-lg p-3">
+                            <p className="text-[10px] text-[#87917E] mb-1">감지일</p>
+                            <p className="text-xs font-medium text-[#405345]">
                               {opp.lastDetectedAt ? new Date(opp.lastDetectedAt).toLocaleDateString('ko-KR') : '-'}
                             </p>
                           </div>
@@ -391,9 +394,9 @@ export default function OpportunitiesPage() {
           {contentGaps.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
-                {gapsAvailable ? <Target className="h-12 w-12 text-slate-300 mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
-                <p className="text-slate-500 font-medium">{gapsAvailable ? 'Content Gap이 아직 없습니다' : 'Content Gap 데이터를 확인할 수 없습니다'}</p>
-                <p className="text-slate-400 text-sm mt-1">
+                {gapsAvailable ? <Target className="h-12 w-12 text-[#B9C6B3] mx-auto mb-3" /> : <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto mb-3" />}
+                <p className="text-[#778378] font-medium">{gapsAvailable ? 'Content Gap이 아직 없습니다' : 'Content Gap 데이터를 확인할 수 없습니다'}</p>
+                <p className="text-[#87917E] text-sm mt-1">
                   {gapsAvailable ? '크롤링 데이터가 쌓이면 경쟁사가 노출되는 주제에서 우리가 빠진 영역을 자동으로 발견합니다' : '잠시 후 새로고침해 주세요.'}
                 </p>
               </CardContent>
@@ -402,9 +405,9 @@ export default function OpportunitiesPage() {
             contentGaps.map((gap) => {
               const isExpanded = expandedId === gap.id;
               return (
-                <Card key={gap.id} className="hover:border-blue-200 transition-all">
+                <Card key={gap.id} className="hover:border-[#DEE4D9] transition-all">
                   <CardContent className="p-4">
-                    <div 
+                    <div
                       className="flex items-start justify-between cursor-pointer"
                       onClick={() => setExpandedId(isExpanded ? null : gap.id)}
                     >
@@ -419,39 +422,39 @@ export default function OpportunitiesPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className={`px-2 py-0.5 text-[10px] rounded-full border ${
-                              gap.gapType === 'CONTENT' ? 'bg-purple-50 text-purple-600 border-purple-200'
+                              gap.gapType === 'CONTENT' ? 'bg-[#F4F5EF] text-[#36765A] border-[#DEE4D9]'
                               : gap.gapType === 'KEYWORD' ? 'bg-brand-50 text-brand-600 border-brand-200'
-                              : 'bg-slate-50 text-slate-600 border-slate-200'
+                              : 'bg-[#F4F5EF] text-[#637167] border-[#DEE4D9]'
                             }`}>
                               {gap.gapType === 'CONTENT' ? '콘텐츠' : gap.gapType === 'KEYWORD' ? '키워드' : '주제'}
                             </span>
                             <div className="flex items-center gap-1">
                               {Array.from({ length: 10 }, (_, i) => (
                                 <div key={i} className={`w-1.5 h-1.5 rounded-full ${
-                                  i < gap.priorityScore ? 'bg-brand-500' : 'bg-slate-200'
+                                  i < gap.priorityScore ? 'bg-brand-500' : 'bg-[#DEE4D9]'
                                 }`} />
                               ))}
                             </div>
                           </div>
-                          <p className="text-sm font-medium text-slate-900">{gap.topic}</p>
+                          <p className="text-sm font-medium text-[#15231B]">{gap.topic}</p>
                           {gap.competitorNames.length > 0 && (
-                            <p className="text-xs text-slate-400 mt-1">
+                            <p className="text-xs text-[#87917E] mt-1">
                               경쟁사: {gap.competitorNames.slice(0, 3).join(', ')}
                             </p>
                           )}
                         </div>
                       </div>
                       <div className="flex-shrink-0 ml-2">
-                        {isExpanded ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                        {isExpanded ? <ChevronUp className="h-4 w-4 text-[#87917E]" /> : <ChevronDown className="h-4 w-4 text-[#87917E]" />}
                       </div>
                     </div>
 
                     {isExpanded && (
                       <div className="mt-4 pt-4 border-t space-y-3">
                         {gap.suggestedAction && (
-                          <div className="bg-green-50 rounded-lg p-3">
-                            <p className="text-xs font-semibold text-green-700 mb-1">💡 추천 액션</p>
-                            <p className="text-xs text-green-600 leading-relaxed">{gap.suggestedAction}</p>
+                          <div className="bg-brand-50 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-brand-700 mb-1">💡 추천 액션</p>
+                            <p className="text-xs text-brand-600 leading-relaxed">{gap.suggestedAction}</p>
                           </div>
                         )}
                         {gap.aiGeneratedGuide && (
@@ -469,7 +472,7 @@ export default function OpportunitiesPage() {
                               generateBlogFromGap(gap);
                             }}
                             disabled={generatingBlogGapIds.has(gap.id)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 transition-all disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md border border-brand-200 bg-brand-50 text-brand-700 hover:bg-brand-100 transition-all disabled:opacity-50"
                           >
                             {generatingBlogGapIds.has(gap.id) ? (
                               <><Loader2 className="h-3 w-3 animate-spin" /> 생성 중...</>
@@ -499,7 +502,7 @@ export default function OpportunitiesPage() {
               <div>
                 <p className="text-sm font-bold text-brand-800">기회를 활용하는 방법</p>
                 <p className="text-xs text-brand-600 mt-1">
-                  발견된 기회를 활용하려면 해당 주제에 대한 블로그 포스트, 웹사이트 콘텐츠, 
+                  발견된 기회를 활용하려면 해당 주제에 대한 블로그 포스트, 웹사이트 콘텐츠,
                   네이버 플레이스 정보를 보강하세요. AI는 최신 정보를 우선적으로 참고합니다.
                 </p>
               </div>

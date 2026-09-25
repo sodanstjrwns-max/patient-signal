@@ -154,21 +154,22 @@ export function UpgradeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#13251D]/55 p-4">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto border border-[#DEE4D9] bg-[#F4F5EF] shadow-none">
         {/* Header */}
-        <div className="bg-gradient-to-r from-brand-600 to-indigo-600 p-6 text-white relative">
+        <div className="relative border-b border-[#DEE4D9] bg-[#13251D] px-6 py-8 text-white">
           <button
             onClick={onClose}
+            aria-label="플랜 안내 닫기"
             className="absolute top-4 right-4 text-white/70 hover:text-white"
           >
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-3 mb-2">
-            <Sparkles className="w-8 h-8" />
-            <h3 className="text-xl font-bold">업그레이드가 필요합니다</h3>
+            <Lock className="h-5 w-5 text-[#D8F36A]" />
+            <h3 className="text-2xl font-semibold tracking-[-0.045em]">더 넓은 범위를 확인하세요</h3>
           </div>
-          <p className="text-blue-100 text-sm">
+          <p className="text-white/65 text-sm">
             <strong>{featureNames[feature] || feature}</strong> 기능은{' '}
             <strong>{planDisplay[requiredPlan] || requiredPlan}</strong> 플랜 이상에서 사용 가능합니다.
           </p>
@@ -185,15 +186,15 @@ export function UpgradeModal({
             </div>
             <ul className="space-y-2">
               {(planFeatures[requiredPlan] || []).map((feat, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
-                  <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                <li key={i} className="flex items-start gap-2 text-sm text-[#637167]">
+                  <Check className="w-4 h-4 text-brand-500 mt-0.5 flex-shrink-0" />
                   {feat}
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3 mb-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
             <p className="text-sm text-yellow-800">
               <strong>14일 무료 체험</strong> 가능! 마음에 안 들면 언제든 취소하세요.
             </p>
@@ -202,7 +203,7 @@ export function UpgradeModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 border border-slate-300 rounded-2xl text-slate-600 hover:bg-white/60 text-sm"
+              className="flex-1 px-4 py-2.5 border border-[#C7D2C0] rounded-lg text-[#637167] hover:bg-white text-sm"
             >
               나중에
             </button>
@@ -211,7 +212,7 @@ export function UpgradeModal({
                 onClose();
                 window.location.href = `/dashboard/billing?plan=${requiredPlan}`;
               }}
-              className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-2xl hover:bg-brand-700 text-sm font-medium flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-medium flex items-center justify-center gap-2"
             >
               업그레이드 <ArrowRight className="w-4 h-4" />
             </button>
@@ -246,8 +247,8 @@ export function LockedFeature({
         onClick={() => setShowModal(true)}
       >
         <div className="opacity-50 pointer-events-none">{children}</div>
-        <div className="absolute inset-0 flex items-center justify-center bg-white/60 rounded-2xl backdrop-blur-[1px]">
-          <div className="flex items-center gap-2 bg-slate-800 text-white px-4 py-2 rounded-full text-sm shadow-lg">
+        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-lg ">
+          <div className="flex items-center gap-2 bg-[#13251D] text-white px-4 py-2 rounded-full text-sm shadow-none">
             <Lock className="w-4 h-4" />
             <span>{getRequiredPlan(feature)} 플랜 필요</span>
           </div>
@@ -284,12 +285,12 @@ export function UsageBar({
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-600">{label}</span>
-        <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-slate-900'}`}>
+        <span className="text-[#637167]">{label}</span>
+        <span className={`font-medium ${isAtLimit ? 'text-red-600' : isNearLimit ? 'text-yellow-600' : 'text-[#15231B]'}`}>
           {used}/{limit === -1 ? '∞' : limit}
         </span>
       </div>
-      <div className="w-full bg-slate-200 rounded-full h-2">
+      <div className="w-full bg-[#DEE4D9] rounded-full h-2">
         <div
           className={`h-2 rounded-full transition-all ${
             isAtLimit ? 'bg-red-500' : isNearLimit ? 'bg-yellow-500' : 'bg-brand-500'

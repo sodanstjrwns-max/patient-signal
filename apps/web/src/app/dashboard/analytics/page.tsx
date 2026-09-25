@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { Header } from '@/components/layout/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuthStore } from '@/stores/auth';
+import { Header } from "@/components/layout/Header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuthStore } from "@/stores/auth";
 import {
   useScoreHistory,
   usePlatformScores,
@@ -11,7 +11,7 @@ import {
   useCompetitiveShare,
   useActionIntelligence,
   useMentionInsight,
-} from '@/hooks/useQueries';
+} from "@/hooks/useQueries";
 import {
   BarChart3,
   TrendingUp,
@@ -32,30 +32,30 @@ import {
   FileText,
   Lightbulb,
   ChevronRight,
-} from 'lucide-react';
-import Link from 'next/link';
-import { TermTip } from '@/components/ui/term-tooltip';
+} from "lucide-react";
+import Link from "next/link";
+import { TermTip } from "@/components/ui/term-tooltip";
 
 const platformNames: Record<string, string> = {
-  CHATGPT: 'ChatGPT',
-  CLAUDE: 'Claude',
-  PERPLEXITY: 'Perplexity',
-  GEMINI: 'Gemini',
+  CHATGPT: "ChatGPT",
+  CLAUDE: "Claude",
+  PERPLEXITY: "Perplexity",
+  GEMINI: "Gemini",
 };
 
 const platformColors: Record<string, string> = {
-  CHATGPT: '#10A37F',
-  CLAUDE: '#CC785C',
-  PERPLEXITY: '#3B82F6',
-  GEMINI: '#8B5CF6',
+  CHATGPT: "#10A37F",
+  CLAUDE: "#CC785C",
+  PERPLEXITY: "#36765A",
+  GEMINI: "#94A774",
 };
 
 const intentNames: Record<string, string> = {
-  reservation: '예약 의도',
-  comparison: '비교 의도',
-  information: '정보 탐색',
-  review: '후기/리뷰',
-  fear: '공포/걱정',
+  reservation: "예약 의도",
+  comparison: "비교 의도",
+  information: "정보 탐색",
+  review: "후기/리뷰",
+  fear: "공포/걱정",
 };
 
 const intentWeights: Record<string, number> = {
@@ -67,25 +67,25 @@ const intentWeights: Record<string, number> = {
 };
 
 const depthNames: Record<string, string> = {
-  R3: '단독 추천',
-  R2: '상위 추천',
-  R1: '단순 언급',
-  R0: '미언급/부정',
+  R3: "단독 추천",
+  R2: "상위 추천",
+  R1: "단순 언급",
+  R0: "미언급/부정",
 };
 
 const depthColors: Record<string, string> = {
-  R3: 'bg-green-500',
-  R2: 'bg-brand-500',
-  R1: 'bg-yellow-500',
-  R0: 'bg-red-400',
+  R3: "bg-green-500",
+  R2: "bg-brand-500",
+  R1: "bg-yellow-500",
+  R0: "bg-red-400",
 };
 
 const sentimentLabel = (v: number) => {
-  if (v >= 1.5) return { text: '매우 긍정', color: 'text-green-600' };
-  if (v >= 0.5) return { text: '긍정', color: 'text-green-500' };
-  if (v >= -0.5) return { text: '중립', color: 'text-slate-500' };
-  if (v >= -1.5) return { text: '부정', color: 'text-red-500' };
-  return { text: '매우 부정', color: 'text-red-600' };
+  if (v >= 1.5) return { text: "매우 긍정", color: "text-green-600" };
+  if (v >= 0.5) return { text: "긍정", color: "text-green-500" };
+  if (v >= -0.5) return { text: "중립", color: "text-[#778378]" };
+  if (v >= -1.5) return { text: "부정", color: "text-red-500" };
+  return { text: "매우 부정", color: "text-red-600" };
 };
 
 export default function AnalyticsPage() {
@@ -97,14 +97,16 @@ export default function AnalyticsPage() {
   const { data: platforms, isLoading: platformsLoading } = usePlatformScores();
   const { data: weekly, isLoading: weeklyLoading } = useWeeklyScore();
   const { data: abhs, isLoading: abhsLoading } = useABHS();
-  const { data: competitiveShare, isLoading: csLoading } = useCompetitiveShare();
+  const { data: competitiveShare, isLoading: csLoading } =
+    useCompetitiveShare();
   const { data: actions, isLoading: actionsLoading } = useActionIntelligence();
   const { data: mentionInsight } = useMentionInsight();
 
-  const isLoading = historyLoading || platformsLoading || weeklyLoading || abhsLoading;
+  const isLoading =
+    historyLoading || platformsLoading || weeklyLoading || abhsLoading;
 
   const getTrendIcon = (change: number | undefined) => {
-    if (!change) return <Minus className="h-4 w-4 text-slate-400" />;
+    if (!change) return <Minus className="h-4 w-4 text-[#8F9B8C]" />;
     if (change > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
     return <TrendingDown className="h-4 w-4 text-red-500" />;
   };
@@ -112,15 +114,18 @@ export default function AnalyticsPage() {
   if (!hospitalId) {
     return (
       <div className="min-h-screen">
-        <Header title="ABHS 분석 리포트" description="AI-Based Hospital Score 분석" />
+        <Header
+          title="ABHS 분석 리포트"
+          description="AI-Based Hospital Score 분석"
+        />
         <div className="p-6">
           <Card>
             <CardContent className="p-12 text-center">
-              <BarChart3 className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <BarChart3 className="h-12 w-12 text-[#8F9B8C] mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-[#15231B] mb-2">
                 병원 등록이 필요합니다
               </h3>
-              <p className="text-slate-500 mb-4">
+              <p className="text-[#778378] mb-4">
                 ABHS 분석 리포트를 확인하려면 먼저 병원 정보를 등록해주세요.
               </p>
             </CardContent>
@@ -132,9 +137,28 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen">
-      <Header title="ABHS 분석 리포트" description="AI-Based Hospital Score · 초고도화 평가 프레임워크" />
+      <Header
+        title="ABHS 분석 리포트"
+        description="측정된 AI 답변을 점수와 추이로 읽습니다"
+      />
 
-      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="mx-auto max-w-[1480px] space-y-7 px-5 pb-12 pt-7 sm:px-8 lg:px-10">
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#778378]">
+              PERFORMANCE REPORT
+            </p>
+            <h1 className="text-3xl font-semibold tracking-[-0.05em] text-[#15231B] sm:text-[38px]">
+              숫자로 읽는 병원의 존재감.
+            </h1>
+            <p className="mt-3 text-sm text-[#778378]">
+              AI가 얼마나 자주, 어떤 맥락으로 우리 병원을 추천하는지 확인하세요.
+            </p>
+          </div>
+          <span className="flex items-center gap-2 text-xs text-[#667668]">
+            <Calendar className="h-4 w-4" /> 최근 30일
+          </span>
+        </div>
         {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
@@ -143,29 +167,39 @@ export default function AnalyticsPage() {
           <>
             {/* ========== 신뢰도 요약 배너 ========== */}
             {mentionInsight?.confidenceSummary && (
-              <Card className={`border-l-4 ${
-                mentionInsight.confidenceSummary.lowConfidenceCount > 0
-                  ? 'border-l-amber-400 bg-amber-50/50'
-                  : 'border-l-green-400 bg-green-50/50'
-              }`}>
+              <Card
+                className={`border-l-4 ${
+                  mentionInsight.confidenceSummary.lowConfidenceCount > 0
+                    ? "border-l-amber-400 bg-amber-50/50"
+                    : "border-l-green-400 bg-green-50/50"
+                }`}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {mentionInsight.confidenceSummary.lowConfidenceCount > 0 ? (
+                      {mentionInsight.confidenceSummary.lowConfidenceCount >
+                      0 ? (
                         <AlertTriangleWarn className="h-5 w-5 text-amber-500" />
                       ) : (
                         <CheckCircle2 className="h-5 w-5 text-green-500" />
                       )}
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">
-                          AI 응답 신뢰도: {mentionInsight.confidenceSummary.avgConfidence
+                        <p className="text-sm font-semibold text-[#15231B]">
+                          AI 응답 신뢰도:{" "}
+                          {mentionInsight.confidenceSummary.avgConfidence
                             ? `${Math.round(mentionInsight.confidenceSummary.avgConfidence * 100)}%`
-                            : '측정 중'}
+                            : "측정 중"}
                         </p>
-                        <p className="text-xs text-slate-500">
-                          전체 {mentionInsight.totalResponses}건 중 저신뢰 {mentionInsight.confidenceSummary.lowConfidenceCount}건
-                          {mentionInsight.confidenceSummary.lowConfidenceCount > 0 && (
-                            <span className="text-amber-600"> · 할루시네이션 감소 필터 적용됨</span>
+                        <p className="text-xs text-[#778378]">
+                          전체 {mentionInsight.totalResponses}건 중 저신뢰{" "}
+                          {mentionInsight.confidenceSummary.lowConfidenceCount}
+                          건
+                          {mentionInsight.confidenceSummary.lowConfidenceCount >
+                            0 && (
+                            <span className="text-amber-600">
+                              {" "}
+                              · 할루시네이션 감소 필터 적용됨
+                            </span>
                           )}
                         </p>
                       </div>
@@ -180,66 +214,79 @@ export default function AnalyticsPage() {
               </Card>
             )}
 
-            {/* ========== ABHS 종합 점수 섹션 ========== */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              {/* ABHS 종합 점수 */}
-              <Card className="md:col-span-2 !bg-brand-600 !border-brand-600 text-white">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-blue-100"><TermTip term="abhs" className="text-blue-100">ABHS 종합 점수</TermTip></p>
-                    <Shield className="h-5 w-5 text-brand-200" />
+            <section className="overflow-hidden rounded-[24px] bg-[#13251D] text-white">
+              <div className="grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+                <div>
+                  <p className="text-xs text-[#B2C1B5]">
+                    <TermTip term="abhs" className="text-[#B2C1B5]">
+                      ABHS 종합 점수
+                    </TermTip>
+                  </p>
+                  <div className="mt-4 flex items-baseline gap-3">
+                    <strong className="text-[88px] font-medium leading-none tracking-[-0.08em] text-[#D8F36A] sm:text-[112px]">
+                      {abhs?.abhsScore ?? 0}
+                    </strong>
+                    <span className="text-xl text-[#9AAD9E]">/ 100</span>
                   </div>
-                  <div className="flex items-end gap-2">
-                    <p className="text-5xl font-bold">{abhs?.abhsScore ?? 0}</p>
-                    <p className="text-brand-200 text-sm pb-1">/100</p>
-                  </div>
-                  <div className="mt-3 w-full bg-brand-500/30 rounded-full h-2">
+                  <div className="mt-6 h-1 w-full max-w-xs overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="bg-white/80 rounded-full h-2 transition-all"
-                      style={{ width: `${abhs?.abhsScore ?? 0}%` }}
+                      className="h-full rounded-full bg-[#D8F36A]"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, abhs?.abhsScore ?? 0))}%`,
+                      }}
                     />
                   </div>
-                  <p className="text-xs text-brand-200 mt-2">
+                  <p className="mt-3 text-[10px] tracking-wide text-[#9AAD9E]">
                     SoV × Sentiment × Depth × Weight × Intent
                   </p>
-                </CardContent>
-              </Card>
-
-              {/* Voice Share */}
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-slate-500 mb-1">Voice Share</p>
-                  <p className="text-3xl font-bold text-slate-900">
-                    {abhs?.sovPercent ?? 0}%
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1"><TermTip term="sov">언급 점유율</TermTip></p>
-                </CardContent>
-              </Card>
-
-              {/* 평균 감성 */}
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-slate-500 mb-1"><TermTip term="sentiment">평균 감성</TermTip></p>
-                  <p className={`text-3xl font-bold ${sentimentLabel(abhs?.avgSentimentV2 ?? 0).color}`}>
-                    {abhs?.avgSentimentV2 != null ? (abhs.avgSentimentV2 > 0 ? '+' : '') + abhs.avgSentimentV2.toFixed(1) : '0'}
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {sentimentLabel(abhs?.avgSentimentV2 ?? 0).text} (-2 ~ +2)
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* 경쟁 점유율 */}
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-sm text-slate-500 mb-1"><TermTip term="competitorShare">경쟁 점유율</TermTip></p>
-                  <p className="text-3xl font-bold text-indigo-600">
-                    {competitiveShare?.mySharePercent ?? 0}%
-                  </p>
-                  <p className="text-xs text-slate-400 mt-1">Weighted Share</p>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+                <dl className="grid grid-cols-1 divide-y divide-white/15 border-t border-white/15 lg:border-l lg:border-t-0 lg:pl-8">
+                  <div className="flex items-center justify-between gap-4 py-5">
+                    <div>
+                      <dt className="text-xs text-[#B2C1B5]">Voice Share</dt>
+                      <dd className="mt-1 text-[10px] text-[#9AAD9E]">
+                        <TermTip term="sov">언급 점유율</TermTip>
+                      </dd>
+                    </div>
+                    <dd className="text-3xl font-medium tabular-nums tracking-tight">
+                      {abhs?.sovPercent ?? 0}
+                      <span className="ml-1 text-sm text-[#9AAD9E]">%</span>
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 py-5">
+                    <div>
+                      <dt className="text-xs text-[#B2C1B5]">
+                        <TermTip term="sentiment">평균 감성</TermTip>
+                      </dt>
+                      <dd className="mt-1 text-[10px] text-[#9AAD9E]">
+                        {sentimentLabel(abhs?.avgSentimentV2 ?? 0).text} · -2 ~
+                        +2
+                      </dd>
+                    </div>
+                    <dd className="text-3xl font-medium tabular-nums tracking-tight">
+                      {abhs?.avgSentimentV2 != null
+                        ? (abhs.avgSentimentV2 > 0 ? "+" : "") +
+                          abhs.avgSentimentV2.toFixed(1)
+                        : "0"}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 py-5">
+                    <div>
+                      <dt className="text-xs text-[#B2C1B5]">
+                        <TermTip term="competitorShare">경쟁 점유율</TermTip>
+                      </dt>
+                      <dd className="mt-1 text-[10px] text-[#9AAD9E]">
+                        Weighted Share
+                      </dd>
+                    </div>
+                    <dd className="text-3xl font-medium tabular-nums tracking-tight">
+                      {competitiveShare?.mySharePercent ?? 0}
+                      <span className="ml-1 text-sm text-[#9AAD9E]">%</span>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </section>
 
             {/* ========== 5축 분석: 플랫폼별 기여도 + 추천 깊이 ========== */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -248,46 +295,58 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5" />
-                    <TermTip term="platformWeight">플랫폼별 ABHS 기여도</TermTip>
+                    <TermTip term="platformWeight">
+                      플랫폼별 ABHS 기여도
+                    </TermTip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Object.entries(abhs?.platformContributions || {}).map(([platform, data]: [string, any]) => (
-                      <div key={platform} className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm">
-                              {platformNames[platform.toUpperCase()] || platform}
-                            </span>
-                            <span className="text-xs text-slate-400">×{data.weight}</span>
+                    {Object.entries(abhs?.platformContributions || {}).map(
+                      ([platform, data]: [string, any]) => (
+                        <div key={platform} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm">
+                                {platformNames[platform.toUpperCase()] ||
+                                  platform}
+                              </span>
+                              <span className="text-xs text-[#8F9B8C]">
+                                ×{data.weight}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#778378]">
+                                SoV {data.sovPercent}%
+                              </span>
+                              <span className="font-semibold text-sm">
+                                {Math.round(data.contribution)}점
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-slate-500">
-                              SoV {data.sovPercent}%
-                            </span>
-                            <span className="font-semibold text-sm">
-                              {Math.round(data.contribution)}점
-                            </span>
+                          <div className="flex-1 bg-[#EDF0E9] rounded-full h-3">
+                            <div
+                              className="rounded-full h-3 transition-all"
+                              style={{
+                                width: `${Math.min(100, data.contribution)}%`,
+                                backgroundColor:
+                                  platformColors[platform.toUpperCase()] ||
+                                  "#6B7280",
+                              }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-xs text-[#8F9B8C]">
+                            <span>깊이: {data.avgDepth}</span>
+                            <span>{data.responseCount}개 응답</span>
                           </div>
                         </div>
-                        <div className="flex-1 bg-slate-100 rounded-full h-3">
-                          <div
-                            className="rounded-full h-3 transition-all"
-                            style={{
-                              width: `${Math.min(100, data.contribution)}%`,
-                              backgroundColor: platformColors[platform.toUpperCase()] || '#6B7280',
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-slate-400">
-                          <span>깊이: {data.avgDepth}</span>
-                          <span>{data.responseCount}개 응답</span>
-                        </div>
-                      </div>
-                    ))}
-                    {Object.keys(abhs?.platformContributions || {}).length === 0 && (
-                      <p className="text-center text-slate-400 py-4">아직 데이터가 없습니다</p>
+                      ),
+                    )}
+                    {Object.keys(abhs?.platformContributions || {}).length ===
+                      0 && (
+                      <p className="text-center text-[#8F9B8C] py-4">
+                        아직 데이터가 없습니다
+                      </p>
                     )}
                   </div>
                 </CardContent>
@@ -303,21 +362,35 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {['R3', 'R2', 'R1', 'R0'].map((depth) => {
+                    {["R3", "R2", "R1", "R0"].map((depth) => {
                       const count = abhs?.depthDistribution?.[depth] ?? 0;
-                      const total = Object.values(abhs?.depthDistribution || {}).reduce((a: number, b: any) => a + (b as number), 0) as number;
-                      const percent = total > 0 ? Math.round((count / total) * 100) : 0;
+                      const total = Object.values(
+                        abhs?.depthDistribution || {},
+                      ).reduce(
+                        (a: number, b: any) => a + (b as number),
+                        0,
+                      ) as number;
+                      const percent =
+                        total > 0 ? Math.round((count / total) * 100) : 0;
                       return (
                         <div key={depth}>
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${depthColors[depth]}`} />
-                              <span className="text-sm font-medium">{depth}</span>
-                              <span className="text-xs text-slate-400">{depthNames[depth]}</span>
+                              <div
+                                className={`w-3 h-3 rounded-full ${depthColors[depth]}`}
+                              />
+                              <span className="text-sm font-medium">
+                                {depth}
+                              </span>
+                              <span className="text-xs text-[#8F9B8C]">
+                                {depthNames[depth]}
+                              </span>
                             </div>
-                            <span className="text-sm font-semibold">{count}건 ({percent}%)</span>
+                            <span className="text-sm font-semibold">
+                              {count}건 ({percent}%)
+                            </span>
                           </div>
-                          <div className="bg-slate-100 rounded-full h-2">
+                          <div className="bg-[#EDF0E9] rounded-full h-2">
                             <div
                               className={`${depthColors[depth]} rounded-full h-2 transition-all`}
                               style={{ width: `${percent}%` }}
@@ -327,13 +400,30 @@ export default function AnalyticsPage() {
                       );
                     })}
                   </div>
-                  
+
                   {/* 깊이 설명 */}
-                  <div className="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-slate-500 space-y-1">
-                    <p><TermTip term="r3"><strong>R3</strong></TermTip>: AI가 우리 병원만 단독 추천</p>
-                    <p><TermTip term="r2"><strong>R2</strong></TermTip>: 복수 추천 중 1~2순위</p>
-                    <p><TermTip term="r1"><strong>R1</strong></TermTip>: 단순 언급/하위 노출</p>
-                    <p><strong>R0</strong>: 미언급 또는 부정 맥락</p>
+                  <div className="mt-6 p-3 bg-slate-50 rounded-lg text-xs text-[#778378] space-y-1">
+                    <p>
+                      <TermTip term="r3">
+                        <strong>R3</strong>
+                      </TermTip>
+                      : AI가 우리 병원만 단독 추천
+                    </p>
+                    <p>
+                      <TermTip term="r2">
+                        <strong>R2</strong>
+                      </TermTip>
+                      : 복수 추천 중 1~2순위
+                    </p>
+                    <p>
+                      <TermTip term="r1">
+                        <strong>R1</strong>
+                      </TermTip>
+                      : 단순 언급/하위 노출
+                    </p>
+                    <p>
+                      <strong>R0</strong>: 미언급 또는 부정 맥락
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -348,30 +438,48 @@ export default function AnalyticsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  {Object.entries(abhs?.intentScores || {}).map(([intent, score]: [string, any]) => {
-                    const weight = intentWeights[intent] || 1.0;
-                    const hasWeight = weight > 1.0;
-                    return (
-                      <div key={intent} className={`p-4 rounded-lg border ${hasWeight ? 'border-brand-200 bg-brand-50' : 'border-slate-100'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-slate-500">{intentNames[intent] || intent}</span>
-                          {hasWeight && <span className="text-xs bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded">×{weight}</span>}
+                <div className="divide-y divide-[#DEE4D9]">
+                  <div className="grid grid-cols-[minmax(0,1fr)_58px_52px] gap-4 pb-3 text-[10px] text-[#778378] sm:grid-cols-[140px_minmax(0,1fr)_58px_52px]">
+                    <span>환자분의 질문 의도</span>
+                    <span className="hidden sm:block">AI 가시성</span>
+                    <span className="text-right">가중치</span>
+                    <span className="text-right">점수</span>
+                  </div>
+                  {Object.entries(abhs?.intentScores || {}).map(
+                    ([intent, score]: [string, any]) => {
+                      const weight = intentWeights[intent] || 1;
+                      return (
+                        <div
+                          key={intent}
+                          className="grid grid-cols-[minmax(0,1fr)_58px_52px] items-center gap-4 py-4 sm:grid-cols-[140px_minmax(0,1fr)_58px_52px]"
+                        >
+                          <span className="text-sm font-medium text-[#536354]">
+                            {intentNames[intent] || intent}
+                          </span>
+                          <div className="hidden h-1.5 overflow-hidden rounded-full bg-[#EDF0E9] sm:block">
+                            <div
+                              className="h-full rounded-full bg-[#36765A]"
+                              style={{
+                                width: `${Math.min(100, Math.max(0, score))}%`,
+                              }}
+                            />
+                          </div>
+                          <span className="text-right text-xs text-[#778378]">
+                            ×{weight}
+                          </span>
+                          <span
+                            className={`text-right text-xl font-semibold tabular-nums ${score >= 60 ? "text-[#36765A]" : score >= 30 ? "text-[#8A783F]" : "text-[#B56857]"}`}
+                          >
+                            {score}
+                          </span>
                         </div>
-                        <p className={`text-2xl font-bold ${score >= 60 ? 'text-green-600' : score >= 30 ? 'text-yellow-600' : 'text-red-500'}`}>
-                          {score}
-                        </p>
-                        <div className="bg-slate-200 rounded-full h-1.5 mt-2">
-                          <div
-                            className={`rounded-full h-1.5 transition-all ${score >= 60 ? 'bg-green-500' : score >= 30 ? 'bg-yellow-500' : 'bg-red-400'}`}
-                            style={{ width: `${score}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    },
+                  )}
                   {Object.keys(abhs?.intentScores || {}).length === 0 && (
-                    <p className="col-span-5 text-center text-slate-400 py-4">아직 데이터가 없습니다</p>
+                    <p className="py-8 text-center text-sm text-[#778378]">
+                      아직 데이터가 없습니다
+                    </p>
                   )}
                 </div>
               </CardContent>
@@ -392,30 +500,42 @@ export default function AnalyticsPage() {
                       <div
                         key={idx}
                         className={`p-4 rounded-lg border-l-4 ${
-                          action.severity === 'critical' ? 'border-l-red-500 bg-red-50' :
-                          action.severity === 'warning' ? 'border-l-yellow-500 bg-yellow-50' :
-                          'border-l-blue-500 bg-brand-50'
+                          action.severity === "critical"
+                            ? "border-l-red-500 bg-red-50"
+                            : action.severity === "warning"
+                              ? "border-l-yellow-500 bg-yellow-50"
+                              : "border-l-[#94AD67] bg-brand-50"
                         }`}
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex items-center gap-2">
-                            {action.severity === 'critical' ? (
+                            {action.severity === "critical" ? (
                               <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
                             ) : (
                               <AlertTriangle className="h-4 w-4 text-yellow-500 flex-shrink-0" />
                             )}
-                            <p className="text-sm font-medium text-slate-900">{action.message}</p>
+                            <p className="text-sm font-medium text-[#15231B]">
+                              {action.message}
+                            </p>
                           </div>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            action.severity === 'critical' ? 'bg-red-100 text-red-700' :
-                            action.severity === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-brand-100 text-brand-700'
-                          }`}>
-                            {action.severity === 'critical' ? '긴급' : action.severity === 'warning' ? '주의' : '참고'}
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded ${
+                              action.severity === "critical"
+                                ? "bg-red-100 text-red-700"
+                                : action.severity === "warning"
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-brand-100 text-brand-700"
+                            }`}
+                          >
+                            {action.severity === "critical"
+                              ? "긴급"
+                              : action.severity === "warning"
+                                ? "주의"
+                                : "참고"}
                           </span>
                         </div>
-                        <p className="text-xs text-slate-600 mt-2 ml-6">
-                          💡 {action.suggestedAction}
+                        <p className="text-xs text-[#667668] mt-2 ml-6">
+                          {action.suggestedAction}
                         </p>
                       </div>
                     ))}
@@ -425,52 +545,67 @@ export default function AnalyticsPage() {
             )}
 
             {/* ========== 경쟁사 대비 Weighted Share ========== */}
-            {competitiveShare && competitiveShare.competitorShares?.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5" />
-                    경쟁사 대비 Weighted Competitive Share
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {/* 내 병원 */}
-                    <div className="flex items-center gap-4">
-                      <div className="w-32 text-sm font-semibold text-brand-600">우리 병원</div>
-                      <div className="flex-1 bg-slate-100 rounded-full h-5">
-                        <div
-                          className="bg-brand-500 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
-                          style={{ width: `${Math.max(5, competitiveShare.mySharePercent)}%` }}
-                        >
-                          <span className="text-xs text-white font-medium">
-                            {competitiveShare.mySharePercent}%
-                          </span>
+            {competitiveShare &&
+              competitiveShare.competitorShares?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5" />
+                      경쟁사 대비 Weighted Competitive Share
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {/* 내 병원 */}
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm font-semibold text-brand-600">
+                          우리 병원
                         </div>
-                      </div>
-                      <div className="w-16 text-right text-sm font-bold">{competitiveShare.myABHS}점</div>
-                    </div>
-                    {/* 경쟁사들 */}
-                    {competitiveShare.competitorShares.map((cs: any, idx: number) => (
-                      <div key={idx} className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-slate-600 truncate">{cs.name}</div>
-                        <div className="flex-1 bg-slate-100 rounded-full h-5">
+                        <div className="flex-1 bg-[#EDF0E9] rounded-full h-5">
                           <div
-                            className="bg-slate-400 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
-                            style={{ width: `${Math.max(5, cs.sharePercent)}%` }}
+                            className="bg-brand-500 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
+                            style={{
+                              width: `${Math.max(5, competitiveShare.mySharePercent)}%`,
+                            }}
                           >
                             <span className="text-xs text-white font-medium">
-                              {cs.sharePercent}%
+                              {competitiveShare.mySharePercent}%
                             </span>
                           </div>
                         </div>
-                        <div className="w-16 text-right text-sm">{cs.abhsEstimate}점</div>
+                        <div className="w-16 text-right text-sm font-bold">
+                          {competitiveShare.myABHS}점
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                      {/* 경쟁사들 */}
+                      {competitiveShare.competitorShares.map(
+                        (cs: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-4">
+                            <div className="w-24 shrink-0 text-xs sm:w-32 sm:text-sm text-[#667668] truncate">
+                              {cs.name}
+                            </div>
+                            <div className="flex-1 bg-[#EDF0E9] rounded-full h-5">
+                              <div
+                                className="bg-slate-400 rounded-full h-5 flex items-center justify-end pr-2 transition-all"
+                                style={{
+                                  width: `${Math.max(5, cs.sharePercent)}%`,
+                                }}
+                              >
+                                <span className="text-xs text-white font-medium">
+                                  {cs.sharePercent}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-16 text-right text-sm">
+                              {cs.abhsEstimate}점
+                            </div>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
             {/* ========== 기존: 플랫폼별 점수 ========== */}
             <Card>
@@ -482,47 +617,57 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {Array.isArray(platforms) ? (
-                    platforms.map((item: any) => (
-                      <div key={item.platform} className="flex items-center gap-4">
-                        <div className="w-24 font-medium">
-                          {item.platformName || platformNames[item.platform] || item.platform}
+                  {Array.isArray(platforms)
+                    ? platforms.map((item: any) => (
+                        <div
+                          key={item.platform}
+                          className="flex items-center gap-4"
+                        >
+                          <div className="w-20 shrink-0 text-xs font-medium sm:w-24 sm:text-sm">
+                            {item.platformName ||
+                              platformNames[item.platform] ||
+                              item.platform}
+                          </div>
+                          <div className="flex-1 bg-[#EDF0E9] rounded-full h-4">
+                            <div
+                              className="rounded-full h-4 transition-all"
+                              style={{
+                                width: `${item.visibilityScore || 0}%`,
+                                backgroundColor:
+                                  platformColors[item.platform] || "#6B7280",
+                              }}
+                            />
+                          </div>
+                          <div className="w-12 text-right font-semibold">
+                            {item.visibilityScore || 0}점
+                          </div>
                         </div>
-                        <div className="flex-1 bg-slate-100 rounded-full h-4">
+                      ))
+                    : Object.entries(platforms || {}).map(
+                        ([platform, score]) => (
                           <div
-                            className="rounded-full h-4 transition-all"
-                            style={{
-                              width: `${item.visibilityScore || 0}%`,
-                              backgroundColor: platformColors[item.platform] || '#6B7280',
-                            }}
-                          />
-                        </div>
-                        <div className="w-12 text-right font-semibold">
-                          {item.visibilityScore || 0}점
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    Object.entries(platforms || {}).map(([platform, score]) => (
-                      <div key={platform} className="flex items-center gap-4">
-                        <div className="w-24 font-medium">
-                          {platformNames[platform] || platform}
-                        </div>
-                        <div className="flex-1 bg-slate-100 rounded-full h-4">
-                          <div
-                            className="rounded-full h-4 transition-all"
-                            style={{
-                              width: `${score as number}%`,
-                              backgroundColor: platformColors[platform] || '#6B7280',
-                            }}
-                          />
-                        </div>
-                        <div className="w-12 text-right font-semibold">
-                          {score as number}점
-                        </div>
-                      </div>
-                    ))
-                  )}
+                            key={platform}
+                            className="flex items-center gap-4"
+                          >
+                            <div className="w-20 shrink-0 text-xs font-medium sm:w-24 sm:text-sm">
+                              {platformNames[platform] || platform}
+                            </div>
+                            <div className="flex-1 bg-[#EDF0E9] rounded-full h-4">
+                              <div
+                                className="rounded-full h-4 transition-all"
+                                style={{
+                                  width: `${score as number}%`,
+                                  backgroundColor:
+                                    platformColors[platform] || "#6B7280",
+                                }}
+                              />
+                            </div>
+                            <div className="w-12 text-right font-semibold">
+                              {score as number}점
+                            </div>
+                          </div>
+                        ),
+                      )}
                 </div>
               </CardContent>
             </Card>
@@ -537,7 +682,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 {history?.length > 0 ? (
-                  <div className="h-64">
+                  <div className="h-64 pb-6">
                     <div className="flex items-end justify-between h-full gap-1">
                       {history.map((item: any, index: number) => (
                         <div
@@ -548,13 +693,13 @@ export default function AnalyticsPage() {
                         />
                       ))}
                     </div>
-                    <div className="flex justify-between mt-2 text-xs text-slate-500">
+                    <div className="flex justify-between mt-2 text-xs text-[#778378]">
                       <span>30일 전</span>
                       <span>오늘</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center text-slate-500">
+                  <div className="h-64 flex items-center justify-center text-[#778378]">
                     <p>아직 데이터가 없습니다. 크롤링을 실행해주세요.</p>
                   </div>
                 )}
@@ -565,14 +710,14 @@ export default function AnalyticsPage() {
             {weekly?.insights?.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>💡 이번 주 인사이트</CardTitle>
+                  <CardTitle>이번 주 인사이트</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     {weekly.insights.map((insight: string, index: number) => (
                       <li key={index} className="flex items-start gap-2">
                         <span className="text-brand-500">•</span>
-                        <span className="text-slate-600">{insight}</span>
+                        <span className="text-[#667668]">{insight}</span>
                       </li>
                     ))}
                   </ul>
@@ -581,38 +726,51 @@ export default function AnalyticsPage() {
             )}
 
             {/* ========== 다음 단계 가이드 ========== */}
-            <Card className="border-brand-200 bg-brand-50/30">
+            <Card className="border-brand-200 bg-[#F7F9F2]">
               <CardContent className="p-5">
                 <h3 className="text-sm font-semibold text-brand-700 mb-3 flex items-center gap-2">
                   <Lightbulb className="h-4 w-4" />
                   ABHS 점수 기반 추천 다음 단계
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Link href="/dashboard/insights?tab=contentGap">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
+                  <Link href="/dashboard/opportunities">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#94AD67] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-900">콘텐츠 갭 분석</span>
+                        <span className="text-sm font-medium text-[#15231B]">
+                          콘텐츠 갭 분석
+                        </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-slate-500">경쟁사는 있지만 우리가 없는 영역을 찾아 콘텐츠를 보강하세요.</p>
+                      <p className="text-xs text-[#778378]">
+                        경쟁사는 있지만 우리가 없는 영역을 찾아 콘텐츠를
+                        보강하세요.
+                      </p>
                     </div>
                   </Link>
                   <Link href="/dashboard/opportunities">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#94AD67] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-900">기회 분석</span>
+                        <span className="text-sm font-medium text-[#15231B]">
+                          기회 분석
+                        </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-slate-500">경쟁사만 추천되는 질문을 찾아 우선 공략하세요.</p>
+                      <p className="text-xs text-[#778378]">
+                        경쟁사만 추천되는 질문을 찾아 우선 공략하세요.
+                      </p>
                     </div>
                   </Link>
                   <Link href="/dashboard">
-                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-blue-200 transition-all cursor-pointer">
+                    <div className="p-3 bg-white rounded-lg border border-slate-200 hover:border-[#94AD67] transition-all cursor-pointer">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-slate-900">대시보드로 돌아가기</span>
+                        <span className="text-sm font-medium text-[#15231B]">
+                          대시보드로 돌아가기
+                        </span>
                         <ArrowRight className="h-3.5 w-3.5 text-brand-500" />
                       </div>
-                      <p className="text-xs text-slate-500">전체 현황을 한눈에 파악하세요.</p>
+                      <p className="text-xs text-[#778378]">
+                        전체 현황을 한눈에 파악하세요.
+                      </p>
                     </div>
                   </Link>
                 </div>

@@ -1,15 +1,13 @@
 import Link from 'next/link';
-import { SearchX, Home } from 'lucide-react';
+import { Home } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[#f6f7f9] text-[#17212e]">
-      <div className="w-16 h-16 bg-[#eff4ff] rounded-[16px] flex items-center justify-center">
-        <SearchX className="h-8 w-8 text-[#285cf4]" />
-      </div>
+    <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-[#F4F5EF] text-[#15231B]">
+      <div className="text-[clamp(6rem,18vw,12rem)] font-medium leading-none tracking-[-0.09em] text-[#36765A]">404</div>
 
       <section className="text-center max-w-md">
-        <h1 className="text-2xl font-bold tracking-[-0.04em] text-[#17212e] mb-2">
+        <h1 className="text-3xl font-semibold tracking-[-0.055em] text-[#15231B] mb-2">
           페이지를 찾을 수 없습니다
         </h1>
         <p className="text-slate-500">
@@ -19,7 +17,7 @@ export default function NotFound() {
 
       <Link
         href="/dashboard"
-        className="px-6 py-2.5 bg-[#285cf4] text-white rounded-[10px] font-semibold hover:bg-[#204bce] flex items-center gap-2"
+        className="px-6 py-2.5 bg-[#15231B] text-white rounded-none font-semibold hover:bg-[#36765A] flex items-center gap-2"
       >
         <Home className="h-4 w-4" />
         대시보드로 이동

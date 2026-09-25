@@ -74,7 +74,7 @@ export function CategoryPerformance() {
             onClick={() => setPeriod(d)}
             className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all ${
               period === d
-                ? 'bg-purple-100 text-purple-700 ring-2 ring-purple-200'
+                ? 'bg-brand-100 text-brand-700 ring-2 ring-brand-200'
                 : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
             }`}
           >
@@ -86,7 +86,7 @@ export function CategoryPerformance() {
       {/* 로딩 */}
       {loading && (
         <Card><CardContent className="p-12 text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-500 mx-auto mb-3" />
+          <Loader2 className="h-8 w-8 animate-spin text-brand-500 mx-auto mb-3" />
           <p className="text-sm text-slate-500">카테고리별 성과를 분석하고 있어요...</p>
         </CardContent></Card>
       )}
@@ -100,7 +100,7 @@ export function CategoryPerformance() {
             <p className="text-sm text-slate-500 mb-6">
               실시간 질문을 하거나, 정기 크롤링이 실행되면<br/>자동으로 카테고리가 분류되고 성과가 쌓여요!
             </p>
-            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-gradient-to-r from-purple-600 to-brand-600">
+            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-[#15231b] hover:bg-[#2c4635]">
               <Zap className="h-4 w-4 mr-2" />실시간 질문 하러 가기
             </Button>
           </CardContent>
@@ -127,8 +127,8 @@ export function CategoryPerformance() {
             <Card>
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-1.5 mb-1">
-                  <Zap className="h-4 w-4 text-purple-500" />
-                  <p className="text-2xl font-bold text-purple-600">{data.totalLiveQueries}</p>
+                  <Zap className="h-4 w-4 text-brand-500" />
+                  <p className="text-2xl font-bold text-brand-600">{data.totalLiveQueries}</p>
                 </div>
                 <p className="text-xs text-slate-500">실시간 질문</p>
               </CardContent>
@@ -204,7 +204,7 @@ export function CategoryPerformance() {
 
           {/* 진료별 드릴다운 */}
           {data.myProcedures?.length > 0 && (
-            <Card className="border-brand-200 bg-gradient-to-br from-blue-50/40 to-indigo-50/20">
+            <Card className="border-[#dee4d9] bg-[#f4f5ef]">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -251,12 +251,12 @@ export function CategoryPerformance() {
                               </div>
 
                               <div className="grid grid-cols-2 gap-2 mb-3">
-                                <div className="bg-purple-50/70 rounded-2xl px-3 py-2 text-center">
+                                <div className="bg-brand-50/70 rounded-2xl px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
-                                    <Zap className="h-3 w-3 text-purple-500" />
-                                    <span className="text-sm font-bold text-purple-700">{proc.liveAvgRate}%</span>
+                                    <Zap className="h-3 w-3 text-brand-500" />
+                                    <span className="text-sm font-bold text-brand-700">{proc.liveAvgRate}%</span>
                                   </div>
-                                  <p className="text-[9px] text-purple-500 mt-0.5">실시간 ({proc.liveQueries})</p>
+                                  <p className="text-[9px] text-brand-500 mt-0.5">실시간 ({proc.liveQueries})</p>
                                 </div>
                                 <div className="bg-brand-50/70 rounded-2xl px-3 py-2 text-center">
                                   <div className="flex items-center justify-center gap-1">
@@ -286,7 +286,7 @@ export function CategoryPerformance() {
                           {!hasData && (
                             <p className="text-xs text-slate-400 mt-1">
                               이 진료에 대한 질문이나 크롤링 데이터가 아직 없어요.
-                              <button onClick={() => window.location.href = '/dashboard/live-query'} className="text-purple-600 hover:underline ml-1">질문해보기</button>
+                              <button onClick={() => window.location.href = '/dashboard/live-query'} className="text-brand-600 hover:underline ml-1">질문해보기</button>
                             </p>
                           )}
                         </div>
@@ -319,7 +319,7 @@ export function CategoryPerformance() {
           {/* 카테고리별 상세 카드 */}
           <div>
             <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <Tag className="h-4 w-4 text-purple-500" />
+              <Tag className="h-4 w-4 text-brand-500" />
               카테고리별 상세 분석
             </h3>
             <div className="space-y-3">
@@ -365,12 +365,12 @@ export function CategoryPerformance() {
                     {isExpanded && (
                       <div className="px-4 sm:px-5 pb-5 border-t border-slate-100 bg-white/80 backdrop-blur-sm">
                         <div className="grid grid-cols-2 gap-3 mt-4 mb-4">
-                          <div className="bg-purple-50 rounded-2xl p-3 text-center">
+                          <div className="bg-brand-50 rounded-2xl p-3 text-center">
                             <div className="flex items-center justify-center gap-1.5">
-                              <Zap className="h-3.5 w-3.5 text-purple-500" />
-                              <span className="text-lg font-bold text-purple-700">{cat.liveAvgRate}%</span>
+                              <Zap className="h-3.5 w-3.5 text-brand-500" />
+                              <span className="text-lg font-bold text-brand-700">{cat.liveAvgRate}%</span>
                             </div>
-                            <p className="text-[10px] text-purple-600 mt-0.5">실시간 질문 ({cat.liveQueries}회)</p>
+                            <p className="text-[10px] text-brand-600 mt-0.5">실시간 질문 ({cat.liveQueries}회)</p>
                           </div>
                           <div className="bg-brand-50 rounded-2xl p-3 text-center">
                             <div className="flex items-center justify-center gap-1.5">
@@ -442,7 +442,7 @@ export function CategoryPerformance() {
           </div>
 
           {/* CTA: 실시간 질문으로 이동 */}
-          <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
+          <Card className="border-[#dee4d9] bg-[#e9eddf]">
             <CardContent className="p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-900">더 많은 데이터로 정확한 분석을</p>
@@ -450,7 +450,7 @@ export function CategoryPerformance() {
               </div>
               <Button
                 size="sm"
-                className="bg-gradient-to-r from-purple-600 to-brand-600"
+                className="bg-[#15231b] hover:bg-[#2c4635]"
                 onClick={() => window.location.href = '/dashboard/live-query'}
               >
                 <Zap className="h-3.5 w-3.5 mr-1.5" />

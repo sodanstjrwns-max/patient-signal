@@ -10,19 +10,9 @@
  */
 
 import Link from 'next/link';
-import {
-  Sparkles,
-  ArrowLeft,
-  Check,
-  X,
-  Crown,
-  ArrowRight,
-  ShieldCheck,
-  CalendarCheck,
-  RefreshCw,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, ArrowUpRight, Check, Plus } from 'lucide-react';
 import SiteFooter from '@/components/layout/SiteFooter';
+import { PublicHeader } from '@/components/public/PublicBrand';
 import { useAuthStore } from '@/stores/auth';
 
 const PLATFORMS_ALL = 'ChatGPT · Claude · Gemini · Perplexity · Grok · CLOVA X · 네이버 AI 브리핑';
@@ -130,223 +120,37 @@ const COMPARE_ROWS: { label: string; free: string; s: string; m: string; l: stri
 ];
 
 export default function PricingPage() {
-  // 로그인 상태면 "무료로 시작" 계열 CTA를 "대시보드로 이동"으로 분기
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const loggedIn = _hasHydrated && isAuthenticated;
-
+  const faqs = [
+    ['연 결제는 어떻게 되나요?', '10개월치 금액을 한 번에 결제하면 12개월 동안 이용할 수 있습니다. 연 결제 시 2개월 무료 혜택이 적용됩니다.'],
+    ['무료 체험에 카드가 필요한가요?', '가입 즉시 14일 무료 체험을 시작할 수 있습니다. 카드 등록 없이 시작하며, 카드를 등록하지 않으면 체험 종료 후 자동 결제되지 않습니다.'],
+    ['환불 규정이 궁금합니다.', '결제 후 7일 이내 미사용 시 전액 환불됩니다. 이후에는 일할 계산으로 환불되며, 자세한 기준은 환불규정에서 확인할 수 있습니다.'],
+    ['S와 M은 무엇이 다른가요?', 'S는 질문 5개를 주 2회 추적하고 경쟁 병원 3개를 비교합니다. M은 질문 15개를 매일 추적하며, 전체 7개 플랫폼과 경쟁 병원 10개 비교, 리포트 기능을 제공합니다.'],
+  ];
   return (
-    <div className="min-h-screen bg-[#f6f7f9] text-[#17212e]">
-      {/* Header */}
-      <header className="bg-white/95 backdrop-blur-xl border-b border-[#e7ecf2] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-[72px] flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 text-slate-600 hover:text-slate-900">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-semibold">Patient Signal</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-brand-600" />
-            <span className="text-sm font-semibold text-slate-900">요금제</span>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-5 sm:px-8 py-14 sm:py-20">
-        {/* Hero */}
-        <section id="pricing-hero" className="text-center mb-14">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#285cf4] mb-4">Plans & pricing</p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-[-0.055em] text-[#17212e] mb-5">
-            우리 병원에 맞는<br className="hidden sm:block" />
-            <span className="text-[#285cf4]"> 질문 추적 플랜</span>을 선택하세요
-          </h1>
-          <p className="text-base text-[#69788b] max-w-2xl mx-auto mb-7 leading-7">
-            핵심 질문과 경쟁 병원을 함께 추적하세요. 필요한 질문 수와 측정 주기에 따라 선택할 수 있습니다.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-[#526175]">
-            <span className="flex items-center gap-1.5 rounded-full border border-[#e7ecf2] bg-white px-3 py-1.5">
-              <CalendarCheck className="h-3.5 w-3.5 text-[#285cf4]" /> 14일 무료 체험 · 카드 등록 없음
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-[#e7ecf2] bg-white px-3 py-1.5">
-              <RefreshCw className="h-3.5 w-3.5 text-[#285cf4]" /> 연 결제 시 2개월 무료
-            </span>
-            <span className="flex items-center gap-1.5 rounded-full border border-[#e7ecf2] bg-white px-3 py-1.5">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#285cf4]" /> 결제 후 7일 이내 미사용 시 전액 환불
-            </span>
-          </div>
+    <div className="min-h-screen bg-[#F4F5EF] text-[#15231B]">
+      <PublicHeader active="pricing" loggedIn={loggedIn} />
+      <main className="mx-auto max-w-[1440px] px-5 sm:px-10 lg:px-14">
+        <section id="pricing-hero" className="grid gap-8 pb-12 pt-14 lg:grid-cols-[1.3fr_0.7fr] lg:items-end lg:pb-16 lg:pt-20">
+          <div><p className="mb-6 text-[11px] font-semibold tracking-[0.18em] text-[#778378]">PLANS / FIND YOUR FREQUENCY</p><h1 className="text-5xl font-semibold leading-[1.13] tracking-[-0.07em] sm:text-6xl lg:text-7xl">질문의 범위만큼,<br />더 선명한 시그널.</h1></div>
+          <div className="max-w-sm lg:justify-self-end"><p className="text-sm leading-7 text-[#637167]">우리 병원에 필요한 질문 수와 측정 주기를 선택하세요. 모든 유료 플랜은 14일간 무료로 시작할 수 있습니다.</p><div className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs font-medium"><span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#36765A]" />카드 등록 없음</span><span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-[#36765A]" />연 결제 2개월 무료</span></div></div>
         </section>
-
-        {/* Tier Cards */}
-        <section id="pricing-tiers" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-14">
-          {TIERS.map((t) => (
-            <article
-              key={t.id}
-              className={`relative rounded-[18px] border bg-white p-6 flex flex-col transition-shadow hover:shadow-[0_12px_28px_rgba(18,33,54,0.06)] ${
-                t.highlight
-                  ? 'border-[#285cf4] shadow-[0_8px_28px_rgba(40,92,244,0.10)]'
-                  : 'border-[#e7ecf2] shadow-[0_1px_2px_rgba(18,33,54,0.025)]'
-              }`}
-            >
-              {t.highlight && (
-                <span className="absolute -top-3 left-6 bg-[#285cf4] text-white text-[11px] font-bold px-3 py-1 rounded-full">
-                  가장 많이 선택하는 플랜
-                </span>
-              )}
-              <div className="mb-4">
-                <div className="flex items-baseline gap-2">
-                  <h2 className="text-2xl font-bold tracking-[-0.04em] text-[#17212e]">{t.tier}</h2>
-                  <span className="text-xs text-[#8390a0]">{t.subName}</span>
-                </div>
-                <div className="mt-5">
-                  <span className="text-3xl font-bold tracking-[-0.05em] text-[#17212e]">{t.priceText}</span>
-                </div>
-                <p className="text-xs text-[#8390a0] mt-1">{t.priceNote}</p>
-              </div>
-
-              <ul className="space-y-3 border-t border-[#eef1f5] pt-5 text-[13px] leading-5 text-[#526175] flex-1">
-                <li className="flex gap-2"><Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />{t.specs.platforms}</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />{t.specs.prompts}</li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />크롤 주기: {t.specs.crawl}</li>
-                <li className="flex gap-2">
-                  {t.specs.competitors === '—'
-                    ? <X className="h-4 w-4 text-slate-300 shrink-0 mt-0.5" />
-                    : <Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />}
-                  경쟁사 추적 {t.specs.competitors === '—' ? '없음' : t.specs.competitors}
-                </li>
-                <li className="flex gap-2"><Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />라이브 쿼리 {t.specs.liveQueries}</li>
-                <li className="flex gap-2">
-                  {t.specs.reports
-                    ? <Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />
-                    : <X className="h-4 w-4 text-slate-300 shrink-0 mt-0.5" />}
-                  리포트 내보내기 · AI 개선 추천
-                </li>
-                <li className="flex gap-2">
-                  {t.specs.contentGap
-                    ? <Check className="h-4 w-4 text-[#285cf4] shrink-0 mt-0.5" />
-                    : <X className="h-4 w-4 text-slate-300 shrink-0 mt-0.5" />}
-                  콘텐츠 갭 분석
-                </li>
-              </ul>
-
-              <Link href={loggedIn ? '/dashboard' : t.cta.href} className="mt-7">
-                <Button
-                  className={`w-full font-semibold ${
-                    t.highlight
-                      ? 'bg-[#285cf4] hover:bg-[#204bce] text-white'
-                      : ''
-                  }`}
-                  variant={t.highlight ? 'default' : 'outline'}
-                >
-                  {loggedIn ? '대시보드로 이동' : t.cta.label}
-                  <ArrowRight className="ml-1.5 h-4 w-4" />
-                </Button>
-              </Link>
-            </article>
-          ))}
+        <section id="pricing-tiers" className="grid border-y border-[#15231B] md:grid-cols-2 xl:grid-cols-4">
+          {TIERS.map(t => <article key={t.id} className={`flex flex-col border-b border-[#DEE4D9] p-6 md:border-r md:p-7 xl:border-b-0 last:border-r-0 ${t.highlight ? 'bg-[#D8F36A]' : ''}`}>
+            <div className="flex min-h-[24px] items-center justify-between text-[10px] font-medium tracking-[0.1em]"><span>{t.subName}</span>{t.highlight && <span className="bg-[#15231B] px-2 py-1 text-white">매일 확인하는 병원에</span>}</div>
+            <h2 className={`mb-7 mt-6 flex h-[96px] items-end font-medium leading-none tracking-[-0.08em] ${t.tier === 'FREE' ? 'text-[62px]' : 'text-[96px]'}`}>{t.tier}<span className="ml-2 inline-block h-2 w-2 bg-[#36765A]" /></h2>
+            <div className="flex items-baseline gap-1"><span className="text-3xl font-semibold tracking-[-0.06em]">{t.priceText}</span></div><p className="mt-2 text-[11px] text-[#637167]">{t.priceNote}</p>
+            <Link href={loggedIn ? '/dashboard' : t.cta.href} className={`my-7 flex items-center justify-between gap-3 px-4 py-3.5 text-xs font-semibold ${t.highlight ? 'bg-[#15231B] text-white hover:bg-[#36765A]' : 'border border-[#15231B] hover:bg-white'}`}>{loggedIn ? '대시보드로 이동' : t.cta.label}<ArrowUpRight className="h-4 w-4" /></Link>
+            <div className="mb-5 grid grid-cols-2 gap-4 border-y border-[#15231B]/15 py-4"><div><p className="text-[10px] text-[#637167]">추적 질문</p><p className="mt-1 text-xl font-medium">{t.specs.prompts.replace('추적 질문 ', '')}</p></div><div><p className="text-[10px] text-[#637167]">경쟁 병원</p><p className="mt-1 text-xl font-medium">{t.specs.competitors === '—' ? '미제공' : t.specs.competitors.replace('경쟁사 ', '')}</p></div></div>
+            <ul className="space-y-3 text-xs leading-5 text-[#506054]">{[t.specs.platforms, `${t.specs.crawl} 정기 측정`, `라이브 쿼리 ${t.specs.liveQueries}`, ...(t.specs.reports ? ['리포트 내보내기 · AI 개선 추천'] : []), ...(t.specs.contentGap ? ['콘텐츠 갭 분석'] : [])].map(feature => <li key={feature} className="flex gap-2"><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#36765A]" />{feature}</li>)}</ul>
+          </article>)}
         </section>
-
-        {/* Enterprise band */}
-        <section id="pricing-enterprise" className="mb-16">
-          <div className="rounded-[18px] border border-[#dfe6ef] bg-[#17212e] p-6 sm:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-white">
-            <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-[11px] bg-white/10 flex items-center justify-center shrink-0">
-                <Crown className="h-5 w-5 text-[#a9bcff]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">별도 플랜 — 80명 초과 · 다지점 · 네트워크 병원</h2>
-                <p className="text-sm text-[#abb8c9] mt-1">
-                  질문·경쟁사·크롤 전부 무제한 + 7개 플랫폼 전체 + 전담 지원. <strong>월 150만원부터, 견적 상담.</strong>
-                </p>
-              </div>
-            </div>
-            <a href="mailto:contact@patientsignal.kr">
-              <Button variant="outline" className="border-white/20 bg-white font-bold whitespace-nowrap">
-                견적 문의
-              </Button>
-            </a>
-          </div>
-        </section>
-
-        {/* Compare table */}
-        <section id="pricing-compare" className="mb-14">
-          <h2 className="text-2xl font-bold tracking-[-0.04em] text-[#17212e] mb-6 text-center">플랜 전체 비교</h2>
-          <div className="overflow-x-auto rounded-[18px] border border-[#e7ecf2] bg-white">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#e7ecf2] bg-[#fbfcfe] text-[#526175]">
-                  <th className="text-left px-4 py-3 font-semibold min-w-[180px]">기능</th>
-                  <th className="px-4 py-3 font-semibold">FREE</th>
-                  <th className="px-4 py-3 font-semibold">S<div className="text-xs font-normal text-slate-500">9.9만/월</div></th>
-                  <th className="px-4 py-3 font-bold text-brand-700 bg-brand-50">M<div className="text-xs font-normal text-brand-600">29만/월</div></th>
-                  <th className="px-4 py-3 font-semibold">L<div className="text-xs font-normal text-slate-500">49만/월</div></th>
-                  <th className="px-4 py-3 font-semibold">별도<div className="text-xs font-normal text-slate-500">150만~</div></th>
-                </tr>
-              </thead>
-              <tbody>
-                {COMPARE_ROWS.map((row) => (
-                  <tr key={row.label} className="border-b border-[#eef1f5] last:border-0">
-                    <td className="px-4 py-3 text-slate-700">{row.label}</td>
-                    <td className="px-4 py-3 text-center text-slate-600">{row.free}</td>
-                    <td className="px-4 py-3 text-center text-slate-600">{row.s}</td>
-                    <td className="px-4 py-3 text-center font-semibold text-slate-900 bg-brand-50/50">{row.m}</td>
-                    <td className="px-4 py-3 text-center text-slate-600">{row.l}</td>
-                    <td className="px-4 py-3 text-center text-slate-600">{row.ent}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-xs text-[#8390a0] mt-3 text-center">
-            플랫폼 7개: {PLATFORMS_ALL}. 플랜별 제공 범위를 위 표에서 확인할 수 있습니다.
-          </p>
-        </section>
-
-        {/* FAQ */}
-        <section id="pricing-faq" className="mb-14 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold tracking-[-0.04em] text-[#17212e] mb-6 text-center">자주 묻는 질문</h2>
-          <div className="space-y-4">
-            <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-5">
-              <h3 className="font-semibold text-slate-900 mb-1.5">Q. 연 결제 할인이 있나요?</h3>
-              <p className="text-sm text-slate-600">연 결제 시 <strong>2개월 무료</strong>입니다 (10개월치 일시납으로 12개월 이용).</p>
-            </div>
-            <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-5">
-              <h3 className="font-semibold text-slate-900 mb-1.5">Q. 무료 체험은 어떻게 하나요?</h3>
-              <p className="text-sm text-slate-600">가입 즉시 <strong>14일 무료 체험</strong>이 시작됩니다. 카드 등록 없이 시작하고, 체험 종료 후 자동 결제도 없습니다.</p>
-            </div>
-            <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-5">
-              <h3 className="font-semibold text-slate-900 mb-1.5">Q. 환불 규정은요?</h3>
-              <p className="text-sm text-slate-600">결제 후 <strong>7일 이내 미사용 시 전액 환불</strong>, 이후에는 일할 계산으로 환불됩니다.</p>
-            </div>
-            <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-5">
-              <h3 className="font-semibold text-slate-900 mb-1.5">Q. S 플랜과 M 플랜의 가장 큰 차이는요?</h3>
-              <p className="text-sm text-slate-600">
-                두 가지입니다. ① <strong>크롤 주기</strong> — S는 주 2회, M부터 매일 추적합니다. AI 답변은 매일 바뀌기 때문에 순위 변동을 놓치지 않으려면 매일 크롤이 필요합니다.
-                ② <strong>한국 AI 2종</strong> — CLOVA X와 네이버 AI 브리핑 전체 추적은 M부터입니다 (S는 맛보기 1개 질문만).
-              </p>
-            </div>
-            <div className="rounded-[14px] border border-[#e7ecf2] bg-white p-5">
-              <h3 className="font-semibold text-slate-900 mb-1.5">Q. 우리 병원 규모면 어떤 플랜인가요?</h3>
-              <p className="text-sm text-slate-600">
-                직원 1~15명 규모의 1인 원장 병원은 <strong>S</strong>, 16~30명 규모는 <strong>M</strong>, 31~80명 대형·다진료과는 <strong>L</strong>을 권장합니다.
-                80명 초과·다지점은 별도 견적으로 상담해 드립니다.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Bottom CTA */}
-        <section id="pricing-cta" className="text-center pb-10">
-          <div className="rounded-[20px] bg-[#17212e] p-9 sm:p-11 text-white">
-            <h2 className="text-2xl font-bold mb-3">광고비를 태우기 전에, AI가 우리를 어떻게 보는지부터.</h2>
-            <p className="text-[#abb8c9] mb-6">14일 무료 체험 — 카드 등록 없이 지금 바로 시작하세요.</p>
-            <Link href={loggedIn ? '/dashboard' : '/register'}>
-              <Button size="lg" className="bg-white text-[#17212e] hover:bg-[#edf2ff] font-bold px-10">
-                {loggedIn ? '대시보드로 이동' : '무료로 시작하기'}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-          </div>
-        </section>
-      </main>
-      <SiteFooter />
+        <section id="pricing-enterprise" className="flex flex-col justify-between gap-6 border-b border-[#DEE4D9] py-8 sm:flex-row sm:items-center"><div className="flex gap-5"><Plus className="mt-1 hidden h-7 w-7 shrink-0 sm:block" /><div><h2 className="text-xl font-semibold tracking-[-0.04em]">다지점·네트워크 병원을 위한 별도 플랜</h2><p className="mt-2 text-sm leading-6 text-[#637167]">질문·경쟁 병원·측정 무제한, 전체 플랫폼과 전담 지원. 월 150만원부터.</p></div></div><a href="mailto:contact@patientsignal.kr" className="inline-flex shrink-0 items-center gap-8 border-b border-[#15231B] pb-2 text-sm font-semibold">견적 문의<ArrowUpRight className="h-4 w-4" /></a></section>
+        <section id="pricing-compare" className="py-16 lg:py-24"><div className="mb-8 flex flex-wrap items-end justify-between gap-4"><h2 className="text-3xl font-semibold tracking-[-0.055em] sm:text-4xl">모든 기능을 한눈에.</h2><p className="text-[11px] text-[#778378]">월 이용료 · VAT 별도</p></div><div className="overflow-x-auto border-t border-[#15231B]"><table className="w-full min-w-[740px] text-sm"><thead><tr className="border-b border-[#DEE4D9] text-left"><th className="py-5 pr-5 font-medium text-[#778378]">기능</th>{['FREE', 'S', 'M', 'L', '별도'].map(plan => <th key={plan} className={`px-5 py-5 text-center text-lg font-medium ${plan === 'M' ? 'bg-[#D8F36A]/35' : ''}`}>{plan}</th>)}</tr></thead><tbody>{COMPARE_ROWS.map(row => <tr key={row.label} className="border-b border-[#DEE4D9]"><td className="py-5 pr-5 text-[13px]">{row.label}</td>{[row.free, row.s, row.m, row.l, row.ent].map((value, i) => <td key={i} className={`px-5 py-5 text-center text-xs ${i === 2 ? 'bg-[#D8F36A]/20 font-semibold' : 'text-[#637167]'}`}>{value === '✅' ? <Check className="mx-auto h-4 w-4 text-[#36765A]" aria-label="포함" /> : value === '✕' ? <span aria-label="미포함">—</span> : value}</td>)}</tr>)}</tbody></table></div><p className="mt-4 text-[11px] leading-5 text-[#778378]">지원 플랫폼: {PLATFORMS_ALL}</p></section>
+        <section id="pricing-faq" className="grid gap-8 border-t border-[#15231B] py-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20"><div><p className="text-[10px] font-medium tracking-[0.16em] text-[#778378]">GOOD TO KNOW</p><h2 className="mt-4 text-3xl font-semibold tracking-[-0.05em]">시작하기 전에.</h2><Link href="/refund" className="mt-6 inline-flex items-center gap-3 text-xs font-semibold">환불규정 보기<ArrowRight className="h-3.5 w-3.5" /></Link></div><div>{faqs.map(([question, answer]) => <details key={question} className="group border-b border-[#DEE4D9] py-5 first:pt-0"><summary className="flex cursor-pointer list-none items-start justify-between gap-4 text-sm font-semibold">{question}<Plus className="h-4 w-4 shrink-0 transition-transform group-open:rotate-45" /></summary><p className="mt-4 max-w-xl text-sm leading-7 text-[#637167]">{answer}</p></details>)}</div></section>
+        <section id="pricing-cta" className="mb-14 mt-8 flex flex-col justify-between gap-8 bg-[#13251D] px-7 py-10 text-white sm:px-10 lg:flex-row lg:items-center"><div><p className="mb-3 text-[10px] tracking-[0.18em] text-[#D8F36A]">START WITH A QUESTION</p><h2 className="text-2xl font-medium leading-tight tracking-[-0.045em] sm:text-3xl">우리 병원의 첫 번째 질문을 등록하세요.</h2></div><Link href={loggedIn ? '/dashboard' : '/register'} className="inline-flex shrink-0 items-center justify-between gap-8 bg-[#D8F36A] px-6 py-4 text-sm font-semibold text-[#15231B]">{loggedIn ? '대시보드로 이동' : '14일 무료로 시작'}<ArrowUpRight className="h-5 w-5" /></Link></section>
+      </main><SiteFooter />
     </div>
   );
 }

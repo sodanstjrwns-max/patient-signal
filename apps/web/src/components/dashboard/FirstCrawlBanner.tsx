@@ -81,20 +81,20 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
       : 0;
 
   return (
-    <div className="mx-4 sm:mx-6 mt-3" id="first-crawl-banner">
+    <div className="mx-5 mt-4 sm:mx-8 xl:mx-10" id="first-crawl-banner">
       <div
-        className={`relative rounded-2xl border p-4 sm:p-5 overflow-hidden ${
+        className={`relative border border-l-4 p-4 sm:p-5 overflow-hidden ${
           !hasResults
-            ? 'bg-gradient-to-r from-brand-50 to-violet-50 border-brand-200'
+            ? 'bg-white border-[#DEE4D9] border-l-[#36765A]'
             : anyMention
-              ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
-              : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200'
+              ? 'bg-white border-[#DEE4D9] border-l-[#36765A]'
+              : 'bg-amber-50 border-amber-200'
         }`}
       >
         <button
           onClick={handleDismiss}
           aria-label="배너 닫기"
-          className="absolute top-3 right-3 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-white/60 transition-colors"
+          className="absolute top-3 right-3 p-1 rounded-full text-[#87917E] hover:text-[#637167] hover:bg-white transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -102,20 +102,20 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
         {/* ── 진행 중 ── */}
         {isRunning && !hasResults && (
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-100 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-md bg-brand-100 flex items-center justify-center shrink-0">
               <Loader2 className="h-5 w-5 text-brand-600 animate-spin" />
             </div>
             <div className="flex-1 min-w-0 pr-6">
-              <p className="text-sm font-black text-slate-800">
+              <p className="text-sm font-semibold text-[#20372A]">
                 첫 AI 분석이 지금 진행 중입니다 <Sparkles className="inline h-4 w-4 text-brand-500 -mt-0.5" />
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[#778378] mt-0.5">
                 AI 플랫폼에 실제 질문을 던지고 있어요. 몇 분 안에 첫 결과가 여기에 표시됩니다.
               </p>
               <div className="mt-2.5 flex items-center gap-2">
                 <div className="flex-1 h-1.5 bg-white rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all duration-700"
+                    className="h-full bg-[#36765A] rounded-full transition-all duration-700"
                     style={{ width: `${Math.max(progressPct, 5)}%` }}
                   />
                 </div>
@@ -131,28 +131,28 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
         {hasResults && (
           <div className="flex items-start gap-3">
             <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                anyMention ? 'bg-emerald-100' : 'bg-amber-100'
+              className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${
+                anyMention ? 'bg-brand-100' : 'bg-amber-100'
               }`}
             >
               {anyMention ? (
-                <PartyPopper className="h-5 w-5 text-emerald-600" />
+                <PartyPopper className="h-5 w-5 text-brand-600" />
               ) : (
                 <Search className="h-5 w-5 text-amber-600" />
               )}
             </div>
             <div className="flex-1 min-w-0 pr-6">
-              <p className="text-sm font-black text-slate-800">
+              <p className="text-sm font-semibold text-[#20372A]">
                 {anyMention ? (
                   <>
                     첫 분석 결과: AI가 우리 병원을{' '}
-                    <span className="text-emerald-600">{results.mentionedTotal}회 언급</span>했습니다!
+                    <span className="text-brand-600">{results.mentionedTotal}회 언급</span>했습니다!
                   </>
                 ) : (
                   <>첫 분석 결과: 아직 AI 응답에서 우리 병원이 언급되지 않았습니다</>
                 )}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-[#778378] mt-0.5">
                 {anyMention
                   ? '좋은 출발이에요. 어떤 질문에서 어떻게 언급됐는지 확인해보세요.'
                   : '지극히 정상입니다 — 여기서부터가 시작이에요. AEO 개선 액션으로 언급을 만들어갑니다.'}
@@ -166,8 +166,8 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
                       key={p.platform}
                       className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold ${
                         p.mentioned > 0
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-white/70 text-slate-500'
+                          ? 'bg-brand-100 text-brand-700'
+                          : 'bg-white text-[#778378]'
                       }`}
                     >
                       {p.mentioned > 0 ? (
@@ -185,14 +185,14 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Link
                   href="/dashboard/insights"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-700 bg-white px-3 py-1.5 rounded-xl border border-brand-200 hover:border-brand-300 transition-colors"
+                  className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 hover:text-brand-700 bg-white px-3 py-1.5 rounded-md border border-brand-200 hover:border-brand-300 transition-colors"
                 >
                   AI 응답 원문 보기 <ArrowRight className="h-3 w-3" />
                 </Link>
                 {!anyMention && (
                   <Link
                     href="/dashboard/funnel"
-                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 bg-white px-3 py-1.5 rounded-xl border border-amber-200 hover:border-amber-300 transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:text-amber-700 bg-white px-3 py-1.5 rounded-md border border-amber-200 hover:border-amber-300 transition-colors"
                   >
                     개선 액션 시작하기 <ArrowRight className="h-3 w-3" />
                   </Link>
@@ -205,12 +205,12 @@ export function FirstCrawlBanner({ hospitalId }: { hospitalId?: string }) {
         {/* ── 잡 실패 ── */}
         {!isRunning && !hasResults && job.status === 'FAILED' && (
           <div className="flex items-start gap-3 pr-6">
-            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-              <Search className="h-5 w-5 text-slate-500" />
+            <div className="w-10 h-10 rounded-md bg-[#ECEFE6] flex items-center justify-center shrink-0">
+              <Search className="h-5 w-5 text-[#778378]" />
             </div>
             <div>
-              <p className="text-sm font-black text-slate-800">첫 분석이 아직 준비 중입니다</p>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-sm font-semibold text-[#20372A]">첫 분석이 아직 준비 중입니다</p>
+              <p className="text-xs text-[#778378] mt-0.5">
                 다음 정기 분석에서 자동으로 다시 시도합니다. 조금만 기다려주세요.
               </p>
             </div>

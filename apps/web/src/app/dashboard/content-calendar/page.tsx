@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
+import { WorkspaceIntro } from '@/components/dashboard/WorkspaceIntro';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/auth';
@@ -35,19 +36,19 @@ interface CalendarItem {
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
-  PLANNED: { label: '계획', color: 'bg-slate-100 text-slate-600', icon: Clock },
-  ANALYZED: { label: '분석 완료', color: 'bg-blue-100 text-blue-700', icon: Search },
+  PLANNED: { label: '계획', color: 'bg-[#ECEFE6] text-[#637167]', icon: Clock },
+  ANALYZED: { label: '분석 완료', color: 'bg-[#ECEFE6] text-[#15231B]', icon: Search },
   GENERATING: { label: '생성 중', color: 'bg-amber-100 text-amber-700', icon: Loader2 },
-  PUBLISHED: { label: '발행됨', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  PUBLISHED: { label: '발행됨', color: 'bg-brand-100 text-brand-700', icon: CheckCircle },
   SKIPPED: { label: '건너뜀', color: 'bg-red-100 text-red-600', icon: AlertTriangle },
 };
 
 const funnelConfig: Record<string, { label: string; color: string; emoji: string }> = {
   AWARENESS: { label: '인지', color: 'bg-sky-100 text-sky-700', emoji: '👀' },
-  CONSIDERATION: { label: '고려', color: 'bg-violet-100 text-violet-700', emoji: '🤔' },
-  DECISION: { label: '결정', color: 'bg-emerald-100 text-emerald-700', emoji: '✅' },
+  CONSIDERATION: { label: '고려', color: 'bg-[#ECEFE6] text-[#15231B]', emoji: '🤔' },
+  DECISION: { label: '결정', color: 'bg-brand-100 text-brand-700', emoji: '✅' },
   RETENTION: { label: '유지', color: 'bg-amber-100 text-amber-700', emoji: '🔄' },
-  ADVOCACY: { label: '추천', color: 'bg-pink-100 text-pink-700', emoji: '💖' },
+  ADVOCACY: { label: '추천', color: 'bg-[#ECEFE6] text-[#15231B]', emoji: '💖' },
 };
 
 const priorityColors: Record<string, string> = {
@@ -129,38 +130,40 @@ export default function ContentCalendarPage() {
         description="AI가 병원 맞춤형 56주 콘텐츠 계획을 자동으로 생성합니다"
       />
 
-      <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 xl:px-10">
+        <WorkspaceIntro eyebrow="CONTENT CALENDAR" title="다음 이야기를 준비하세요." description="주차별 콘텐츠 계획과 발행 진행을 한곳에서 관리하세요." />
+
 
         {/* ─── 상단 통계 + 생성 버튼 ─── */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2 flex-1">
-            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-slate-800">{calendar?.total || 0}</p>
-              <p className="text-[10px] text-slate-500">총 주차</p>
+            <div className="bg-white rounded-lg border border-[#DEE4D9] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#20372A]">{calendar?.total || 0}</p>
+              <p className="text-[10px] text-[#778378]">총 주차</p>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-green-600">{stats.PUBLISHED || 0}</p>
-              <p className="text-[10px] text-slate-500">발행 완료</p>
+            <div className="bg-white rounded-lg border border-[#DEE4D9] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-brand-600">{stats.PUBLISHED || 0}</p>
+              <p className="text-[10px] text-[#778378]">발행 완료</p>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-blue-600">{stats.ANALYZED || 0}</p>
-              <p className="text-[10px] text-slate-500">분석 완료</p>
+            <div className="bg-white rounded-lg border border-[#DEE4D9] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#36765A]">{stats.ANALYZED || 0}</p>
+              <p className="text-[10px] text-[#778378]">분석 완료</p>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-slate-600">{stats.PLANNED || 0}</p>
-              <p className="text-[10px] text-slate-500">계획 중</p>
+            <div className="bg-white rounded-lg border border-[#DEE4D9] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#637167]">{stats.PLANNED || 0}</p>
+              <p className="text-[10px] text-[#778378]">계획 중</p>
             </div>
-            <div className="bg-white rounded-lg border border-slate-200 px-3 py-2.5 text-center">
-              <p className="text-lg font-bold text-purple-600">
+            <div className="bg-white rounded-lg border border-[#DEE4D9] px-3 py-2.5 text-center">
+              <p className="text-lg font-bold text-[#36765A]">
                 {calendar?.total ? Math.round(((stats.PUBLISHED || 0) / calendar.total) * 100) : 0}%
               </p>
-              <p className="text-[10px] text-slate-500">진행률</p>
+              <p className="text-[10px] text-[#778378]">진행률</p>
             </div>
           </div>
           <Button
             onClick={() => generateMutation.mutate()}
             disabled={generateMutation.isPending}
-            className="bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-6"
+            className="bg-brand-600 hover:bg-brand-700 text-white rounded-md px-6"
           >
             {generateMutation.isPending ? (
               <><Loader2 className="w-4 h-4 animate-spin mr-2" /> 생성 중...</>
@@ -172,9 +175,9 @@ export default function ContentCalendarPage() {
 
         {/* ─── 퍼널 분포 바 ─── */}
         {calendar?.total > 0 && (
-          <Card className="border border-slate-200 shadow-none">
+          <Card className="border border-[#DEE4D9] shadow-none">
             <CardContent className="p-4">
-              <h4 className="text-xs font-semibold text-slate-500 mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
+              <h4 className="text-xs font-semibold text-[#778378] mb-2"><TermTip term="funnelStage">퍼널 분포</TermTip></h4>
               <div className="flex h-6 rounded-full overflow-hidden">
                 {Object.entries(funnelDist).map(([stage, count]: [string, any]) => {
                   const config = funnelConfig[stage] || funnelConfig.AWARENESS;
@@ -199,7 +202,7 @@ export default function ContentCalendarPage() {
                     key={stage}
                     onClick={() => setFilterFunnel(filterFunnel === stage ? '' : stage)}
                     className={`text-[10px] px-2 py-0.5 rounded-full transition ${
-                      filterFunnel === stage ? config.color + ' ring-2 ring-offset-1' : 'text-slate-400 hover:text-slate-600'
+                      filterFunnel === stage ? config.color + ' ring-2 ring-offset-1' : 'text-[#87917E] hover:text-[#637167]'
                     }`}
                   >
                     {config.emoji} {config.label} {funnelDist[stage] || 0}
@@ -214,7 +217,7 @@ export default function ContentCalendarPage() {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterStatus('')}
-            className={`text-xs px-3 py-1.5 rounded-full transition ${!filterStatus ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 border'}`}
+            className={`text-xs px-3 py-1.5 rounded-full transition ${!filterStatus ? 'bg-brand-600 text-white' : 'bg-white text-[#637167] hover:bg-[#F4F5EF] border'}`}
           >
             전체
           </button>
@@ -223,7 +226,7 @@ export default function ContentCalendarPage() {
               key={key}
               onClick={() => setFilterStatus(filterStatus === key ? '' : key)}
               className={`text-xs px-3 py-1.5 rounded-full transition flex items-center gap-1 ${
-                filterStatus === key ? config.color + ' ring-2 ring-offset-1' : 'bg-white text-slate-600 hover:bg-slate-50 border'
+                filterStatus === key ? config.color + ' ring-2 ring-offset-1' : 'bg-white text-[#637167] hover:bg-[#F4F5EF] border'
               }`}
             >
               {config.label}
@@ -233,18 +236,18 @@ export default function ContentCalendarPage() {
 
         {/* ─── 캘린더 비어있을 때 ─── */}
         {!isLoading && items.length === 0 && (
-          <Card className="border border-slate-200 shadow-none">
+          <Card className="border border-[#DEE4D9] shadow-none">
             <CardContent className="p-12 text-center">
-              <CalendarDays className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-slate-700 mb-2">콘텐츠 캘린더가 비어있습니다</h3>
-              <p className="text-sm text-slate-500 mb-6">
+              <CalendarDays className="w-16 h-16 text-[#B9C6B3] mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-[#405345] mb-2">콘텐츠 캘린더가 비어있습니다</h3>
+              <p className="text-sm text-[#778378] mb-6">
                 AI가 병원의 핵심 시술, 지역, 퍼널 단계를 고려하여<br />
                 56주치 콘텐츠 계획을 자동으로 생성합니다.
               </p>
               <Button
                 onClick={() => generateMutation.mutate()}
                 disabled={generateMutation.isPending}
-                className="bg-brand-600 hover:bg-brand-700 text-white rounded-xl px-8 py-3"
+                className="bg-brand-600 hover:bg-brand-700 text-white rounded-md px-8 py-3"
               >
                 {generateMutation.isPending ? (
                   <><Loader2 className="w-4 h-4 animate-spin mr-2" /> 캘린더 생성 중...</>
@@ -260,7 +263,7 @@ export default function ContentCalendarPage() {
         {isLoading ? (
           <div className="text-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-3" />
-            <p className="text-sm text-slate-500">캘린더 로딩 중...</p>
+            <p className="text-sm text-[#778378]">캘린더 로딩 중...</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -276,16 +279,16 @@ export default function ContentCalendarPage() {
               return (
                 <Card
                   key={item.id}
-                  className={`border border-slate-200 shadow-none border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
+                  className={`border border-[#DEE4D9] shadow-none border-l-4 ${priorityBorder} ${isThisWeek ? 'ring-2 ring-brand-200' : ''}`}
                 >
                   <CardContent className="p-0">
                     <button
                       onClick={() => setExpandedWeek(isExpanded ? null : item.weekNumber)}
-                      className="w-full p-4 text-left flex items-center gap-3 hover:bg-slate-50/50 transition"
+                      className="w-full p-4 text-left flex items-center gap-3 hover:bg-[#F4F5EF]/50 transition"
                     >
                       {/* 주차 번호 */}
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                        isThisWeek ? 'bg-brand-600 text-white' : isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-700'
+                        isThisWeek ? 'bg-brand-600 text-white' : isPast ? 'bg-[#ECEFE6] text-[#87917E]' : 'bg-[#ECEFE6] text-[#405345]'
                       }`}>
                         {item.weekNumber}
                       </div>
@@ -295,14 +298,14 @@ export default function ContentCalendarPage() {
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${stConfig.color}`}>{stConfig.label}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded ${fConfig.color}`}>{fConfig.emoji} {fConfig.label}</span>
                           {item.contentType && item.contentType !== 'BLOG' && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">{item.contentType}</span>
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ECEFE6] text-[#778378]">{item.contentType}</span>
                           )}
                           {isThisWeek && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 font-bold">이번 주</span>
                           )}
                         </div>
-                        <p className="text-sm font-medium text-slate-800 truncate">{item.topic}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-sm font-medium text-[#20372A] truncate">{item.topic}</p>
+                        <p className="text-xs text-[#778378]">
                           {item.targetKeyword} · {scheduledDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                           {item.procedure && ` · ${item.procedure}`}
                         </p>
@@ -311,7 +314,7 @@ export default function ContentCalendarPage() {
                       {/* SEO 지시어 유무 표시 */}
                       {item.seoDirectives && (
                         <div className="flex-shrink-0">
-                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-100 text-purple-600 font-medium">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#ECEFE6] text-[#36765A] font-medium">
                             SEO 지시어 ✓
                           </span>
                         </div>
@@ -322,7 +325,7 @@ export default function ContentCalendarPage() {
 
                     {/* 확장 영역 */}
                     {isExpanded && (
-                      <div className="px-4 pb-4 border-t bg-slate-50/50 space-y-3">
+                      <div className="px-4 pb-4 border-t bg-[#F4F5EF]/50 space-y-3">
                         {/* 액션 버튼 */}
                         <div className="flex gap-2 mt-3">
                           <Button
@@ -347,7 +350,7 @@ export default function ContentCalendarPage() {
                         {/* SEO 지시어 표시 */}
                         {item.seoDirectives && (
                           <div className="bg-white rounded-lg p-3 border">
-                            <h5 className="text-xs font-semibold text-purple-700 mb-2 flex items-center gap-1">
+                            <h5 className="text-xs font-semibold text-[#15231B] mb-2 flex items-center gap-1">
                               <Sparkles className="w-3 h-3" />
                               역분석 기반 SEO 지시어
                             </h5>
@@ -356,17 +359,17 @@ export default function ContentCalendarPage() {
                                 <span className={`text-[10px] px-1 py-0.5 rounded font-bold ${
                                   d.priority === 'critical' ? 'bg-red-100 text-red-600' :
                                   d.priority === 'high' ? 'bg-amber-100 text-amber-600' :
-                                  'bg-blue-100 text-blue-600'
+                                  'bg-[#ECEFE6] text-[#36765A]'
                                 }`}>
                                   {d.priority === 'critical' ? '필수' : d.priority === 'high' ? '권장' : '참고'}
                                 </span>
-                                <p className="text-xs text-slate-700">{d.action}</p>
+                                <p className="text-xs text-[#405345]">{d.action}</p>
                               </div>
                             ))}
                             {(item.seoDirectives as any)?.contentScore && (
                               <div className="mt-2 pt-2 border-t flex items-center gap-4 text-xs">
-                                <span className="text-slate-500">인용 가능성:</span>
-                                <span className="font-bold text-slate-700">
+                                <span className="text-[#778378]">인용 가능성:</span>
+                                <span className="font-bold text-[#405345]">
                                   {(item.seoDirectives as any).contentScore.current} → {(item.seoDirectives as any).contentScore.potential}
                                 </span>
                               </div>
@@ -376,7 +379,7 @@ export default function ContentCalendarPage() {
 
                         {/* 메모 */}
                         {item.notes && (
-                          <p className="text-xs text-slate-500 italic">📝 {item.notes}</p>
+                          <p className="text-xs text-[#778378] italic">📝 {item.notes}</p>
                         )}
                       </div>
                     )}

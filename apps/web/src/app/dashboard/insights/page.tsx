@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'next/navigation';
-import { Header } from '@/components/layout/Header';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { TermTip } from '@/components/ui/term-tooltip';
-import { crawlerApi } from '@/lib/api';
-import { useAuthStore } from '@/stores/auth';
-import { toast } from '@/hooks/useToast';
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
+import { Header } from "@/components/layout/Header";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { TermTip } from "@/components/ui/term-tooltip";
+import { crawlerApi } from "@/lib/api";
+import { useAuthStore } from "@/stores/auth";
+import { toast } from "@/hooks/useToast";
 import {
   useMentionInsight,
   useTrendInsight,
@@ -30,7 +30,7 @@ import {
   useSourceQualityInsight,
   useActionInsight,
   useHospitalId,
-} from '@/hooks/useQueries';
+} from "@/hooks/useQueries";
 import {
   Lightbulb,
   TrendingUp,
@@ -67,49 +67,148 @@ import {
   MessageCircle,
   Antenna,
   ShieldAlert,
-} from 'lucide-react';
+} from "lucide-react";
 
 const platformNames: Record<string, string> = {
-  CHATGPT: 'ChatGPT',
-  CLAUDE: 'Claude',
-  PERPLEXITY: 'Perplexity',
-  GEMINI: 'Gemini',
-  GOOGLE_AI_OVERVIEW: 'Google AI',
-  GROK: 'Grok',
-  CLOVA_X: 'CLOVA X',
-  NAVER_AI_BRIEFING: '네이버 AI 브리핑',
+  CHATGPT: "ChatGPT",
+  CLAUDE: "Claude",
+  PERPLEXITY: "Perplexity",
+  GEMINI: "Gemini",
+  GOOGLE_AI_OVERVIEW: "Google AI",
+  GROK: "Grok",
+  CLOVA_X: "CLOVA X",
+  NAVER_AI_BRIEFING: "네이버 AI 브리핑",
 };
 
 const platformColors: Record<string, string> = {
-  CHATGPT: 'bg-green-500',
-  CLAUDE: 'bg-orange-500',
-  PERPLEXITY: 'bg-brand-500',
-  GEMINI: 'bg-purple-500',
-  GOOGLE_AI_OVERVIEW: 'bg-yellow-500',
-  GROK: 'bg-slate-900',
-  CLOVA_X: 'bg-emerald-500',
+  CHATGPT: "bg-green-500",
+  CLAUDE: "bg-orange-500",
+  PERPLEXITY: "bg-brand-500",
+  GEMINI: "bg-brand-500",
+  GOOGLE_AI_OVERVIEW: "bg-yellow-500",
+  GROK: "bg-slate-900",
+  CLOVA_X: "bg-emerald-500",
 };
 
 const platformBgColors: Record<string, string> = {
-  CHATGPT: 'bg-green-50 text-green-700',
-  CLAUDE: 'bg-orange-50 text-orange-700',
-  PERPLEXITY: 'bg-brand-50 text-brand-700',
-  GEMINI: 'bg-purple-50 text-purple-700',
-  GOOGLE_AI_OVERVIEW: 'bg-yellow-50 text-yellow-700',
-  GROK: 'bg-slate-900 text-white',
-  CLOVA_X: 'bg-emerald-50 text-emerald-700',
+  CHATGPT: "bg-green-50 text-green-700",
+  CLAUDE: "bg-orange-50 text-orange-700",
+  PERPLEXITY: "bg-brand-50 text-brand-700",
+  GEMINI: "bg-brand-50 text-brand-700",
+  GOOGLE_AI_OVERVIEW: "bg-yellow-50 text-yellow-700",
+  GROK: "bg-slate-900 text-white",
+  CLOVA_X: "bg-emerald-50 text-emerald-700",
 };
+
+const insightSections = [
+  {
+    group: "실행과 비교",
+    tabs: [
+      {
+        key: "actions",
+        icon: FileText,
+        label: "액션 리포트",
+        description: "측정 결과에서 이번 주 실행할 일을 찾습니다.",
+      },
+      {
+        key: "positioning",
+        icon: Radar,
+        label: "포지셔닝 맵",
+        description: "경쟁 병원과 비교해 AI가 인식하는 강점을 확인합니다.",
+      },
+    ],
+  },
+  {
+    group: "답변과 변화",
+    tabs: [
+      {
+        key: "mention",
+        icon: Quote,
+        label: "추천 멘트",
+        description: "AI가 우리 병원을 어떻게 설명하고 추천하는지 읽습니다.",
+      },
+      {
+        key: "trend",
+        icon: TrendingUp,
+        label: "트렌드",
+        description: "기간과 질문 집합에 따른 노출 변화를 살펴봅니다.",
+      },
+      {
+        key: "breadth",
+        icon: Award,
+        label: "인용 범위",
+        description:
+          "우리 병원을 설명하는 출처가 얼마나 넓게 분포하는지 확인합니다.",
+      },
+    ],
+  },
+  {
+    group: "출처와 채널",
+    tabs: [
+      {
+        key: "sources",
+        icon: Globe,
+        label: "출처 분석",
+        description: "AI가 답변에 참고한 채널과 도메인을 살펴봅니다.",
+      },
+      {
+        key: "topUrls",
+        icon: ExternalLink,
+        label: "URL 랭킹",
+        description: "인용 빈도가 높은 페이지와 병원 언급을 비교합니다.",
+      },
+      {
+        key: "urlMatrix",
+        icon: BarChart3,
+        label: "AI × URL",
+        description: "플랫폼마다 참고한 페이지를 한눈에 비교합니다.",
+      },
+      {
+        key: "sourceIntel",
+        icon: Sparkles,
+        label: "출처 인텔리전스",
+        description: "인용 페이지의 본문과 우리 병원에 대한 묘사를 분석합니다.",
+      },
+      {
+        key: "newChannels",
+        icon: Antenna,
+        label: "신규 인용 채널",
+        description: "새롭게 등장하거나 빠르게 성장하는 인용 채널을 찾습니다.",
+      },
+      {
+        key: "sourceQuality",
+        icon: Shield,
+        label: "출처 품질",
+        description: "출처의 품질과 추천 맥락을 함께 검토합니다.",
+      },
+    ],
+  },
+];
 
 export default function InsightsPage() {
   const { user } = useAuthStore();
   const hospitalId = useHospitalId();
   const searchParams = useSearchParams();
-  const tabParam = searchParams.get('tab');
-  const validTabs = ['mention', 'trend', 'sources', 'topUrls', 'urlMatrix', 'breadth', 'sourceIntel', 'newChannels', 'positioning', 'sourceQuality', 'actions'] as const;
-  type TabType = typeof validTabs[number];
-  const initialTab: TabType = validTabs.includes(tabParam as TabType) ? (tabParam as TabType) : 'actions';
+  const tabParam = searchParams.get("tab");
+  const validTabs = [
+    "mention",
+    "trend",
+    "sources",
+    "topUrls",
+    "urlMatrix",
+    "breadth",
+    "sourceIntel",
+    "newChannels",
+    "positioning",
+    "sourceQuality",
+    "actions",
+  ] as const;
+  type TabType = (typeof validTabs)[number];
+  const initialTab: TabType = validTabs.includes(tabParam as TabType)
+    ? (tabParam as TabType)
+    : "actions";
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
-  const [trendCohort, setTrendCohort] = useState<'all' | 'fixed'>('all');
+  const [trendCohort, setTrendCohort] = useState<"all" | "fixed">("all");
   const queryClient = useQueryClient();
 
   // URL 파라미터 변경 시 탭 동기화
@@ -121,158 +220,352 @@ export default function InsightsPage() {
 
   // 【캐싱 통합 완료】공유 훅 사용 → 대시보드에서 프리페치된 데이터 자동 활용
   // lazy 파라미터로 비활성 탭은 fetch 안 함 (이미 캐시 있으면 즉시 표시)
-  const { data: mentionData, isLoading: mentionLoading, error: mentionError } = useMentionInsight(activeTab !== 'mention');
-  const { data: trendData, isLoading: trendLoading, error: trendError } = useTrendInsight(activeTab !== 'trend', trendCohort);
-  const { data: sourceData, isLoading: sourceLoading, error: sourceError } = useSourceInsight(activeTab !== 'sources');
-  const { data: diagnosticData } = useSourceDiagnostic(activeTab !== 'sources');
-  const { data: geminiDietData } = useGeminiDiet(activeTab !== 'sources');
-  const { data: topUrlsData, isLoading: topUrlsLoading, error: topUrlsError } = useTopUrls(activeTab !== 'topUrls', 100);
-  const { data: urlMatrixData, isLoading: urlMatrixLoading, error: urlMatrixError } = useUrlMatrix(activeTab !== 'urlMatrix', 30);
-  const { data: breadthData, isLoading: breadthLoading, error: breadthError } = useBreadthInsight(activeTab !== 'breadth');
-  const { data: siSummary, isLoading: siSummaryLoading, error: siSummaryError } = useSourceIntelSummary(activeTab !== 'sourceIntel');
-  const { data: siTopSources, isLoading: siTopLoading } = useTopSources(activeTab !== 'sourceIntel');
-  const { data: siInstagram, isLoading: siIgLoading } = useInstagramIntel(activeTab !== 'sourceIntel');
-  const { data: siHints, isLoading: siHintsLoading } = useHintKeywords(activeTab !== 'sourceIntel');
-  const { data: newChannelsData, isLoading: newChannelsLoading, error: newChannelsError } = useNewChannels(activeTab !== 'newChannels');
-  const { data: positionData, isLoading: positionLoading, error: positionError } = usePositioningInsight(activeTab !== 'positioning');
-  const { data: sourceQualityData, isLoading: sourceQualityLoading, error: sourceQualityError } = useSourceQualityInsight(activeTab !== 'sourceQuality');
-  const { data: actionData, isLoading: actionLoading, error: actionError } = useActionInsight(activeTab !== 'actions');
-  const { data: channelPriorityData } = useChannelPriority(activeTab !== 'actions');
-
-
+  const {
+    data: mentionData,
+    isLoading: mentionLoading,
+    error: mentionError,
+  } = useMentionInsight(activeTab !== "mention");
+  const {
+    data: trendData,
+    isLoading: trendLoading,
+    error: trendError,
+  } = useTrendInsight(activeTab !== "trend", trendCohort);
+  const {
+    data: sourceData,
+    isLoading: sourceLoading,
+    error: sourceError,
+  } = useSourceInsight(activeTab !== "sources");
+  const { data: diagnosticData } = useSourceDiagnostic(activeTab !== "sources");
+  const { data: geminiDietData } = useGeminiDiet(activeTab !== "sources");
+  const {
+    data: topUrlsData,
+    isLoading: topUrlsLoading,
+    error: topUrlsError,
+  } = useTopUrls(activeTab !== "topUrls", 100);
+  const {
+    data: urlMatrixData,
+    isLoading: urlMatrixLoading,
+    error: urlMatrixError,
+  } = useUrlMatrix(activeTab !== "urlMatrix", 30);
+  const {
+    data: breadthData,
+    isLoading: breadthLoading,
+    error: breadthError,
+  } = useBreadthInsight(activeTab !== "breadth");
+  const {
+    data: siSummary,
+    isLoading: siSummaryLoading,
+    error: siSummaryError,
+  } = useSourceIntelSummary(activeTab !== "sourceIntel");
+  const { data: siTopSources, isLoading: siTopLoading } = useTopSources(
+    activeTab !== "sourceIntel",
+  );
+  const { data: siInstagram, isLoading: siIgLoading } = useInstagramIntel(
+    activeTab !== "sourceIntel",
+  );
+  const { data: siHints, isLoading: siHintsLoading } = useHintKeywords(
+    activeTab !== "sourceIntel",
+  );
+  const {
+    data: newChannelsData,
+    isLoading: newChannelsLoading,
+    error: newChannelsError,
+  } = useNewChannels(activeTab !== "newChannels");
+  const {
+    data: positionData,
+    isLoading: positionLoading,
+    error: positionError,
+  } = usePositioningInsight(activeTab !== "positioning");
+  const {
+    data: sourceQualityData,
+    isLoading: sourceQualityLoading,
+    error: sourceQualityError,
+  } = useSourceQualityInsight(activeTab !== "sourceQuality");
+  const {
+    data: actionData,
+    isLoading: actionLoading,
+    error: actionError,
+  } = useActionInsight(activeTab !== "actions");
+  const { data: channelPriorityData } = useChannelPriority(
+    activeTab !== "actions",
+  );
 
   // 현재 활성 탭의 에러 상태
-  const currentError = (
-    (activeTab === 'mention' && mentionError) ||
-    (activeTab === 'trend' && trendError) ||
-    (activeTab === 'sources' && sourceError) ||
-    (activeTab === 'topUrls' && topUrlsError) ||
-    (activeTab === 'urlMatrix' && urlMatrixError) ||
-    (activeTab === 'breadth' && breadthError) ||
-    (activeTab === 'sourceIntel' && siSummaryError) ||
-    (activeTab === 'newChannels' && newChannelsError) ||
-    (activeTab === 'positioning' && positionError) ||
-    (activeTab === 'sourceQuality' && sourceQualityError) ||
-    (activeTab === 'actions' && actionError)
-  ) as any;
+  const currentError = ((activeTab === "mention" && mentionError) ||
+    (activeTab === "trend" && trendError) ||
+    (activeTab === "sources" && sourceError) ||
+    (activeTab === "topUrls" && topUrlsError) ||
+    (activeTab === "urlMatrix" && urlMatrixError) ||
+    (activeTab === "breadth" && breadthError) ||
+    (activeTab === "sourceIntel" && siSummaryError) ||
+    (activeTab === "newChannels" && newChannelsError) ||
+    (activeTab === "positioning" && positionError) ||
+    (activeTab === "sourceQuality" && sourceQualityError) ||
+    (activeTab === "actions" && actionError)) as any;
 
   // 현재 활성 탭의 로딩 상태만 확인
-  const isLoading = (
-    (activeTab === 'mention' && mentionLoading) ||
-    (activeTab === 'trend' && trendLoading) ||
-    (activeTab === 'sources' && sourceLoading) ||
-    (activeTab === 'topUrls' && topUrlsLoading) ||
-    (activeTab === 'urlMatrix' && urlMatrixLoading) ||
-    (activeTab === 'breadth' && breadthLoading) ||
-    (activeTab === 'sourceIntel' && siSummaryLoading && siTopLoading && siIgLoading && siHintsLoading) ||
-    (activeTab === 'newChannels' && newChannelsLoading) ||
-    (activeTab === 'positioning' && positionLoading) ||
-    (activeTab === 'sourceQuality' && sourceQualityLoading) ||
-    (activeTab === 'actions' && actionLoading)
-  );
+  const isLoading =
+    (activeTab === "mention" && mentionLoading) ||
+    (activeTab === "trend" && trendLoading) ||
+    (activeTab === "sources" && sourceLoading) ||
+    (activeTab === "topUrls" && topUrlsLoading) ||
+    (activeTab === "urlMatrix" && urlMatrixLoading) ||
+    (activeTab === "breadth" && breadthLoading) ||
+    (activeTab === "sourceIntel" &&
+      siSummaryLoading &&
+      siTopLoading &&
+      siIgLoading &&
+      siHintsLoading) ||
+    (activeTab === "newChannels" && newChannelsLoading) ||
+    (activeTab === "positioning" && positionLoading) ||
+    (activeTab === "sourceQuality" && sourceQualityLoading) ||
+    (activeTab === "actions" && actionLoading);
 
   if (!hospitalId) {
     return (
       <div className="min-h-screen">
-        <Header title="AI 인사이트" description="AI가 우리 병원을 어떻게 보는지 분석합니다" />
-        <div className="p-6 text-center text-slate-500">병원 등록이 필요합니다</div>
+        <Header
+          title="AI 인사이트"
+          description="AI가 우리 병원을 어떻게 보는지 분석합니다"
+        />
+        <div className="p-6 text-center text-[#778378]">
+          병원 등록이 필요합니다
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <Header title="AI 인사이트" description="AI가 우리 병원을 어떻게 추천하는지 심층 분석" />
+    <div className="signal-insights min-h-screen text-[#15231B]">
+      <Header
+        title="AI 인사이트"
+        description="답변의 맥락에서 다음 행동을 찾습니다"
+      />
 
-      <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-        {/* 탭 */}
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {[
-            { key: 'actions', icon: FileText, label: '액션 리포트' },
-            { key: 'mention', icon: Quote, label: '추천 멘트' },
-            { key: 'positioning', icon: Radar, label: '포지셔닝 맵' },
-            { key: 'trend', icon: TrendingUp, label: '트렌드' },
-            { key: 'sources', icon: Globe, label: '출처 분석' },
-            { key: 'topUrls', icon: ExternalLink, label: 'Top URL 랭킹' },
-            { key: 'urlMatrix', icon: BarChart3, label: 'AI×URL 매트릭스' },
-            { key: 'breadth', icon: Award, label: 'Breadth 리포트' },
-            { key: 'sourceIntel', icon: Sparkles, label: '출처 인텔리전스' },
-            { key: 'newChannels', icon: Antenna, label: '신규 인용 채널 🆕' },
-            { key: 'sourceQuality', icon: Shield, label: '출처 품질' },
-          ].map(tab => (
-            <Button
-              key={tab.key}
-              variant={activeTab === tab.key ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab(tab.key as any)}
-              className="flex-shrink-0"
-            >
-              <tab.icon className="h-4 w-4 mr-1.5" />
-              {tab.label}
-            </Button>
-          ))}
+      <div className="mx-auto max-w-[1480px] px-5 pb-12 pt-7 sm:px-8 lg:px-10">
+        <div className="mb-8">
+          <p className="mb-3 text-[10px] font-bold tracking-[0.2em] text-[#778378]">
+            INTELLIGENCE WORKSPACE
+          </p>
+          <h1 className="text-3xl font-semibold tracking-[-0.05em] sm:text-[38px]">
+            답변 너머의 기회를 읽다.
+          </h1>
+          <p className="mt-3 text-sm text-[#778378]">
+            추천의 맥락부터 인용 출처까지, 필요한 분석을 골라 살펴보세요.
+          </p>
         </div>
-
-        {isLoading ? (
-          <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
-          </div>
-        ) : currentError ? (
-          <Card className="border-red-200 bg-red-50/50">
-            <CardContent className="p-6 sm:p-8 text-center">
-              <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
-              <h3 className="text-base font-semibold text-red-800 mb-1">
-                분석 데이터를 불러오지 못했습니다
-              </h3>
-              <p className="text-sm text-red-600 mb-4">
-                {currentError?.code === 'ECONNABORTED' 
-                  ? '서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.'
-                  : currentError?.response?.status === 500
-                  ? '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
-                  : '네트워크 오류가 발생했습니다.'}
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => queryClient.invalidateQueries()}
-                className="border-red-300 text-red-700 hover:bg-red-100"
+        <div className="grid items-start gap-7 xl:grid-cols-[180px_minmax(0,1fr)]">
+          <aside className="xl:sticky xl:top-24">
+            <div className="xl:hidden">
+              <label
+                htmlFor="insight-view"
+                className="mb-2 block text-xs font-semibold text-[#667668]"
               >
-                <RefreshCw className="h-4 w-4 mr-1.5" />
-                다시 시도
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {activeTab === 'actions' && actionData && (
-              <div className="space-y-6">
-                {channelPriorityData && channelPriorityData.totalCitations > 0 && (
-                  <ChannelPriorityWidget data={channelPriorityData} />
-                )}
-                <ActionReport data={actionData} />
+                분석 보기
+              </label>
+              <select
+                id="insight-view"
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value as TabType)}
+                className="h-12 w-full rounded-xl border border-[#DEE4D9] bg-white px-4 text-sm font-medium outline-none focus:border-[#36765A]"
+              >
+                {insightSections.map((section) => (
+                  <optgroup key={section.group} label={section.group}>
+                    {section.tabs.map((tab) => (
+                      <option key={tab.key} value={tab.key}>
+                        {tab.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+            <nav
+              aria-label="인사이트 분석 종류"
+              className="hidden space-y-6 xl:block"
+            >
+              {insightSections.map((section) => (
+                <div key={section.group}>
+                  <p className="mb-2 px-3 text-[10px] font-bold tracking-wide text-[#8F9B8C]">
+                    {section.group}
+                  </p>
+                  <div className="space-y-1">
+                    {section.tabs.map((tab) => (
+                      <button
+                        key={tab.key}
+                        onClick={() => setActiveTab(tab.key as TabType)}
+                        aria-current={
+                          activeTab === tab.key ? "page" : undefined
+                        }
+                        className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors ${activeTab === tab.key ? "bg-[#13251D] text-[#D8F36A]" : "text-[#667668] hover:bg-[#E9EDE1] hover:text-[#15231B]"}`}
+                      >
+                        <tab.icon className="h-3.5 w-3.5 shrink-0" />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </aside>
+          <div className="insight-detail min-w-0 space-y-6">
+            <div className="border-b border-[#D4DDCE] pb-5">
+              <h2 className="text-xl font-semibold tracking-tight">
+                {
+                  insightSections
+                    .flatMap((section) => section.tabs)
+                    .find((tab) => tab.key === activeTab)?.label
+                }
+              </h2>
+              <p className="mt-2 text-xs leading-6 text-[#778378]">
+                {
+                  insightSections
+                    .flatMap((section) => section.tabs)
+                    .find((tab) => tab.key === activeTab)?.description
+                }
+              </p>
+            </div>
+            {isLoading ? (
+              <div className="flex justify-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin text-brand-600" />
               </div>
+            ) : currentError ? (
+              <Card className="border-red-200 bg-red-50/50">
+                <CardContent className="p-6 sm:p-8 text-center">
+                  <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
+                  <h3 className="text-base font-semibold text-red-800 mb-1">
+                    분석 데이터를 불러오지 못했습니다
+                  </h3>
+                  <p className="text-sm text-red-600 mb-4">
+                    {currentError?.code === "ECONNABORTED"
+                      ? "서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."
+                      : currentError?.response?.status === 500
+                        ? "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                        : "네트워크 오류가 발생했습니다."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => queryClient.invalidateQueries()}
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1.5" />
+                    다시 시도
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {activeTab === "actions" && actionData && (
+                  <div className="space-y-6">
+                    {channelPriorityData &&
+                      channelPriorityData.totalCitations > 0 && (
+                        <ChannelPriorityWidget data={channelPriorityData} />
+                      )}
+                    <ActionReport data={actionData} />
+                  </div>
+                )}
+                {activeTab === "mention" && mentionData && (
+                  <MentionAnalysis data={mentionData} />
+                )}
+                {activeTab === "positioning" && positionData && (
+                  <PositioningMap data={positionData} />
+                )}
+                {activeTab === "trend" && trendData && (
+                  <TrendAnalysis
+                    data={trendData}
+                    cohort={trendCohort}
+                    onCohortChange={setTrendCohort}
+                  />
+                )}
+                {activeTab === "sources" && sourceData && (
+                  <SourceAnalysis
+                    data={sourceData}
+                    diagnostic={diagnosticData}
+                    geminiDiet={geminiDietData}
+                  />
+                )}
+                {activeTab === "topUrls" && topUrlsData && (
+                  <TopUrlsRanking data={topUrlsData} />
+                )}
+                {activeTab === "urlMatrix" && urlMatrixData && (
+                  <UrlMatrix data={urlMatrixData} />
+                )}
+                {activeTab === "breadth" && breadthData && (
+                  <BreadthInsights data={breadthData} />
+                )}
+                {activeTab === "sourceIntel" && (
+                  <SourceIntelDashboard
+                    summary={siSummary}
+                    topSources={siTopSources}
+                    instagram={siInstagram}
+                    hints={siHints}
+                    hospitalId={hospitalId!}
+                  />
+                )}
+                {activeTab === "newChannels" && newChannelsData && (
+                  <NewChannels data={newChannelsData} />
+                )}
+                {activeTab === "sourceQuality" && sourceQualityData && (
+                  <SourceQuality data={sourceQualityData} />
+                )}
+              </>
             )}
-            {activeTab === 'mention' && mentionData && <MentionAnalysis data={mentionData} />}
-            {activeTab === 'positioning' && positionData && <PositioningMap data={positionData} />}
-            {activeTab === 'trend' && trendData && <TrendAnalysis data={trendData} cohort={trendCohort} onCohortChange={setTrendCohort} />}
-            {activeTab === 'sources' && sourceData && <SourceAnalysis data={sourceData} diagnostic={diagnosticData} geminiDiet={geminiDietData} />}
-            {activeTab === 'topUrls' && topUrlsData && <TopUrlsRanking data={topUrlsData} />}
-            {activeTab === 'urlMatrix' && urlMatrixData && <UrlMatrix data={urlMatrixData} />}
-            {activeTab === 'breadth' && breadthData && <BreadthInsights data={breadthData} />}
-            {activeTab === 'sourceIntel' && (
-              <SourceIntelDashboard
-                summary={siSummary}
-                topSources={siTopSources}
-                instagram={siInstagram}
-                hints={siHints}
-                hospitalId={hospitalId!}
-              />
-            )}
-            {activeTab === 'newChannels' && newChannelsData && <NewChannels data={newChannelsData} />}
-            {activeTab === 'sourceQuality' && sourceQualityData && <SourceQuality data={sourceQualityData} />}
-          </>
-        )}
+          </div>
+        </div>
       </div>
+      <style jsx global>{`
+        .signal-insights .insight-stat-band {
+          gap: 0;
+          overflow: hidden;
+          border: 1px solid #dee4d9;
+          border-radius: 20px;
+          background: #fff;
+        }
+        .signal-insights .insight-stat-band > div {
+          border: 0 !important;
+          border-right: 1px solid #dee4d9 !important;
+          border-radius: 0 !important;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+        .signal-insights .insight-stat-band > div:last-child {
+          border-right: 0 !important;
+        }
+        .signal-insights .insight-stat-band > div > div {
+          padding: 22px 20px;
+          text-align: left;
+        }
+        .signal-insights .insight-stat-band .text-2xl {
+          font-size: 30px;
+          font-weight: 600;
+          letter-spacing: -0.04em;
+        }
+        .signal-insights .insight-row-list {
+          overflow: hidden;
+          border: 1px solid #dee4d9;
+          border-radius: 20px;
+          background: #fff;
+        }
+        .signal-insights .insight-row-list > div {
+          margin: 0 !important;
+          border: 0 !important;
+          border-bottom: 1px solid #dee4d9 !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+        }
+        .signal-insights .insight-row-list > div:last-child {
+          border-bottom: 0 !important;
+        }
+        @media (max-width: 1023px) {
+          .signal-insights .insight-stat-band > div:nth-child(2n) {
+            border-right: 0 !important;
+          }
+          .signal-insights .insight-stat-band > div:nth-child(n + 3) {
+            border-top: 1px solid #dee4d9 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
@@ -280,7 +573,8 @@ export default function InsightsPage() {
 // ==================== 1. 추천 멘트 분석 ====================
 function MentionAnalysis({ data }: { data: any }) {
   const ctx = data.recommendationContext || {};
-  const totalMentioned = ctx.primaryRecommend + ctx.listRecommend + ctx.conditionalRecommend;
+  const totalMentioned =
+    ctx.primaryRecommend + ctx.listRecommend + ctx.conditionalRecommend;
   const conf = data.confidenceSummary;
 
   return (
@@ -292,12 +586,14 @@ function MentionAnalysis({ data }: { data: any }) {
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-amber-800">
-                신뢰도 알림: {conf.lowConfidenceCount}개 응답이 저신뢰 (40% 미만)
+                신뢰도 알림: {conf.lowConfidenceCount}개 응답이 저신뢰 (40%
+                미만)
               </p>
               <p className="text-xs text-amber-600 mt-1">
-                평균 신뢰도 {Math.round((conf.avgConfidence || 0) * 100)}% · 
-                고신뢰(≥70%) {conf.highConfidenceCount}개 / 전체 {conf.totalWithConfidence}개 · 
-                AI 응답의 불확실성이 높은 항목은 직접 확인을 권장합니다
+                평균 신뢰도 {Math.round((conf.avgConfidence || 0) * 100)}% ·
+                고신뢰(≥70%) {conf.highConfidenceCount}개 / 전체{" "}
+                {conf.totalWithConfidence}개 · AI 응답의 불확실성이 높은 항목은
+                직접 확인을 권장합니다
               </p>
             </div>
           </CardContent>
@@ -305,37 +601,60 @@ function MentionAnalysis({ data }: { data: any }) {
       )}
 
       {/* 요약 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-blue-50 border-brand-200">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">전체 응답</p>
-            <p className="text-2xl font-bold text-brand-800">{data.totalResponses}</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.totalResponses}
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium">언급된 응답</p>
-            <p className="text-2xl font-bold text-green-800">{data.mentionedResponses}</p>
+            <p className="text-2xl font-bold text-green-800">
+              {data.mentionedResponses}
+            </p>
             <p className="text-xs text-green-600">
-              {data.totalResponses > 0 ? Math.round((data.mentionedResponses / data.totalResponses) * 100) : 0}%
+              {data.totalResponses > 0
+                ? Math.round(
+                    (data.mentionedResponses / data.totalResponses) * 100,
+                  )
+                : 0}
+              %
             </p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4">
             <p className="text-xs text-amber-600 font-medium">1순위 추천</p>
-            <p className="text-2xl font-bold text-amber-800">{ctx.primaryRecommend || 0}</p>
+            <p className="text-2xl font-bold text-amber-800">
+              {ctx.primaryRecommend || 0}
+            </p>
             <p className="text-xs text-amber-600">
-              {totalMentioned > 0 ? Math.round(((ctx.primaryRecommend || 0) / totalMentioned) * 100) : 0}%
+              {totalMentioned > 0
+                ? Math.round(
+                    ((ctx.primaryRecommend || 0) / totalMentioned) * 100,
+                  )
+                : 0}
+              %
             </p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium">조건부 추천</p>
-            <p className="text-2xl font-bold text-purple-800">{ctx.conditionalRecommend || 0}</p>
-            <p className="text-xs text-purple-600">
-              {totalMentioned > 0 ? Math.round(((ctx.conditionalRecommend || 0) / totalMentioned) * 100) : 0}%
+            <p className="text-xs text-brand-600 font-medium">조건부 추천</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {ctx.conditionalRecommend || 0}
+            </p>
+            <p className="text-xs text-brand-600">
+              {totalMentioned > 0
+                ? Math.round(
+                    ((ctx.conditionalRecommend || 0) / totalMentioned) * 100,
+                  )
+                : 0}
+              %
             </p>
           </CardContent>
         </Card>
@@ -344,23 +663,32 @@ function MentionAnalysis({ data }: { data: any }) {
       {/* 추천 키워드 분석 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Target className="h-5 w-5 text-brand-600" />
             AI가 우리 병원을 추천할 때 강조하는 포인트
           </h3>
-          <p className="text-xs text-slate-500 mb-4">AI 응답에서 우리 병원 언급 주변의 키워드를 분석합니다</p>
+          <p className="text-xs text-[#778378] mb-4">
+            AI 응답에서 우리 병원 언급 주변의 키워드를 분석합니다
+          </p>
           {data.recommendationKeywords?.length > 0 ? (
             <div className="space-y-3">
               {data.recommendationKeywords.map((kw: any, i: number) => {
                 const maxCount = data.recommendationKeywords[0].count;
-                const percentage = maxCount > 0 ? Math.round((kw.count / maxCount) * 100) : 0;
+                const percentage =
+                  maxCount > 0 ? Math.round((kw.count / maxCount) * 100) : 0;
                 return (
                   <div key={kw.keyword} className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-slate-700 w-24 flex-shrink-0">{kw.keyword}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-6 relative overflow-hidden">
+                    <span className="text-sm font-medium text-[#536354] w-24 flex-shrink-0">
+                      {kw.keyword}
+                    </span>
+                    <div className="flex-1 bg-[#EDF0E9] rounded-full h-6 relative overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
-                          i === 0 ? 'bg-brand-500' : i === 1 ? 'bg-brand-400' : 'bg-blue-300'
+                          i === 0
+                            ? "bg-brand-500"
+                            : i === 1
+                              ? "bg-brand-400"
+                              : "bg-brand-300"
                         }`}
                         style={{ width: `${percentage}%` }}
                       />
@@ -373,7 +701,9 @@ function MentionAnalysis({ data }: { data: any }) {
               })}
             </div>
           ) : (
-            <p className="text-slate-400 text-sm">아직 충분한 데이터가 없습니다</p>
+            <p className="text-[#8F9B8C] text-sm">
+              아직 충분한 데이터가 없습니다
+            </p>
           )}
         </CardContent>
       </Card>
@@ -381,48 +711,65 @@ function MentionAnalysis({ data }: { data: any }) {
       {/* 플랫폼별 추천 방식 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-purple-600" />
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-brand-600" />
             플랫폼별 추천 패턴
           </h3>
-          <p className="text-xs text-slate-500 mb-4">각 AI 플랫폼이 우리 병원을 어떤 방식으로 추천하는지</p>
+          <p className="text-xs text-[#778378] mb-4">
+            각 AI 플랫폼이 우리 병원을 어떤 방식으로 추천하는지
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {Object.entries(data.platformContext || {}).map(([platform, stats]: [string, any]) => {
-              const mentioned = stats.primary + stats.list + stats.conditional;
-              return (
-                <div key={platform} className="border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
-                    <span className="font-medium text-slate-900">{platformNames[platform]}</span>
-                    <span className="text-xs text-slate-400 ml-auto">{stats.total}건</span>
-                  </div>
-                  {mentioned > 0 ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-amber-600 flex items-center gap-1">
-                          <Award className="h-3 w-3" /> 1순위 추천
-                        </span>
-                        <span className="font-bold">{stats.primary}건</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-brand-600">목록 나열</span>
-                        <span className="font-bold">{stats.list}건</span>
-                      </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-purple-600">조건부 추천</span>
-                        <span className="font-bold">{stats.conditional}건</span>
-                      </div>
-                      <div className="flex justify-between text-xs border-t pt-2">
-                        <span className="text-slate-500">언급 안됨</span>
-                        <span className="text-slate-400">{stats.notMentioned}건</span>
-                      </div>
+            {Object.entries(data.platformContext || {}).map(
+              ([platform, stats]: [string, any]) => {
+                const mentioned =
+                  stats.primary + stats.list + stats.conditional;
+                return (
+                  <div key={platform} className="border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className={`w-3 h-3 rounded-full ${platformColors[platform]}`}
+                      />
+                      <span className="font-medium text-[#15231B]">
+                        {platformNames[platform]}
+                      </span>
+                      <span className="text-xs text-[#8F9B8C] ml-auto">
+                        {stats.total}건
+                      </span>
                     </div>
-                  ) : (
-                    <p className="text-xs text-slate-400">아직 언급된 적 없음</p>
-                  )}
-                </div>
-              );
-            })}
+                    {mentioned > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-amber-600 flex items-center gap-1">
+                            <Award className="h-3 w-3" /> 1순위 추천
+                          </span>
+                          <span className="font-bold">{stats.primary}건</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-brand-600">목록 나열</span>
+                          <span className="font-bold">{stats.list}건</span>
+                        </div>
+                        <div className="flex justify-between text-xs">
+                          <span className="text-brand-600">조건부 추천</span>
+                          <span className="font-bold">
+                            {stats.conditional}건
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs border-t pt-2">
+                          <span className="text-[#778378]">언급 안됨</span>
+                          <span className="text-[#8F9B8C]">
+                            {stats.notMentioned}건
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[#8F9B8C]">
+                        아직 언급된 적 없음
+                      </p>
+                    )}
+                  </div>
+                );
+              },
+            )}
           </div>
         </CardContent>
       </Card>
@@ -431,38 +778,50 @@ function MentionAnalysis({ data }: { data: any }) {
       {data.competitorComparison?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-600" />
               경쟁사 대비 차별화 포인트
             </h3>
-            <p className="text-xs text-slate-500 mb-4">AI가 경쟁사를 추천할 때 강조하는 포인트 vs 우리</p>
+            <p className="text-xs text-[#778378] mb-4">
+              AI가 경쟁사를 추천할 때 강조하는 포인트 vs 우리
+            </p>
             <div className="space-y-3">
               {/* 우리 병원 */}
               <div className="bg-brand-50 rounded-lg p-4">
                 <p className="text-sm font-semibold text-brand-800 mb-2">
-                  🏥 {data.hospitalName} (우리)
+                  {data.hospitalName} (우리)
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(data.ourStrengthProfile || {})
                     .sort(([, a]: any, [, b]: any) => b - a)
                     .slice(0, 5)
                     .map(([attr, count]: any) => (
-                      <span key={attr} className="text-xs bg-brand-100 text-brand-700 px-2 py-1 rounded-full">
+                      <span
+                        key={attr}
+                        className="text-xs bg-brand-100 text-brand-700 px-2 py-1 rounded-full"
+                      >
                         {attr} ({count})
                       </span>
                     ))}
                   {Object.keys(data.ourStrengthProfile || {}).length === 0 && (
-                    <span className="text-xs text-brand-400">데이터 수집 중...</span>
+                    <span className="text-xs text-brand-400">
+                      데이터 수집 중...
+                    </span>
                   )}
                 </div>
               </div>
               {/* 경쟁사 */}
               {data.competitorComparison.map((comp: any) => (
                 <div key={comp.name} className="bg-slate-50 rounded-lg p-4">
-                  <p className="text-sm font-medium text-slate-700 mb-2">{comp.name}</p>
+                  <p className="text-sm font-medium text-[#536354] mb-2">
+                    {comp.name}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {comp.topAttributes?.map((attr: any) => (
-                      <span key={attr.keyword} className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full">
+                      <span
+                        key={attr.keyword}
+                        className="text-xs bg-slate-200 text-[#667668] px-2 py-1 rounded-full"
+                      >
                         {attr.keyword} ({attr.count})
                       </span>
                     ))}
@@ -478,41 +837,65 @@ function MentionAnalysis({ data }: { data: any }) {
       {data.sampleMentions?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
               <Quote className="h-5 w-5 text-green-600" />
               AI의 실제 추천 문구
             </h3>
-            <p className="text-xs text-slate-500 mb-4">AI가 실제로 우리 병원을 언급한 원문 발췌</p>
+            <p className="text-xs text-[#778378] mb-4">
+              AI가 실제로 우리 병원을 언급한 원문 발췌
+            </p>
             <div className="space-y-4">
               {data.sampleMentions.map((mention: any, i: number) => (
-                <div key={i} className="border-l-4 border-l-green-400 pl-4 py-2">
+                <div
+                  key={i}
+                  className="border-l-4 border-l-green-400 pl-4 py-2"
+                >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded ${platformBgColors[mention.platform]}`}>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${platformBgColors[mention.platform]}`}
+                    >
                       {platformNames[mention.platform]}
                     </span>
                     {mention.position && (
-                      <span className="text-xs text-amber-600 font-medium">{mention.position}위</span>
+                      <span className="text-xs text-amber-600 font-medium">
+                        {mention.position}위
+                      </span>
                     )}
                     {mention.sentiment && (
-                      <span className={`text-xs ${
-                        mention.sentiment === 'POSITIVE' ? 'text-green-600' :
-                        mention.sentiment === 'NEGATIVE' ? 'text-red-600' : 'text-slate-400'
-                      }`}>
-                        {mention.sentiment === 'POSITIVE' ? '😊 긍정' : mention.sentiment === 'NEGATIVE' ? '😟 부정' : '😐 중립'}
+                      <span
+                        className={`text-xs ${
+                          mention.sentiment === "POSITIVE"
+                            ? "text-green-600"
+                            : mention.sentiment === "NEGATIVE"
+                              ? "text-red-600"
+                              : "text-[#8F9B8C]"
+                        }`}
+                      >
+                        {mention.sentiment === "POSITIVE"
+                          ? " 긍정"
+                          : mention.sentiment === "NEGATIVE"
+                            ? " 부정"
+                            : " 중립"}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mb-1">Q: {mention.question}</p>
-                  <p className="text-sm text-slate-700 italic leading-relaxed">
+                  <p className="text-xs text-[#778378] mb-1">
+                    Q: {mention.question}
+                  </p>
+                  <p className="text-sm text-[#536354] italic leading-relaxed">
                     "{mention.excerpt}"
                   </p>
                   {mention.confidenceScore != null && (
                     <div className="mt-2 flex items-center gap-2">
-                      <div className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        mention.confidenceScore >= 0.7 ? 'bg-green-100 text-green-700' :
-                        mention.confidenceScore >= 0.4 ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
+                      <div
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          mention.confidenceScore >= 0.7
+                            ? "bg-green-100 text-green-700"
+                            : mention.confidenceScore >= 0.4
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700"
+                        }`}
+                      >
                         신뢰도 {Math.round(mention.confidenceScore * 100)}%
                       </div>
                       {mention.isLowConfidence && (
@@ -534,69 +917,112 @@ function MentionAnalysis({ data }: { data: any }) {
 }
 
 // ==================== 2. 트렌드 분석 ====================
-function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'all' | 'fixed'; onCohortChange: (c: 'all' | 'fixed') => void }) {
-  const markerDates = new Set((data.promptMarkers || []).map((m: any) => m.date));
-  const markerCount = (date: string) => (data.promptMarkers || []).find((m: any) => m.date === date)?.count || 0;
+function TrendAnalysis({
+  data,
+  cohort,
+  onCohortChange,
+}: {
+  data: any;
+  cohort: "all" | "fixed";
+  onCohortChange: (c: "all" | "fixed") => void;
+}) {
+  const markerDates = new Set(
+    (data.promptMarkers || []).map((m: any) => m.date),
+  );
+  const markerCount = (date: string) =>
+    (data.promptMarkers || []).find((m: any) => m.date === date)?.count || 0;
   return (
     <div className="space-y-6">
       {/* 코호트 토글 — 신규 프롬프트 유입 착시 제거 */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-xl border bg-white p-1">
           <button
-            onClick={() => onCohortChange('all')}
+            onClick={() => onCohortChange("all")}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              cohort === 'all' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              cohort === "all"
+                ? "bg-brand-600 text-white"
+                : "text-[#667668] hover:bg-slate-50"
             }`}
           >
-            <TermTip term="allPrompts" icon={false}>전체 프롬프트</TermTip>
+            <TermTip term="allPrompts" icon={false}>
+              전체 프롬프트
+            </TermTip>
           </button>
           <button
-            onClick={() => onCohortChange('fixed')}
+            onClick={() => onCohortChange("fixed")}
             className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              cohort === 'fixed' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
+              cohort === "fixed"
+                ? "bg-brand-600 text-white"
+                : "text-[#667668] hover:bg-slate-50"
             }`}
           >
-            <TermTip term="fixedCohort" icon={false}>고정 코호트</TermTip>
+            <TermTip term="fixedCohort" icon={false}>
+              고정 코호트
+            </TermTip>
           </button>
         </div>
-        {cohort === 'fixed' ? (
-          <p className="text-xs text-slate-500">
-            기간 시작 전부터 있던 프롬프트 <span className="font-semibold text-slate-700">{data.cohortInfo?.cohortPrompts ?? 0}개</span>만 집계 — 같은 질문 셋으로 기간 전체를 비교합니다
+        {cohort === "fixed" ? (
+          <p className="text-xs text-[#778378]">
+            기간 시작 전부터 있던 프롬프트{" "}
+            <span className="font-semibold text-[#536354]">
+              {data.cohortInfo?.cohortPrompts ?? 0}개
+            </span>
+            만 집계 — 같은 질문 셋으로 기간 전체를 비교합니다
           </p>
         ) : (
           data.cohortInfo?.addedInPeriod > 0 && (
             <p className="text-xs text-amber-600">
-              ⚠️ 기간 중 프롬프트 {data.cohortInfo.addedInPeriod}개 추가됨 — 평균이 희석될 수 있으니 실제 성과 추이는 &lsquo;고정 코호트&rsquo;로 확인하세요
+              기간 중 프롬프트 {data.cohortInfo.addedInPeriod}개 추가됨 — 평균이
+              희석될 수 있으니 실제 성과 추이는 &lsquo;고정 코호트&rsquo;로
+              확인하세요
             </p>
           )
         )}
       </div>
 
       {/* 요약 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-blue-50 border-brand-200">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium"><TermTip term="totalResponses">전체 응답 (60일)</TermTip></p>
-            <p className="text-2xl font-bold text-brand-800">{data.summary?.totalResponses || 0}</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="totalResponses">전체 응답 (60일)</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.summary?.totalResponses || 0}
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium"><TermTip term="totalMentions">총 언급</TermTip></p>
-            <p className="text-2xl font-bold text-green-800">{data.summary?.totalMentions || 0}</p>
+            <p className="text-xs text-green-600 font-medium">
+              <TermTip term="totalMentions">총 언급</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-green-800">
+              {data.summary?.totalMentions || 0}
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4">
-            <p className="text-xs text-amber-600 font-medium"><TermTip term="mentionRate">언급률</TermTip></p>
-            <p className="text-2xl font-bold text-amber-800">{data.summary?.overallMentionRate || 0}%</p>
+            <p className="text-xs text-amber-600 font-medium">
+              <TermTip term="mentionRate">언급률</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-amber-800">
+              {data.summary?.overallMentionRate || 0}%
+            </p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium"><TermTip term="firstPositionShare">1위 점유율</TermTip></p>
-            <p className="text-2xl font-bold text-purple-800">{data.summary?.firstPositionShare ?? 0}%</p>
-            <p className="text-[10px] text-purple-500 mt-0.5">언급 시 첫 번째로 불린 비율</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="firstPositionShare">1위 점유율</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.summary?.firstPositionShare ?? 0}%
+            </p>
+            <p className="text-[10px] text-brand-500 mt-0.5">
+              언급 시 첫 번째로 불린 비율
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -605,32 +1031,51 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
       {data.summary?.positionDistribution && data.summary.totalMentions > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-purple-600" />
-              <TermTip term="positionDistribution" icon={false}>AI 추천 순서 분포</TermTip>
+            <h3 className="text-sm font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-brand-600" />
+              <TermTip term="positionDistribution" icon={false}>
+                AI 추천 순서 분포
+              </TermTip>
             </h3>
-            <p className="text-xs text-slate-500 mb-3">AI 답변은 보통 3~5곳을 추천합니다 — 언급돼도 몇 번째로 불렸는지가 환자 눈에 꽂힐 확률을 가릅니다</p>
+            <p className="text-xs text-[#778378] mb-3">
+              AI 답변은 보통 3~5곳을 추천합니다 — 언급돼도 몇 번째로 불렸는지가
+              환자 눈에 꽂힐 확률을 가릅니다
+            </p>
             {(() => {
               const pd = data.summary.positionDistribution;
               const totalPos = pd.first + pd.second + pd.third + pd.fourthPlus;
-              if (totalPos === 0) return <p className="text-xs text-slate-400">포지션 데이터 없음</p>;
+              if (totalPos === 0)
+                return (
+                  <p className="text-xs text-[#8F9B8C]">포지션 데이터 없음</p>
+                );
               const rows = [
-                { label: '1번째', count: pd.first, color: 'bg-purple-500' },
-                { label: '2번째', count: pd.second, color: 'bg-purple-300' },
-                { label: '3번째', count: pd.third, color: 'bg-slate-300' },
-                { label: '4번째 이하', count: pd.fourthPlus, color: 'bg-slate-200' },
+                { label: "1번째", count: pd.first, color: "bg-brand-500" },
+                { label: "2번째", count: pd.second, color: "bg-brand-300" },
+                { label: "3번째", count: pd.third, color: "bg-slate-300" },
+                {
+                  label: "4번째 이하",
+                  count: pd.fourthPlus,
+                  color: "bg-slate-200",
+                },
               ];
               return (
                 <div className="space-y-2">
-                  {rows.map(row => {
+                  {rows.map((row) => {
                     const pct = Math.round((row.count / totalPos) * 100);
                     return (
                       <div key={row.label} className="flex items-center gap-3">
-                        <span className="text-xs text-slate-600 w-16">{row.label}</span>
+                        <span className="text-xs text-[#667668] w-16">
+                          {row.label}
+                        </span>
                         <div className="flex-1 h-4 bg-slate-50 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${row.color}`} style={{ width: `${pct}%` }} />
+                          <div
+                            className={`h-full rounded-full ${row.color}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
-                        <span className="text-xs text-slate-600 w-20 text-right">{row.count}건 ({pct}%)</span>
+                        <span className="text-xs text-[#667668] w-20 text-right">
+                          {row.count}건 ({pct}%)
+                        </span>
                       </div>
                     );
                   })}
@@ -644,55 +1089,93 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
       {/* 플랫폼별 트렌드 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-brand-600" />
             플랫폼별 가시성 트렌드
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {Object.entries(data.platformTrend || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${platformColors[platform]}`} />
-                    <span className="font-medium text-slate-900">{platformNames[platform]}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {stats.trend === 'UP' && <ArrowUpRight className="h-4 w-4 text-green-600" />}
-                    {stats.trend === 'DOWN' && <ArrowDownRight className="h-4 w-4 text-red-600" />}
-                    {stats.trend === 'STABLE' && <Minus className="h-4 w-4 text-slate-400" />}
-                    <span className={`text-xs font-medium ${
-                      stats.trend === 'UP' ? 'text-green-600' :
-                      stats.trend === 'DOWN' ? 'text-red-600' : 'text-slate-400'
-                    }`}>
-                      {stats.trend === 'UP' ? '상승' : stats.trend === 'DOWN' ? '하락' : '유지'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-3xl font-bold text-slate-900">{stats.mentionRate}%</p>
-                    <p className="text-xs text-slate-500"><TermTip term="mentionRate" icon={false}>언급률</TermTip></p>
-                  </div>
-                  {stats.firstShare != null && (
-                    <div className="text-center">
-                      <p className="text-lg font-bold text-purple-600">{stats.firstShare}%</p>
-                      <p className="text-xs text-slate-400"><TermTip term="firstPositionShare" icon={false}>1위 점유</TermTip></p>
+            {Object.entries(data.platformTrend || {}).map(
+              ([platform, stats]: [string, any]) => (
+                <div
+                  key={platform}
+                  className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className={`w-3 h-3 rounded-full ${platformColors[platform]}`}
+                      />
+                      <span className="font-medium text-[#15231B]">
+                        {platformNames[platform]}
+                      </span>
                     </div>
-                  )}
-                  <div className="text-right">
-                    <p className="text-sm text-slate-600">{stats.mentioned}/{stats.total}</p>
-                    <p className="text-xs text-slate-400">언급/전체</p>
+                    <div className="flex items-center gap-1">
+                      {stats.trend === "UP" && (
+                        <ArrowUpRight className="h-4 w-4 text-green-600" />
+                      )}
+                      {stats.trend === "DOWN" && (
+                        <ArrowDownRight className="h-4 w-4 text-red-600" />
+                      )}
+                      {stats.trend === "STABLE" && (
+                        <Minus className="h-4 w-4 text-[#8F9B8C]" />
+                      )}
+                      <span
+                        className={`text-xs font-medium ${
+                          stats.trend === "UP"
+                            ? "text-green-600"
+                            : stats.trend === "DOWN"
+                              ? "text-red-600"
+                              : "text-[#8F9B8C]"
+                        }`}
+                      >
+                        {stats.trend === "UP"
+                          ? "상승"
+                          : stats.trend === "DOWN"
+                            ? "하락"
+                            : "유지"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-3xl font-bold text-[#15231B]">
+                        {stats.mentionRate}%
+                      </p>
+                      <p className="text-xs text-[#778378]">
+                        <TermTip term="mentionRate" icon={false}>
+                          언급률
+                        </TermTip>
+                      </p>
+                    </div>
+                    {stats.firstShare != null && (
+                      <div className="text-center">
+                        <p className="text-lg font-bold text-brand-600">
+                          {stats.firstShare}%
+                        </p>
+                        <p className="text-xs text-[#8F9B8C]">
+                          <TermTip term="firstPositionShare" icon={false}>
+                            1위 점유
+                          </TermTip>
+                        </p>
+                      </div>
+                    )}
+                    <div className="text-right">
+                      <p className="text-sm text-[#667668]">
+                        {stats.mentioned}/{stats.total}
+                      </p>
+                      <p className="text-xs text-[#8F9B8C]">언급/전체</p>
+                    </div>
+                  </div>
+                  {/* 간단한 바 */}
+                  <div className="mt-3 bg-[#EDF0E9] rounded-full h-2 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${platformColors[platform]}`}
+                      style={{ width: `${stats.mentionRate}%` }}
+                    />
                   </div>
                 </div>
-                {/* 간단한 바 */}
-                <div className="mt-3 bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${platformColors[platform]}`}
-                    style={{ width: `${stats.mentionRate}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ),
+            )}
           </div>
         </CardContent>
       </Card>
@@ -701,60 +1184,99 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
       {data.dailyData?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-purple-600" />
+            <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-brand-600" />
               일별 크롤링 기록
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium text-slate-500">날짜</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">전체</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">언급</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="mentionRate" icon={false}>언급률</TermTip></th>
-                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="firstPositionShare">1위 점유</TermTip></th>
-                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="sentiment" icon={false}>감성</TermTip></th>
+                    <th className="pb-2 font-medium text-[#778378]">날짜</th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      전체
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      언급
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      <TermTip term="mentionRate" icon={false}>
+                        언급률
+                      </TermTip>
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      <TermTip term="firstPositionShare">1위 점유</TermTip>
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      <TermTip term="sentiment" icon={false}>
+                        감성
+                      </TermTip>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.dailyData.slice(-14).reverse().map((day: any) => (
-                    <tr key={day.date} className="border-b last:border-0 hover:bg-white/60">
-                      <td className="py-2 text-slate-700">
-                        {new Date(day.date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', weekday: 'short' })}
-                        {markerDates.has(day.date) && (
-                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700" title={`이날 프롬프트 ${markerCount(day.date)}개 추가 — 이후 언급률 변동은 신규 질문 유입 영향일 수 있음`}>
-                            +{markerCount(day.date)} 프롬프트
+                  {data.dailyData
+                    .slice(-14)
+                    .reverse()
+                    .map((day: any) => (
+                      <tr
+                        key={day.date}
+                        className="border-b last:border-0 hover:bg-white/60"
+                      >
+                        <td className="py-2 text-[#536354]">
+                          {new Date(day.date).toLocaleDateString("ko-KR", {
+                            month: "short",
+                            day: "numeric",
+                            weekday: "short",
+                          })}
+                          {markerDates.has(day.date) && (
+                            <span
+                              className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700"
+                              title={`이날 프롬프트 ${markerCount(day.date)}개 추가 — 이후 언급률 변동은 신규 질문 유입 영향일 수 있음`}
+                            >
+                              +{markerCount(day.date)} 프롬프트
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2 text-center text-[#667668]">
+                          {day.total}
+                        </td>
+                        <td className="py-2 text-center text-green-600 font-medium">
+                          {day.mentioned}
+                        </td>
+                        <td className="py-2 text-center">
+                          <span
+                            className={`font-medium ${day.mentionRate >= 50 ? "text-green-600" : day.mentionRate >= 30 ? "text-amber-600" : "text-red-500"}`}
+                          >
+                            {day.mentionRate}%
                           </span>
-                        )}
-                      </td>
-                      <td className="py-2 text-center text-slate-600">{day.total}</td>
-                      <td className="py-2 text-center text-green-600 font-medium">{day.mentioned}</td>
-                      <td className="py-2 text-center">
-                        <span className={`font-medium ${day.mentionRate >= 50 ? 'text-green-600' : day.mentionRate >= 30 ? 'text-amber-600' : 'text-red-500'}`}>
-                          {day.mentionRate}%
-                        </span>
-                      </td>
-                      <td className="py-2 text-center">
-                        {day.firstShare != null ? (
-                          <span className={`text-xs font-medium ${day.firstShare >= 50 ? 'text-purple-600' : 'text-slate-500'}`}>
-                            {day.firstShare}%
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-300">-</span>
-                        )}
-                      </td>
-                      <td className="py-2 text-center">
-                        <span className="text-green-500 text-xs">+{day.sentiment.positive}</span>
-                        {' '}
-                        <span className="text-slate-400 text-xs">{day.sentiment.neutral}</span>
-                        {' '}
-                        {day.sentiment.negative > 0 && (
-                          <span className="text-red-500 text-xs">-{day.sentiment.negative}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-2 text-center">
+                          {day.firstShare != null ? (
+                            <span
+                              className={`text-xs font-medium ${day.firstShare >= 50 ? "text-brand-600" : "text-[#778378]"}`}
+                            >
+                              {day.firstShare}%
+                            </span>
+                          ) : (
+                            <span className="text-xs text-slate-300">-</span>
+                          )}
+                        </td>
+                        <td className="py-2 text-center">
+                          <span className="text-green-500 text-xs">
+                            +{day.sentiment.positive}
+                          </span>{" "}
+                          <span className="text-[#8F9B8C] text-xs">
+                            {day.sentiment.neutral}
+                          </span>{" "}
+                          {day.sentiment.negative > 0 && (
+                            <span className="text-red-500 text-xs">
+                              -{day.sentiment.negative}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -773,43 +1295,50 @@ function TrendAnalysis({ data, cohort, onCohortChange }: { data: any; cohort: 'a
 function ChannelPriorityWidget({ data }: { data: any }) {
   const [expanded, setExpanded] = useState(false);
   const channels: any[] = data.channels || [];
-  const investable = channels.filter((c) => c.verdict !== '통제 불가');
+  const investable = channels.filter((c) => c.verdict !== "통제 불가");
   const visible = expanded ? investable : investable.slice(0, 8);
 
   const verdictStyle: Record<string, string> = {
-    '집중 투자': 'bg-red-100 text-red-700 border-red-200',
-    '유지·강화': 'bg-green-100 text-green-700 border-green-200',
-    '저비용 실험': 'bg-sky-100 text-sky-700 border-sky-200',
-    '후순위': 'bg-slate-100 text-slate-500 border-slate-200',
+    "집중 투자": "bg-red-100 text-red-700 border-red-200",
+    "유지·강화": "bg-green-100 text-green-700 border-green-200",
+    "저비용 실험": "bg-sky-100 text-sky-700 border-sky-200",
+    후순위: "bg-[#EDF0E9] text-[#778378] border-slate-200",
   };
   const scoreColor = (s: number) =>
-    s >= 70 ? 'text-red-600' : s >= 55 ? 'text-amber-600' : 'text-slate-500';
+    s >= 70 ? "text-red-600" : s >= 55 ? "text-amber-600" : "text-[#778378]";
 
   return (
     <Card className="border-amber-200">
       <CardContent className="p-5">
-        <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
           <Target className="h-5 w-5 text-amber-600" />
           채널 투자 우선순위
-          <span className="text-xs font-normal text-slate-400">
-            ({data.period} · 전 AI 플랫폼 인용 {data.totalCitations?.toLocaleString()}건 기반)
+          <span className="text-xs font-normal text-[#8F9B8C]">
+            ({data.period} · 전 AI 플랫폼 인용{" "}
+            {data.totalCitations?.toLocaleString()}건 기반)
           </span>
         </h3>
-        <p className="text-xs text-slate-500 mb-4">
-          AI가 많이 긁는 채널(식탁 점유 45%) × 아직 우리 이름이 덜 실리는 정도(침투 여지 25%) × 우리가 직접 깔 수 있는 정도(통제 가능성 30%)
-          — 다음 콘텐츠 예산을 어디에 쓸지 한 줄로 답합니다.
+        <p className="text-xs text-[#778378] mb-4">
+          AI가 많이 긁는 채널(식탁 점유 45%) × 아직 우리 이름이 덜 실리는
+          정도(침투 여지 25%) × 우리가 직접 깔 수 있는 정도(통제 가능성 30%) —
+          다음 콘텐츠 예산을 어디에 쓸지 한 줄로 답합니다.
         </p>
 
         {/* 집중 투자 요약 */}
         {(data.focus || []).length > 0 && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-xl">
             <p className="text-xs text-amber-800">
-              🎯 <strong>이번 분기 집중 투자:</strong>{' '}
+              <strong>이번 분기 집중 투자:</strong>{" "}
               {data.focus.map((f: any, i: number) => (
                 <span key={f.channel}>
-                  {i > 0 && ' · '}
-                  <strong>{f.channel}</strong> (인용 {f.count.toLocaleString()}건인데{' '}
-                  <TermTip term="companionRate" icon={false}>동반율</TermTip> {f.companionRate}% — 식탁엔 자주 오르는데 우리 이름이 빠져 있음)
+                  {i > 0 && " · "}
+                  <strong>{f.channel}</strong> (인용 {f.count.toLocaleString()}
+                  건인데{" "}
+                  <TermTip term="companionRate" icon={false}>
+                    동반율
+                  </TermTip>{" "}
+                  {f.companionRate}% — 식탁엔 자주 오르는데 우리 이름이 빠져
+                  있음)
                 </span>
               ))}
             </p>
@@ -819,33 +1348,58 @@ function ChannelPriorityWidget({ data }: { data: any }) {
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="text-slate-400 border-b border-slate-100">
+              <tr className="text-[#8F9B8C] border-b border-slate-100">
                 <th className="text-left py-2 pr-2 font-medium">채널</th>
                 <th className="text-right py-2 px-2 font-medium">스코어</th>
                 <th className="text-left py-2 px-2 font-medium">판정</th>
                 <th className="text-right py-2 px-2 font-medium">인용</th>
                 <th className="text-right py-2 px-2 font-medium">동반율</th>
-                <th className="text-right py-2 px-2 font-medium hidden sm:table-cell">통제</th>
-                <th className="text-right py-2 pl-2 font-medium hidden sm:table-cell">AI 수</th>
+                <th className="text-right py-2 px-2 font-medium hidden sm:table-cell">
+                  통제
+                </th>
+                <th className="text-right py-2 pl-2 font-medium hidden sm:table-cell">
+                  AI 수
+                </th>
               </tr>
             </thead>
             <tbody>
               {visible.map((c: any) => (
-                <tr key={c.channel} className="border-b border-slate-50 hover:bg-slate-50/50">
-                  <td className="py-2 pr-2 text-slate-700 font-medium">{c.channel}</td>
-                  <td className={`py-2 px-2 text-right font-bold ${scoreColor(c.priorityScore)}`}>{c.priorityScore}</td>
+                <tr
+                  key={c.channel}
+                  className="border-b border-slate-50 hover:bg-slate-50/50"
+                >
+                  <td className="py-2 pr-2 text-[#536354] font-medium">
+                    {c.channel}
+                  </td>
+                  <td
+                    className={`py-2 px-2 text-right font-bold ${scoreColor(c.priorityScore)}`}
+                  >
+                    {c.priorityScore}
+                  </td>
                   <td className="py-2 px-2">
-                    <span className={`inline-flex px-1.5 py-0.5 rounded border text-[11px] font-semibold whitespace-nowrap ${verdictStyle[c.verdict] || 'bg-slate-100 text-slate-500'}`}>
+                    <span
+                      className={`inline-flex px-1.5 py-0.5 rounded border text-[11px] font-semibold whitespace-nowrap ${verdictStyle[c.verdict] || "bg-[#EDF0E9] text-[#778378]"}`}
+                    >
                       {c.verdict}
                     </span>
                   </td>
-                  <td className="py-2 px-2 text-right text-slate-600">{c.count.toLocaleString()}</td>
-                  <td className="py-2 px-2 text-right text-slate-600">{c.companionRate}%</td>
-                  <td className="py-2 px-2 text-right hidden sm:table-cell">
-                    <span className="text-amber-500">{'●'.repeat(c.controllability)}</span>
-                    <span className="text-slate-200">{'●'.repeat(5 - c.controllability)}</span>
+                  <td className="py-2 px-2 text-right text-[#667668]">
+                    {c.count.toLocaleString()}
                   </td>
-                  <td className="py-2 pl-2 text-right text-slate-500 hidden sm:table-cell">{c.platformCount}</td>
+                  <td className="py-2 px-2 text-right text-[#667668]">
+                    {c.companionRate}%
+                  </td>
+                  <td className="py-2 px-2 text-right hidden sm:table-cell">
+                    <span className="text-amber-500">
+                      {"●".repeat(c.controllability)}
+                    </span>
+                    <span className="text-slate-200">
+                      {"●".repeat(5 - c.controllability)}
+                    </span>
+                  </td>
+                  <td className="py-2 pl-2 text-right text-[#778378] hidden sm:table-cell">
+                    {c.platformCount}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -857,13 +1411,18 @@ function ChannelPriorityWidget({ data }: { data: any }) {
             onClick={() => setExpanded(!expanded)}
             className="mt-3 text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
           >
-            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {expanded ? '접기' : `전체 ${investable.length}개 채널 보기`}
+            {expanded ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+            {expanded ? "접기" : `전체 ${investable.length}개 채널 보기`}
           </button>
         )}
 
-        <p className="mt-3 text-[11px] text-slate-400">
-          * 스코어 = 식탁 점유 45% + 침투 여지(100−동반율) 25% + 통제 가능성 30% · 타 병원 홈페이지 등 통제 불가 채널은 제외
+        <p className="mt-3 text-[11px] text-[#8F9B8C]">
+          * 스코어 = 식탁 점유 45% + 침투 여지(100−동반율) 25% + 통제 가능성 30%
+          · 타 병원 홈페이지 등 통제 불가 채널은 제외
         </p>
       </CardContent>
     </Card>
@@ -877,83 +1436,116 @@ function GeminiDietWidget({ diet }: { diet: any }) {
   const own = diet.ownDomain;
 
   const catColors: Record<string, string> = {
-    '우리 병원 홈페이지': 'bg-brand-500',
-    '모두닥': 'bg-teal-500',
-    '굿닥': 'bg-cyan-500',
-    '캐시닥': 'bg-sky-500',
-    '마이닥터': 'bg-blue-400',
-    '닥터나우': 'bg-indigo-400',
-    '하이닥': 'bg-blue-300',
-    '병원 홈페이지(타 병원)': 'bg-slate-400',
-    '티스토리': 'bg-orange-400',
-    '유튜브': 'bg-red-400',
-    '카카오': 'bg-yellow-400',
-    '나무위키': 'bg-green-500',
-    '위키피디아': 'bg-emerald-400',
-    '기타': 'bg-slate-300',
+    "우리 병원 홈페이지": "bg-brand-500",
+    모두닥: "bg-teal-500",
+    굿닥: "bg-cyan-500",
+    캐시닥: "bg-sky-500",
+    마이닥터: "bg-brand-400",
+    닥터나우: "bg-brand-400",
+    하이닥: "bg-brand-300",
+    "병원 홈페이지(타 병원)": "bg-slate-400",
+    티스토리: "bg-orange-400",
+    유튜브: "bg-red-400",
+    카카오: "bg-yellow-400",
+    나무위키: "bg-green-500",
+    위키피디아: "bg-emerald-400",
+    기타: "bg-slate-300",
   };
 
   const companionBadge = (rate: number) =>
-    rate >= 50 ? 'bg-green-100 text-green-700' : rate >= 20 ? 'bg-amber-100 text-amber-700' : 'bg-red-50 text-red-500';
+    rate >= 50
+      ? "bg-green-100 text-green-700"
+      : rate >= 20
+        ? "bg-amber-100 text-amber-700"
+        : "bg-red-50 text-red-500";
 
   return (
-    <Card className="border-purple-200">
+    <Card className="border-brand-200">
       <CardContent className="p-5">
-        <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-          <Eye className="h-5 w-5 text-purple-600" />
-          Gemini 실제 식단 <span className="text-xs font-normal text-slate-400">({diet.period} · 리다이렉트 {diet.totalRedirects?.toLocaleString()}개 디코딩 {diet.decodeRate}%)</span>
+        <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+          <Eye className="h-5 w-5 text-brand-600" />
+          Gemini 실제 식단{" "}
+          <span className="text-xs font-normal text-[#8F9B8C]">
+            ({diet.period} · 리다이렉트 {diet.totalRedirects?.toLocaleString()}
+            개 디코딩 {diet.decodeRate}%)
+          </span>
         </h3>
-        <p className="text-xs text-slate-500 mb-4">
-          Gemini는 인용 URL을 전부 마스킹합니다 — 가면을 벗기면 실제로 어떤 채널을 긁는지 보입니다.
-          고유 도메인 <strong>{diet.uniqueDomains?.toLocaleString()}개</strong> 발견
+        <p className="text-xs text-[#778378] mb-4">
+          Gemini는 인용 URL을 전부 마스킹합니다 — 가면을 벗기면 실제로 어떤
+          채널을 긁는지 보입니다. 고유 도메인{" "}
+          <strong>{diet.uniqueDomains?.toLocaleString()}개</strong> 발견
         </p>
 
         {/* 핵심 경고: 네이버/인스타 부재 */}
-        <div className="mb-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
-          <p className="text-xs text-purple-800">
-            💡 <strong>Gemini는 구글 색인 세계입니다</strong> — 네이버 블로그·카페·인스타·틱톡 비중{' '}
+        <div className="mb-4 p-3 bg-brand-50 border border-brand-100 rounded-xl">
+          <p className="text-xs text-brand-800">
+            <strong>Gemini는 구글 색인 세계입니다</strong> — 네이버
+            블로그·카페·인스타·틱톡 비중{" "}
             <strong>{diet.naverInstaShare}%</strong>
-            {diet.naverInstaShare < 1 && ' (사실상 0)'}. 네이버·인스타 콘텐츠는 Gemini에게 보이지 않습니다.
-            Gemini 공략 = 공식홈 구글 색인 + 의료 플랫폼(모두닥·굿닥 등) + 유튜브·티스토리.
+            {diet.naverInstaShare < 1 && " (사실상 0)"}. 네이버·인스타 콘텐츠는
+            Gemini에게 보이지 않습니다. Gemini 공략 = 공식홈 구글 색인 + 의료
+            플랫폼(모두닥·굿닥 등) + 유튜브·티스토리.
           </p>
         </div>
 
         {/* 자사 도메인 성적 */}
         {own && (
-          <div className={`mb-4 p-3 rounded-xl border ${own.count > 0 ? 'bg-brand-50 border-brand-100' : 'bg-red-50 border-red-100'}`}>
+          <div
+            className={`mb-4 p-3 rounded-xl border ${own.count > 0 ? "bg-brand-50 border-brand-100" : "bg-red-50 border-red-100"}`}
+          >
             {own.count > 0 ? (
-              <p className="text-xs text-slate-700">
-                🏠 <strong>{own.domain}</strong> — Gemini 인용 <strong>{own.count.toLocaleString()}회</strong> (전체 {own.rank}위)
-                · <TermTip term="companionRate" icon={false}>동반율</TermTip>{' '}
-                <span className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(own.companionRate)}`}>{own.companionRate}%</span>
-                {own.companionRate >= 90 && ' — 인용 = 곧 언급. 최상급 엔티티 설계입니다'}
-                {own.companionRate < 30 && ' — 인용돼도 이름이 안 실립니다. 페이지에 병원명·지역 엔티티 보강 필요'}
+              <p className="text-xs text-[#536354]">
+                <strong>{own.domain}</strong> — Gemini 인용{" "}
+                <strong>{own.count.toLocaleString()}회</strong> (전체 {own.rank}
+                위) ·{" "}
+                <TermTip term="companionRate" icon={false}>
+                  동반율
+                </TermTip>{" "}
+                <span
+                  className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(own.companionRate)}`}
+                >
+                  {own.companionRate}%
+                </span>
+                {own.companionRate >= 90 &&
+                  " — 인용 = 곧 언급. 최상급 엔티티 설계입니다"}
+                {own.companionRate < 30 &&
+                  " — 인용돼도 이름이 안 실립니다. 페이지에 병원명·지역 엔티티 보강 필요"}
               </p>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-red-700">
-                  ⚠️ 등록된 <strong>{own.domain}</strong> — Gemini가 {diet.period}간 한 번도 인용하지 않았습니다.
+                  등록된 <strong>{own.domain}</strong> — Gemini가 {diet.period}
+                  간 한 번도 인용하지 않았습니다.
                 </p>
                 {(diet.suspectedOwnDomains || []).length > 0 ? (
                   <div className="p-2 bg-white/70 rounded-lg border border-red-100">
-                    <p className="text-[11px] text-slate-600 mb-1">
-                      🔍 대신 아래 도메인이 우리 병원 페이지처럼 인용되고 있습니다 (고동반율 자동 탐지):
+                    <p className="text-[11px] text-[#667668] mb-1">
+                      대신 아래 도메인이 우리 병원 페이지처럼 인용되고 있습니다
+                      (고동반율 자동 탐지):
                     </p>
                     {diet.suspectedOwnDomains.map((d: any) => (
-                      <p key={d.domain} className="text-xs text-slate-700">
-                        🏠 <strong>{d.domain}</strong> — {d.count.toLocaleString()}회 인용 (전체 {d.rank}위) ·{' '}
-                        <TermTip term="companionRate" icon={false}>동반율</TermTip>{' '}
-                        <span className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(d.companionRate)}`}>
+                      <p key={d.domain} className="text-xs text-[#536354]">
+                        <strong>{d.domain}</strong> — {d.count.toLocaleString()}
+                        회 인용 (전체 {d.rank}위) ·{" "}
+                        <TermTip term="companionRate" icon={false}>
+                          동반율
+                        </TermTip>{" "}
+                        <span
+                          className={`inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold ${companionBadge(d.companionRate)}`}
+                        >
                           {d.companionRate}%
                         </span>
                       </p>
                     ))}
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      → 설정에서 웹사이트 URL이 실제 운영 도메인과 일치하는지 확인해 보세요.
+                    <p className="text-[11px] text-[#778378] mt-1">
+                      → 설정에서 웹사이트 URL이 실제 운영 도메인과 일치하는지
+                      확인해 보세요.
                     </p>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-red-500">구글 색인 상태 점검이 필요합니다.</p>
+                  <p className="text-[11px] text-red-500">
+                    구글 색인 상태 점검이 필요합니다.
+                  </p>
                 )}
               </div>
             )}
@@ -964,16 +1556,22 @@ function GeminiDietWidget({ diet }: { diet: any }) {
         <div className="space-y-2 mb-5">
           {categories.slice(0, 10).map((cat: any) => (
             <div key={cat.category} className="flex items-center gap-3">
-              <span className="text-xs text-slate-600 w-36 flex-shrink-0 truncate">{cat.category}</span>
+              <span className="text-xs text-[#667668] w-36 flex-shrink-0 truncate">
+                {cat.category}
+              </span>
               <div className="flex-1 h-4 bg-slate-50 rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${catColors[cat.category] || 'bg-slate-300'}`}
+                  className={`h-full rounded-full ${catColors[cat.category] || "bg-slate-300"}`}
                   style={{ width: `${Math.max(cat.percentage, 1)}%` }}
                 />
               </div>
-              <span className="text-xs text-slate-500 w-32 text-right">
+              <span className="text-xs text-[#778378] w-32 text-right">
                 {cat.count.toLocaleString()}회 ({cat.percentage}%)
-                <span className={`ml-1 px-1 py-0.5 rounded text-[10px] ${companionBadge(cat.companionRate)}`}>동반 {cat.companionRate}%</span>
+                <span
+                  className={`ml-1 px-1 py-0.5 rounded text-[10px] ${companionBadge(cat.companionRate)}`}
+                >
+                  동반 {cat.companionRate}%
+                </span>
               </span>
             </div>
           ))}
@@ -981,27 +1579,52 @@ function GeminiDietWidget({ diet }: { diet: any }) {
 
         {/* Top 도메인 테이블 */}
         <div className="border-t pt-3">
-          <p className="text-xs font-medium text-slate-600 mb-2">가면 뒤 실제 도메인 Top {showAllDomains ? 20 : 8}</p>
+          <p className="text-xs font-medium text-[#667668] mb-2">
+            가면 뒤 실제 도메인 Top {showAllDomains ? 20 : 8}
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b text-left text-slate-400">
+                <tr className="border-b text-left text-[#8F9B8C]">
                   <th className="pb-1 w-8">#</th>
                   <th className="pb-1">도메인</th>
-                  <th className="pb-1 text-center w-20"><TermTip term="citedCount" icon={false}>인용</TermTip></th>
-                  <th className="pb-1 text-center w-24"><TermTip term="companionRate" icon={false}>동반율</TermTip></th>
+                  <th className="pb-1 text-center w-20">
+                    <TermTip term="citedCount" icon={false}>
+                      인용
+                    </TermTip>
+                  </th>
+                  <th className="pb-1 text-center w-24">
+                    <TermTip term="companionRate" icon={false}>
+                      동반율
+                    </TermTip>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {topDomains.slice(0, showAllDomains ? 20 : 8).map((d: any) => (
-                  <tr key={d.domain} className={`border-b last:border-0 ${d.isOwn ? 'bg-brand-50/60 font-medium' : ''}`}>
-                    <td className="py-1.5 text-slate-400">{d.rank}</td>
-                    <td className="py-1.5 text-slate-700 truncate max-w-[220px]">
-                      {d.domain}{d.isOwn && <span className="ml-1.5 text-[10px] text-brand-600">🏠 우리</span>}
+                  <tr
+                    key={d.domain}
+                    className={`border-b last:border-0 ${d.isOwn ? "bg-brand-50/60 font-medium" : ""}`}
+                  >
+                    <td className="py-1.5 text-[#8F9B8C]">{d.rank}</td>
+                    <td className="py-1.5 text-[#536354] truncate max-w-[220px]">
+                      {d.domain}
+                      {d.isOwn && (
+                        <span className="ml-1.5 text-[10px] text-brand-600">
+                          {" "}
+                          우리
+                        </span>
+                      )}
                     </td>
-                    <td className="py-1.5 text-center text-slate-600">{d.count.toLocaleString()}</td>
+                    <td className="py-1.5 text-center text-[#667668]">
+                      {d.count.toLocaleString()}
+                    </td>
                     <td className="py-1.5 text-center">
-                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${companionBadge(d.companionRate)}`}>{d.companionRate}%</span>
+                      <span
+                        className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${companionBadge(d.companionRate)}`}
+                      >
+                        {d.companionRate}%
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -1009,8 +1632,11 @@ function GeminiDietWidget({ diet }: { diet: any }) {
             </table>
           </div>
           {topDomains.length > 8 && (
-            <button onClick={() => setShowAllDomains(!showAllDomains)} className="mt-2 text-xs text-brand-600 hover:text-brand-700 font-medium">
-              {showAllDomains ? '접기 ▲' : `더 보기 (Top 20) ▼`}
+            <button
+              onClick={() => setShowAllDomains(!showAllDomains)}
+              className="mt-2 text-xs text-brand-600 hover:text-brand-700 font-medium"
+            >
+              {showAllDomains ? "접기 ▲" : `더 보기 (Top 20) ▼`}
             </button>
           )}
         </div>
@@ -1020,27 +1646,39 @@ function GeminiDietWidget({ diet }: { diet: any }) {
 }
 
 // ==================== 3. 출처 분석 ====================
-function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnostic?: any; geminiDiet?: any }) {
+function SourceAnalysis({
+  data,
+  diagnostic,
+  geminiDiet,
+}: {
+  data: any;
+  diagnostic?: any;
+  geminiDiet?: any;
+}) {
   return (
     <div className="space-y-6">
       {/* Gemini 디코딩 배지 */}
       {data.decoding && data.decoding.geminiDecoded > 0 && (
-        <Card className="border-purple-200 bg-purple-50/50">
+        <Card className="border-brand-200 bg-brand-50/50">
           <CardContent className="p-4 flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-              <Search className="h-4 w-4 text-purple-600" />
+            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
+              <Search className="h-4 w-4 text-brand-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-purple-900">
-                Gemini grounding-redirect 디코딩 활성화 ({data.decoding.geminiDecodeRate}%)
+              <p className="text-sm font-semibold text-brand-900">
+                Gemini grounding-redirect 디코딩 활성화 (
+                {data.decoding.geminiDecodeRate}%)
               </p>
-              <p className="text-xs text-purple-700 mt-0.5">
-                Gemini가 마스킹한 출처 URL {data.decoding.geminiDecoded}개의 실제 도메인을 추출해 분석에 반영했습니다.
-                {data.decoding.geminiUnDecoded > 0 && ` (미디코딩 ${data.decoding.geminiUnDecoded}개)`}
+              <p className="text-xs text-brand-700 mt-0.5">
+                Gemini가 마스킹한 출처 URL {data.decoding.geminiDecoded}개의
+                실제 도메인을 추출해 분석에 반영했습니다.
+                {data.decoding.geminiUnDecoded > 0 &&
+                  ` (미디코딩 ${data.decoding.geminiUnDecoded}개)`}
               </p>
               {diagnostic?.summary?.newDomainsRevealed > 0 && (
-                <p className="text-xs text-purple-800 mt-1 font-medium">
-                  🎯 디코딩으로 신규 도메인 {diagnostic.summary.newDomainsRevealed}개 추가 노출
+                <p className="text-xs text-brand-800 mt-1 font-medium">
+                  디코딩으로 신규 도메인 {diagnostic.summary.newDomainsRevealed}
+                  개 추가 노출
                 </p>
               )}
             </div>
@@ -1049,26 +1687,40 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
       )}
 
       {/* Gemini 실제 식단 — 가면 뒤 도메인 분포 */}
-      {geminiDiet && geminiDiet.decoded > 0 && <GeminiDietWidget diet={geminiDiet} />}
+      {geminiDiet && geminiDiet.decoded > 0 && (
+        <GeminiDietWidget diet={geminiDiet} />
+      )}
 
       {/* 요약 */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <Card className="bg-blue-50 border-brand-200">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-3">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium"><TermTip term="citedSources">인용된 출처</TermTip></p>
-            <p className="text-2xl font-bold text-brand-800">{data.totalUrls || 0}개</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="citedSources">인용된 출처</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.totalUrls || 0}개
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium"><TermTip term="responsesWithSources">출처 포함 응답</TermTip></p>
-            <p className="text-2xl font-bold text-green-800">{data.totalResponsesWithSources || 0}건</p>
+            <p className="text-xs text-green-600 font-medium">
+              <TermTip term="responsesWithSources">출처 포함 응답</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-green-800">
+              {data.totalResponsesWithSources || 0}건
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-200">
           <CardContent className="p-4 col-span-2 sm:col-span-1">
-            <p className="text-xs text-amber-600 font-medium"><TermTip term="analysisChannels">분석 채널</TermTip></p>
-            <p className="text-2xl font-bold text-amber-800">{data.categories?.length || 0}개</p>
+            <p className="text-xs text-amber-600 font-medium">
+              <TermTip term="analysisChannels">분석 채널</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-amber-800">
+              {data.categories?.length || 0}개
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -1076,27 +1728,37 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
       {/* 출처 카테고리별 분포 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Globe className="h-5 w-5 text-brand-600" />
             AI가 참조하는 출처 채널
           </h3>
-          <p className="text-xs text-slate-500 mb-4">AI가 우리 병원 정보를 가져오는 소스 분석</p>
+          <p className="text-xs text-[#778378] mb-4">
+            AI가 우리 병원 정보를 가져오는 소스 분석
+          </p>
           {data.categories?.length > 0 ? (
             <div className="space-y-3">
               {data.categories.map((cat: any, i: number) => {
                 const colors = [
-                  'bg-brand-500', 'bg-green-500', 'bg-amber-500', 'bg-purple-500',
-                  'bg-pink-500', 'bg-red-500', 'bg-teal-500', 'bg-indigo-500',
+                  "bg-brand-500",
+                  "bg-green-500",
+                  "bg-amber-500",
+                  "bg-brand-500",
+                  "bg-pink-500",
+                  "bg-red-500",
+                  "bg-teal-500",
+                  "bg-brand-500",
                 ];
                 return (
                   <div key={cat.category} className="flex items-center gap-3">
-                    <span className="text-sm text-slate-700 w-28 flex-shrink-0 truncate">{cat.category}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-6 relative overflow-hidden">
+                    <span className="text-sm text-[#536354] w-28 flex-shrink-0 truncate">
+                      {cat.category}
+                    </span>
+                    <div className="flex-1 bg-[#EDF0E9] rounded-full h-6 relative overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${colors[i % colors.length]}`}
                         style={{ width: `${cat.percentage}%` }}
                       />
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-slate-700">
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-[#536354]">
                         {cat.count}건 ({cat.percentage}%)
                       </span>
                     </div>
@@ -1105,7 +1767,9 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
               })}
             </div>
           ) : (
-            <p className="text-slate-400 text-sm">출처 데이터가 없습니다. Perplexity 응답에서 주로 수집됩니다.</p>
+            <p className="text-[#8F9B8C] text-sm">
+              출처 데이터가 없습니다. Perplexity 응답에서 주로 수집됩니다.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -1113,21 +1777,32 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
       {/* 플랫폼별 출처 현황 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
             <ExternalLink className="h-5 w-5 text-green-600" />
             플랫폼별 출처 인용 현황
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Object.entries(data.platformSources || {}).map(([platform, stats]: [string, any]) => (
-              <div key={platform} className="text-center border rounded-lg p-4">
-                <div className={`w-3 h-3 rounded-full ${platformColors[platform]} mx-auto mb-2`} />
-                <p className="text-sm font-medium text-slate-900">{platformNames[platform]}</p>
-                <p className="text-2xl font-bold text-slate-800 my-1">{stats.totalSources}</p>
-                <p className="text-xs text-slate-500">
-                  {stats.responsesWithSources}/{stats.total} 응답
-                </p>
-              </div>
-            ))}
+            {Object.entries(data.platformSources || {}).map(
+              ([platform, stats]: [string, any]) => (
+                <div
+                  key={platform}
+                  className="text-center border rounded-lg p-4"
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full ${platformColors[platform]} mx-auto mb-2`}
+                  />
+                  <p className="text-sm font-medium text-[#15231B]">
+                    {platformNames[platform]}
+                  </p>
+                  <p className="text-2xl font-bold text-[#2E4132] my-1">
+                    {stats.totalSources}
+                  </p>
+                  <p className="text-xs text-[#778378]">
+                    {stats.responsesWithSources}/{stats.total} 응답
+                  </p>
+                </div>
+              ),
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1136,20 +1811,29 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
       {data.missingChannels?.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-600" />
               미활용 채널 — AI 참조를 늘릴 수 있는 기회!
             </h3>
-            <p className="text-xs text-slate-500 mb-4">이 채널에 콘텐츠를 올리면 AI 가시성이 올라갈 수 있어요</p>
+            <p className="text-xs text-[#778378] mb-4">
+              이 채널에 콘텐츠를 올리면 AI 가시성이 올라갈 수 있어요
+            </p>
             <div className="space-y-3">
               {data.missingChannels.map((ch: any) => (
-                <div key={ch.channel} className="flex items-start gap-3 bg-white rounded-lg p-4 border border-amber-100">
+                <div
+                  key={ch.channel}
+                  className="flex items-start gap-3 bg-white rounded-lg p-4 border border-amber-100"
+                >
                   <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
                     <Lightbulb className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{ch.channel}</p>
-                    <p className="text-xs text-slate-600 mt-0.5">{ch.recommendation}</p>
+                    <p className="text-sm font-semibold text-[#15231B]">
+                      {ch.channel}
+                    </p>
+                    <p className="text-xs text-[#667668] mt-0.5">
+                      {ch.recommendation}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -1162,37 +1846,57 @@ function SourceAnalysis({ data, diagnostic, geminiDiet }: { data: any; diagnosti
       {data.topDomains?.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-indigo-600" />
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-brand-600" />
               인용 빈도 상위 도메인 (Top {Math.min(data.topDomains.length, 25)})
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
-              어떤 AI가 인용했는지까지 표시 — 여러 AI에서 인용되는 도메인이 우선순위
+            <p className="text-xs text-[#778378] mb-4">
+              어떤 AI가 인용했는지까지 표시 — 여러 AI에서 인용되는 도메인이
+              우선순위
             </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 font-medium text-slate-500 w-10">#</th>
-                    <th className="pb-2 font-medium text-slate-500">도메인</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center">카테고리</th>
-                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="citedCount" icon={false}>인용 수</TermTip></th>
-                    <th className="pb-2 font-medium text-slate-500 text-center"><TermTip term="citedAI" icon={false}>인용 AI</TermTip></th>
+                    <th className="pb-2 font-medium text-[#778378] w-10">#</th>
+                    <th className="pb-2 font-medium text-[#778378]">도메인</th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      카테고리
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      <TermTip term="citedCount" icon={false}>
+                        인용 수
+                      </TermTip>
+                    </th>
+                    <th className="pb-2 font-medium text-[#778378] text-center">
+                      <TermTip term="citedAI" icon={false}>
+                        인용 AI
+                      </TermTip>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {data.topDomains.slice(0, 25).map((d: any, i: number) => (
-                    <tr key={d.domain} className="border-b last:border-0 hover:bg-white/60">
-                      <td className="py-2 text-slate-400 text-xs">{i + 1}</td>
-                      <td className="py-2 text-slate-700 font-mono text-xs break-all">{d.domain}</td>
-                      <td className="py-2 text-center text-slate-500 text-xs">{d.category}</td>
-                      <td className="py-2 text-center font-medium text-slate-800">{d.count}</td>
+                    <tr
+                      key={d.domain}
+                      className="border-b last:border-0 hover:bg-white/60"
+                    >
+                      <td className="py-2 text-[#8F9B8C] text-xs">{i + 1}</td>
+                      <td className="py-2 text-[#536354] font-mono text-xs break-all">
+                        {d.domain}
+                      </td>
+                      <td className="py-2 text-center text-[#778378] text-xs">
+                        {d.category}
+                      </td>
+                      <td className="py-2 text-center font-medium text-[#2E4132]">
+                        {d.count}
+                      </td>
                       <td className="py-2 text-center">
                         <div className="flex flex-wrap gap-1 justify-center">
                           {(d.platforms || []).map((p: string) => (
                             <span
                               key={p}
-                              className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}
+                              className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || "bg-[#EDF0E9] text-[#667668]"}`}
                             >
                               {platformNames[p] || p}
                             </span>
@@ -1219,64 +1923,102 @@ function TopUrlsRanking({ data }: { data: any }) {
   return (
     <div className="space-y-6">
       {/* 요약 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-indigo-50 border-indigo-200">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-indigo-600 font-medium"><TermTip term="uniqueUrls">고유 URL</TermTip></p>
-            <p className="text-2xl font-bold text-indigo-800">{data.totalUniqueUrls || 0}개</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="uniqueUrls">고유 URL</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.totalUniqueUrls || 0}개
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-rose-50 border-rose-200">
           <CardContent className="p-4">
-            <p className="text-xs text-rose-600 font-medium"><TermTip term="crossAI">크로스-AI 인용</TermTip></p>
-            <p className="text-2xl font-bold text-rose-800">{data.crossAICount || 0}개</p>
-            <p className="text-[10px] text-rose-500 mt-0.5">3개 이상 AI가 인용</p>
+            <p className="text-xs text-rose-600 font-medium">
+              <TermTip term="crossAI">크로스-AI 인용</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-rose-800">
+              {data.crossAICount || 0}개
+            </p>
+            <p className="text-[10px] text-rose-500 mt-0.5">
+              3개 이상 AI가 인용
+            </p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium"><TermTip term="geminiDecoded">Gemini 디코딩</TermTip></p>
-            <p className="text-2xl font-bold text-purple-800">{data.geminiDecoded || 0}건</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="geminiDecoded">Gemini 디코딩</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.geminiDecoded || 0}건
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-emerald-50 border-emerald-200">
           <CardContent className="p-4">
             <p className="text-xs text-emerald-600 font-medium">표시</p>
-            <p className="text-2xl font-bold text-emerald-800">Top {Math.min(showCount, urls.length)}</p>
+            <p className="text-2xl font-bold text-emerald-800">
+              Top {Math.min(showCount, urls.length)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <ExternalLink className="h-5 w-5 text-brand-600" />
             Top URL 페이지 랭킹 ({data.period})
           </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            도메인이 아닌 <strong>개별 페이지(URL)</strong> 단위 인용 순위 — 어떤 콘텐츠가 강한지 정확히 파악
+          <p className="text-xs text-[#778378] mb-4">
+            도메인이 아닌 <strong>개별 페이지(URL)</strong> 단위 인용 순위 —
+            어떤 콘텐츠가 강한지 정확히 파악
           </p>
 
           {urls.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm">아직 분석된 URL이 없습니다</div>
+            <div className="text-center py-8 text-[#8F9B8C] text-sm">
+              아직 분석된 URL이 없습니다
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="pb-2 font-medium text-slate-500 w-10">#</th>
-                      <th className="pb-2 font-medium text-slate-500">URL</th>
-                      <th className="pb-2 font-medium text-slate-500 text-center w-16"><TermTip term="citedCount" icon={false}>인용</TermTip></th>
-                      <th className="pb-2 font-medium text-slate-500 text-center w-20"><TermTip term="hospitalMentionRate" icon={false}>병원 언급률</TermTip></th>
-                      <th className="pb-2 font-medium text-slate-500 text-center">AI</th>
-                      <th className="pb-2 font-medium text-slate-500 text-center w-24">최근 인용</th>
+                      <th className="pb-2 font-medium text-[#778378] w-10">
+                        #
+                      </th>
+                      <th className="pb-2 font-medium text-[#778378]">URL</th>
+                      <th className="pb-2 font-medium text-[#778378] text-center w-16">
+                        <TermTip term="citedCount" icon={false}>
+                          인용
+                        </TermTip>
+                      </th>
+                      <th className="pb-2 font-medium text-[#778378] text-center w-20">
+                        <TermTip term="hospitalMentionRate" icon={false}>
+                          병원 언급률
+                        </TermTip>
+                      </th>
+                      <th className="pb-2 font-medium text-[#778378] text-center">
+                        AI
+                      </th>
+                      <th className="pb-2 font-medium text-[#778378] text-center w-24">
+                        최근 인용
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {urls.slice(0, showCount).map((u: any) => (
-                      <tr key={u.url} className="border-b last:border-0 hover:bg-white/60 align-top">
-                        <td className="py-2 text-slate-400 text-xs">{u.rank}</td>
+                      <tr
+                        key={u.url}
+                        className="border-b last:border-0 hover:bg-white/60 align-top"
+                      >
+                        <td className="py-2 text-[#8F9B8C] text-xs">
+                          {u.rank}
+                        </td>
                         <td className="py-2">
                           <div className="space-y-0.5">
                             <a
@@ -1287,27 +2029,35 @@ function TopUrlsRanking({ data }: { data: any }) {
                             >
                               {u.url}
                             </a>
-                            <p className="text-[10px] text-slate-400 font-mono">{u.domain}</p>
+                            <p className="text-[10px] text-[#8F9B8C] font-mono">
+                              {u.domain}
+                            </p>
                             {u.isCrossAI && (
                               <span className="inline-block text-[10px] bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-medium">
-                                ✨ 크로스-AI 검증
+                                크로스-AI 검증
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="py-2 text-center font-bold text-slate-800">{u.citationCount}</td>
+                        <td className="py-2 text-center font-bold text-[#2E4132]">
+                          {u.citationCount}
+                        </td>
                         <td className="py-2 text-center">
-                          <span className={`text-xs font-medium ${u.mentionRate >= 50 ? 'text-green-700' : u.mentionRate >= 20 ? 'text-amber-700' : 'text-slate-500'}`}>
+                          <span
+                            className={`text-xs font-medium ${u.mentionRate >= 50 ? "text-green-700" : u.mentionRate >= 20 ? "text-amber-700" : "text-[#778378]"}`}
+                          >
                             {u.mentionRate}%
                           </span>
-                          <p className="text-[10px] text-slate-400">{u.mentionedWithHospital}/{u.citationCount}</p>
+                          <p className="text-[10px] text-[#8F9B8C]">
+                            {u.mentionedWithHospital}/{u.citationCount}
+                          </p>
                         </td>
                         <td className="py-2">
                           <div className="flex flex-wrap gap-1 justify-center">
                             {(u.platforms || []).map((p: string) => (
                               <span
                                 key={p}
-                                className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}
+                                className={`text-[10px] px-1.5 py-0.5 rounded ${platformBgColors[p] || "bg-[#EDF0E9] text-[#667668]"}`}
                               >
                                 {platformNames[p] || p}
                               </span>
@@ -1315,8 +2065,12 @@ function TopUrlsRanking({ data }: { data: any }) {
                           </div>
                         </td>
                         <td className="py-2 text-center">
-                          <span className="text-xs text-slate-600">{u.freshness}</span>
-                          <p className="text-[10px] text-slate-400">{u.daysSinceLast}일 전</p>
+                          <span className="text-xs text-[#667668]">
+                            {u.freshness}
+                          </span>
+                          <p className="text-[10px] text-[#8F9B8C]">
+                            {u.daysSinceLast}일 전
+                          </p>
                         </td>
                       </tr>
                     ))}
@@ -1326,7 +2080,13 @@ function TopUrlsRanking({ data }: { data: any }) {
 
               {showCount < urls.length && (
                 <div className="mt-4 text-center">
-                  <Button variant="outline" size="sm" onClick={() => setShowCount(c => Math.min(c + 30, urls.length))}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setShowCount((c) => Math.min(c + 30, urls.length))
+                    }
+                  >
                     <ChevronDown className="h-4 w-4 mr-1.5" />
                     더보기 ({urls.length - showCount}개 남음)
                   </Button>
@@ -1343,16 +2103,24 @@ function TopUrlsRanking({ data }: { data: any }) {
 // ==================== A-2. URL × AI 매트릭스 ====================
 function UrlMatrix({ data }: { data: any }) {
   const rows: any[] = data.rows || [];
-  const platforms: string[] = data.platforms || ['CHATGPT', 'PERPLEXITY', 'CLAUDE', 'GEMINI', 'GOOGLE_AI_OVERVIEW', 'GROK', 'CLOVA_X'];
+  const platforms: string[] = data.platforms || [
+    "CHATGPT",
+    "PERPLEXITY",
+    "CLAUDE",
+    "GEMINI",
+    "GOOGLE_AI_OVERVIEW",
+    "GROK",
+    "CLOVA_X",
+  ];
 
   // 색 강도 계산: 0=white, 1+=brand 농도
   const getCellBg = (count: number, max: number) => {
-    if (count === 0) return 'bg-white';
+    if (count === 0) return "bg-white";
     const ratio = max > 0 ? count / max : 0;
-    if (ratio > 0.75) return 'bg-brand-600 text-white';
-    if (ratio > 0.5) return 'bg-brand-500 text-white';
-    if (ratio > 0.25) return 'bg-brand-300 text-brand-900';
-    return 'bg-brand-100 text-brand-800';
+    if (ratio > 0.75) return "bg-brand-600 text-white";
+    if (ratio > 0.5) return "bg-brand-500 text-white";
+    if (ratio > 0.25) return "bg-brand-300 text-brand-900";
+    return "bg-brand-100 text-brand-800";
   };
 
   // 모든 셀의 최댓값
@@ -1367,39 +2135,59 @@ function UrlMatrix({ data }: { data: any }) {
     <div className="space-y-6">
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-indigo-600" />
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-brand-600" />
             URL × AI 매트릭스 ({data.period})
           </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            상위 {data.returnedCount}개 URL이 <strong>어떤 AI</strong>에서 얼마나 인용되는지 한눈에 — 진한 셀일수록 빈도 높음
+          <p className="text-xs text-[#778378] mb-4">
+            상위 {data.returnedCount}개 URL이 <strong>어떤 AI</strong>에서
+            얼마나 인용되는지 한눈에 — 진한 셀일수록 빈도 높음
           </p>
 
           {rows.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm">아직 매트릭스 데이터가 없습니다</div>
+            <div className="text-center py-8 text-[#8F9B8C] text-sm">
+              아직 매트릭스 데이터가 없습니다
+            </div>
           ) : (
             <div className="overflow-x-auto -mx-5 px-5">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left pb-2 pr-2 font-medium text-slate-500 sticky left-0 bg-white z-10 w-8">#</th>
-                    <th className="text-left pb-2 pr-2 font-medium text-slate-500 sticky left-8 bg-white z-10 min-w-[180px]">URL</th>
-                    <th className="pb-2 px-2 font-medium text-slate-500 text-center w-12">총합</th>
-                    {platforms.map(p => (
-                      <th key={p} className="pb-2 px-1 font-medium text-slate-500 text-center min-w-[60px]">
+                    <th className="text-left pb-2 pr-2 font-medium text-[#778378] sticky left-0 bg-white z-10 w-8">
+                      #
+                    </th>
+                    <th className="text-left pb-2 pr-2 font-medium text-[#778378] sticky left-8 bg-white z-10 min-w-[180px]">
+                      URL
+                    </th>
+                    <th className="pb-2 px-2 font-medium text-[#778378] text-center w-12">
+                      총합
+                    </th>
+                    {platforms.map((p) => (
+                      <th
+                        key={p}
+                        className="pb-2 px-1 font-medium text-[#778378] text-center min-w-[60px]"
+                      >
                         <div className="flex flex-col items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${platformColors[p]}`} />
-                          <span className="text-[10px]">{platformNames[p] || p}</span>
+                          <span
+                            className={`w-2 h-2 rounded-full ${platformColors[p]}`}
+                          />
+                          <span className="text-[10px]">
+                            {platformNames[p] || p}
+                          </span>
                         </div>
                       </th>
                     ))}
-                    <th className="pb-2 px-2 font-medium text-slate-500 text-center w-12">커버</th>
+                    <th className="pb-2 px-2 font-medium text-[#778378] text-center w-12">
+                      커버
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row: any) => (
                     <tr key={row.url} className="border-b last:border-0">
-                      <td className="py-2 pr-2 text-slate-400 sticky left-0 bg-white">{row.rank}</td>
+                      <td className="py-2 pr-2 text-[#8F9B8C] sticky left-0 bg-white">
+                        {row.rank}
+                      </td>
                       <td className="py-2 pr-2 sticky left-8 bg-white">
                         <a
                           href={row.url}
@@ -1409,21 +2197,27 @@ function UrlMatrix({ data }: { data: any }) {
                         >
                           {row.url}
                         </a>
-                        <p className="text-[10px] text-slate-400 font-mono">{row.domain}</p>
+                        <p className="text-[10px] text-[#8F9B8C] font-mono">
+                          {row.domain}
+                        </p>
                       </td>
-                      <td className="py-2 px-2 text-center font-bold text-slate-800">{row.total}</td>
+                      <td className="py-2 px-2 text-center font-bold text-[#2E4132]">
+                        {row.total}
+                      </td>
                       {row.cells.map((c: any) => (
                         <td key={c.platform} className="py-1 px-1">
                           <div
                             className={`text-center py-1.5 rounded text-[11px] font-medium ${getCellBg(c.count, maxCell)}`}
                             title={`${platformNames[c.platform] || c.platform}: ${c.count}건`}
                           >
-                            {c.count || ''}
+                            {c.count || ""}
                           </div>
                         </td>
                       ))}
                       <td className="py-2 px-2 text-center">
-                        <span className={`text-xs font-bold ${row.coverage >= 4 ? 'text-rose-700' : row.coverage >= 2 ? 'text-amber-700' : 'text-slate-500'}`}>
+                        <span
+                          className={`text-xs font-bold ${row.coverage >= 4 ? "text-rose-700" : row.coverage >= 2 ? "text-amber-700" : "text-[#778378]"}`}
+                        >
                           {row.coverage}/{platforms.length}
                         </span>
                       </td>
@@ -1432,12 +2226,23 @@ function UrlMatrix({ data }: { data: any }) {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 bg-slate-50">
-                    <td colSpan={2} className="py-2 px-2 text-right font-bold text-slate-700 sticky left-0 bg-slate-50">AI별 합계</td>
-                    <td className="py-2 px-2 text-center font-bold text-slate-800">
-                      {(data.columnTotals || []).reduce((s: number, c: any) => s + c.total, 0)}
+                    <td
+                      colSpan={2}
+                      className="py-2 px-2 text-right font-bold text-[#536354] sticky left-0 bg-slate-50"
+                    >
+                      AI별 합계
+                    </td>
+                    <td className="py-2 px-2 text-center font-bold text-[#2E4132]">
+                      {(data.columnTotals || []).reduce(
+                        (s: number, c: any) => s + c.total,
+                        0,
+                      )}
                     </td>
                     {(data.columnTotals || []).map((c: any) => (
-                      <td key={c.platform} className="py-2 px-1 text-center font-bold text-slate-700">
+                      <td
+                        key={c.platform}
+                        className="py-2 px-1 text-center font-bold text-[#536354]"
+                      >
                         {c.total}
                       </td>
                     ))}
@@ -1448,7 +2253,7 @@ function UrlMatrix({ data }: { data: any }) {
             </div>
           )}
 
-          <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+          <div className="mt-4 flex items-center gap-4 text-xs text-[#778378]">
             <span>색 농도:</span>
             <div className="flex items-center gap-1">
               <span className="w-4 h-4 bg-brand-100 rounded" /> 적음
@@ -1487,54 +2292,79 @@ function BreadthInsights({ data }: { data: any }) {
 
   // 종합 권위도 색상
   const authColor =
-    summary.overallAuthority >= 7 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
-    summary.overallAuthority >= 5 ? 'text-blue-600 bg-blue-50 border-blue-200' :
-    summary.overallAuthority >= 3 ? 'text-amber-600 bg-amber-50 border-amber-200' :
-    'text-red-600 bg-red-50 border-red-200';
+    summary.overallAuthority >= 7
+      ? "text-emerald-600 bg-emerald-50 border-emerald-200"
+      : summary.overallAuthority >= 5
+        ? "text-brand-600 bg-brand-50 border-brand-200"
+        : summary.overallAuthority >= 3
+          ? "text-amber-600 bg-amber-50 border-amber-200"
+          : "text-red-600 bg-red-50 border-red-200";
 
   const tierColors: Record<string, string> = {
-    'tier_s': 'bg-emerald-500',
-    'tier_a': 'bg-blue-500',
-    'tier_b': 'bg-indigo-400',
-    'tier_c': 'bg-amber-400',
-    'tier_d': 'bg-red-400',
+    tier_s: "bg-emerald-500",
+    tier_a: "bg-brand-500",
+    tier_b: "bg-brand-400",
+    tier_c: "bg-amber-400",
+    tier_d: "bg-red-400",
   };
 
   const priorityColors: Record<string, string> = {
-    P0: 'bg-red-100 text-red-700 border-red-300',
-    P1: 'bg-amber-100 text-amber-700 border-amber-300',
-    P2: 'bg-blue-100 text-blue-700 border-blue-300',
+    P0: "bg-red-100 text-red-700 border-red-300",
+    P1: "bg-amber-100 text-amber-700 border-amber-300",
+    P2: "bg-brand-100 text-brand-700 border-brand-300",
   };
 
   return (
     <div className="space-y-6">
       {/* 요약 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
         <Card className={`border-2 ${authColor}`}>
           <CardContent className="p-4">
-            <p className="text-xs font-medium opacity-80"><TermTip term="authority" icon={false}>종합 권위도</TermTip></p>
-            <p className="text-3xl font-bold mt-1">{summary.overallAuthority}/10</p>
-            <p className="text-xs mt-1 opacity-90">{summary.overallAuthorityTier}</p>
+            <p className="text-xs font-medium opacity-80">
+              <TermTip term="authority" icon={false}>
+                종합 권위도
+              </TermTip>
+            </p>
+            <p className="text-3xl font-bold mt-1">
+              {summary.overallAuthority}/10
+            </p>
+            <p className="text-xs mt-1 opacity-90">
+              {summary.overallAuthorityTier}
+            </p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50 border-brand-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-brand-600 font-medium"><TermTip term="totalCitations">총 인용 URL</TermTip></p>
-            <p className="text-2xl font-bold text-brand-800">{summary.totalUrls?.toLocaleString()}</p>
-            <p className="text-xs text-brand-600 mt-1">{summary.totalResponses?.toLocaleString()}개 응답</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="totalCitations">총 인용 URL</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {summary.totalUrls?.toLocaleString()}
+            </p>
+            <p className="text-xs text-brand-600 mt-1">
+              {summary.totalResponses?.toLocaleString()}개 응답
+            </p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium"><TermTip term="categoryDiversity">카테고리 다양성</TermTip></p>
-            <p className="text-2xl font-bold text-purple-800">{summary.uniqueCategories}</p>
-            <p className="text-xs text-purple-600 mt-1">/ 25개 카테고리</p>
+            <p className="text-xs text-brand-600 font-medium">
+              <TermTip term="categoryDiversity">카테고리 다양성</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-brand-800">
+              {summary.uniqueCategories}
+            </p>
+            <p className="text-xs text-brand-600 mt-1">/ 25개 카테고리</p>
           </CardContent>
         </Card>
         <Card className="bg-green-50 border-green-200">
           <CardContent className="p-4">
-            <p className="text-xs text-green-600 font-medium"><TermTip term="positiveSentiment">긍정 감성</TermTip></p>
-            <p className="text-2xl font-bold text-green-800">{sentiment.positiveRate}%</p>
+            <p className="text-xs text-green-600 font-medium">
+              <TermTip term="positiveSentiment">긍정 감성</TermTip>
+            </p>
+            <p className="text-2xl font-bold text-green-800">
+              {sentiment.positiveRate}%
+            </p>
             <p className="text-xs text-green-600 mt-1">
               부정 {sentiment.negativeRate}% · {data.period}
             </p>
@@ -1545,26 +2375,38 @@ function BreadthInsights({ data }: { data: any }) {
       {/* 권위도 Tier 분포 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Shield className="h-5 w-5 text-brand-600" />
-            <TermTip term="authorityTier" icon={false}>권위도 Tier 분포</TermTip>
+            <TermTip term="authorityTier" icon={false}>
+              권위도 Tier 분포
+            </TermTip>
           </h3>
-          <p className="text-xs text-slate-500 mb-4">
-            AI가 우리 병원 정보를 어떤 신뢰 등급 출처에서 가져오는지 — Tier S/A가 많을수록 견고합니다
+          <p className="text-xs text-[#778378] mb-4">
+            AI가 우리 병원 정보를 어떤 신뢰 등급 출처에서 가져오는지 — Tier
+            S/A가 많을수록 견고합니다
           </p>
           <div className="space-y-3">
             {auth.map((bucket: any) => {
-              const key = Object.keys(tierColors).find(k => bucket.label.includes(k.replace('tier_', '').toUpperCase())) || 'tier_b';
-              const widthPct = maxAuthCount > 0 ? (bucket.count / maxAuthCount) * 100 : 0;
+              const key =
+                Object.keys(tierColors).find((k) =>
+                  bucket.label.includes(k.replace("tier_", "").toUpperCase()),
+                ) || "tier_b";
+              const widthPct =
+                maxAuthCount > 0 ? (bucket.count / maxAuthCount) * 100 : 0;
               return (
                 <div key={bucket.label}>
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-medium text-slate-700">{bucket.label}</span>
-                    <span className="text-xs text-slate-500">
-                      {bucket.count.toLocaleString()}회 · <span className="font-semibold text-slate-900">{bucket.percentage}%</span>
+                    <span className="text-sm font-medium text-[#536354]">
+                      {bucket.label}
+                    </span>
+                    <span className="text-xs text-[#778378]">
+                      {bucket.count.toLocaleString()}회 ·{" "}
+                      <span className="font-semibold text-[#15231B]">
+                        {bucket.percentage}%
+                      </span>
                     </span>
                   </div>
-                  <div className="bg-slate-100 rounded-full h-6 overflow-hidden">
+                  <div className="bg-[#EDF0E9] rounded-full h-6 overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${tierColors[key]}`}
                       style={{ width: `${widthPct}%` }}
@@ -1574,11 +2416,14 @@ function BreadthInsights({ data }: { data: any }) {
               );
             })}
           </div>
-          {auth.find((a: any) => a.label.includes('Tier D'))?.percentage > 20 && (
+          {auth.find((a: any) => a.label.includes("Tier D"))?.percentage >
+            20 && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-xs text-red-700">
                 <AlertTriangle className="h-3 w-3 inline mr-1" />
-                <strong>경고</strong>: Tier D (광고/저신뢰) 비중이 20% 초과 — AI 인용 출처의 1/4 이상이 신뢰도 낮은 출처입니다. 권위 있는 출처 비중 확대가 시급합니다.
+                <strong>경고</strong>: Tier D (광고/저신뢰) 비중이 20% 초과 — AI
+                인용 출처의 1/4 이상이 신뢰도 낮은 출처입니다. 권위 있는 출처
+                비중 확대가 시급합니다.
               </p>
             </div>
           )}
@@ -1593,34 +2438,53 @@ function BreadthInsights({ data }: { data: any }) {
             <CardContent className="p-5">
               <h3 className="text-base font-semibold text-red-900 mb-1 flex items-center gap-2">
                 <Target className="h-5 w-5 text-red-600" />
-                🔥 진출 기회 (갭 분석)
+                진출 기회 (갭 분석)
               </h3>
-              <p className="text-xs text-red-700/80 mb-4">경쟁사는 노출 중이지만 우리는 부재한 카테고리</p>
+              <p className="text-xs text-red-700/80 mb-4">
+                경쟁사는 노출 중이지만 우리는 부재한 카테고리
+              </p>
               {opps.length > 0 ? (
                 <div className="space-y-2">
                   {opps.map((opp: any) => (
-                    <div key={opp.category} className="bg-white rounded-xl p-3 border border-red-100">
+                    <div
+                      key={opp.category}
+                      className="bg-white rounded-xl p-3 border border-red-100"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium text-slate-900 text-sm">{opp.label}</span>
+                        <span className="font-medium text-[#15231B] text-sm">
+                          {opp.label}
+                        </span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                           {opp.opportunity}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden flex">
-                          <div className="bg-brand-400" style={{ width: `${opp.ourShare}%` }} />
-                          <div className="bg-red-400" style={{ width: `${opp.compShare}%` }} />
+                        <div className="flex-1 bg-[#EDF0E9] rounded-full h-3 overflow-hidden flex">
+                          <div
+                            className="bg-brand-400"
+                            style={{ width: `${opp.ourShare}%` }}
+                          />
+                          <div
+                            className="bg-red-400"
+                            style={{ width: `${opp.compShare}%` }}
+                          />
                         </div>
                       </div>
                       <div className="flex justify-between mt-1 text-xs">
-                        <span className="text-brand-600">우리 {opp.ourPresence}회 ({opp.ourShare}%)</span>
-                        <span className="text-red-600">경쟁사 {opp.competitorPresence}회 ({opp.compShare}%)</span>
+                        <span className="text-brand-600">
+                          우리 {opp.ourPresence}회 ({opp.ourShare}%)
+                        </span>
+                        <span className="text-red-600">
+                          경쟁사 {opp.competitorPresence}회 ({opp.compShare}%)
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">진출 기회 카테고리가 없습니다</p>
+                <p className="text-sm text-[#8F9B8C]">
+                  진출 기회 카테고리가 없습니다
+                </p>
               )}
             </CardContent>
           </Card>
@@ -1630,28 +2494,41 @@ function BreadthInsights({ data }: { data: any }) {
             <CardContent className="p-5">
               <h3 className="text-base font-semibold text-emerald-900 mb-1 flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                ✅ 우리 우위 영역
+                우리 우위 영역
               </h3>
-              <p className="text-xs text-emerald-700/80 mb-4">경쟁사 대비 우리가 더 많이 노출되는 카테고리</p>
+              <p className="text-xs text-emerald-700/80 mb-4">
+                경쟁사 대비 우리가 더 많이 노출되는 카테고리
+              </p>
               {strengths.length > 0 ? (
                 <div className="space-y-2">
                   {strengths.map((s: any) => (
-                    <div key={s.category} className="bg-white rounded-xl p-3 border border-emerald-100">
+                    <div
+                      key={s.category}
+                      className="bg-white rounded-xl p-3 border border-emerald-100"
+                    >
                       <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium text-slate-900 text-sm">{s.label}</span>
+                        <span className="font-medium text-[#15231B] text-sm">
+                          {s.label}
+                        </span>
                         <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                          ✅ 우위
+                          우위
                         </span>
                       </div>
                       <div className="flex justify-between text-xs">
-                        <span className="text-emerald-600 font-medium">우리 {s.ourPresence}회</span>
-                        <span className="text-slate-500">경쟁사 {s.competitorPresence}회</span>
+                        <span className="text-emerald-600 font-medium">
+                          우리 {s.ourPresence}회
+                        </span>
+                        <span className="text-[#778378]">
+                          경쟁사 {s.competitorPresence}회
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-400">아직 우위 영역이 충분히 누적되지 않았습니다</p>
+                <p className="text-sm text-[#8F9B8C]">
+                  아직 우위 영역이 충분히 누적되지 않았습니다
+                </p>
               )}
             </CardContent>
           </Card>
@@ -1662,20 +2539,29 @@ function BreadthInsights({ data }: { data: any }) {
       {recs.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-600" />
               자동 액션 추천
             </h3>
-            <p className="text-xs text-slate-500 mb-4">권위도/감성/갭 분석 기반 우선순위별 실행 계획</p>
+            <p className="text-xs text-[#778378] mb-4">
+              권위도/감성/갭 분석 기반 우선순위별 실행 계획
+            </p>
             <div className="space-y-2">
               {recs.map((r: any, i: number) => (
-                <div key={i} className="bg-white rounded-xl p-3 border border-amber-100 flex items-start gap-3">
-                  <span className={`text-xs font-bold px-2 py-1 rounded border ${priorityColors[r.priority] || priorityColors.P2}`}>
+                <div
+                  key={i}
+                  className="bg-white rounded-xl p-3 border border-amber-100 flex items-start gap-3"
+                >
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded border ${priorityColors[r.priority] || priorityColors.P2}`}
+                  >
                     {r.priority}
                   </span>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-900">{r.label}</p>
-                    <p className="text-xs text-slate-600 mt-1">{r.action}</p>
+                    <p className="text-sm font-medium text-[#15231B]">
+                      {r.label}
+                    </p>
+                    <p className="text-xs text-[#667668] mt-1">{r.action}</p>
                   </div>
                 </div>
               ))}
@@ -1688,29 +2574,44 @@ function BreadthInsights({ data }: { data: any }) {
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-1">
-            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-brand-600" />
               25 카테고리 상세 분포
             </h3>
-            <span className="text-xs text-slate-500">{categories.length}개 카테고리 활성</span>
+            <span className="text-xs text-[#778378]">
+              {categories.length}개 카테고리 활성
+            </span>
           </div>
-          <p className="text-xs text-slate-500 mb-4">카테고리별 인용 횟수, 권위도, 감성, 플랫폼 분포</p>
+          <p className="text-xs text-[#778378] mb-4">
+            카테고리별 인용 횟수, 권위도, 감성, 플랫폼 분포
+          </p>
 
           <div className="space-y-3">
             {visibleCats.map((cat: any) => {
               const widthPct = (cat.count / maxCatCount) * 100;
               const authBadge =
-                cat.avgAuthority >= 9 ? 'bg-emerald-100 text-emerald-700' :
-                cat.avgAuthority >= 7 ? 'bg-blue-100 text-blue-700' :
-                cat.avgAuthority >= 5 ? 'bg-indigo-100 text-indigo-700' :
-                cat.avgAuthority >= 3 ? 'bg-amber-100 text-amber-700' :
-                'bg-red-100 text-red-700';
+                cat.avgAuthority >= 9
+                  ? "bg-emerald-100 text-emerald-700"
+                  : cat.avgAuthority >= 7
+                    ? "bg-brand-100 text-brand-700"
+                    : cat.avgAuthority >= 5
+                      ? "bg-brand-100 text-brand-700"
+                      : cat.avgAuthority >= 3
+                        ? "bg-amber-100 text-amber-700"
+                        : "bg-red-100 text-red-700";
               return (
-                <div key={cat.category} className="border rounded-xl p-4 hover:bg-slate-50/50 transition-colors">
+                <div
+                  key={cat.category}
+                  className="border rounded-xl p-4 hover:bg-slate-50/50 transition-colors"
+                >
                   <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-slate-900 text-sm">{cat.label}</span>
-                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${authBadge}`}>
+                      <span className="font-semibold text-[#15231B] text-sm">
+                        {cat.label}
+                      </span>
+                      <span
+                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${authBadge}`}
+                      >
                         권위 {cat.avgAuthority}/10
                       </span>
                       {cat.ownCount > 0 && (
@@ -1724,27 +2625,36 @@ function BreadthInsights({ data }: { data: any }) {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-500">
-                      <span className="font-bold text-slate-900">{cat.count.toLocaleString()}회</span>
+                    <div className="text-xs text-[#778378]">
+                      <span className="font-bold text-[#15231B]">
+                        {cat.count.toLocaleString()}회
+                      </span>
                       <span className="ml-1">({cat.percentage}%)</span>
                       <span className="ml-2">· {cat.uniqueDomains} 도메인</span>
                     </div>
                   </div>
-                  <div className="bg-slate-100 rounded-full h-2 overflow-hidden mb-2">
-                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${widthPct}%` }} />
+                  <div className="bg-[#EDF0E9] rounded-full h-2 overflow-hidden mb-2">
+                    <div
+                      className="h-full bg-brand-500 rounded-full"
+                      style={{ width: `${widthPct}%` }}
+                    />
                   </div>
-                  <div className="flex justify-between text-xs text-slate-500 mb-2">
+                  <div className="flex justify-between text-xs text-[#778378] mb-2">
                     <span>
-                      😊 긍정 {cat.sentiment.positive} · 😐 중립 {cat.sentiment.neutral} · 😞 부정 {cat.sentiment.negative}
+                      긍정 {cat.sentiment.positive} · 중립{" "}
+                      {cat.sentiment.neutral} · 부정 {cat.sentiment.negative}
                     </span>
                     <span>병원 언급률 {cat.mentionedRate}%</span>
                   </div>
                   {/* 플랫폼 */}
                   {cat.platforms?.length > 0 && (
                     <div className="flex items-center gap-1 flex-wrap mb-2">
-                      <span className="text-xs text-slate-400 mr-1">AI:</span>
+                      <span className="text-xs text-[#8F9B8C] mr-1">AI:</span>
                       {cat.platforms.map((p: string) => (
-                        <span key={p} className={`text-xs px-1.5 py-0.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-700'}`}>
+                        <span
+                          key={p}
+                          className={`text-xs px-1.5 py-0.5 rounded ${platformBgColors[p] || "bg-[#EDF0E9] text-[#536354]"}`}
+                        >
                           {platformNames[p] || p}
                         </span>
                       ))}
@@ -1753,9 +2663,12 @@ function BreadthInsights({ data }: { data: any }) {
                   {/* Top 도메인 */}
                   {cat.topDomains?.length > 0 && (
                     <div className="flex items-center gap-1 flex-wrap">
-                      <span className="text-xs text-slate-400 mr-1">Top:</span>
+                      <span className="text-xs text-[#8F9B8C] mr-1">Top:</span>
                       {cat.topDomains.slice(0, 3).map((d: any) => (
-                        <span key={d.domain} className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 font-mono">
+                        <span
+                          key={d.domain}
+                          className="text-xs px-1.5 py-0.5 rounded bg-[#EDF0E9] text-[#536354] font-mono"
+                        >
                           {d.domain} ({d.count})
                         </span>
                       ))}
@@ -1774,9 +2687,15 @@ function BreadthInsights({ data }: { data: any }) {
               className="w-full mt-4"
             >
               {showAllCats ? (
-                <><ChevronUp className="h-4 w-4 mr-1.5" />접기</>
+                <>
+                  <ChevronUp className="h-4 w-4 mr-1.5" />
+                  접기
+                </>
               ) : (
-                <><ChevronDown className="h-4 w-4 mr-1.5" />전체 {categories.length}개 보기</>
+                <>
+                  <ChevronDown className="h-4 w-4 mr-1.5" />
+                  전체 {categories.length}개 보기
+                </>
               )}
             </Button>
           )}
@@ -1800,7 +2719,9 @@ function SourceIntelDashboard({
   hints: any;
   hospitalId: string;
 }) {
-  const [subTab, setSubTab] = useState<'overview' | 'quotes' | 'instagram' | 'hints' | 'top'>('overview');
+  const [subTab, setSubTab] = useState<
+    "overview" | "quotes" | "instagram" | "hints" | "top"
+  >("overview");
   const [enrichTriggered, setEnrichTriggered] = useState(false);
   const { data: enrichStatus } = useEnrichStatus(hospitalId, enrichTriggered);
   const queryClient = useQueryClient();
@@ -1809,57 +2730,78 @@ function SourceIntelDashboard({
     try {
       await crawlerApi.enrichSources(hospitalId, 30, 200, true);
       setEnrichTriggered(true);
-      toast.success('🔥 분석 시작 — AI가 인용 페이지를 크롤링하고 분석 중입니다 (약 5-10분)');
+      toast.success(
+        " 분석 시작 — AI가 인용 페이지를 크롤링하고 분석 중입니다 (약 5-10분)",
+      );
     } catch (e: any) {
-      toast.error(e?.response?.data?.message || '분석 시작 실패');
+      toast.error(e?.response?.data?.message || "분석 시작 실패");
     }
   };
 
   // 폴링 상태에 따라 캐시 무효화
   useEffect(() => {
-    if (enrichStatus?.status === 'done' && enrichTriggered) {
+    if (enrichStatus?.status === "done" && enrichTriggered) {
       setEnrichTriggered(false);
-      queryClient.invalidateQueries({ queryKey: ['source-intel-summary', hospitalId] });
-      queryClient.invalidateQueries({ queryKey: ['source-intel-top', hospitalId] });
-      queryClient.invalidateQueries({ queryKey: ['source-intel-instagram', hospitalId] });
-      toast.success(`✅ 분석 완료 — ${enrichStatus.processed}개 페이지 처리, ${enrichStatus.aiAnalyzed}개 AI 분석 완료`);
+      queryClient.invalidateQueries({
+        queryKey: ["source-intel-summary", hospitalId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["source-intel-top", hospitalId],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["source-intel-instagram", hospitalId],
+      });
+      toast.success(
+        ` 분석 완료 — ${enrichStatus.processed}개 페이지 처리, ${enrichStatus.aiAnalyzed}개 AI 분석 완료`,
+      );
     }
   }, [enrichStatus?.status, enrichTriggered, queryClient, hospitalId]);
 
-  const isRunning = enrichStatus?.status === 'running';
-  const enrichProgress = isRunning && enrichStatus?.total > 0
-    ? Math.round((enrichStatus.processed / enrichStatus.total) * 100)
-    : 0;
+  const isRunning = enrichStatus?.status === "running";
+  const enrichProgress =
+    isRunning && enrichStatus?.total > 0
+      ? Math.round((enrichStatus.processed / enrichStatus.total) * 100)
+      : 0;
 
   return (
     <div className="space-y-6">
       {/* 상단 — 분석 트리거 */}
-      <Card className="border-purple-200 bg-purple-50">
+      <Card className="border-brand-200 bg-brand-50">
         <CardContent className="p-5">
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-brand-600" />
                 출처 인텔리전스 🆕
               </h3>
-              <p className="text-sm text-slate-600">
-                AI가 인용한 페이지의 <strong>실제 본문 + 우리 병원이 어떻게 묘사되는지</strong>를 분석합니다.
-                인스타 릴/포스트, 블로그, 모두닥 등 모든 인용 출처를 심층 추적.
+              <p className="text-sm text-[#667668]">
+                AI가 인용한 페이지의{" "}
+                <strong>실제 본문 + 우리 병원이 어떻게 묘사되는지</strong>를
+                분석합니다. 인스타 릴/포스트, 블로그, 모두닥 등 모든 인용 출처를
+                심층 추적.
               </p>
             </div>
             <div className="flex-shrink-0">
               {isRunning ? (
                 <div className="flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-2 text-sm font-medium text-purple-700">
+                  <div className="flex items-center gap-2 text-sm font-medium text-brand-700">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    분석 중 {enrichStatus?.processed || 0}/{enrichStatus?.total || 0}
+                    분석 중 {enrichStatus?.processed || 0}/
+                    {enrichStatus?.total || 0}
                   </div>
-                  <div className="w-40 h-2 bg-purple-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 transition-all" style={{ width: `${enrichProgress}%` }} />
+                  <div className="w-40 h-2 bg-brand-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500 transition-all"
+                      style={{ width: `${enrichProgress}%` }}
+                    />
                   </div>
                 </div>
               ) : (
-                <Button onClick={handleEnrich} size="sm" className="bg-purple-600 hover:bg-purple-700">
+                <Button
+                  onClick={handleEnrich}
+                  size="sm"
+                  className="bg-brand-600 hover:bg-brand-700"
+                >
                   <Sparkles className="h-4 w-4 mr-1.5" />
                   AI 분석 실행
                 </Button>
@@ -1872,19 +2814,19 @@ function SourceIntelDashboard({
       {/* sub tabs */}
       <div className="flex gap-2 overflow-x-auto border-b pb-2">
         {[
-          { key: 'overview', icon: Eye, label: '개요' },
-          { key: 'quotes', icon: MessageCircle, label: 'Quote & 정확성' },
-          { key: 'top', icon: Award, label: 'Top 영향 출처' },
-          { key: 'instagram', icon: Instagram, label: '인스타 인사이트' },
-          { key: 'hints', icon: Hash, label: 'AI 단서 키워드' },
-        ].map(t => (
+          { key: "overview", icon: Eye, label: "개요" },
+          { key: "quotes", icon: MessageCircle, label: "Quote & 정확성" },
+          { key: "top", icon: Award, label: "Top 영향 출처" },
+          { key: "instagram", icon: Instagram, label: "인스타 인사이트" },
+          { key: "hints", icon: Hash, label: "AI 단서 키워드" },
+        ].map((t) => (
           <button
             key={t.key}
             onClick={() => setSubTab(t.key as any)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg whitespace-nowrap transition-colors ${
               subTab === t.key
-                ? 'bg-purple-100 text-purple-700 font-semibold'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? "bg-brand-100 text-brand-700 font-semibold"
+                : "text-[#667668] hover:bg-[#EDF0E9]"
             }`}
           >
             <t.icon className="h-4 w-4" />
@@ -1894,24 +2836,40 @@ function SourceIntelDashboard({
       </div>
 
       {/* sub content */}
-      {subTab === 'overview' && <SI_Overview summary={summary} instagram={instagram} hospitalId={hospitalId} />}
-      {subTab === 'quotes' && <SI_Quotes summary={summary} />}
-      {subTab === 'top' && <SI_TopSources data={topSources} />}
-      {subTab === 'instagram' && <SI_Instagram data={instagram} />}
-      {subTab === 'hints' && <SI_HintKeywords data={hints} />}
+      {subTab === "overview" && (
+        <SI_Overview
+          summary={summary}
+          instagram={instagram}
+          hospitalId={hospitalId}
+        />
+      )}
+      {subTab === "quotes" && <SI_Quotes summary={summary} />}
+      {subTab === "top" && <SI_TopSources data={topSources} />}
+      {subTab === "instagram" && <SI_Instagram data={instagram} />}
+      {subTab === "hints" && <SI_HintKeywords data={hints} />}
     </div>
   );
 }
 
 // ━━━ 출처 인텔: 개요 ━━━
-function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagram: any; hospitalId: string }) {
+function SI_Overview({
+  summary,
+  instagram,
+  hospitalId,
+}: {
+  summary: any;
+  instagram: any;
+  hospitalId: string;
+}) {
   if (!summary) {
     return (
       <Card>
         <CardContent className="p-8 text-center">
           <FileSearch className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-          <p className="text-slate-500 mb-3">아직 분석된 출처가 없습니다</p>
-          <p className="text-xs text-slate-400">위의 'AI 분석 실행' 버튼을 눌러 시작하세요</p>
+          <p className="text-[#778378] mb-3">아직 분석된 출처가 없습니다</p>
+          <p className="text-xs text-[#8F9B8C]">
+            위의 'AI 분석 실행' 버튼을 눌러 시작하세요
+          </p>
         </CardContent>
       </Card>
     );
@@ -1922,33 +2880,48 @@ function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagr
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-purple-200 bg-purple-50">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card className="border-brand-200 bg-brand-50">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium">분석된 페이지</p>
-            <p className="text-2xl font-bold text-purple-800">{summary.analyzed?.toLocaleString() || 0}</p>
-            <p className="text-xs text-purple-600 mt-1">/ {summary.totalSnapshots?.toLocaleString() || 0} 스냅샷 ({summary.coverage}%)</p>
+            <p className="text-xs text-brand-600 font-medium">분석된 페이지</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {summary.analyzed?.toLocaleString() || 0}
+            </p>
+            <p className="text-xs text-brand-600 mt-1">
+              / {summary.totalSnapshots?.toLocaleString() || 0} 스냅샷 (
+              {summary.coverage}%)
+            </p>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50">
           <CardContent className="p-4">
             <p className="text-xs text-green-600 font-medium">우리 병원 언급</p>
-            <p className="text-2xl font-bold text-green-800">{summary.mentionsUs?.toLocaleString() || 0}</p>
-            <p className="text-xs text-green-600 mt-1">{td.positiveRate || 0}% 긍정</p>
+            <p className="text-2xl font-bold text-green-800">
+              {summary.mentionsUs?.toLocaleString() || 0}
+            </p>
+            <p className="text-xs text-green-600 mt-1">
+              {td.positiveRate || 0}% 긍정
+            </p>
           </CardContent>
         </Card>
         <Card className="border-amber-200 bg-amber-50">
           <CardContent className="p-4">
             <p className="text-xs text-amber-600 font-medium">정확성 이슈</p>
             <p className="text-2xl font-bold text-amber-800">{ai.total || 0}</p>
-            <p className="text-xs text-amber-600 mt-1">옛 정보 {ai.outdated || 0} · 오류 {ai.incorrect || 0}</p>
+            <p className="text-xs text-amber-600 mt-1">
+              옛 정보 {ai.outdated || 0} · 오류 {ai.incorrect || 0}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-pink-200 bg-pink-50">
           <CardContent className="p-4">
             <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
-            <p className="text-2xl font-bold text-pink-800">{instagram?.summary?.igCitations?.toLocaleString() || 0}</p>
-            <p className="text-xs text-pink-600 mt-1">{instagram?.summary?.igPercent || 0}% (전체 대비)</p>
+            <p className="text-2xl font-bold text-pink-800">
+              {instagram?.summary?.igCitations?.toLocaleString() || 0}
+            </p>
+            <p className="text-xs text-pink-600 mt-1">
+              {instagram?.summary?.igPercent || 0}% (전체 대비)
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -1956,27 +2929,44 @@ function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagr
       {/* Tone 분포 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <MessageCircle className="h-5 w-5 text-purple-600" />
+          <h3 className="text-base font-semibold text-[#15231B] mb-3 flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-brand-600" />
             AI 인용 출처가 우리 병원을 묘사하는 톤
           </h3>
           <div className="space-y-2">
             {[
-              { label: '😊 긍정', count: td.positive || 0, color: 'bg-green-500' },
-              { label: '😐 중립', count: td.neutral || 0, color: 'bg-slate-400' },
-              { label: '⚖️ 비교 (vs 경쟁사)', count: td.comparative || 0, color: 'bg-amber-500' },
-              { label: '😞 부정', count: td.negative || 0, color: 'bg-red-500' },
-            ].map(t => {
-              const total = (td.positive || 0) + (td.neutral || 0) + (td.comparative || 0) + (td.negative || 0);
+              {
+                label: " 긍정",
+                count: td.positive || 0,
+                color: "bg-green-500",
+              },
+              { label: " 중립", count: td.neutral || 0, color: "bg-slate-400" },
+              {
+                label: " 비교 (vs 경쟁사)",
+                count: td.comparative || 0,
+                color: "bg-amber-500",
+              },
+              { label: " 부정", count: td.negative || 0, color: "bg-red-500" },
+            ].map((t) => {
+              const total =
+                (td.positive || 0) +
+                (td.neutral || 0) +
+                (td.comparative || 0) +
+                (td.negative || 0);
               const pct = total > 0 ? (t.count / total) * 100 : 0;
               return (
                 <div key={t.label}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-700">{t.label}</span>
-                    <span className="font-medium">{t.count}회 ({pct.toFixed(1)}%)</span>
+                    <span className="text-[#536354]">{t.label}</span>
+                    <span className="font-medium">
+                      {t.count}회 ({pct.toFixed(1)}%)
+                    </span>
                   </div>
-                  <div className="bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div className={`h-full ${t.color} transition-all`} style={{ width: `${pct}%` }} />
+                  <div className="bg-[#EDF0E9] rounded-full h-3 overflow-hidden">
+                    <div
+                      className={`h-full ${t.color} transition-all`}
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
@@ -1992,7 +2982,11 @@ function SI_Overview({ summary, instagram, hospitalId }: { summary: any; instagr
 function SI_Quotes({ summary }: { summary: any }) {
   if (!summary) {
     return (
-      <Card><CardContent className="p-8 text-center text-slate-500">분석된 데이터가 없습니다</CardContent></Card>
+      <Card>
+        <CardContent className="p-8 text-center text-[#778378]">
+          분석된 데이터가 없습니다
+        </CardContent>
+      </Card>
     );
   }
   const positiveQuotes = summary.positiveQuotes || [];
@@ -2007,19 +3001,30 @@ function SI_Quotes({ summary }: { summary: any }) {
           <CardContent className="p-5">
             <h3 className="text-base font-semibold text-red-900 mb-3 flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-600" />
-              🚨 정정 필요 출처 ({alerts.length}건)
+              정정 필요 출처 ({alerts.length}건)
             </h3>
             <div className="space-y-2">
               {alerts.map((a: any, i: number) => (
-                <div key={i} className="bg-white rounded-xl p-3 border border-red-100 flex items-start gap-3">
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${
-                    a.type === 'INCORRECT' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                  }`}>
-                    {a.type === 'INCORRECT' ? '잘못된 정보' : '옛 정보'}
+                <div
+                  key={i}
+                  className="bg-white rounded-xl p-3 border border-red-100 flex items-start gap-3"
+                >
+                  <span
+                    className={`text-xs font-bold px-2 py-1 rounded ${
+                      a.type === "INCORRECT"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {a.type === "INCORRECT" ? "잘못된 정보" : "옛 정보"}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-slate-900">{a.action || '내용 검토 필요'}</p>
-                    <p className="text-xs text-slate-400 mt-1 truncate">snapshot: {a.snapId.substring(0, 8)}</p>
+                    <p className="text-sm text-[#15231B]">
+                      {a.action || "내용 검토 필요"}
+                    </p>
+                    <p className="text-xs text-[#8F9B8C] mt-1 truncate">
+                      snapshot: {a.snapId.substring(0, 8)}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -2031,20 +3036,27 @@ function SI_Quotes({ summary }: { summary: any }) {
       {/* 긍정 quotes */}
       <Card className="border-green-200">
         <CardContent className="p-5">
-          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h3 className="text-base font-semibold text-[#15231B] mb-3 flex items-center gap-2">
             <Quote className="h-5 w-5 text-green-600" />
-            💎 우리 병원 핵심 quote ({positiveQuotes.length}개)
+            우리 병원 핵심 quote ({positiveQuotes.length}개)
           </h3>
           {positiveQuotes.length > 0 ? (
             <div className="space-y-3">
               {positiveQuotes.map((q: any, i: number) => (
-                <div key={i} className="bg-green-50/50 rounded-xl p-3 border-l-4 border-green-400">
-                  <p className="text-sm text-slate-800 italic leading-relaxed">"{q.quote}"</p>
+                <div
+                  key={i}
+                  className="bg-green-50/50 rounded-xl p-3 border-l-4 border-green-400"
+                >
+                  <p className="text-sm text-[#2E4132] italic leading-relaxed">
+                    "{q.quote}"
+                  </p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-400">아직 긍정 quote가 수집되지 않았습니다</p>
+            <p className="text-sm text-[#8F9B8C]">
+              아직 긍정 quote가 수집되지 않았습니다
+            </p>
           )}
         </CardContent>
       </Card>
@@ -2053,14 +3065,19 @@ function SI_Quotes({ summary }: { summary: any }) {
       {negativeQuotes.length > 0 && (
         <Card className="border-red-200">
           <CardContent className="p-5">
-            <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <h3 className="text-base font-semibold text-[#15231B] mb-3 flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-red-600" />
-              ⚠️ 부정적 묘사 ({negativeQuotes.length}개) — 평판 관리 대상
+              부정적 묘사 ({negativeQuotes.length}개) — 평판 관리 대상
             </h3>
             <div className="space-y-3">
               {negativeQuotes.map((q: any, i: number) => (
-                <div key={i} className="bg-red-50/50 rounded-xl p-3 border-l-4 border-red-400">
-                  <p className="text-sm text-slate-800 italic leading-relaxed">"{q.quote}"</p>
+                <div
+                  key={i}
+                  className="bg-red-50/50 rounded-xl p-3 border-l-4 border-red-400"
+                >
+                  <p className="text-sm text-[#2E4132] italic leading-relaxed">
+                    "{q.quote}"
+                  </p>
                 </div>
               ))}
             </div>
@@ -2074,17 +3091,25 @@ function SI_Quotes({ summary }: { summary: any }) {
 // ━━━ 출처 인텔: Top Sources ━━━
 function SI_TopSources({ data }: { data: any }) {
   if (!data || !data.sources?.length) {
-    return <Card><CardContent className="p-8 text-center text-slate-500">분석된 출처가 없습니다</CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-[#778378]">
+          분석된 출처가 없습니다
+        </CardContent>
+      </Card>
+    );
   }
   return (
     <div className="space-y-3">
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
-            <Award className="h-5 w-5 text-purple-600" />
+          <h3 className="text-base font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+            <Award className="h-5 w-5 text-brand-600" />
             영향력 TOP {data.sources.length} 출처
           </h3>
-          <p className="text-xs text-slate-500 mb-4">권위도 × 인용빈도 × AI 다양성 × 신선도 × 톤 가중 점수 (0~10)</p>
+          <p className="text-xs text-[#778378] mb-4">
+            권위도 × 인용빈도 × AI 다양성 × 신선도 × 톤 가중 점수 (0~10)
+          </p>
           <div className="space-y-2">
             {data.sources.map((s: any, i: number) => (
               <SourceCard key={s.id} source={s} rank={i + 1} />
@@ -2100,91 +3125,166 @@ function SourceCard({ source, rank }: { source: any; rank: number }) {
   const [expanded, setExpanded] = useState(false);
   const a = source.analysis;
   const toneColor =
-    a?.ourTone === 'POSITIVE' ? 'bg-green-100 text-green-700' :
-    a?.ourTone === 'NEGATIVE' ? 'bg-red-100 text-red-700' :
-    a?.ourTone === 'COMPARATIVE' ? 'bg-amber-100 text-amber-700' :
-    'bg-slate-100 text-slate-600';
+    a?.ourTone === "POSITIVE"
+      ? "bg-green-100 text-green-700"
+      : a?.ourTone === "NEGATIVE"
+        ? "bg-red-100 text-red-700"
+        : a?.ourTone === "COMPARATIVE"
+          ? "bg-amber-100 text-amber-700"
+          : "bg-[#EDF0E9] text-[#667668]";
 
   return (
     <div className="border rounded-xl p-3 hover:bg-slate-50/50 transition-colors">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-8 h-8 rounded-full bg-purple-600 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-brand-600 text-white text-sm font-bold flex items-center justify-center flex-shrink-0">
             {rank}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="font-mono text-xs text-slate-700 truncate">{source.domain}</span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
+              <span className="font-mono text-xs text-[#536354] truncate">
+                {source.domain}
+              </span>
+              <span className="text-xs px-1.5 py-0.5 rounded bg-brand-100 text-brand-700">
                 Authority {source.authorityScore}/10
               </span>
-              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-brand-100 text-brand-700">
                 Influence {source.influenceScore?.toFixed(2)}
               </span>
               {a && (
-                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${toneColor}`}>
-                  {a.ourTone === 'POSITIVE' ? '😊 긍정' :
-                   a.ourTone === 'NEGATIVE' ? '😞 부정' :
-                   a.ourTone === 'COMPARATIVE' ? '⚖️ 비교' :
-                   a.ourTone === 'NEUTRAL' ? '😐 중립' : '— 미언급'}
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded font-medium ${toneColor}`}
+                >
+                  {a.ourTone === "POSITIVE"
+                    ? " 긍정"
+                    : a.ourTone === "NEGATIVE"
+                      ? " 부정"
+                      : a.ourTone === "COMPARATIVE"
+                        ? " 비교"
+                        : a.ourTone === "NEUTRAL"
+                          ? " 중립"
+                          : "— 미언급"}
                 </span>
               )}
-              {a?.claimAccuracy && a.claimAccuracy !== 'ACCURATE' && (
+              {a?.claimAccuracy && a.claimAccuracy !== "ACCURATE" && (
                 <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-medium">
-                  ⚠️ {a.claimAccuracy === 'OUTDATED' ? '옛정보' : a.claimAccuracy === 'INCORRECT' ? '오류' : a.claimAccuracy}
+                  {a.claimAccuracy === "OUTDATED"
+                    ? "옛정보"
+                    : a.claimAccuracy === "INCORRECT"
+                      ? "오류"
+                      : a.claimAccuracy}
                 </span>
               )}
             </div>
-            <p className="text-sm font-medium text-slate-900 truncate">{source.title || source.url}</p>
+            <p className="text-sm font-medium text-[#15231B] truncate">
+              {source.title || source.url}
+            </p>
             {a?.extractedQuote && (
-              <p className="text-xs text-slate-600 italic mt-1 line-clamp-2">"{a.extractedQuote}"</p>
+              <p className="text-xs text-[#667668] italic mt-1 line-clamp-2">
+                "{a.extractedQuote}"
+              </p>
             )}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          <span className="text-xs text-slate-500">{source.totalCitations}회 인용</span>
+          <span className="text-xs text-[#778378]">
+            {source.totalCitations}회 인용
+          </span>
           <div className="flex gap-1">
             {source.citingAiPlatforms?.slice(0, 4).map((p: string) => (
-              <span key={p} className={`w-2 h-2 rounded-full ${platformColors[p] || 'bg-slate-300'}`} title={platformNames[p]} />
+              <span
+                key={p}
+                className={`w-2 h-2 rounded-full ${platformColors[p] || "bg-slate-300"}`}
+                title={platformNames[p]}
+              />
             ))}
           </div>
         </div>
       </div>
       <button
         onClick={() => setExpanded(!expanded)}
-        className="mt-2 text-xs text-purple-600 hover:underline flex items-center gap-1"
+        className="mt-2 text-xs text-brand-600 hover:underline flex items-center gap-1"
       >
-        {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+        {expanded ? (
+          <ChevronUp className="h-3 w-3" />
+        ) : (
+          <ChevronDown className="h-3 w-3" />
+        )}
         상세 보기
       </button>
       {expanded && (
         <div className="mt-3 p-3 bg-slate-50 rounded-lg text-xs space-y-2">
-          <div><span className="font-semibold text-slate-700">URL:</span> <a href={source.url} target="_blank" rel="noreferrer" className="text-purple-600 hover:underline break-all">{source.url}</a></div>
-          {source.publisher && <div><span className="font-semibold text-slate-700">매체:</span> {source.publisher}</div>}
-          {source.author && <div><span className="font-semibold text-slate-700">작성자:</span> {source.author}</div>}
-          {source.publishedAt && <div><span className="font-semibold text-slate-700">게시일:</span> {new Date(source.publishedAt).toLocaleDateString('ko-KR')}</div>}
-          {a?.topicSummary && <div><span className="font-semibold text-slate-700">주제:</span> {a.topicSummary}</div>}
+          <div>
+            <span className="font-semibold text-[#536354]">URL:</span>{" "}
+            <a
+              href={source.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-brand-600 hover:underline break-all"
+            >
+              {source.url}
+            </a>
+          </div>
+          {source.publisher && (
+            <div>
+              <span className="font-semibold text-[#536354]">매체:</span>{" "}
+              {source.publisher}
+            </div>
+          )}
+          {source.author && (
+            <div>
+              <span className="font-semibold text-[#536354]">작성자:</span>{" "}
+              {source.author}
+            </div>
+          )}
+          {source.publishedAt && (
+            <div>
+              <span className="font-semibold text-[#536354]">게시일:</span>{" "}
+              {new Date(source.publishedAt).toLocaleDateString("ko-KR")}
+            </div>
+          )}
+          {a?.topicSummary && (
+            <div>
+              <span className="font-semibold text-[#536354]">주제:</span>{" "}
+              {a.topicSummary}
+            </div>
+          )}
           {a?.ourContext && (
             <div>
-              <span className="font-semibold text-slate-700">우리 병원 언급 컨텍스트:</span>
-              <p className="mt-1 text-slate-600 leading-relaxed">{a.ourContext}</p>
+              <span className="font-semibold text-[#536354]">
+                우리 병원 언급 컨텍스트:
+              </span>
+              <p className="mt-1 text-[#667668] leading-relaxed">
+                {a.ourContext}
+              </p>
             </div>
           )}
           {a?.recommendedAction && (
             <div className="mt-2 p-2 bg-amber-50 rounded border border-amber-200">
-              <span className="font-semibold text-amber-800">🎯 추천 액션:</span> <span className="text-amber-700">{a.recommendedAction}</span>
+              <span className="font-semibold text-amber-800"> 추천 액션:</span>{" "}
+              <span className="text-amber-700">{a.recommendedAction}</span>
             </div>
           )}
           {a?.mentionedCompetitors?.length > 0 && (
             <div>
-              <span className="font-semibold text-slate-700">함께 언급된 경쟁사:</span> {a.mentionedCompetitors.slice(0, 5).join(', ')}
+              <span className="font-semibold text-[#536354]">
+                함께 언급된 경쟁사:
+              </span>{" "}
+              {a.mentionedCompetitors.slice(0, 5).join(", ")}
             </div>
           )}
           {a?.signalKeywords?.length > 0 && (
             <div className="flex gap-1 flex-wrap">
-              <span className="font-semibold text-slate-700">시그널 키워드:</span>
+              <span className="font-semibold text-[#536354]">
+                시그널 키워드:
+              </span>
               {a.signalKeywords.map((k: string, i: number) => (
-                <span key={i} className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{k}</span>
+                <span
+                  key={i}
+                  className="px-1.5 py-0.5 bg-brand-100 text-brand-700 rounded"
+                >
+                  {k}
+                </span>
               ))}
             </div>
           )}
@@ -2197,7 +3297,13 @@ function SourceCard({ source, rank }: { source: any; rank: number }) {
 // ━━━ 출처 인텔: Instagram ━━━
 function SI_Instagram({ data }: { data: any }) {
   if (!data) {
-    return <Card><CardContent className="p-8 text-center text-slate-500">인스타 데이터가 없습니다</CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-[#778378]">
+          인스타 데이터가 없습니다
+        </CardContent>
+      </Card>
+    );
   }
   const s = data.summary || {};
   const diag = data.diagnosis || [];
@@ -2205,43 +3311,61 @@ function SI_Instagram({ data }: { data: any }) {
   return (
     <div className="space-y-4">
       {/* 요약 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
         <Card className="border-pink-200 bg-pink-50">
           <CardContent className="p-4">
             <p className="text-xs text-pink-600 font-medium">인스타 인용</p>
-            <p className="text-2xl font-bold text-pink-800">{s.igCitations?.toLocaleString() || 0}</p>
-            <p className="text-xs text-pink-600 mt-1">{s.igPercent}% (전체 대비)</p>
+            <p className="text-2xl font-bold text-pink-800">
+              {s.igCitations?.toLocaleString() || 0}
+            </p>
+            <p className="text-xs text-pink-600 mt-1">
+              {s.igPercent}% (전체 대비)
+            </p>
           </CardContent>
         </Card>
-        <Card className="border-purple-200 bg-purple-50">
+        <Card className="border-brand-200 bg-brand-50">
           <CardContent className="p-4">
-            <p className="text-xs text-purple-600 font-medium">고유 URL</p>
-            <p className="text-2xl font-bold text-purple-800">{s.uniqueUrls || 0}</p>
-            <p className="text-xs text-purple-600 mt-1">{s.uniqueHandles || 0}개 핸들</p>
+            <p className="text-xs text-brand-600 font-medium">고유 URL</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {s.uniqueUrls || 0}
+            </p>
+            <p className="text-xs text-brand-600 mt-1">
+              {s.uniqueHandles || 0}개 핸들
+            </p>
           </CardContent>
         </Card>
         {data.ourHandle ? (
           <Card className="border-emerald-200 bg-emerald-50">
             <CardContent className="p-4">
-              <p className="text-xs text-emerald-600 font-medium">우리 병원 핸들</p>
-              <p className="text-base font-bold text-emerald-800 truncate">{data.ourHandle.handle}</p>
-              <p className="text-xs text-emerald-600 mt-1">{data.ourHandle.citations}회 ({data.ourHandle.sharePercent}%)</p>
+              <p className="text-xs text-emerald-600 font-medium">
+                우리 병원 핸들
+              </p>
+              <p className="text-base font-bold text-emerald-800 truncate">
+                {data.ourHandle.handle}
+              </p>
+              <p className="text-xs text-emerald-600 mt-1">
+                {data.ourHandle.citations}회 ({data.ourHandle.sharePercent}%)
+              </p>
             </CardContent>
           </Card>
         ) : (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="p-4">
               <p className="text-xs text-red-600 font-medium">우리 병원 핸들</p>
-              <p className="text-base font-bold text-red-800">🚨 부재</p>
+              <p className="text-base font-bold text-red-800"> 부재</p>
               <p className="text-xs text-red-600 mt-1">인스타 SEO 미진입</p>
             </CardContent>
           </Card>
         )}
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-brand-200 bg-brand-50">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">AI 분석된 URL</p>
-            <p className="text-2xl font-bold text-brand-800">{s.analyzedCount || 0}</p>
-            <p className="text-xs text-brand-600 mt-1">/ {s.snapshotsAvailable || 0} 스냅샷</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {s.analyzedCount || 0}
+            </p>
+            <p className="text-xs text-brand-600 mt-1">
+              / {s.snapshotsAvailable || 0} 스냅샷
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -2250,11 +3374,13 @@ function SI_Instagram({ data }: { data: any }) {
       {diag.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-4">
-            <h4 className="text-sm font-semibold text-slate-900 mb-2 flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-[#15231B] mb-2 flex items-center gap-2">
               <Lightbulb className="h-4 w-4 text-amber-600" /> 진단
             </h4>
-            <ul className="text-sm text-slate-700 space-y-1">
-              {diag.map((d: string, i: number) => <li key={i}>{d}</li>)}
+            <ul className="text-sm text-[#536354] space-y-1">
+              {diag.map((d: string, i: number) => (
+                <li key={i}>{d}</li>
+              ))}
             </ul>
           </CardContent>
         </Card>
@@ -2263,20 +3389,28 @@ function SI_Instagram({ data }: { data: any }) {
       {/* AI 플랫폼별 */}
       <Card>
         <CardContent className="p-5">
-          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-pink-600" /> AI 플랫폼별 인스타 인용
+          <h4 className="text-sm font-semibold text-[#15231B] mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-pink-600" /> AI 플랫폼별 인스타
+            인용
           </h4>
           <div className="space-y-2">
             {(data.aiPlatformDistribution || []).map((p: any) => (
               <div key={p.platform}>
                 <div className="flex justify-between text-sm mb-1">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${platformBgColors[p.platform] || 'bg-slate-100'}`}>
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${platformBgColors[p.platform] || "bg-[#EDF0E9]"}`}
+                  >
                     {platformNames[p.platform] || p.platform}
                   </span>
-                  <span className="font-medium">{p.citations}회 ({p.percent}%)</span>
+                  <span className="font-medium">
+                    {p.citations}회 ({p.percent}%)
+                  </span>
                 </div>
-                <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
-                  <div className={`h-full ${platformColors[p.platform] || 'bg-slate-400'}`} style={{ width: `${p.percent}%` }} />
+                <div className="bg-[#EDF0E9] rounded-full h-2 overflow-hidden">
+                  <div
+                    className={`h-full ${platformColors[p.platform] || "bg-slate-400"}`}
+                    style={{ width: `${p.percent}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -2287,20 +3421,27 @@ function SI_Instagram({ data }: { data: any }) {
       {/* Top Handles */}
       <Card>
         <CardContent className="p-5">
-          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-[#15231B] mb-3 flex items-center gap-2">
             <Instagram className="h-4 w-4 text-pink-600" /> Top 인스타 핸들
           </h4>
           <div className="space-y-1">
             {(data.topHandles || []).slice(0, 10).map((h: any, i: number) => (
-              <div key={h.handle} className={`flex items-center justify-between p-2 rounded-lg ${h.isOurs ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-slate-50'}`}>
+              <div
+                key={h.handle}
+                className={`flex items-center justify-between p-2 rounded-lg ${h.isOurs ? "bg-emerald-50 border border-emerald-200" : "hover:bg-slate-50"}`}
+              >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-xs w-6 text-slate-500">#{i + 1}</span>
+                  <span className="text-xs w-6 text-[#778378]">#{i + 1}</span>
                   <span className="font-mono text-sm truncate">{h.handle}</span>
-                  {h.isOurs && <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800">우리</span>}
+                  {h.isOurs && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800">
+                      우리
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-xs">
-                  <span className="text-slate-500">{h.urls} URL</span>
-                  <span className="font-bold text-slate-900">{h.count}회</span>
+                  <span className="text-[#778378]">{h.urls} URL</span>
+                  <span className="font-bold text-[#15231B]">{h.count}회</span>
                 </div>
               </div>
             ))}
@@ -2311,39 +3452,67 @@ function SI_Instagram({ data }: { data: any }) {
       {/* Top URLs (포스트/릴) */}
       <Card>
         <CardContent className="p-5">
-          <h4 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <ExternalLink className="h-4 w-4 text-pink-600" /> Top 인용 인스타 포스트/릴
+          <h4 className="text-sm font-semibold text-[#15231B] mb-3 flex items-center gap-2">
+            <ExternalLink className="h-4 w-4 text-pink-600" /> Top 인용 인스타
+            포스트/릴
           </h4>
           <div className="space-y-2">
             {(data.topUrls || []).slice(0, 15).map((u: any, i: number) => (
-              <div key={i} className="border rounded-xl p-3 hover:bg-slate-50/50">
+              <div
+                key={i}
+                className="border rounded-xl p-3 hover:bg-slate-50/50"
+              >
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1 flex-wrap mb-1">
                       <span className="text-xs px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-medium">
-                        {u.snapshot?.mediaType === 'reel' ? '🎬 릴' : u.snapshot?.mediaType === 'post' ? '📷 포스트' : '📱'}
+                        {u.snapshot?.mediaType === "reel"
+                          ? " 릴"
+                          : u.snapshot?.mediaType === "post"
+                            ? " 포스트"
+                            : ""}
                       </span>
                       {u.snapshot?.handle && (
-                        <span className="text-xs font-mono text-slate-700">{u.snapshot.handle}</span>
+                        <span className="text-xs font-mono text-[#536354]">
+                          {u.snapshot.handle}
+                        </span>
                       )}
-                      <span className="text-xs text-slate-500">멘션률 {u.mentionRate}%</span>
+                      <span className="text-xs text-[#778378]">
+                        멘션률 {u.mentionRate}%
+                      </span>
                     </div>
-                    <a href={u.url} target="_blank" rel="noreferrer" className="text-xs text-purple-600 hover:underline truncate block">
+                    <a
+                      href={u.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs text-brand-600 hover:underline truncate block"
+                    >
                       {u.url}
                     </a>
                     {u.snapshot?.caption && (
-                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">{u.snapshot.caption}</p>
+                      <p className="text-xs text-[#667668] mt-1 line-clamp-2">
+                        {u.snapshot.caption}
+                      </p>
                     )}
                     {u.analysis?.extractedQuote && (
-                      <p className="text-xs text-slate-700 italic mt-1 line-clamp-2">💬 "{u.analysis.extractedQuote}"</p>
+                      <p className="text-xs text-[#536354] italic mt-1 line-clamp-2">
+                        {" "}
+                        "{u.analysis.extractedQuote}"
+                      </p>
                     )}
                     {u.topCoCompetitors?.length > 0 && (
                       <p className="text-xs text-amber-600 mt-1">
-                        🥊 동시언급: {u.topCoCompetitors.slice(0, 3).map((c: any) => c.name).join(', ')}
+                        동시언급:{" "}
+                        {u.topCoCompetitors
+                          .slice(0, 3)
+                          .map((c: any) => c.name)
+                          .join(", ")}
                       </p>
                     )}
                   </div>
-                  <span className="text-sm font-bold text-slate-900 flex-shrink-0">{u.citations}회</span>
+                  <span className="text-sm font-bold text-[#15231B] flex-shrink-0">
+                    {u.citations}회
+                  </span>
                 </div>
               </div>
             ))}
@@ -2357,19 +3526,25 @@ function SI_Instagram({ data }: { data: any }) {
 // ━━━ 출처 인텔: Hint Keywords ━━━
 function SI_HintKeywords({ data }: { data: any }) {
   if (!data || !data.keywords?.length) {
-    return <Card><CardContent className="p-8 text-center text-slate-500">아직 hint keyword가 누적되지 않았습니다</CardContent></Card>;
+    return (
+      <Card>
+        <CardContent className="p-8 text-center text-[#778378]">
+          아직 hint keyword가 누적되지 않았습니다
+        </CardContent>
+      </Card>
+    );
   }
 
   const categoryLabels: Record<string, string> = {
-    REVIEW_SIGNAL: '⭐ 리뷰/평점',
-    OFFICIAL_SIGNAL: '🏥 공식 홈페이지',
-    AUTHORITY_SIGNAL: '🏛 공공/권위',
-    VIDEO_SIGNAL: '🎬 영상/유튜브',
-    SOCIAL_SIGNAL: '📱 SNS/인스타',
-    BLOG_SIGNAL: '✍️ 블로그',
-    MAP_SIGNAL: '🗺 지도/플레이스',
-    NEWS_SIGNAL: '📰 뉴스',
-    OTHER: '기타',
+    REVIEW_SIGNAL: "⭐ 리뷰/평점",
+    OFFICIAL_SIGNAL: " 공식 홈페이지",
+    AUTHORITY_SIGNAL: " 공공/권위",
+    VIDEO_SIGNAL: " 영상/유튜브",
+    SOCIAL_SIGNAL: " SNS/인스타",
+    BLOG_SIGNAL: " 블로그",
+    MAP_SIGNAL: " 지도/플레이스",
+    NEWS_SIGNAL: " 뉴스",
+    OTHER: "기타",
   };
 
   return (
@@ -2377,11 +3552,13 @@ function SI_HintKeywords({ data }: { data: any }) {
       {/* 카테고리 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-base font-semibold text-slate-900 mb-1 flex items-center gap-2">
-            <Hash className="h-5 w-5 text-purple-600" />
+          <h3 className="text-base font-semibold text-[#15231B] mb-1 flex items-center gap-2">
+            <Hash className="h-5 w-5 text-brand-600" />
             AI가 인용 시 사용한 단서 신호 (카테고리별)
           </h3>
-          <p className="text-xs text-slate-500 mb-4">AI가 응답을 만들 때 어떤 종류의 출처 단서를 참조하는지</p>
+          <p className="text-xs text-[#778378] mb-4">
+            AI가 응답을 만들 때 어떤 종류의 출처 단서를 참조하는지
+          </p>
           <div className="space-y-2">
             {(data.byCategory || []).map((c: any) => {
               const max = data.byCategory[0]?.total || 1;
@@ -2389,13 +3566,19 @@ function SI_HintKeywords({ data }: { data: any }) {
               return (
                 <div key={c.category}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium text-slate-700">{categoryLabels[c.category] || c.category}</span>
-                    <span className="text-xs text-slate-500">
-                      전체 {c.total} · 우리 {c.withUs} · 경쟁사 {c.withCompetitor}
+                    <span className="font-medium text-[#536354]">
+                      {categoryLabels[c.category] || c.category}
+                    </span>
+                    <span className="text-xs text-[#778378]">
+                      전체 {c.total} · 우리 {c.withUs} · 경쟁사{" "}
+                      {c.withCompetitor}
                     </span>
                   </div>
-                  <div className="bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div className="h-full bg-purple-500" style={{ width: `${pct}%` }} />
+                  <div className="bg-[#EDF0E9] rounded-full h-3 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-500"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
@@ -2407,8 +3590,8 @@ function SI_HintKeywords({ data }: { data: any }) {
       {/* Top 키워드 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-base font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <Search className="h-5 w-5 text-purple-600" />
+          <h3 className="text-base font-semibold text-[#15231B] mb-3 flex items-center gap-2">
+            <Search className="h-5 w-5 text-brand-600" />
             Top {Math.min(30, data.keywords.length)} 단서 키워드
           </h3>
           <div className="space-y-1">
@@ -2416,20 +3599,34 @@ function SI_HintKeywords({ data }: { data: any }) {
               const total = data.keywords[0]?.total || 1;
               const pct = (k.total / total) * 100;
               return (
-                <div key={k.keyword} className="border rounded-lg p-2 hover:bg-slate-50/50">
+                <div
+                  key={k.keyword}
+                  className="border rounded-lg p-2 hover:bg-slate-50/50"
+                >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="text-sm font-medium text-slate-900 truncate">{k.keyword}</span>
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{categoryLabels[k.category] || k.category}</span>
+                      <span className="text-sm font-medium text-[#15231B] truncate">
+                        {k.keyword}
+                      </span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-[#EDF0E9] text-[#667668]">
+                        {categoryLabels[k.category] || k.category}
+                      </span>
                     </div>
                     <div className="flex items-center gap-3 text-xs flex-shrink-0">
                       <span className="text-green-600">우리 {k.usShare}%</span>
-                      <span className="text-red-600">경쟁사 {k.compShare}%</span>
-                      <span className="font-bold text-slate-900 w-8 text-right">{k.total}</span>
+                      <span className="text-red-600">
+                        경쟁사 {k.compShare}%
+                      </span>
+                      <span className="font-bold text-[#15231B] w-8 text-right">
+                        {k.total}
+                      </span>
                     </div>
                   </div>
-                  <div className="bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden">
-                    <div className="h-full bg-purple-400" style={{ width: `${pct}%` }} />
+                  <div className="bg-[#EDF0E9] rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    <div
+                      className="h-full bg-brand-400"
+                      style={{ width: `${pct}%` }}
+                    />
                   </div>
                 </div>
               );
@@ -2444,23 +3641,17 @@ function SI_HintKeywords({ data }: { data: any }) {
 // ==================== 4. 경쟁사 포지셔닝 맵 (레이더 차트) ====================
 function PositioningMap({ data }: { data: any }) {
   const axisLabels: Record<string, string> = data.axes || {
-    expertise: '전문성',
-    price: '가격',
-    accessibility: '접근성',
-    facility: '시설/장비',
-    reputation: '후기/평판',
+    expertise: "전문성",
+    price: "가격",
+    accessibility: "접근성",
+    facility: "시설/장비",
+    reputation: "후기/평판",
   };
   const axisKeys = Object.keys(axisLabels);
-  const axisEmojis: Record<string, string> = {
-    expertise: '🎓',
-    price: '💰',
-    accessibility: '🚇',
-    facility: '🏥',
-    reputation: '⭐',
-  };
-
   // SVG 레이더 차트 계산
-  const cx = 150, cy = 150, maxR = 120;
+  const cx = 150,
+    cy = 150,
+    maxR = 120;
   const angleStep = (2 * Math.PI) / axisKeys.length;
   const startAngle = -Math.PI / 2; // 12시 방향 시작
 
@@ -2471,55 +3662,83 @@ function PositioningMap({ data }: { data: any }) {
   };
 
   const getPolygonPoints = (scores: Record<string, number>) => {
-    return axisKeys.map((key, i) => {
-      const pt = getPoint(i, scores[key] || 0);
-      return `${pt.x},${pt.y}`;
-    }).join(' ');
+    return axisKeys
+      .map((key, i) => {
+        const pt = getPoint(i, scores[key] || 0);
+        return `${pt.x},${pt.y}`;
+      })
+      .join(" ");
   };
 
   const ourScores = data.ourPosition?.scores || {};
   const competitors = data.competitors || [];
 
   // 경쟁사 색상
-  const compColors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#8b5cf6'];
-  const compBgColors = ['bg-red-100 text-red-700', 'bg-orange-100 text-orange-700', 'bg-yellow-100 text-yellow-700', 'bg-green-100 text-green-700', 'bg-purple-100 text-purple-700'];
+  const compColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#94A774"];
+  const compBgColors = [
+    "bg-red-100 text-red-700",
+    "bg-orange-100 text-orange-700",
+    "bg-yellow-100 text-yellow-700",
+    "bg-green-100 text-green-700",
+    "bg-brand-100 text-brand-700",
+  ];
 
   return (
     <div className="space-y-6">
       {/* 요약 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="bg-blue-50 border-brand-200">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4">
             <p className="text-xs text-brand-600 font-medium">우리 병원 언급</p>
-            <p className="text-2xl font-bold text-brand-800">{data.ourPosition?.totalMentions || 0}회</p>
+            <p className="text-2xl font-bold text-brand-800">
+              {data.ourPosition?.totalMentions || 0}회
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-red-50 border-red-200">
           <CardContent className="p-4">
             <p className="text-xs text-red-600 font-medium">비교 경쟁사</p>
-            <p className="text-2xl font-bold text-red-800">{competitors.length}곳</p>
+            <p className="text-2xl font-bold text-red-800">
+              {competitors.length}곳
+            </p>
           </CardContent>
         </Card>
         {(() => {
-          const topAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) > (ourScores[b] || 0) ? a : b, axisKeys[0]);
+          const topAxis = axisKeys.reduce(
+            (a, b) => ((ourScores[a] || 0) > (ourScores[b] || 0) ? a : b),
+            axisKeys[0],
+          );
           return (
             <Card className="bg-green-50 border-green-200">
               <CardContent className="p-4">
-                <p className="text-xs text-green-600 font-medium">최강 포인트</p>
-                <p className="text-lg font-bold text-green-800">{axisEmojis[topAxis]} {axisLabels[topAxis]}</p>
-                <p className="text-xs text-green-600">{ourScores[topAxis] || 0}점</p>
+                <p className="text-xs text-green-600 font-medium">
+                  최강 포인트
+                </p>
+                <p className="text-lg font-bold text-green-800">
+                  {axisLabels[topAxis]}
+                </p>
+                <p className="text-xs text-green-600">
+                  {ourScores[topAxis] || 0}점
+                </p>
               </CardContent>
             </Card>
           );
         })()}
         {(() => {
-          const weakAxis = axisKeys.reduce((a, b) => (ourScores[a] || 0) < (ourScores[b] || 0) ? a : b, axisKeys[0]);
+          const weakAxis = axisKeys.reduce(
+            (a, b) => ((ourScores[a] || 0) < (ourScores[b] || 0) ? a : b),
+            axisKeys[0],
+          );
           return (
             <Card className="bg-amber-50 border-amber-200">
               <CardContent className="p-4">
                 <p className="text-xs text-amber-600 font-medium">강화 필요</p>
-                <p className="text-lg font-bold text-amber-800">{axisEmojis[weakAxis]} {axisLabels[weakAxis]}</p>
-                <p className="text-xs text-amber-600">{ourScores[weakAxis] || 0}점</p>
+                <p className="text-lg font-bold text-amber-800">
+                  {axisLabels[weakAxis]}
+                </p>
+                <p className="text-xs text-amber-600">
+                  {ourScores[weakAxis] || 0}점
+                </p>
               </CardContent>
             </Card>
           );
@@ -2529,26 +3748,30 @@ function PositioningMap({ data }: { data: any }) {
       {/* 레이더 차트 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Radar className="h-5 w-5 text-brand-600" />
             AI가 보는 시장 내 포지션 맵
           </h3>
-          <p className="text-xs text-slate-500 mb-4">AI 응답에서 추출한 5개 축 기준 포지셔닝 비교</p>
+          <p className="text-xs text-[#778378] mb-4">
+            AI 응답에서 추출한 5개 축 기준 포지셔닝 비교
+          </p>
 
           <div className="flex flex-col lg:flex-row items-center gap-6">
             {/* SVG 레이더 */}
             <div className="flex-shrink-0">
               <svg viewBox="0 0 300 300" className="w-72 h-72 sm:w-80 sm:h-80">
                 {/* 배경 동심원 */}
-                {[20, 40, 60, 80, 100].map(level => (
+                {[20, 40, 60, 80, 100].map((level) => (
                   <polygon
                     key={level}
-                    points={axisKeys.map((_, i) => {
-                      const pt = getPoint(i, level);
-                      return `${pt.x},${pt.y}`;
-                    }).join(' ')}
+                    points={axisKeys
+                      .map((_, i) => {
+                        const pt = getPoint(i, level);
+                        return `${pt.x},${pt.y}`;
+                      })
+                      .join(" ")}
                     fill="none"
-                    stroke="#e5e7eb"
+                    stroke="#DEE4D9"
                     strokeWidth="1"
                   />
                 ))}
@@ -2557,7 +3780,15 @@ function PositioningMap({ data }: { data: any }) {
                 {axisKeys.map((_, i) => {
                   const pt = getPoint(i, 100);
                   return (
-                    <line key={i} x1={cx} y1={cy} x2={pt.x} y2={pt.y} stroke="#d1d5db" strokeWidth="1" />
+                    <line
+                      key={i}
+                      x1={cx}
+                      y1={cy}
+                      x2={pt.x}
+                      y2={pt.y}
+                      stroke="#C8D3C0"
+                      strokeWidth="1"
+                    />
                   );
                 })}
 
@@ -2577,9 +3808,9 @@ function PositioningMap({ data }: { data: any }) {
                 {/* 우리 병원 폴리곤 */}
                 <polygon
                   points={getPolygonPoints(ourScores)}
-                  fill="#3b82f6"
+                  fill="#36765A"
                   fillOpacity="0.2"
-                  stroke="#2563eb"
+                  stroke="#245A3D"
                   strokeWidth="2.5"
                 />
 
@@ -2587,7 +3818,15 @@ function PositioningMap({ data }: { data: any }) {
                 {axisKeys.map((key, i) => {
                   const pt = getPoint(i, ourScores[key] || 0);
                   return (
-                    <circle key={key} cx={pt.x} cy={pt.y} r="4" fill="#2563eb" stroke="white" strokeWidth="2" />
+                    <circle
+                      key={key}
+                      cx={pt.x}
+                      cy={pt.y}
+                      r="4"
+                      fill="#245A3D"
+                      stroke="white"
+                      strokeWidth="2"
+                    />
                   );
                 })}
 
@@ -2604,16 +3843,23 @@ function PositioningMap({ data }: { data: any }) {
                       className="text-xs font-medium fill-gray-700"
                       fontSize="11"
                     >
-                      {axisEmojis[key]} {axisLabels[key]}
+                      {axisLabels[key]}
                     </text>
                   );
                 })}
 
                 {/* 점수 라벨 (20, 40, 60, 80, 100) */}
-                {[20, 40, 60, 80, 100].map(level => {
+                {[20, 40, 60, 80, 100].map((level) => {
                   const pt = getPoint(0, level);
                   return (
-                    <text key={level} x={pt.x + 8} y={pt.y} fontSize="8" className="fill-gray-400" dominantBaseline="middle">
+                    <text
+                      key={level}
+                      x={pt.x + 8}
+                      y={pt.y}
+                      fontSize="8"
+                      className="fill-gray-400"
+                      dominantBaseline="middle"
+                    >
                       {level}
                     </text>
                   );
@@ -2627,13 +3873,20 @@ function PositioningMap({ data }: { data: any }) {
               <div className="bg-brand-50 rounded-lg p-4 border border-brand-200">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-4 h-1 bg-brand-600 rounded" />
-                  <span className="text-sm font-semibold text-brand-800">🏥 {data.hospitalName} (우리)</span>
+                  <span className="text-sm font-semibold text-brand-800">
+                    {" "}
+                    {data.hospitalName} (우리)
+                  </span>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
-                  {axisKeys.map(key => (
+                  {axisKeys.map((key) => (
                     <div key={key} className="text-center">
-                      <p className="text-xs text-slate-500">{axisLabels[key]}</p>
-                      <p className="text-lg font-bold text-brand-700">{ourScores[key] || 0}</p>
+                      <p className="text-xs text-[#778378]">
+                        {axisLabels[key]}
+                      </p>
+                      <p className="text-lg font-bold text-brand-700">
+                        {ourScores[key] || 0}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -2641,23 +3894,46 @@ function PositioningMap({ data }: { data: any }) {
 
               {/* 경쟁사 */}
               {competitors.map((comp: any, ci: number) => (
-                <div key={comp.name} className="bg-slate-50 rounded-lg p-4 border">
+                <div
+                  key={comp.name}
+                  className="bg-slate-50 rounded-lg p-4 border"
+                >
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-4 h-1 rounded" style={{ backgroundColor: compColors[ci % compColors.length] }} />
-                    <span className="text-sm font-medium text-slate-700">{comp.name}</span>
-                    <span className="text-xs text-slate-400 ml-auto">{comp.mentionCount}회 언급</span>
+                    <div
+                      className="w-4 h-1 rounded"
+                      style={{
+                        backgroundColor: compColors[ci % compColors.length],
+                      }}
+                    />
+                    <span className="text-sm font-medium text-[#536354]">
+                      {comp.name}
+                    </span>
+                    <span className="text-xs text-[#8F9B8C] ml-auto">
+                      {comp.mentionCount}회 언급
+                    </span>
                   </div>
                   <div className="grid grid-cols-5 gap-2">
-                    {axisKeys.map(key => {
+                    {axisKeys.map((key) => {
                       const compVal = comp.scores?.[key] || 0;
                       const ourVal = ourScores[key] || 0;
                       const diff = compVal - ourVal;
                       return (
                         <div key={key} className="text-center">
-                          <p className="text-xs text-slate-500">{axisLabels[key]}</p>
-                          <p className="text-lg font-bold" style={{ color: compColors[ci % compColors.length] }}>{compVal}</p>
+                          <p className="text-xs text-[#778378]">
+                            {axisLabels[key]}
+                          </p>
+                          <p
+                            className="text-lg font-bold"
+                            style={{
+                              color: compColors[ci % compColors.length],
+                            }}
+                          >
+                            {compVal}
+                          </p>
                           {diff !== 0 && (
-                            <p className={`text-xs ${diff > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                            <p
+                              className={`text-xs ${diff > 0 ? "text-red-500" : "text-green-500"}`}
+                            >
                               {diff > 0 ? `+${diff}` : diff}
                             </p>
                           )}
@@ -2669,7 +3945,10 @@ function PositioningMap({ data }: { data: any }) {
               ))}
 
               {competitors.length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-4">경쟁사 데이터가 없습니다. AI 응답에서 경쟁사가 언급되면 자동으로 추출됩니다.</p>
+                <p className="text-sm text-[#8F9B8C] text-center py-4">
+                  경쟁사 데이터가 없습니다. AI 응답에서 경쟁사가 언급되면
+                  자동으로 추출됩니다.
+                </p>
               )}
             </div>
           </div>
@@ -2680,17 +3959,22 @@ function PositioningMap({ data }: { data: any }) {
       {data.insights?.length > 0 && (
         <Card className="border-brand-200 bg-brand-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
               <Lightbulb className="h-5 w-5 text-amber-500" />
               포지셔닝 인사이트
             </h3>
             <div className="space-y-3">
               {data.insights.map((insight: string, i: number) => (
-                <div key={i} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-brand-100">
+                <div
+                  key={i}
+                  className="flex items-start gap-3 bg-white rounded-lg p-3 border border-brand-100"
+                >
                   <div className="w-6 h-6 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-brand-600">{i + 1}</span>
+                    <span className="text-xs font-bold text-brand-600">
+                      {i + 1}
+                    </span>
                   </div>
-                  <p className="text-sm text-slate-700">{insight}</p>
+                  <p className="text-sm text-[#536354]">{insight}</p>
                 </div>
               ))}
             </div>
@@ -2701,38 +3985,58 @@ function PositioningMap({ data }: { data: any }) {
       {/* 5축별 상세 비교 바 차트 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-purple-600" />
+          <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-brand-600" />
             축별 상세 비교
           </h3>
           <div className="space-y-6">
-            {axisKeys.map(key => {
+            {axisKeys.map((key) => {
               const ourVal = ourScores[key] || 0;
               return (
                 <div key={key}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-slate-700">{axisEmojis[key]} {axisLabels[key]}</span>
+                    <span className="text-sm font-medium text-[#536354]">
+                      {axisLabels[key]}
+                    </span>
                   </div>
                   {/* 우리 바 */}
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-slate-500 w-20 flex-shrink-0 truncate">{data.hospitalName}</span>
-                    <div className="flex-1 bg-slate-100 rounded-full h-5 relative overflow-hidden">
-                      <div className="h-full bg-brand-500 rounded-full transition-all duration-700" style={{ width: `${ourVal}%` }} />
-                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-700">{ourVal}</span>
+                    <span className="text-xs text-[#778378] w-20 flex-shrink-0 truncate">
+                      {data.hospitalName}
+                    </span>
+                    <div className="flex-1 bg-[#EDF0E9] rounded-full h-5 relative overflow-hidden">
+                      <div
+                        className="h-full bg-brand-500 rounded-full transition-all duration-700"
+                        style={{ width: `${ourVal}%` }}
+                      />
+                      <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-[#536354]">
+                        {ourVal}
+                      </span>
                     </div>
                   </div>
                   {/* 경쟁사 바 */}
                   {competitors.map((comp: any, ci: number) => {
                     const compVal = comp.scores?.[key] || 0;
                     return (
-                      <div key={comp.name} className="flex items-center gap-2 mb-1">
-                        <span className="text-xs text-slate-400 w-20 flex-shrink-0 truncate">{comp.name}</span>
-                        <div className="flex-1 bg-slate-100 rounded-full h-4 relative overflow-hidden">
+                      <div
+                        key={comp.name}
+                        className="flex items-center gap-2 mb-1"
+                      >
+                        <span className="text-xs text-[#8F9B8C] w-20 flex-shrink-0 truncate">
+                          {comp.name}
+                        </span>
+                        <div className="flex-1 bg-[#EDF0E9] rounded-full h-4 relative overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all duration-700"
-                            style={{ width: `${compVal}%`, backgroundColor: compColors[ci % compColors.length] }}
+                            style={{
+                              width: `${compVal}%`,
+                              backgroundColor:
+                                compColors[ci % compColors.length],
+                            }}
                           />
-                          <span className="absolute inset-0 flex items-center justify-center text-xs text-slate-600">{compVal}</span>
+                          <span className="absolute inset-0 flex items-center justify-center text-xs text-[#667668]">
+                            {compVal}
+                          </span>
                         </div>
                       </div>
                     );
@@ -2752,49 +4056,55 @@ function SourceQuality({ data }: { data: any }) {
   const channels = data.channels || [];
 
   const healthColors: Record<string, string> = {
-    '우수': 'text-green-600 bg-green-50 border-green-200',
-    '양호': 'text-brand-600 bg-brand-50 border-brand-200',
-    '보통': 'text-amber-600 bg-amber-50 border-amber-200',
-    '개선 필요': 'text-red-600 bg-red-50 border-red-200',
+    우수: "text-green-600 bg-green-50 border-green-200",
+    양호: "text-brand-600 bg-brand-50 border-brand-200",
+    보통: "text-amber-600 bg-amber-50 border-amber-200",
+    "개선 필요": "text-red-600 bg-red-50 border-red-200",
   };
 
   const weightColors: Record<string, string> = {
-    '최상': 'bg-green-100 text-green-800',
-    '상': 'bg-brand-100 text-brand-800',
-    '중상': 'bg-cyan-100 text-cyan-800',
-    '중': 'bg-amber-100 text-amber-800',
-    '하': 'bg-slate-100 text-slate-600',
+    최상: "bg-green-100 text-green-800",
+    상: "bg-brand-100 text-brand-800",
+    중상: "bg-cyan-100 text-cyan-800",
+    중: "bg-amber-100 text-amber-800",
+    하: "bg-[#EDF0E9] text-[#667668]",
   };
 
   return (
     <div className="space-y-6">
       {/* 건강도 점수 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className={`${healthColors[data.healthLabel] || 'bg-slate-50'} border-2`}>
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
+        <Card
+          className={`${healthColors[data.healthLabel] || "bg-slate-50"} border-2`}
+        >
           <CardContent className="p-4 text-center">
             <p className="text-xs font-medium opacity-80">출처 건강도</p>
             <p className="text-3xl font-bold">{data.healthScore || 0}</p>
             <p className="text-sm font-semibold">{data.healthLabel}</p>
           </CardContent>
         </Card>
-        <Card className="bg-blue-50 border-brand-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4 text-center">
             <p className="text-xs text-brand-600 font-medium">평균 품질</p>
-            <p className="text-3xl font-bold text-brand-800">{data.avgQuality || 0}</p>
+            <p className="text-3xl font-bold text-brand-800">
+              {data.avgQuality || 0}
+            </p>
             <p className="text-xs text-brand-600">100점 만점</p>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
+        <Card className="bg-brand-50 border-brand-200">
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-purple-600 font-medium">활성 채널</p>
-            <p className="text-3xl font-bold text-purple-800">{data.channelDiversity || 0}</p>
-            <p className="text-xs text-purple-600">개 채널</p>
+            <p className="text-xs text-brand-600 font-medium">활성 채널</p>
+            <p className="text-3xl font-bold text-brand-800">
+              {data.channelDiversity || 0}
+            </p>
+            <p className="text-xs text-brand-600">개 채널</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-slate-500 font-medium">분석 기간</p>
-            <p className="text-lg font-bold text-slate-800">{data.period}</p>
+            <p className="text-xs text-[#778378] font-medium">분석 기간</p>
+            <p className="text-lg font-bold text-[#2E4132]">{data.period}</p>
           </CardContent>
         </Card>
       </div>
@@ -2802,60 +4112,91 @@ function SourceQuality({ data }: { data: any }) {
       {/* 채널별 영향력 분석 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Shield className="h-5 w-5 text-brand-600" />
             채널별 영향력 분석
           </h3>
-          <p className="text-xs text-slate-500 mb-4">각 출처 채널의 품질 점수와 AI 가시성 영향 분석</p>
+          <p className="text-xs text-[#778378] mb-4">
+            각 출처 채널의 품질 점수와 AI 가시성 영향 분석
+          </p>
 
           {channels.length > 0 ? (
             <div className="space-y-4">
               {channels.map((ch: any, i: number) => (
-                <div key={ch.channel} className="border rounded-lg p-4 hover:shadow-sm transition-shadow">
+                <div
+                  key={ch.channel}
+                  className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-slate-900">{ch.channel}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${weightColors[ch.qualityWeight] || 'bg-slate-100 text-slate-600'}`}>
+                      <span className="text-sm font-semibold text-[#15231B]">
+                        {ch.channel}
+                      </span>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${weightColors[ch.qualityWeight] || "bg-[#EDF0E9] text-[#667668]"}`}
+                      >
                         {ch.qualityWeight}
                       </span>
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold text-brand-600">{ch.influenceScore}</span>
-                      <span className="text-xs text-slate-400 ml-1">영향력</span>
+                      <span className="text-lg font-bold text-brand-600">
+                        {ch.influenceScore}
+                      </span>
+                      <span className="text-xs text-[#8F9B8C] ml-1">
+                        영향력
+                      </span>
                     </div>
                   </div>
 
                   {/* 지표 바 */}
                   <div className="grid grid-cols-3 gap-4 mb-3">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">품질 점수</p>
-                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div className="h-full bg-green-500 rounded-full" style={{ width: `${ch.qualityScore}%` }} />
+                      <p className="text-xs text-[#778378] mb-1">품질 점수</p>
+                      <div className="bg-[#EDF0E9] rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-green-500 rounded-full"
+                          style={{ width: `${ch.qualityScore}%` }}
+                        />
                       </div>
-                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.qualityScore}/100</p>
+                      <p className="text-xs font-medium text-[#536354] mt-0.5">
+                        {ch.qualityScore}/100
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">언급 상관도</p>
-                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div className="h-full bg-brand-500 rounded-full" style={{ width: `${ch.mentionCorrelation}%` }} />
+                      <p className="text-xs text-[#778378] mb-1">언급 상관도</p>
+                      <div className="bg-[#EDF0E9] rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-brand-500 rounded-full"
+                          style={{ width: `${ch.mentionCorrelation}%` }}
+                        />
                       </div>
-                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.mentionCorrelation}%</p>
+                      <p className="text-xs font-medium text-[#536354] mt-0.5">
+                        {ch.mentionCorrelation}%
+                      </p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">긍정 비율</p>
-                      <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${ch.positiveCorrelation}%` }} />
+                      <p className="text-xs text-[#778378] mb-1">긍정 비율</p>
+                      <div className="bg-[#EDF0E9] rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 rounded-full"
+                          style={{ width: `${ch.positiveCorrelation}%` }}
+                        />
                       </div>
-                      <p className="text-xs font-medium text-slate-700 mt-0.5">{ch.positiveCorrelation}%</p>
+                      <p className="text-xs font-medium text-[#536354] mt-0.5">
+                        {ch.positiveCorrelation}%
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center justify-between text-xs text-[#778378]">
                     <span>인용 {ch.citedCount}건</span>
                     <span>{ch.qualityDescription}</span>
                     <div className="flex gap-1">
                       {ch.platforms?.map((p: string) => (
-                        <span key={p} className={`px-1.5 py-0.5 rounded text-xs ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}>
+                        <span
+                          key={p}
+                          className={`px-1.5 py-0.5 rounded text-xs ${platformBgColors[p] || "bg-[#EDF0E9] text-[#667668]"}`}
+                        >
                           {platformNames[p] || p}
                         </span>
                       ))}
@@ -2865,7 +4206,9 @@ function SourceQuality({ data }: { data: any }) {
               ))}
             </div>
           ) : (
-            <p className="text-slate-400 text-sm text-center py-4">출처 데이터가 아직 없습니다</p>
+            <p className="text-[#8F9B8C] text-sm text-center py-4">
+              출처 데이터가 아직 없습니다
+            </p>
           )}
         </CardContent>
       </Card>
@@ -2874,19 +4217,26 @@ function SourceQuality({ data }: { data: any }) {
       {data.recommendations?.length > 0 && (
         <Card className="border-amber-200 bg-amber-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
               <Target className="h-5 w-5 text-amber-600" />
               출처 강화 추천 (우선순위 순)
             </h3>
-            <p className="text-xs text-slate-500 mb-4">AI 가시성을 높이기 위해 집중해야 할 채널</p>
+            <p className="text-xs text-[#778378] mb-4">
+              AI 가시성을 높이기 위해 집중해야 할 채널
+            </p>
             <div className="space-y-3">
               {data.recommendations.map((rec: any, i: number) => (
-                <div key={i} className="bg-white rounded-lg p-4 border border-amber-100">
+                <div
+                  key={i}
+                  className="bg-white rounded-lg p-4 border border-amber-100"
+                >
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-sm">{rec.priority}</span>
-                    <span className="text-sm font-semibold text-slate-900">{rec.channel}</span>
+                    <span className="text-sm font-semibold text-[#15231B]">
+                      {rec.channel}
+                    </span>
                   </div>
-                  <p className="text-sm text-slate-700 mb-2">{rec.action}</p>
+                  <p className="text-sm text-[#536354] mb-2">{rec.action}</p>
                   <p className="text-xs text-brand-600 font-medium flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     {rec.expectedImpact}
@@ -2906,79 +4256,106 @@ function ActionReport({ data }: { data: any }) {
   const summary = data?.summary || {};
   const actions = Array.isArray(data?.actions) ? data.actions : [];
   const weeklyGoals = Array.isArray(data?.weeklyGoals) ? data.weeklyGoals : [];
-  const measuredResponses = Number.isFinite(summary.totalResponses) ? summary.totalResponses : 0;
+  const measuredResponses = Number.isFinite(summary.totalResponses)
+    ? summary.totalResponses
+    : 0;
 
   if (measuredResponses <= 0) {
     return (
       <Card>
         <CardContent className="p-8 sm:p-12 text-center">
-          <FileSearch className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-          <h2 className="text-lg font-semibold text-slate-900">아직 분석할 AI 답변이 없습니다</h2>
-          <p className="text-sm text-slate-500 mt-2">최근 30일에 수집된 응답이 없어 언급률과 실행 과제를 계산할 수 없습니다.</p>
-          <p className="text-xs text-slate-400 mt-1">질문 측정이 시작된 뒤 다시 확인해 주세요.</p>
+          <FileSearch className="h-10 w-10 text-[#8F9B8C] mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-[#15231B]">
+            아직 분석할 AI 답변이 없습니다
+          </h2>
+          <p className="text-sm text-[#778378] mt-2">
+            최근 30일에 수집된 응답이 없어 언급률과 실행 과제를 계산할 수
+            없습니다.
+          </p>
+          <p className="text-xs text-[#8F9B8C] mt-1">
+            질문 측정이 시작된 뒤 다시 확인해 주세요.
+          </p>
         </CardContent>
       </Card>
     );
   }
 
   const priorityStyles: Record<number, string> = {
-    1: 'border-l-red-500 bg-red-50/50',
-    2: 'border-l-orange-500 bg-orange-50/50',
-    3: 'border-l-amber-500 bg-amber-50/50',
-    4: 'border-l-blue-500 bg-brand-50/50',
-    5: 'border-l-gray-400 bg-slate-50/50',
-  };
-
-  const categoryIcons: Record<string, string> = {
-    '플랫폼 공략': '🎯',
-    '콘텐츠 갭': '📝',
-    '출처 강화': '🔗',
-    '경쟁사 대응': '⚔️',
-    '감성 관리': '💬',
+    1: "border-l-[#B56857] bg-white",
+    2: "border-l-[#B59267] bg-white",
+    3: "border-l-[#A0AD75] bg-white",
+    4: "border-l-brand-500 bg-brand-50/50",
+    5: "border-l-gray-400 bg-slate-50/50",
   };
 
   return (
     <div className="space-y-6">
       {/* 리포트 헤더 */}
-      <Card className="!bg-slate-900 !border-slate-900 text-white">
+      <Card className="!bg-[#13251D] !border-[#13251D] text-white">
         <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
             <div>
               <h2 className="text-xl font-bold flex items-center gap-2">
                 <FileText className="h-6 w-6" />
                 주간 액션 리포트
               </h2>
-              <p className="text-sm text-slate-300 mt-1">{[data.hospitalName, data.period || '최근 30일'].filter(Boolean).join(' · ')}</p>
+              <p className="text-sm text-slate-300 mt-1">
+                {[data.hospitalName, data.period || "최근 30일"]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-400">생성 시각</p>
+              <p className="text-xs text-[#8F9B8C]">생성 시각</p>
               <p className="text-sm text-slate-200">
-                {data.generatedAt && !Number.isNaN(Date.parse(data.generatedAt)) ? new Date(data.generatedAt).toLocaleDateString('ko-KR', {
-                  year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                }) : '확인 불가'}
+                {data.generatedAt && !Number.isNaN(Date.parse(data.generatedAt))
+                  ? new Date(data.generatedAt).toLocaleDateString("ko-KR", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "확인 불가"}
               </p>
             </div>
           </div>
 
           {/* 핵심 수치 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="bg-white/10 rounded-lg p-3 text-center">
-              <p className="text-xs text-slate-300"><TermTip term="mentionRate" icon={false}>전체 언급률</TermTip></p>
-              <p className="text-2xl font-bold">{summary.overallMentionRate || 0}%</p>
+            <div className="border-l border-white/15 pl-4 first:border-l-0 first:pl-0">
+              <p className="text-xs text-slate-300">
+                <TermTip term="mentionRate" icon={false}>
+                  전체 언급률
+                </TermTip>
+              </p>
+              <p className="text-2xl font-bold">
+                {summary.overallMentionRate || 0}%
+              </p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="border-l border-white/15 pl-4 first:border-l-0 first:pl-0">
               <p className="text-xs text-slate-300">최강 플랫폼</p>
-              <p className="text-lg font-bold">{summary.strongestPlatform?.name || '-'}</p>
-              <p className="text-xs text-green-400">{summary.strongestPlatform?.rate || 0}%</p>
+              <p className="text-lg font-bold">
+                {summary.strongestPlatform?.name || "-"}
+              </p>
+              <p className="text-xs text-green-400">
+                {summary.strongestPlatform?.rate || 0}%
+              </p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="border-l border-white/15 pl-4 first:border-l-0 first:pl-0">
               <p className="text-xs text-slate-300">최약 플랫폼</p>
-              <p className="text-lg font-bold">{summary.weakestPlatform?.name || '-'}</p>
-              <p className="text-xs text-red-400">{summary.weakestPlatform?.rate || 0}%</p>
+              <p className="text-lg font-bold">
+                {summary.weakestPlatform?.name || "-"}
+              </p>
+              <p className="text-xs text-red-400">
+                {summary.weakestPlatform?.rate || 0}%
+              </p>
             </div>
-            <div className="bg-white/10 rounded-lg p-3 text-center">
+            <div className="border-l border-white/15 pl-4 first:border-l-0 first:pl-0">
               <p className="text-xs text-slate-300">콘텐츠 갭</p>
-              <p className="text-2xl font-bold">{summary.contentGapCount || 0}건</p>
+              <p className="text-2xl font-bold">
+                {summary.contentGapCount || 0}건
+              </p>
             </div>
           </div>
         </CardContent>
@@ -2988,17 +4365,17 @@ function ActionReport({ data }: { data: any }) {
       {weeklyGoals.length > 0 && (
         <Card className="border-brand-200 bg-brand-50/30">
           <CardContent className="p-5">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#15231B] mb-4 flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-500" />
               이번 주 목표
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="divide-y divide-[#DEE4D9]">
               {weeklyGoals.map((goal: string, i: number) => (
-                <div key={i} className="bg-white rounded-lg p-4 border border-brand-100 flex items-start gap-3">
+                <div key={i} className="flex items-start gap-3 py-4 first:pt-0">
                   <div className="w-7 h-7 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
                     <CheckCircle2 className="h-4 w-4 text-brand-600" />
                   </div>
-                  <p className="text-sm text-slate-700 font-medium">{goal}</p>
+                  <p className="text-sm text-[#536354] font-medium">{goal}</p>
                 </div>
               ))}
             </div>
@@ -3009,31 +4386,39 @@ function ActionReport({ data }: { data: any }) {
       {/* 액션 아이템 */}
       <Card>
         <CardContent className="p-5">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+          <h3 className="text-lg font-semibold text-[#15231B] mb-1 flex items-center gap-2">
             <Zap className="h-5 w-5 text-amber-600" />
             실행 과제 ({actions.length}개)
           </h3>
-          <p className="text-xs text-slate-500 mb-4">우선순위 순으로 정렬된 이번 주 실행 과제</p>
+          <p className="text-xs text-[#778378] mb-4">
+            우선순위 순으로 정렬된 이번 주 실행 과제
+          </p>
 
           {actions.length > 0 ? (
             <div className="space-y-4">
               {actions.map((action: any, i: number) => (
                 <div
                   key={i}
-                  className={`border-l-4 rounded-lg p-4 ${priorityStyles[action.priority] || 'border-l-gray-300 bg-slate-50/50'}`}
+                  className={`border-l-4 rounded-lg p-4 ${priorityStyles[action.priority] || "border-l-gray-300 bg-slate-50/50"}`}
                 >
                   <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="text-lg">{categoryIcons[action.category] || '📋'}</span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border text-slate-600 font-medium">
+                    <span className="text-lg">
+                      <Zap className="h-4 w-4 text-[#36765A]" />
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-white border text-[#667668] font-medium">
                       {action.category}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1 ml-auto">
+                    <span className="text-xs text-[#8F9B8C] flex items-center gap-1 ml-auto">
                       <Clock className="h-3 w-3" />
                       {action.deadline}
                     </span>
                   </div>
-                  <h4 className="text-sm font-semibold text-slate-900 mb-1">{action.title}</h4>
-                  <p className="text-sm text-slate-600 mb-2">{action.description}</p>
+                  <h4 className="text-sm font-semibold text-[#15231B] mb-1">
+                    {action.title}
+                  </h4>
+                  <p className="text-sm text-[#667668] mb-2">
+                    {action.description}
+                  </p>
                   <p className="text-xs text-brand-600 font-medium flex items-center gap-1">
                     <TrendingUp className="h-3 w-3" />
                     예상 효과: {action.expectedImpact}
@@ -3043,9 +4428,13 @@ function ActionReport({ data }: { data: any }) {
             </div>
           ) : (
             <div className="text-center py-8">
-              <FileText className="h-12 w-12 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600 font-medium">이 기간에 생성된 실행 과제가 없습니다</p>
-              <p className="text-sm text-slate-400 mt-1">측정된 AI 답변을 확인하고 다음 분석에서 다시 살펴보세요.</p>
+              <FileText className="h-12 w-12 text-[#8F9B8C] mx-auto mb-3" />
+              <p className="text-[#667668] font-medium">
+                이 기간에 생성된 실행 과제가 없습니다
+              </p>
+              <p className="text-sm text-[#8F9B8C] mt-1">
+                측정된 AI 답변을 확인하고 다음 분석에서 다시 살펴보세요.
+              </p>
             </div>
           )}
         </CardContent>
@@ -3059,12 +4448,18 @@ function ActionReport({ data }: { data: any }) {
               <AlertCircle className="h-4 w-4" />
               경쟁사 알림
             </h3>
-            <p className="text-sm text-slate-700">
-              <span className="font-bold text-red-700">{summary.topCompetitor.name}</span>이(가)
-              최근 30일간 <span className="font-bold">{summary.topCompetitor.count}회</span> AI에서 언급되었습니다.
+            <p className="text-sm text-[#536354]">
+              <span className="font-bold text-red-700">
+                {summary.topCompetitor.name}
+              </span>
+              이(가) 최근 30일간{" "}
+              <span className="font-bold">{summary.topCompetitor.count}회</span>{" "}
+              AI에서 언급되었습니다.
               {summary.topCompetitor.count > (summary.mentionedCount || 0) && (
                 <span className="text-red-600 font-medium">
-                  {' '}— 우리({summary.mentionedCount}회)보다 많습니다! 대응이 필요합니다.
+                  {" "}
+                  — 우리({summary.mentionedCount}회)보다 많습니다! 대응이
+                  필요합니다.
                 </span>
               )}
             </p>
@@ -3076,13 +4471,36 @@ function ActionReport({ data }: { data: any }) {
 }
 
 // ==================== 신규 인용 채널 탐지 ====================
-const channelCategoryConfig: Record<string, { label: string; color: string; desc: string }> = {
-  social: { label: '소셜', color: 'bg-pink-100 text-pink-700', desc: '소셜 플랫폼 — 캡션 공식 적용 대상' },
-  directory: { label: '디렉토리', color: 'bg-blue-100 text-blue-700', desc: '병원 정보/예약/가격비교 — 프로필 정비 대상' },
-  hospital_site: { label: '병원 사이트', color: 'bg-amber-100 text-amber-700', desc: '경쟁 병원 자사 사이트 — 콘텐츠 공세 감시' },
-  satellite_suspect: { label: '⚠️ 위성 의심', color: 'bg-red-100 text-red-700', desc: '어뷰징성 위성 사이트(PBN) 의심 — 감시 대상' },
-  wiki_media: { label: '위키/미디어', color: 'bg-purple-100 text-purple-700', desc: '위키·언론·기관 — 프로필 등재 검토' },
-  other: { label: '기타', color: 'bg-slate-100 text-slate-600', desc: '' },
+const channelCategoryConfig: Record<
+  string,
+  { label: string; color: string; desc: string }
+> = {
+  social: {
+    label: "소셜",
+    color: "bg-pink-100 text-pink-700",
+    desc: "소셜 플랫폼 — 캡션 공식 적용 대상",
+  },
+  directory: {
+    label: "디렉토리",
+    color: "bg-brand-100 text-brand-700",
+    desc: "병원 정보/예약/가격비교 — 프로필 정비 대상",
+  },
+  hospital_site: {
+    label: "병원 사이트",
+    color: "bg-amber-100 text-amber-700",
+    desc: "경쟁 병원 자사 사이트 — 콘텐츠 공세 감시",
+  },
+  satellite_suspect: {
+    label: " 위성 의심",
+    color: "bg-red-100 text-red-700",
+    desc: "어뷰징성 위성 사이트(PBN) 의심 — 감시 대상",
+  },
+  wiki_media: {
+    label: "위키/미디어",
+    color: "bg-brand-100 text-brand-700",
+    desc: "위키·언론·기관 — 프로필 등재 검토",
+  },
+  other: { label: "기타", color: "bg-[#EDF0E9] text-[#667668]", desc: "" },
 };
 
 function NewChannels({ data }: { data: any }) {
@@ -3095,29 +4513,43 @@ function NewChannels({ data }: { data: any }) {
   return (
     <div className="space-y-6">
       {/* 요약 카드 */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="insight-stat-band grid grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-brand-600">{totals.newDomains ?? 0}</p>
-            <p className="text-xs text-slate-500 mt-1">신규 채널 (최근 {data?.windowDays}일)</p>
+            <p className="text-2xl font-bold text-brand-600">
+              {totals.newDomains ?? 0}
+            </p>
+            <p className="text-xs text-[#778378] mt-1">
+              신규 채널 (최근 {data?.windowDays}일)
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-amber-600">{totals.surgingDomains ?? 0}</p>
-            <p className="text-xs text-slate-500 mt-1">급성장 채널 (5배+)</p>
+            <p className="text-2xl font-bold text-amber-600">
+              {totals.surgingDomains ?? 0}
+            </p>
+            <p className="text-xs text-[#778378] mt-1">급성장 채널 (5배+)</p>
           </CardContent>
         </Card>
-        <Card className={totals.satelliteSuspects > 0 ? 'border-red-200 bg-red-50/40' : ''}>
+        <Card
+          className={
+            totals.satelliteSuspects > 0 ? "border-red-200 bg-red-50/40" : ""
+          }
+        >
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-red-600">{totals.satelliteSuspects ?? 0}</p>
-            <p className="text-xs text-slate-500 mt-1">위성 사이트 의심</p>
+            <p className="text-2xl font-bold text-red-600">
+              {totals.satelliteSuspects ?? 0}
+            </p>
+            <p className="text-xs text-[#778378] mt-1">위성 사이트 의심</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold text-slate-700">{totals.recentDomains ?? 0}</p>
-            <p className="text-xs text-slate-500 mt-1">활성 인용 도메인 전체</p>
+            <p className="text-2xl font-bold text-[#536354]">
+              {totals.recentDomains ?? 0}
+            </p>
+            <p className="text-xs text-[#778378] mt-1">활성 인용 도메인 전체</p>
           </CardContent>
         </Card>
       </div>
@@ -3127,10 +4559,13 @@ function NewChannels({ data }: { data: any }) {
         <Card className="border-red-200 bg-red-50/50">
           <CardContent className="p-4 flex items-start gap-3">
             <ShieldAlert className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-slate-700">
-              <span className="font-semibold text-red-700">위성 사이트(PBN) 의심 채널 {totals.satelliteSuspects}개 감지.</span>{' '}
-              익명 도메인에 특정 병원 홍보성 콘텐츠를 올려 AI 인용을 노리는 패턴입니다.
-              AI 플랫폼이 정화하면 해당 채널 의존 병원의 가시성이 급락할 수 있으니, 감시만 하고 모방하지 마세요.
+            <div className="text-sm text-[#536354]">
+              <span className="font-semibold text-red-700">
+                위성 사이트(PBN) 의심 채널 {totals.satelliteSuspects}개 감지.
+              </span>{" "}
+              익명 도메인에 특정 병원 홍보성 콘텐츠를 올려 AI 인용을 노리는
+              패턴입니다. AI 플랫폼이 정화하면 해당 채널 의존 병원의 가시성이
+              급락할 수 있으니, 감시만 하고 모방하지 마세요.
             </div>
           </CardContent>
         </Card>
@@ -3139,21 +4574,25 @@ function NewChannels({ data }: { data: any }) {
       {/* 카테고리 필터 */}
       <div className="flex gap-2 flex-wrap">
         <Button
-          variant={!categoryFilter ? 'default' : 'outline'}
+          variant={!categoryFilter ? "default" : "outline"}
           size="sm"
           onClick={() => setCategoryFilter(null)}
         >
           전체 ({data?.channels?.length ?? 0})
         </Button>
         {Object.entries(channelCategoryConfig).map(([key, cfg]) => {
-          const count = (data?.channels || []).filter((c: any) => c.category === key).length;
+          const count = (data?.channels || []).filter(
+            (c: any) => c.category === key,
+          ).length;
           if (count === 0) return null;
           return (
             <Button
               key={key}
-              variant={categoryFilter === key ? 'default' : 'outline'}
+              variant={categoryFilter === key ? "default" : "outline"}
               size="sm"
-              onClick={() => setCategoryFilter(categoryFilter === key ? null : key)}
+              onClick={() =>
+                setCategoryFilter(categoryFilter === key ? null : key)
+              }
             >
               {cfg.label} ({count})
             </Button>
@@ -3164,46 +4603,98 @@ function NewChannels({ data }: { data: any }) {
       {/* 채널 리스트 */}
       {channels.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-slate-500 text-sm">
+          <CardContent className="p-8 text-center text-[#778378] text-sm">
             최근 {data?.windowDays}일간 새로 나타난 인용 채널이 없습니다.
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="insight-row-list">
           {channels.map((ch: any) => {
-            const cfg = channelCategoryConfig[ch.category] || channelCategoryConfig.other;
-            const topPlatforms = Object.entries(ch.platforms as Record<string, number>)
+            const cfg =
+              channelCategoryConfig[ch.category] || channelCategoryConfig.other;
+            const topPlatforms = Object.entries(
+              ch.platforms as Record<string, number>,
+            )
               .sort((a, b) => b[1] - a[1])
               .slice(0, 3);
             return (
-              <Card key={ch.domain} className={ch.category === 'satellite_suspect' ? 'border-red-200' : ''}>
+              <Card
+                key={ch.domain}
+                className={
+                  ch.category === "satellite_suspect" ? "border-red-200" : ""
+                }
+              >
                 <CardContent className="p-4">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ch.status === 'NEW' ? 'bg-brand-100 text-brand-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {ch.status === 'NEW' ? '🆕 신규' : `📈 급성장${ch.growthX ? ` ×${ch.growthX}` : ''}`}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${ch.status === "NEW" ? "bg-brand-100 text-brand-700" : "bg-amber-100 text-amber-700"}`}
+                    >
+                      {ch.status === "NEW"
+                        ? "🆕 신규"
+                        : ` 급성장${ch.growthX ? ` ×${ch.growthX}` : ""}`}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>{cfg.label}</span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}
+                    >
+                      {cfg.label}
+                    </span>
                     {ch.isOurs && (
-                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">우리 병원</span>
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        우리 병원
+                      </span>
                     )}
                     <a
                       href={`https://${ch.domain}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-semibold text-slate-800 hover:text-brand-600 flex items-center gap-1"
+                      className="font-semibold text-[#2E4132] hover:text-brand-600 flex items-center gap-1"
                     >
                       {ch.domain}
                       <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
 
-                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-600 mb-2">
-                    <span>인용 <b className="text-slate-800">{ch.recentCount}회</b>{ch.baselineCount > 0 && <span className="text-slate-400"> (이전 {ch.baselineCount}회)</span>}</span>
-                    <span><TermTip term="companionRate" icon={false}>우리 병원 언급 동반율</TermTip> <b className={ch.mentionRate >= 50 ? 'text-green-600' : ch.mentionRate >= 20 ? 'text-amber-600' : 'text-red-600'}>{ch.mentionRate}%</b></span>
-                    {ch.firstSeenAt && <span>첫 등장 {new Date(ch.firstSeenAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}</span>}
+                  <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#667668] mb-2">
+                    <span>
+                      인용 <b className="text-[#2E4132]">{ch.recentCount}회</b>
+                      {ch.baselineCount > 0 && (
+                        <span className="text-[#8F9B8C]">
+                          {" "}
+                          (이전 {ch.baselineCount}회)
+                        </span>
+                      )}
+                    </span>
+                    <span>
+                      <TermTip term="companionRate" icon={false}>
+                        우리 병원 언급 동반율
+                      </TermTip>{" "}
+                      <b
+                        className={
+                          ch.mentionRate >= 50
+                            ? "text-green-600"
+                            : ch.mentionRate >= 20
+                              ? "text-amber-600"
+                              : "text-red-600"
+                        }
+                      >
+                        {ch.mentionRate}%
+                      </b>
+                    </span>
+                    {ch.firstSeenAt && (
+                      <span>
+                        첫 등장{" "}
+                        {new Date(ch.firstSeenAt).toLocaleDateString("ko-KR", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                    )}
                     <span className="flex gap-1">
                       {topPlatforms.map(([p, c]) => (
-                        <span key={p} className={`px-1.5 rounded ${platformBgColors[p] || 'bg-slate-100 text-slate-600'}`}>
+                        <span
+                          key={p}
+                          className={`px-1.5 rounded ${platformBgColors[p] || "bg-[#EDF0E9] text-[#667668]"}`}
+                        >
                           {platformNames[p] || p} {c as number}
                         </span>
                       ))}
@@ -3211,10 +4702,15 @@ function NewChannels({ data }: { data: any }) {
                   </div>
 
                   {ch.sampleUrls?.length > 0 && (
-                    <div className="text-xs text-slate-400 space-y-0.5">
+                    <div className="text-xs text-[#8F9B8C] space-y-0.5">
                       {ch.sampleUrls.slice(0, 2).map((s: any) => (
                         <div key={s.url} className="truncate">
-                          <a href={s.url} target="_blank" rel="noopener noreferrer" className="hover:text-brand-600">
+                          <a
+                            href={s.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-brand-600"
+                          >
                             {decodeURIComponent(s.url).slice(0, 90)}
                           </a>
                           <span className="ml-1">({s.count}회)</span>
@@ -3223,7 +4719,9 @@ function NewChannels({ data }: { data: any }) {
                     </div>
                   )}
 
-                  {cfg.desc && <p className="text-xs text-slate-400 mt-2">{cfg.desc}</p>}
+                  {cfg.desc && (
+                    <p className="text-xs text-[#8F9B8C] mt-2">{cfg.desc}</p>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -3231,8 +4729,9 @@ function NewChannels({ data }: { data: any }) {
         </div>
       )}
 
-      <p className="text-xs text-slate-400 text-right">
-        최근 {data?.windowDays}일 vs 이전 {data?.baselineDays}일 비교 · 최소 {data?.minCitations}회 인용 기준 · 6시간마다 갱신
+      <p className="text-xs text-[#8F9B8C] text-right">
+        최근 {data?.windowDays}일 vs 이전 {data?.baselineDays}일 비교 · 최소{" "}
+        {data?.minCitations}회 인용 기준 · 6시간마다 갱신
       </p>
     </div>
   );

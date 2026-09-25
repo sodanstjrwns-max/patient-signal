@@ -11,29 +11,29 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
-        // Signal workspace: crisp cobalt accents on neutral surfaces
+        // Signal workspace: forest ink, warm paper and lime accents
         brand: {
-          50: '#eff4ff',
-          100: '#dce8ff',
-          200: '#bdd2ff',
-          300: '#94b3ff',
-          400: '#668fff',
-          500: '#4274fa',
-          600: '#285cf4',
-          700: '#204bce',
-          800: '#213ea4',
-          900: '#203680',
-          950: '#17265b',
+          50: '#f2f6ee',
+          100: '#e3ecdc',
+          200: '#c7dbc1',
+          300: '#a1bfa0',
+          400: '#75a182',
+          500: '#518668',
+          600: '#36765a',
+          700: '#295b46',
+          800: '#254b3c',
+          900: '#203e32',
+          950: '#13251d',
         },
         surface: {
           0: '#ffffff',
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
+          50: '#f4f5ef',
+          100: '#ecefe6',
+          200: '#dee4d9',
         },
       },
       fontFamily: {
-        sans: ['Pretendard', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
+        sans: ['Pretendard Variable', 'Pretendard', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
       },
       borderRadius: {
@@ -41,8 +41,8 @@ const config: Config = {
         '3xl': '1.5rem',
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(99, 102, 241, 0.15)',
-        'glow-lg': '0 0 40px rgba(99, 102, 241, 0.2)',
+        'glow': '0 0 20px rgba(54, 118, 90, 0.15)',
+        'glow-lg': '0 0 40px rgba(54, 118, 90, 0.2)',
         'card': '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
         'card-hover': '0 10px 40px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)',
         'float': '0 20px 60px rgba(0,0,0,0.1), 0 4px 12px rgba(0,0,0,0.05)',
@@ -52,8 +52,8 @@ const config: Config = {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'glass': 'linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.4) 100%)',
         'glass-dark': 'linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.7) 100%)',
-        'mesh': 'radial-gradient(at 40% 20%, rgba(99,102,241,0.08) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(59,130,246,0.06) 0px, transparent 50%)',
-        'sidebar': 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+        'mesh': 'radial-gradient(at 40% 20%, rgba(54,118,90,0.08) 0px, transparent 50%), radial-gradient(at 80% 80%, rgba(59,130,246,0.06) 0px, transparent 50%)',
+        'sidebar': 'linear-gradient(180deg, #0f172a 0%, #203e32 50%, #0f172a 100%)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out',
@@ -95,8 +95,8 @@ const config: Config = {
           '50%': { opacity: '0.7' },
         },
         glowPulse: {
-          '0%, 100%': { boxShadow: '0 0 20px rgba(99,102,241,0.15)' },
-          '50%': { boxShadow: '0 0 30px rgba(99,102,241,0.3)' },
+          '0%, 100%': { boxShadow: '0 0 20px rgba(54,118,90,0.15)' },
+          '50%': { boxShadow: '0 0 30px rgba(54,118,90,0.3)' },
         },
       },
       transitionTimingFunction: {

@@ -90,20 +90,20 @@ export function TrialBanner() {
           <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
             isCouponExpired ? 'bg-amber-100' : 'bg-red-100'
           }`}>
-            {isCouponExpired 
+            {isCouponExpired
               ? <Ticket className="h-8 w-8 text-amber-600" />
               : <AlertTriangle className="h-8 w-8 text-red-600" />
             }
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">
-            {isCouponExpired 
+            {isCouponExpired
               ? '쿠폰 혜택이 종료되었습니다'
               : '체험 기간이 종료되었습니다'
             }
           </h2>
           {isCouponExpired && subInfo.couponName && (
             <p className="text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-1.5 inline-block mb-2">
-              🎟️ {subInfo.couponName}
+              {subInfo.couponName}
             </p>
           )}
           <p className="text-slate-600 mb-2">
@@ -120,7 +120,7 @@ export function TrialBanner() {
           </div>
           <Link
             href="/dashboard/billing"
-            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-gradient-to-r from-brand-600 to-indigo-600 text-white font-bold rounded-xl hover:from-brand-700 hover:to-indigo-700 transition-all mb-3"
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#15231b] text-white font-bold rounded-xl hover:bg-[#2c4635] transition-all mb-3"
           >
             <CreditCard className="h-5 w-5" />
             {isCouponExpired ? '유료 결제로 계속 이용하기' : '플랜 업그레이드하기'}
@@ -159,21 +159,21 @@ export function TrialBanner() {
       <div className={`
         relative px-4 py-3 text-sm flex items-center justify-between gap-3
         ${isUrgent
-          ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+          ? 'bg-[#873d31] text-white'
           : isWarning
-            ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900'
-            : 'bg-gradient-to-r from-violet-500 to-purple-500 text-white'
+            ? 'bg-[#f1e5c4] text-[#5e4d22]'
+            : 'bg-[#e8eddf] text-[#263e2e]'
         }
       `}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Ticket className="h-4 w-4 flex-shrink-0" />
-          <span className="font-medium truncate">
+          <span className="font-medium text-xs leading-relaxed">
             {isUrgent ? (
-              <>🔥 {subInfo.couponName || '쿠폰'} 혜택이 <strong>{daysLeft}일</strong> 남았어요! 결제 수단을 등록하면 중단 없이 이용 가능합니다</>
+              <>{subInfo.couponName || '쿠폰'} 혜택이 <strong>{daysLeft}일</strong> 남았어요! 결제 수단을 등록하면 중단 없이 이용 가능합니다</>
             ) : isWarning ? (
-              <>⏰ {subInfo.couponName || '쿠폰'} 만료까지 <strong>{daysLeft}일</strong> — 만료 후 FREE(Perplexity만)로 변경됩니다</>
+              <>{subInfo.couponName || '쿠폰'} 만료까지 <strong>{daysLeft}일</strong> — 만료 후 FREE(Perplexity만)로 변경됩니다</>
             ) : (
-              <>🎟️ {subInfo.couponName || '쿠폰'} 혜택 만료까지 <strong>{daysLeft}일</strong> 남음 — 미리 결제를 등록해주세요</>
+              <>{subInfo.couponName || '쿠폰'} 혜택 만료까지 <strong>{daysLeft}일</strong> 남음 — 미리 결제를 등록해주세요</>
             )}
           </span>
         </div>
@@ -187,7 +187,7 @@ export function TrialBanner() {
                 ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
                 : isWarning
                   ? 'bg-amber-900 text-white hover:bg-amber-800'
-                  : 'bg-white/80 backdrop-blur-sm text-purple-600 hover:bg-purple-50'
+                  : 'bg-white/80 backdrop-blur-sm text-[#263e2e] hover:bg-[#f4f5ef]'
               }
             `}
           >
@@ -195,6 +195,7 @@ export function TrialBanner() {
             결제 등록 <ArrowRight className="h-3 w-3" />
           </Link>
           <button
+            aria-label="알림 닫기"
             onClick={() => setDismissed(true)}
             className="opacity-70 hover:opacity-100 transition-opacity"
           >
@@ -209,11 +210,11 @@ export function TrialBanner() {
   // "데이터 수집 중..."으로 오해하지 않도록 만료 사실 + 재개 경로를 명시
   if (subInfo.isExpired) {
     return (
-      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-gradient-to-r from-slate-700 to-slate-800 text-white">
+      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-[#263e2e] text-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
-          <span className="font-medium truncate">
-            ⏸️ <strong>{subInfo.isCouponUser ? '쿠폰 혜택' : '체험'}이 종료되어 AI 데이터 수집이 중단되었습니다</strong>
+          <span className="font-medium text-xs leading-relaxed">
+            <strong>{subInfo.isCouponUser ? '쿠폰 혜택' : '체험'}이 종료되어 AI 데이터 수집이 중단되었습니다</strong>
             {' '}— 현재 FREE 플랜(Perplexity 1개, 질문 1개, 주 1회)으로 운영 중입니다. 쿠폰이 있다면 등록해 주세요!
           </span>
         </div>
@@ -245,35 +246,35 @@ export function TrialBanner() {
 
   return (
     <div className={`
-      relative px-4 py-3 text-sm flex items-center justify-between gap-3 
-      ${isUrgent 
-        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white' 
-        : isExpiring 
-          ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-900'
-          : 'bg-gradient-to-r from-brand-500 to-indigo-500 text-white'
+      relative px-4 py-3 text-sm flex items-center justify-between gap-3
+      ${isUrgent
+        ? 'bg-[#873d31] text-white'
+        : isExpiring
+          ? 'bg-[#f1e5c4] text-[#5e4d22]'
+          : 'bg-[#e8eddf] text-[#263e2e]'
       }
     `}>
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <Sparkles className="h-4 w-4 flex-shrink-0" />
-        <span className="font-medium truncate">
+        <span className="font-medium text-xs leading-relaxed">
           {isUrgent ? (
-            <>🔥 {planName} 체험이 <strong>{daysLeft}일</strong> 남았어요! 지금 결제하면 AI 분석을 계속 이용할 수 있습니다</>
+            <>{planName} 체험이 <strong>{daysLeft}일</strong> 남았어요! 지금 결제하면 AI 분석을 계속 이용할 수 있습니다</>
           ) : isExpiring ? (
-            <>⏰ {planName} 무료 체험 <strong>{daysLeft}일</strong> 남음 — 체험 종료 후 FREE(Perplexity만)로 변경됩니다</>
+            <>{planName} 무료 체험 <strong>{daysLeft}일</strong> 남음 — 체험 종료 후 FREE(Perplexity만)로 변경됩니다</>
           ) : (
-            <>✨ {planName} 무료 체험 중! (남은 <strong>{daysLeft}일</strong>) — 체험 종료 전에 결제를 완료해주세요</>
+            <>{planName} 무료 체험 중! (남은 <strong>{daysLeft}일</strong>) — 체험 종료 전에 결제를 완료해주세요</>
           )}
         </span>
       </div>
-      
+
       <div className="flex items-center gap-2 flex-shrink-0">
-        <Link 
+        <Link
           href="/dashboard/billing"
           className={`
             flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all
-            ${isUrgent 
-              ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50' 
-              : isExpiring 
+            ${isUrgent
+              ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
+              : isExpiring
                 ? 'bg-amber-900 text-white hover:bg-amber-800'
                 : 'bg-white/80 backdrop-blur-sm text-brand-600 hover:bg-brand-50'
             }
@@ -282,8 +283,9 @@ export function TrialBanner() {
           <CreditCard className="h-3 w-3" />
           결제하기 <ArrowRight className="h-3 w-3" />
         </Link>
-        <button 
-          onClick={() => setDismissed(true)}
+        <button
+          aria-label="알림 닫기"
+            onClick={() => setDismissed(true)}
           className="opacity-70 hover:opacity-100 transition-opacity"
         >
           <X className="h-4 w-4" />
