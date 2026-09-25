@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { FirstCrawlBanner } from "@/components/dashboard/FirstCrawlBanner";
-import { ScoreChart } from "@/components/dashboard/ScoreChart";
+import { VisibilityHero } from "@/components/dashboard/VisibilityHero";
 import { buildFindings } from "@/components/dashboard/DiagnosisBoard";
 import OnboardingTutorial from "@/components/onboarding/OnboardingTutorial";
 import { MetricValue, resolveState } from "@/components/ui/metric-value";
@@ -27,6 +27,7 @@ import {
 import { competitorsApi, crawlerApi, queryTemplatesApi } from "@/lib/api";
 import { useAuthStore } from "@/stores/auth";
 import { toast } from "@/hooks/useToast";
+import { formatDecimal } from "@/lib/utils";
 import { AnimatedNumber } from "@/components/motion/SignalMotion";
 
 const PLATFORM_NAMES: Record<string, string> = {
@@ -53,7 +54,7 @@ const mentionRate = (mentioned: unknown, total: unknown) => {
   const count = number(mentioned);
   const responses = number(total);
   return count !== null && responses !== null && responses > 0
-    ? Math.round((count / responses) * 1000) / 10
+    ? Math.round((count / responses) * 10000) / 100
     : null;
 };
 
@@ -222,10 +223,10 @@ export default function DashboardPage() {
       <div className="mx-auto max-w-[1560px] px-4 pb-10 pt-6 sm:px-7 lg:px-9">
         <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="desk-label mb-2">최근 30일 · AI 답변 분석</p>
-            <h1 className="font-display text-[31px] leading-[1.25] tracking-[-.045em] sm:text-[42px] xl:text-[48px]">
+            <p className="desk-label mb-2">우리 병원의 AI 가시성</p>
+            <p className="font-display text-xl leading-[1.25] tracking-[-.035em] sm:text-2xl">
               {name}
-            </h1>
+            </p>
           </div>
           <p className="flex items-center gap-2 text-[11px] text-[#959c9f]">
             <Clock3 className="h-3.5 w-3.5" />
@@ -234,6 +235,13 @@ export default function DashboardPage() {
               : "첫 측정 대기"}
           </p>
         </div>
+
+        <VisibilityHero
+          history={dashboard?.scoreHistory}
+          isLoading={dashboardQuery.isLoading}
+          isError={dashboardQuery.isError}
+          onRetry={() => dashboardQuery.refetch()}
+        />
 
         <nav
           aria-label="AI 노출 관리 흐름"
@@ -261,13 +269,13 @@ export default function DashboardPage() {
           <div className="grid xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
             <div className="flex min-w-0 flex-col border-t-2 border-[#ff6a24] bg-[#08090a] p-5 text-[#f5f5ef] sm:p-7">
               <div className="flex items-center justify-between gap-3 border-b border-[#30343a] pb-4">
-                <h2 className="font-display text-sm">우리 병원 언급률</h2>
+                <h2 className="font-display text-sm">우리 병원 언급률 <span className="ml-2 font-sans text-[10px] font-normal text-[#959c9f]">최근 30일</span></h2>
                 <span className="border border-[#ff6a24]/50 px-2 py-1 text-[10px] font-semibold text-[#ff6a24]">
                   {selectedName}
                 </span>
               </div>
               <div
-                className="flex min-h-[170px] flex-1 items-center py-5 sm:min-h-[220px]"
+                className="flex min-h-[100px] flex-1 items-center py-5 sm:min-h-[130px]"
                 aria-live="polite"
                 aria-atomic="true"
               >
@@ -290,8 +298,8 @@ export default function DashboardPage() {
                     {selectedRate !== null && (
                       <AnimatedNumber
                         value={selectedRate}
-                        decimals={1}
-                        className="text-[96px] sm:text-[146px] xl:text-[158px] 2xl:text-[176px]"
+                        decimals={2}
+                        className="text-[64px] sm:text-[84px] xl:text-[96px]"
                       />
                     )}
                     <span className="ml-2 text-[32px] tracking-[-.04em] text-[#ff6a24] sm:text-[40px]">
@@ -374,7 +382,7 @@ export default function DashboardPage() {
                   />
                 </span>
                 <span className="text-right font-numeric tabular-nums">
-                  {sov === null ? "—" : sov.toFixed(1)}
+                  {sov === null ? "—" : formatDecimal(sov)}
                 </span>
                 <span className="hidden text-right font-numeric text-[10px] sm:block">
                   {mentioned === null || totalResponses === null
@@ -407,7 +415,7 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => setSelectedPlatform(p.platform)}
                       aria-pressed={selected}
-                      aria-label={`${PLATFORM_NAMES[p.platform] || p.platformName}, ${measured ? `언급률 ${rate.toFixed(1)}%, ${p.totalQueries}건 중 ${p.mentionedCount}건` : "측정 대기"}${p.collectionStatus === "STALLED" ? ", 수집 확인 중" : ""}`}
+                      aria-label={`${PLATFORM_NAMES[p.platform] || p.platformName}, ${measured ? `언급률 ${formatDecimal(rate)}%, ${p.totalQueries}건 중 ${p.mentionedCount}건` : "측정 대기"}${p.collectionStatus === "STALLED" ? ", 수집 확인 중" : ""}`}
                       className={`grid w-full grid-cols-[88px_minmax(0,1fr)_46px] items-center gap-3 border-b border-white/15 py-3 text-left text-xs transition-colors last:border-b-0 sm:grid-cols-[100px_minmax(0,1fr)_52px_76px] ${selected ? "text-[#ff6a24]" : "text-[#f5f5ef] hover:text-[#ff6a24]"}`}
                     >
                       <span className="min-w-0">
@@ -428,7 +436,7 @@ export default function DashboardPage() {
                         />
                       </span>
                       <span className="text-right font-numeric tabular-nums">
-                        {rate === null ? "—" : rate.toFixed(1)}
+                        {rate === null ? "—" : formatDecimal(rate)}
                       </span>
                       <span className="hidden text-right font-numeric text-[10px] sm:block">
                         {measured
@@ -674,15 +682,6 @@ export default function DashboardPage() {
                 </Link>
               ))}
             </div>
-          </section>
-        )}
-        {dashboard?.scoreHistory?.length > 0 && (
-          <section className="mt-7">
-            <ScoreChart
-              data={dashboard.scoreHistory}
-              title="가시성 점수의 흐름"
-              subtitle="AI 언급률과 별개인 종합 가시성 점수의 변화입니다."
-            />
           </section>
         )}
         <footer className="mt-7 flex flex-wrap items-center justify-between gap-4 border-t border-[#30343a] pt-4 text-[10px] text-[#959c9f]">

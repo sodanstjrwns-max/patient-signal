@@ -14,6 +14,7 @@
  */
 
 import Link from 'next/link';
+import { formatDecimal } from '@/lib/utils';
 import {
   Stethoscope, ArrowRight, AlertTriangle, TrendingUp,
   ShieldAlert, Search, Sparkles,
@@ -84,7 +85,7 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
       out.push({
         id: 'sov-low',
         severity: 'critical',
-        headline: `AI가 우리 병원을 거의 모릅니다 (${sov}%)`,
+        headline: `AI가 우리 병원을 거의 모릅니다 (${formatDecimal(sov)}%)`,
         cause: `${total.toLocaleString()}번의 환자 질문 중 우리 이름이 나온 건 ${(mentioned ?? 0).toLocaleString()}번뿐입니다. AI는 우리를 "선택지에 넣을 근거"를 아직 충분히 찾지 못했습니다.`,
         action: '경쟁사는 나오는데 우리는 안 나오는 질문부터 확인하세요. 그 빈칸이 가장 싸게 이기는 자리입니다.',
         href: '/dashboard/opportunities',
@@ -95,7 +96,7 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
       out.push({
         id: 'sov-mid',
         severity: 'warn',
-        headline: `노출은 시작됐지만 아직 소수입니다 (${sov}%)`,
+        headline: `노출은 시작됐지만 아직 소수입니다 (${formatDecimal(sov)}%)`,
         cause: `${total.toLocaleString()}번 중 ${(mentioned ?? 0).toLocaleString()}번 언급. 5번에 1번도 못 미칩니다.`,
         action: '이미 언급되는 주제를 더 깊게 파는 편이, 새 주제를 여는 것보다 빠릅니다.',
         href: '/dashboard/citation-analysis',
@@ -106,7 +107,7 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
       out.push({
         id: 'sov-good',
         severity: 'good',
-        headline: `AI 추천 후보에 안정적으로 올라 있습니다 (${sov}%)`,
+        headline: `AI 추천 후보에 안정적으로 올라 있습니다 (${formatDecimal(sov)}%)`,
         cause: `${total.toLocaleString()}번 중 ${(mentioned ?? 0).toLocaleString()}번 언급됐습니다.`,
         action: '이제는 "나오느냐"가 아니라 "몇 번째로, 어떤 말과 함께 나오느냐"가 매출을 가릅니다.',
         href: '/dashboard/analytics',
@@ -241,7 +242,7 @@ export function buildFindings(d: DiagnosisInput): Finding[] {
     out.push({
       id: 'negative',
       severity: 'critical',
-      headline: `AI 답변 중 ${neg}%가 부정적 맥락입니다`,
+      headline: `AI 답변 중 ${formatDecimal(neg)}%가 부정적 맥락입니다`,
       cause: '부정 언급은 노출을 늘려도 상쇄되지 않습니다. 노출이 커질수록 같이 커집니다.',
       action: '어떤 문장에서 부정이 나오는지 원문을 먼저 확인하세요.',
       href: '/dashboard/responses',

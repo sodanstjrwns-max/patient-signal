@@ -10,6 +10,7 @@ import {
   AreaChart,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatDecimal } from '@/lib/utils';
 
 interface ScoreChartProps {
   data: {
@@ -19,25 +20,26 @@ interface ScoreChartProps {
   }[];
   title?: string;
   subtitle?: string;
+  compact?: boolean;
 }
 
-export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitle }: ScoreChartProps) {
+export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitle, compact = false }: ScoreChartProps) {
   const chartData = data.map((item) => ({
-    date: new Date(item.scoreDate).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }),
+    date: new Date(item.scoreDate).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric' }),
     score: item.overallScore,
     mentions: item.mentionCount || 0,
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
+    <Card className={compact ? '!border-0 !bg-transparent !shadow-none' : undefined}>
+      <CardHeader className={compact ? 'px-2 pb-4 pt-1' : undefined}>
+        <CardTitle className={compact ? 'text-sm' : 'text-lg'}>{title}</CardTitle>
         {subtitle && (
           <p className="text-xs text-[#959c9f] font-medium mt-1">{subtitle}</p>
         )}
       </CardHeader>
-      <CardContent>
-        <div className="h-[300px]">
+      <CardContent className={compact ? 'p-0' : undefined}>
+        <div className={compact ? 'h-[196px]' : 'h-[300px]'}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
               <defs>
@@ -49,17 +51,20 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
               <CartesianGrid strokeDasharray="3 3" stroke="#30343a" />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 12, fill: '#959c9f' }}
+                tick={{ fontSize: compact ? 10 : 12, fill: '#959c9f' }}
+                minTickGap={24}
                 tickLine={false}
                 axisLine={{ stroke: '#30343a' }}
               />
               <YAxis
                 domain={[0, 100]}
-                tick={{ fontSize: 12, fill: '#959c9f' }}
+                tick={{ fontSize: compact ? 10 : 12, fill: '#959c9f' }}
+                width={compact ? 32 : 60}
                 tickLine={false}
                 axisLine={{ stroke: '#30343a' }}
               />
               <Tooltip
+                formatter={(value) => [typeof value === 'number' ? formatDecimal(value) : '—', '가시성 점수']}
                 contentStyle={{
                   backgroundColor: '#181b1e',
                   backdropFilter: 'blur(12px)',
@@ -75,6 +80,7 @@ export function ScoreChart({ data, title = 'AI 가시성 점수 추이', subtitl
                 dataKey="score"
                 stroke="#ff6a24"
                 strokeWidth={2.5}
+                dot={chartData.length === 1 ? { r: 4, fill: '#ff6a24' } : false}
                 fillOpacity={1}
                 fill="url(#colorScore)"
               />
