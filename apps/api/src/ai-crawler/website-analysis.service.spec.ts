@@ -8,7 +8,10 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { WebsiteAnalysisController } from './website-analysis.controller';
 import {
   aggregateWebsiteResponse,
+  createRegisteredChannelCitationMatcher,
   kstPeriod,
+  matchCitationToScope,
+  matchRegisteredChannelCitation,
   normalizeCitationUrl,
   normalizeWebsiteDomain,
   normalizeWebsiteScope,
@@ -164,7 +167,8 @@ describe('WebsiteAnalysisService', () => {
       now: new Date('2026-09-24T16:00:00.000Z'),
     });
     expect(prisma.hospital.findUnique).toHaveBeenCalledWith({
-      where: { id: 'my-hospital' }, select: { websiteUrl: true },
+      where: { id: 'my-hospital' },
+      select: { websiteUrl: true, blogUrl: true, instagramUrl: true, youtubeUrl: true },
     });
     expect(prisma.aIResponse.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: {
@@ -184,6 +188,9 @@ describe('WebsiteAnalysisService', () => {
       status: 'READY',
       domain: 'bdbddc.com',
       registeredWebsiteUrl: 'https://www.bdbddc.com',
+      registeredChannels: { WEBSITE: 'https://www.bdbddc.com', BLOG: null, INSTAGRAM: null, YOUTUBE: null },
+      selectedChannelUrl: 'https://www.bdbddc.com',
+      channel: 'WEBSITE',
       totalResponses: 1,
       citedResponseCount: 1,
       pageCount: 1,
@@ -235,5 +242,93 @@ describe('WebsiteAnalysisService', () => {
       }),
     };
     expect(() => guard.canActivate(context as never)).toThrow(ForbiddenException);
+  });
+
+  it('등록 블로그 채널을 자동 선택하고 네이버 모바일·PostView 글을 하나로 묶는다', async () => {
+    const prisma = {
+      hospital: { findUnique: jest.fn().mockResolvedValue({
+        websiteUrl: 'https://bdbddc.com', blogUrl: 'https://blog.naver.com/ourclinic',
+        instagramUrl: 'https://www.instagram.com/ourclinic/',
+        youtubeUrl: 'https://www.youtube.com/@ourclinic',
+      }) },
+      aIResponse: { findMany: jest.fn().mockResolvedValue([row({
+        citedSources: [
+          'https://blog.naver.com/ourclinic/123?utm_source=ai',
+          'https://m.blog.naver.com/ourclinic/123',
+          'https://blog.naver.com/PostView.naver?blogId=ourclinic&logNo=123',
+          'https://blog.naver.com/PostView.naver?blogId=otherclinic&logNo=123',
+        ],
+      })]) },
+    };
+    const result = await new WebsiteAnalysisService(prisma as unknown as PrismaService)
+      .getAnalysis('my-hospital', { channel: 'BLOG', days: 30, platform: 'ALL',
+        page: 1, pageSize: 25, now: new Date('2026-09-24T16:00:00.000Z') });
+    expect(result).toMatchObject({
+      status: 'READY', channel: 'BLOG', selectedChannelUrl: 'https://blog.naver.com/ourclinic',
+      registeredChannels: { BLOG: 'https://blog.naver.com/ourclinic' },
+      pageCount: 1, citedResponseCount: 1,
+      pages: [{ path: '/ourclinic/123', citationResponses: 1 }],
+    });
+    expect(result.pages[0].url).toBe('https://blog.naver.com/ourclinic/123');
+  });
+
+  it('계정 없는 공유 플랫폼 주소는 채널 구분 없이 거부하고 타 계정은 제외한다', () => {
+    for (const url of ['https://blog.naver.com', 'https://instagram.com',
+      'https://youtube.com', 'https://medium.com']) {
+      expect(() => normalizeWebsiteScope(url)).toThrow(BadRequestException);
+    }
+    const match = createRegisteredChannelCitationMatcher({
+      WEBSITE: 'https://bdbddc.com', BLOG: 'https://blog.naver.com/ourclinic',
+      INSTAGRAM: 'https://www.instagram.com/ourclinic/',
+      YOUTUBE: 'https://www.youtube.com/@ourclinic',
+    });
+    expect(match('https://m.blog.naver.com/ourclinic/99')).toMatchObject([
+      { channel: 'BLOG', citation: { key: 'blog.naver.com/ourclinic/99' } },
+    ]);
+    expect(match('https://blog.naver.com/PostView.naver?blogId=otherclinic&logNo=99')).toEqual([]);
+    expect(match('https://blog.naver.com/ourclinic/99?blogId=otherclinic')).toEqual([]);
+    expect(match('https://instagram.com/otherclinic')).toEqual([]);
+    expect(match('https://instagram.com/p/post123')).toEqual([]);
+    expect(match('https://youtube.com/watch?v=123')).toEqual([]);
+    expect(match('https://youtube.com/shorts/123')).toEqual([]);
+    expect(match('https://www.instagram.com/ourclinic/')).toMatchObject([{ channel: 'INSTAGRAM' }]);
+    expect(match('https://m.youtube.com/@ourclinic/videos')).toMatchObject([{ channel: 'YOUTUBE' }]);
+    expect(matchRegisteredChannelCitation('https://instagram.com/p/post123', {
+      WEBSITE: 'https://instagram.com', BLOG: null, INSTAGRAM: null, YOUTUBE: null,
+    })).toEqual([]);
+    expect(matchCitationToScope('https://instagram.com/p/post123',
+      normalizeWebsiteScope('https://instagram.com/ourclinic', 'INSTAGRAM'))).toBeNull();
+  });
+
+  it('선택 채널에 등록 주소가 없으면 다른 채널의 인용을 가져오지 않는다', async () => {
+    const prisma = {
+      hospital: { findUnique: jest.fn().mockResolvedValue({ websiteUrl: 'https://bdbddc.com', blogUrl: null }) },
+      aIResponse: { findMany: jest.fn() },
+    };
+    const result = await new WebsiteAnalysisService(prisma as unknown as PrismaService)
+      .getAnalysis('my-hospital', { channel: 'BLOG', days: 7, platform: 'ALL', page: 1, pageSize: 25 });
+    expect(result).toMatchObject({ status: 'DOMAIN_REQUIRED', channel: 'BLOG', selectedChannelUrl: null });
+    expect(prisma.aIResponse.findMany).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['INSTAGRAM', 'https://www.instagram.com/ourclinic/',
+      ['https://instagram.com/ourclinic/', 'https://instagram.com/p/unknown', 'https://instagram.com/otherclinic/']],
+    ['YOUTUBE', 'https://www.youtube.com/@ourclinic',
+      ['https://m.youtube.com/@ourclinic/videos', 'https://youtube.com/watch?v=unknown', 'https://youtube.com/@otherclinic/videos']],
+  ] as const)('저장된 %s 채널은 프로필 범위의 실제 URL만 집계한다', async (channel, savedUrl, citedSources) => {
+    const prisma = {
+      hospital: { findUnique: jest.fn().mockResolvedValue({
+        websiteUrl: 'https://bdbddc.com', blogUrl: null,
+        instagramUrl: channel === 'INSTAGRAM' ? savedUrl : null,
+        youtubeUrl: channel === 'YOUTUBE' ? savedUrl : null,
+      }) },
+      aIResponse: { findMany: jest.fn().mockResolvedValue([row({ citedSources: [...citedSources] })]) },
+    };
+    const result = await new WebsiteAnalysisService(prisma as unknown as PrismaService)
+      .getAnalysis('my-hospital', { channel, days: 30, platform: 'ALL', page: 1, pageSize: 25 });
+    expect(result).toMatchObject({ channel, selectedChannelUrl: savedUrl,
+      totalResponses: 1, citedResponseCount: 1, pageCount: 1,
+      pages: [{ citationResponses: 1 }] });
   });
 });

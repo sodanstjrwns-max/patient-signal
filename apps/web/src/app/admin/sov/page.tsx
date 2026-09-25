@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal } from '@/lib/utils';
+
 /**
  * 【어드민 전용】전체 고객 병원 SoV 랭킹 보드
  *
@@ -102,7 +104,7 @@ function PlatformBars({ platforms }: { platforms: Record<string, PlatformStat> }
         const p = platforms[k];
         const meta = PLATFORM_LABELS[k];
         return (
-          <span key={k} className="flex flex-col items-center" title={`${k}: ${p.sov}% (${p.mentioned}/${p.total})`}>
+          <span key={k} className="flex flex-col items-center" title={`${k}: ${formatDecimal(p.sov)}% (${p.mentioned}/${p.total})`}>
             <span className="w-4 bg-gray-800 rounded-sm overflow-hidden flex flex-col justify-end" style={{ height: 26 }}>
               <span style={{ height: `${Math.max(2, Math.min(100, p.sov))}%`, background: meta.color, display: 'block' }} />
             </span>
@@ -376,7 +378,7 @@ export default function AdminSovPage() {
           <section id="summary-cards" className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
             {[
               { label: '고객 병원', value: summary.hospitals, sub: `응답 \u00d7${summary.totalResp.toLocaleString()}` },
-              { label: '평균 SoV', value: `${summary.avgSov}%`, sub: '표본충분 병원 기준' },
+              { label: '평균 SoV', value: `${formatDecimal(summary.avgSov)}%`, sub: '표본충분 병원 기준' },
               { label: '언급 0% 병원', value: summary.zeroCount, sub: '표본 충분한데 0 = CS 위험', warn: summary.zeroCount > 0 },
               { label: '급상승 (+3↑)', value: summary.risers, sub: `직전 ${days}일 대비`, up: true },
               { label: '급하락 (−3↓)', value: summary.fallers, sub: `직전 ${days}일 대비`, warn: summary.fallers > 0 },
@@ -458,9 +460,9 @@ export default function AdminSovPage() {
                         {r.lowConfidence && <span className="ml-1.5 text-[10px] text-amber-500">표본부족</span>}
                         <span className="block text-[11px] text-[#959c9f]">{r.region}</span>
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold text-amber-300">{r.sovPercent}%</td>
+                      <td className="px-3 py-2 text-right font-semibold text-amber-300">{formatDecimal(r.sovPercent)}%</td>
                       <td className={`px-3 py-2 text-right text-xs ${(r.sovChange ?? 0) > 0 ? 'text-brand-400' : (r.sovChange ?? 0) < 0 ? 'text-red-400' : 'text-[#959c9f]'}`}>
-                        {r.sovChange === null ? '—' : `${r.sovChange > 0 ? '+' : ''}${r.sovChange}%p`}
+                        {r.sovChange === null ? '—' : `${r.sovChange > 0 ? '+' : ''}${formatDecimal(r.sovChange)}%p`}
                       </td>
                       <td className="px-3 py-2 text-right text-slate-300 font-mono text-xs">
                         {r.mentionedResponses.toLocaleString()}/{r.totalResponses.toLocaleString()}
@@ -538,7 +540,7 @@ export default function AdminSovPage() {
                           {r.rank <= 3 ? ['🥇', '🥈', '🥉'][r.rank - 1] : r.rank}
                         </td>
                         <td className="px-3 py-2 font-medium">{r.name}</td>
-                        <td className="px-3 py-2 text-right font-semibold text-amber-300">{r.sovPercent}%</td>
+                        <td className="px-3 py-2 text-right font-semibold text-amber-300">{formatDecimal(r.sovPercent)}%</td>
                         <td className="px-3 py-2 text-right text-slate-300 font-mono text-xs">
                           {r.mentionedResponses}/{r.totalResponses}
                         </td>
@@ -581,7 +583,7 @@ export default function AdminSovPage() {
               return (
                 <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-5">
                   {[
-                    { label: 'SoV', v: `${row.sovPercent}%` },
+                    { label: 'SoV', v: `${formatDecimal(row.sovPercent)}%` },
                     { label: '평균 순번', v: row.avgMentionPosition ? `${row.avgMentionPosition}위` : '—' },
                     { label: '1위 호명률', v: row.firstPlaceRate !== null ? `${row.firstPlaceRate}%` : '—' },
                     { label: '감성', v: row.avgSentiment !== null ? row.avgSentiment.toFixed(2) : '—' },
@@ -599,7 +601,7 @@ export default function AdminSovPage() {
                         const p = row.platforms[k];
                         return (
                           <span key={k} className="text-[11px] px-2 py-1 rounded-full border border-gray-700" style={{ color: PLATFORM_LABELS[k].color }}>
-                            {k} {p.sov}% ({p.mentioned}/{p.total})
+                            {k} {formatDecimal(p.sov)}% ({p.mentioned}/{p.total})
                           </span>
                         );
                       })}
@@ -638,7 +640,7 @@ export default function AdminSovPage() {
                       <YAxis tick={{ fontSize: 10, fill: '#687253' }} unit="%" />
                       <Tooltip
                         contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
-                        formatter={(v) => [`${v}%`, 'SoV']}
+                        formatter={(v) => [`${formatDecimal(Number(v))}%`, 'SoV']}
                       />
                       <Line type="monotone" dataKey="sovPercent" stroke="#73766b" strokeWidth={2} dot={{ r: 2 }} connectNulls />
                     </LineChart>

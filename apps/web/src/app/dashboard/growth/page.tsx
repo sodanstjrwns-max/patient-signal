@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal } from '@/lib/utils';
+
 /**
  * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  *  성장 진단 — 노출 수치 뒤에 숨은 원인을 분해해 보여주는 화면
@@ -381,11 +383,11 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
                         <span className={`text-[11px] font-bold px-2 py-0.5 rounded border ${st.chip}`}>
                           {z.label}
                         </span>
-                        <span className="text-lg font-semibold text-[#f5f5ef] tabular-nums">{z.share}%</span>
+                        <span className="text-lg font-semibold text-[#f5f5ef] tabular-nums">{formatDecimal(z.share)}%</span>
                       </div>
                       <Bar pct={z.share} className={st.bar} />
                       <p className="text-[11px] text-[#959c9f] mt-2 tabular-nums">
-                        인용 {z.citations}건 · 도메인 {z.domainCount}종 · 동반율 {z.companionRate}%
+                        인용 {z.citations}건 · 도메인 {z.domainCount}종 · 동반율 {formatDecimal(z.companionRate)}%
                       </p>
                       {z.guide && (
                         <p className="text-[11px] text-[#959c9f] leading-snug mt-1.5">{z.guide}</p>
@@ -404,7 +406,7 @@ function ChannelTab({ hospitalId, days }: { hospitalId: string; days: number }) 
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="font-bold text-[#c0c4c7]">{d.label}</span>
                       <span className="tabular-nums text-[#959c9f]">
-                        {d.citations}건 · <span className="font-semibold text-[#f5f5ef]">{d.share}%</span>
+                        {d.citations}건 · <span className="font-semibold text-[#f5f5ef]">{formatDecimal(d.share)}%</span>
                       </span>
                     </div>
                     <Bar
@@ -500,7 +502,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="font-bold text-[#c0c4c7]">{r.label}</span>
                       <span className="tabular-nums text-[#959c9f]">
-                        {r.mentioned}/{r.responses} · <span className="font-semibold text-[#f5f5ef]">{r.mentionRate}%</span>
+                        {r.mentioned}/{r.responses} · <span className="font-semibold text-[#f5f5ef]">{formatDecimal(r.mentionRate)}%</span>
                       </span>
                     </div>
                     <Bar
@@ -582,10 +584,10 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
                   <p className="text-[11px] font-bold text-[#959c9f] mb-1">종합 SoV</p>
                   <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
-                    {df.data.overallSov}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(df.data.overallSov)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <p className="text-[11px] text-[#959c9f] font-medium">
-                    쉬운 질문 비중 {df.data.easyShare}%에 좌우됩니다
+                    쉬운 질문 비중 {formatDecimal(df.data.easyShare)}%에 좌우됩니다
                   </p>
                 </div>
                 <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
@@ -593,7 +595,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     <TermTip term="balancedSov">보정 SoV</TermTip>
                   </p>
                   <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
-                    {df.data.balancedSov}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(df.data.balancedSov)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <p className="text-[11px] text-[#c0c4c7] font-medium">난이도 3구간 단순평균</p>
                 </div>
@@ -615,7 +617,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                       </span>
                       <span className="tabular-nums text-[#959c9f] flex-shrink-0">
                         질문 {r.promptCount}개 · 응답 {r.responses}건 ·{' '}
-                        <span className="font-semibold text-[#f5f5ef]">SoV {r.sov}%</span>
+                        <span className="font-semibold text-[#f5f5ef]">SoV {formatDecimal(r.sov)}%</span>
                       </span>
                     </div>
                     <Bar pct={r.sov} className={DIFF_STYLE[r.difficulty] || 'bg-slate-400'} />
@@ -662,10 +664,10 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                         <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{r.label}</td>
                         <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{r.responses}</td>
                         <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">
-                          {r.mentionRate}%
+                          {formatDecimal(r.mentionRate)}%
                         </td>
                         <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
-                          {r.firstPositionShare}%
+                          {formatDecimal(r.firstPositionShare)}%
                         </td>
                       </tr>
                     ))}
@@ -674,7 +676,7 @@ function QueryTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               </div>
               {lg.data.foreignAdvantage != null && (
                 <p className="text-[11px] text-[#959c9f] font-medium mt-3">
-                  외국어 언급률 {lg.data.foreignMentionRate}% ÷ 한국어 {lg.data.koreanMentionRate}% ={' '}
+                  외국어 언급률 {formatDecimal(lg.data.foreignMentionRate)}% ÷ 한국어 {formatDecimal(lg.data.koreanMentionRate)}% ={' '}
                   <span className="font-semibold text-[#f5f5ef]">{lg.data.foreignAdvantage}배</span>
                 </p>
               )}
@@ -724,7 +726,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
                   <p className="text-[11px] font-bold text-[#959c9f] mb-1">'원장' 직함 언급률</p>
                   <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
-                    {db.data.titleRate}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(db.data.titleRate)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <VsBench value={db.data.titleRate} bench={db.data.benchmark?.titleRate ?? 25.8} />
                 </div>
@@ -733,7 +735,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                     <TermTip term="directorBranding">실명 언급률</TermTip>
                   </p>
                   <p className="text-2xl font-semibold text-[#ff9565] tabular-nums">
-                    {db.data.realNameRate}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(db.data.realNameRate)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <VsBench value={db.data.realNameRate} bench={db.data.benchmark?.realNameRate ?? 0.7} />
                 </div>
@@ -742,7 +744,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
               {db.data.brandingGap != null && (
                 <div className="mb-4">
                   <p className="text-[11px] font-bold text-[#959c9f] mb-1.5">
-                    직함 대비 실명 격차 {db.data.brandingGap}%p
+                    직함 대비 실명 격차 {formatDecimal(db.data.brandingGap)}%p
                   </p>
                   <div className="relative h-6 rounded-lg bg-[#181b1e] overflow-hidden">
                     <div
@@ -797,8 +799,8 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                         <tr key={p.platform} className="border-b border-slate-50">
                           <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{p.platform}</td>
                           <td className="text-right py-2 px-2 tabular-nums text-[#959c9f]">{p.responses}</td>
-                          <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">{p.titleRate}%</td>
-                          <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">{p.realNameRate}%</td>
+                          <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">{formatDecimal(p.titleRate)}%</td>
+                          <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">{formatDecimal(p.realNameRate)}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -825,7 +827,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
                   <p className="text-[11px] font-bold text-[#959c9f] mb-1">AEO — 실시간 검색</p>
                   <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
-                    {ag.data.aeo?.mentionRate}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(ag.data.aeo?.mentionRate)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <p className="text-[11px] text-[#959c9f] font-medium tabular-nums">
                     응답 {ag.data.aeo?.responses}건 · 반영 2~4주
@@ -834,7 +836,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                 <div className="p-3.5 rounded-md bg-[#08090a] border border-[#30343a]">
                   <p className="text-[11px] font-bold text-[#f5f5ef] mb-1">GEO — 사전학습 진입</p>
                   <p className="text-2xl font-semibold text-[#f5f5ef] tabular-nums">
-                    {ag.data.geo?.mentionRate}<span className="text-sm ml-0.5">%</span>
+                    {formatDecimal(ag.data.geo?.mentionRate)}<span className="text-sm ml-0.5">%</span>
                   </p>
                   <p className="text-[11px] text-[#c0c4c7] font-medium tabular-nums">
                     응답 {ag.data.geo?.responses}건 · 모델이 우리를 앎
@@ -877,10 +879,10 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                           <tr key={p.platform} className="border-b border-slate-50">
                             <td className="py-2 px-2 font-semibold text-[#c0c4c7]">{p.platform}</td>
                             <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
-                              {p.aeoMentionRate}% <span className="text-[#b8bcab]">({p.aeoResponses})</span>
+                              {formatDecimal(p.aeoMentionRate)}% <span className="text-[#b8bcab]">({p.aeoResponses})</span>
                             </td>
                             <td className="text-right py-2 px-2 tabular-nums text-[#c0c4c7]">
-                              {p.geoMentionRate}% <span className="text-[#b8bcab]">({p.geoResponses})</span>
+                              {formatDecimal(p.geoMentionRate)}% <span className="text-[#b8bcab]">({p.geoResponses})</span>
                             </td>
                             <td className="text-right py-2 px-2 tabular-nums font-semibold text-[#f5f5ef]">
                               {pen ?? '—'}
@@ -922,7 +924,7 @@ function EntityTab({ hospitalId, days }: { hospitalId: string; days: number }) {
                         {d?.rate ?? 0}<span className="text-sm ml-0.5">%</span>
                       </p>
                       <p className="text-[11px] text-[#959c9f] font-medium tabular-nums">
-                        {d?.count ?? 0}건 · 실측 {x.bench}%
+                        {d?.count ?? 0}건 · 실측 {formatDecimal(x.bench)}%
                       </p>
                     </div>
                   );

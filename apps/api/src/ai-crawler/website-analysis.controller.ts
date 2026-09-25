@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { HospitalOwnershipGuard } from '../common/guards/hospital-ownership.guard';
 import { HttpCacheInterceptor, CacheTTL } from '../common/cache/http-cache.interceptor';
 import { withHeavySlot } from '../common/heavy-slot';
-import { WebsiteAnalysisService } from './website-analysis.service';
+import { OfficialChannel, WebsiteAnalysisService } from './website-analysis.service';
 
 function integerQuery(value: string | undefined, fallback: number, min: number, max: number, name: string) {
   if (value === undefined) return fallback;
@@ -17,7 +17,7 @@ function integerQuery(value: string | undefined, fallback: number, min: number, 
   return number;
 }
 
-@ApiTags('홈페이지 페이지별 AI 인용')
+@ApiTags('공식 채널별 AI 인용')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, HospitalOwnershipGuard)
 @Controller('ai-crawler/website-analysis')
@@ -27,16 +27,18 @@ export class WebsiteAnalysisController {
   @Get(':hospitalId')
   @UseInterceptors(HttpCacheInterceptor)
   @CacheTTL(300)
-  @ApiOperation({ summary: '저장된 AI 답변에서 홈페이지의 페이지별 실제 인용 집계' })
+  @ApiOperation({ summary: '저장된 AI 답변에서 등록 공식 채널의 페이지별 실제 인용 집계' })
   @ApiQuery({ name: 'days', required: false, description: '최근 N일, 기본 30일·최대 90일' })
   @ApiQuery({ name: 'platform', required: false, description: 'AIPlatform 또는 ALL' })
-  @ApiQuery({ name: 'domain', required: false, description: '조회할 도메인; 생략 시 병원 홈페이지' })
+  @ApiQuery({ name: 'channel', required: false, description: 'WEBSITE, BLOG, INSTAGRAM, YOUTUBE; 기본 WEBSITE' })
+  @ApiQuery({ name: 'domain', required: false, description: '조회할 도메인 또는 계정 URL; 생략 시 선택 채널의 등록 주소' })
   @ApiQuery({ name: 'page', required: false, description: '페이지 목록 1부터 시작' })
   @ApiQuery({ name: 'pageSize', required: false, description: '페이지 목록 기본 25, 최대 100' })
   async getAnalysis(
     @Param('hospitalId') hospitalId: string,
     @Query('days') days?: string,
     @Query('platform') platform?: string,
+    @Query('channel') channel?: string,
     @Query('domain') domain?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
@@ -46,9 +48,14 @@ export class WebsiteAnalysisController {
       !Object.values(AIPlatform).includes(selectedPlatform as AIPlatform)) {
       throw new BadRequestException('지원하지 않는 AI 플랫폼입니다.');
     }
+    const selectedChannel = channel || 'WEBSITE';
+    if (!['WEBSITE', 'BLOG', 'INSTAGRAM', 'YOUTUBE'].includes(selectedChannel)) {
+      throw new BadRequestException('지원하지 않는 공식 채널입니다.');
+    }
     return withHeavySlot(() => this.websiteAnalysis.getAnalysis(hospitalId, {
       days: integerQuery(days, 30, 1, 90, 'days'),
       platform: selectedPlatform as AIPlatform | 'ALL',
+      channel: selectedChannel as OfficialChannel,
       domain,
       page: integerQuery(page, 1, 1, 100_000, 'page'),
       pageSize: integerQuery(pageSize, 25, 1, 100, 'pageSize'),

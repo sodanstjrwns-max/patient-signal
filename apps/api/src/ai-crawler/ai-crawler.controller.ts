@@ -14,6 +14,7 @@ import { withHeavySlot } from '../common/heavy-slot';
 import { fillArchivedTexts } from '../common/stats/response-archive';
 import { AIPlatform, LiveQueryCategory } from '@prisma/client';
 import { classifyDomain, isOwnHospital, CATEGORY_LABELS } from './breadth.classifier';
+import { createRegisteredChannelCitationMatcher, type OfficialChannel, type RegisteredChannels } from './website-analysis.service';
 
 const platformNames: Record<string, string> = {
   CHATGPT: 'ChatGPT',
@@ -39,6 +40,22 @@ function parseSourcePlatform(platform?: string): AIPlatform | null {
     throw new BadRequestException('지원하지 않는 AI 플랫폼입니다');
   }
   return requestedPlatform as AIPlatform;
+}
+
+/** Only full source URLs identify a cited page; a Gemini title containing a bare host does not. */
+function actualSourceHintUrls(hints: unknown): string[] {
+  if (!hints || typeof hints !== 'object') return [];
+  const sources = (hints as { sources?: unknown }).sources;
+  if (!Array.isArray(sources)) return [];
+  const urls: string[] = [];
+  for (const source of sources) {
+    if (!source || typeof source !== 'object') continue;
+    const item = source as Record<string, unknown>;
+    for (const value of [item.url, item.uri, item.link, item.title]) {
+      if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) urls.push(value);
+    }
+  }
+  return urls;
 }
 
 /**
@@ -951,6 +968,22 @@ export class AICrawlerController {
       decoded: boolean;     // Gemini grounding 디코딩 여부
     };
 
+    const hospital = await this.prisma.hospital.findUnique({
+      where: { id: hospitalId },
+      select: { websiteUrl: true, blogUrl: true, instagramUrl: true, youtubeUrl: true },
+    });
+    const registeredChannels: RegisteredChannels = {
+      WEBSITE: hospital?.websiteUrl || null,
+      BLOG: hospital?.blogUrl || null,
+      INSTAGRAM: hospital?.instagramUrl || null,
+      YOUTUBE: hospital?.youtubeUrl || null,
+    };
+    const matchOwnChannel = createRegisteredChannelCitationMatcher(registeredChannels);
+    const ownChannelSources = (Object.entries(registeredChannels) as Array<[OfficialChannel, string | null]>)
+      .filter((entry): entry is [OfficialChannel, string] => !!entry[1])
+      .map(([channel, url]) => ({ channel, url, citationCount: 0, responseCount: 0 }));
+    const ownChannelByName = new Map(ownChannelSources.map((source) => [source.channel, source]));
+
     const enrichedUrls: EnrichedUrl[] = [];
     let geminiDecodedCount = 0;
     let geminiUnDecodedCount = 0;
@@ -992,6 +1025,23 @@ export class AICrawlerController {
         ...(r.citedSources || []),
         ...(r.citedUrl ? [r.citedUrl] : []),
       ];
+
+      // Count each cited page once per measured answer, even if it appears in
+      // citedSources, citedUrl and source hints. Shared-host account matching is
+      // delegated to the same conservative matcher as website analysis.
+      const ownPagesInResponse = new Map<OfficialChannel, Set<string>>();
+      for (const sourceUrl of [...rawUrls, ...actualSourceHintUrls(r.sourceHints)]) {
+        for (const { channel, citation } of matchOwnChannel(sourceUrl)) {
+          if (!ownPagesInResponse.has(channel)) ownPagesInResponse.set(channel, new Set());
+          ownPagesInResponse.get(channel)!.add(citation.key);
+        }
+      }
+      for (const [channel, pageKeys] of ownPagesInResponse) {
+        const stats = ownChannelByName.get(channel);
+        if (!stats) continue;
+        stats.citationCount += pageKeys.size;
+        stats.responseCount++;
+      }
 
       // Gemini source_hints 에서 실제 도메인 추출
       // ⚠️ 중요: Gemini의 source_hints[].domain 은 항상 'vertexaisearch.cloud.google.com' (마스킹)
@@ -1146,6 +1196,7 @@ export class AICrawlerController {
       categories,
       topDomains,
       platformSources,
+      ownChannelSources,
       missingChannels: missingChannels.map(c => ({
         channel: c,
         recommendation: this.getChannelRecommendation(c),

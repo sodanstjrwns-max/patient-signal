@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal } from '@/lib/utils';
+
 /**
  * TopMentionedPrompts — "이번 주 언급된 질문 TOP 5" 위젯
  *
@@ -123,7 +125,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
                   “{p.promptText}”
                 </p>
                 <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
-                  {p.totalResponses}회 질문 중 {p.mentionCount}회 언급 ({p.sov}%)
+                  {p.totalResponses}회 질문 중 {p.mentionCount}회 언급 ({formatDecimal(p.sov)}%)
                   {p.topPlatform !== 'NONE' && (
                     <> · 최다 언급 {PLATFORM_LABEL[p.topPlatform] || p.topPlatform}</>
                   )}

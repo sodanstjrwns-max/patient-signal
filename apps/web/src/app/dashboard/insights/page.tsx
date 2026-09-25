@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/Header";
@@ -169,8 +170,8 @@ const insightSections = [
       {
         key: "website",
         icon: FileSearch,
-        label: "우리 홈페이지",
-        description: "우리 홈페이지의 인용 페이지와 해당 질문·답변을 확인합니다.",
+        label: "우리 공식 채널",
+        description: "홈페이지·블로그·인스타그램·유튜브의 인용 주소와 해당 질문·답변을 확인합니다.",
       },
       {
         key: "topUrls",
@@ -1795,6 +1796,30 @@ function SourceAnalysis({
           </CardContent>
         </Card>
       </div>
+
+      {Array.isArray(data.ownChannelSources) && (
+        <section className="border border-[#30343a] bg-[#111315] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-display text-lg font-semibold text-[#f5f5ef]">우리 공식 채널 인용</h3>
+              <p className="mt-1 text-xs leading-6 text-[#959c9f]">병원 소개에 등록한 주소와 일치하는 출처 · {selectedLabel} · 최근 30일</p>
+            </div>
+            <Link href="/dashboard/settings#online-channels" className="text-xs font-semibold text-[#ff9565] hover:underline">채널 주소 설정 →</Link>
+          </div>
+          {data.ownChannelSources.length > 0 ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {data.ownChannelSources.map((channel: any) => (
+                <div key={channel.channel} className="min-w-0 border border-[#30343a] bg-[#08090a] p-4">
+                  <p className="text-xs font-semibold text-[#f5f5ef]">{({ WEBSITE: "홈페이지", BLOG: "블로그", INSTAGRAM: "인스타그램", YOUTUBE: "유튜브" } as Record<string, string>)[channel.channel] || channel.channel}</p>
+                  <p className="mt-2 break-all text-[11px] leading-5 text-[#959c9f]">{channel.url}</p>
+                  <p className="mt-3 text-sm text-[#c0c4c7]"><strong className="text-[#d9ff43]">{channel.responseCount.toLocaleString()}</strong>개 답변에서 <strong>{channel.citationCount.toLocaleString()}</strong>건 인용</p>
+                </div>
+              ))}
+            </div>
+          ) : <p className="mt-4 text-sm text-[#c0c4c7]">공식 채널 주소를 등록하면 우리 채널의 인용을 구분해 볼 수 있습니다.</p>}
+          <p className="mt-4 text-[11px] leading-6 text-[#959c9f]">같은 답변의 동일 페이지는 한 번만 셉니다. 계정을 확인할 수 없는 인스타그램 게시물·유튜브 영상 링크와 Gemini 마스킹 링크는 우리 채널로 추정하지 않습니다.</p>
+        </section>
+      )}
 
       {/* 출처 카테고리별 분포 */}
       <Card>

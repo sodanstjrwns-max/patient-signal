@@ -7,11 +7,14 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
+  BookOpen,
   ExternalLink,
   Globe2,
+  Instagram,
   Loader2,
   RotateCcw,
   Search,
+  Youtube,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -23,6 +26,14 @@ type Platform =
   | "GROK"
   | "CLOVA_X"
   | "NAVER_AI_BRIEFING";
+type Channel = "WEBSITE" | "BLOG" | "INSTAGRAM" | "YOUTUBE";
+
+const channelDetails = {
+  WEBSITE: { label: "홈페이지", icon: Globe2, item: "페이지" },
+  BLOG: { label: "블로그", icon: BookOpen, item: "글·페이지" },
+  INSTAGRAM: { label: "인스타그램", icon: Instagram, item: "프로필 경로" },
+  YOUTUBE: { label: "유튜브", icon: Youtube, item: "채널 경로" },
+} as const;
 
 interface Example {
   responseId: string;
@@ -46,11 +57,14 @@ interface WebsiteAnalysisResult {
   status: "DOMAIN_REQUIRED" | "NO_MEASUREMENTS" | "NO_CITATIONS" | "READY";
   domain: string | null;
   domainSource: "hospital" | "override" | "missing";
+  channel: Channel;
+  registeredChannels: Record<Channel, string | null>;
+  selectedChannelUrl: string | null;
   registeredWebsiteUrl: string | null;
-  hostPolicy: "EXACT_AND_WWW";
+  hostPolicy: "EXACT_AND_WWW" | "EXACT_WWW_AND_PLATFORM_MOBILE";
   scopePath: string | null;
   scopeSearch: string;
-  scopeMode: "PATH_SUBTREE" | "EXACT_URL" | null;
+  scopeMode: "PATH_SUBTREE" | "EXACT_URL" | "NAVER_ACCOUNT" | "SOCIAL_PROFILE" | null;
   dateBasis: "CREATED_AT_KST";
   periodDays: number;
   fromDate: string;
@@ -105,22 +119,25 @@ function Metric({ label, value, note, accent = false }: {
 }
 
 export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
+  const [channel, setChannel] = useState<Channel>("WEBSITE");
   const [days, setDays] = useState(30);
   const [platform, setPlatform] = useState<Platform | "ALL">("ALL");
   const [domainInput, setDomainInput] = useState("");
   const [activeDomain, setActiveDomain] = useState("");
+  const [customOpen, setCustomOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [expandedUrl, setExpandedUrl] = useState<string | null>(null);
   const [selectedResponseId, setSelectedResponseId] = useState<string | null>(null);
 
   const analysisQuery = useQuery({
-    queryKey: ["website-analysis", hospitalId, days, platform, activeDomain, page],
+    queryKey: ["website-analysis", hospitalId, channel, days, platform, activeDomain, page],
     queryFn: () => api.get<WebsiteAnalysisResult>(
       `/ai-crawler/website-analysis/${hospitalId}`,
       {
         params: {
           days,
           platform,
+          channel,
           ...(activeDomain ? { domain: activeDomain } : {}),
           page,
           pageSize: 25,
@@ -142,6 +159,7 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
   });
 
   const data = analysisQuery.data;
+  const selectedChannel = channelDetails[channel];
   const applyDomain = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
@@ -155,6 +173,15 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
     setExpandedUrl(null);
     setSelectedResponseId(null);
   };
+  const chooseChannel = (value: Channel) => {
+    setChannel(value);
+    setActiveDomain("");
+    setDomainInput("");
+    setCustomOpen(false);
+    setPage(1);
+    setExpandedUrl(null);
+    setSelectedResponseId(null);
+  };
 
   return (
     <div className="space-y-5 text-[#f5f5ef]">
@@ -164,42 +191,41 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
             <span className="h-2 w-2 bg-[#ff6a24]" /> FIRST PARTY CITATION MAP
           </p>
           <h2 className="font-display text-[28px] leading-[1.13] tracking-[-.055em] sm:text-[36px]">
-            홈페이지, 어느 페이지가 인용됐을까
+            우리 채널, 어떤 주소가 인용됐을까
           </h2>
         </div>
         <p className="max-w-lg text-xs leading-6 text-[#959c9f] lg:justify-self-end">
-          저장된 AI 답변의 실제 출처 URL을 페이지별로 묶었습니다. 홈페이지의 내용이나 검색 순위를 검사한 결과가 아닙니다.
+          병원에 등록한 공식 채널을 기준으로 저장된 AI 답변의 실제 출처 URL을 묶었습니다. 채널 내용이나 검색 순위를 검사한 결과는 아닙니다.
         </p>
       </div>
 
       <section className="border border-[#30343a] bg-[#111315] p-4 sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <form onSubmit={applyDomain} className="min-w-0">
-            <label htmlFor="website-domain-input" className="mb-2 block text-[11px] font-bold tracking-[.06em] text-[#c0c4c7]">
-              분석할 홈페이지 도메인 또는 URL
-            </label>
-            <div className="flex min-w-0 gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#454a50] bg-[#08090a] px-3 focus-within:border-[#ff6a24]">
-                <Globe2 className="h-4 w-4 shrink-0 text-[#959c9f]" />
-                <input
-                  id="website-domain-input"
-                  type="text"
-                  inputMode="url"
-                  value={domainInput}
-                  onChange={(event) => setDomainInput(event.target.value)}
-                  placeholder={data?.registeredWebsiteUrl || "예: bdbddc.com"}
-                  className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#777f84]"
-                />
-              </div>
-              <button type="submit" className="flex shrink-0 items-center gap-1.5 bg-[#ff6a24] px-3.5 text-xs font-bold text-[#08090a] hover:bg-[#ff9565]">
-                <Search className="h-3.5 w-3.5" /> 조회
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4" aria-label="공식 채널 선택">
+          {(Object.keys(channelDetails) as Channel[]).map((value) => {
+            const item = channelDetails[value];
+            const Icon = item.icon;
+            const registered = !!data?.registeredChannels?.[value];
+            return (
+              <button key={value} type="button" onClick={() => chooseChannel(value)} aria-pressed={channel === value}
+                className={`flex min-w-0 items-center gap-2 border px-3 py-3 text-left transition-colors ${channel === value ? "border-[#d9ff43] bg-[#222916] text-[#f5f5ef]" : "border-[#454a50] bg-[#08090a] text-[#c0c4c7] hover:border-[#959c9f]"}`}>
+                <Icon className={`h-4 w-4 shrink-0 ${channel === value ? "text-[#d9ff43]" : "text-[#ff6a24]"}`} />
+                <span className="min-w-0 flex-1 truncate text-xs font-semibold">{item.label}</span>
+                <span className={`shrink-0 text-[10px] ${registered ? "text-[#d9ff43]" : "text-[#959c9f]"}`}>{registered ? "등록" : "미등록"}</span>
               </button>
-            </div>
-            <p className="mt-2 text-[11px] leading-5 text-[#959c9f]">
-              {data?.registeredWebsiteUrl ? <>병원 등록 주소: <span className="text-[#c0c4c7]">{data.registeredWebsiteUrl}</span>. </> : "등록된 홈페이지 주소가 없습니다. 도메인을 직접 입력하세요. "}
-              입력한 도메인은 이 조회에만 적용됩니다.
+            );
+          })}
+        </div>
+        <div className="mt-4 grid gap-4 border-t border-[#30343a] pt-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-[.06em] text-[#c0c4c7]">등록된 {selectedChannel.label} 주소</p>
+            <p className="mt-1 break-all text-sm font-semibold text-[#f5f5ef]">
+              {analysisQuery.isLoading ? "등록 주소 확인 중" : data?.selectedChannelUrl || "아직 등록된 주소가 없습니다"}
             </p>
-          </form>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px]">
+              <a href="/dashboard/settings#online-channels" className="font-semibold text-[#ff9565] hover:underline">병원 소개에서 공식 채널 주소 설정 <ArrowUpRight className="inline h-3 w-3" /></a>
+              <button type="button" onClick={() => setCustomOpen(!customOpen)} aria-expanded={customOpen} className="text-[#c0c4c7] hover:text-white">{customOpen ? "임시 주소 닫기" : "다른 주소로 조회"}</button>
+            </div>
+          </div>
           <div className="flex flex-wrap items-end gap-3">
             <div>
               <p className="mb-2 text-[11px] font-bold text-[#c0c4c7]">기간</p>
@@ -238,14 +264,32 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
             </div>
           </div>
         </div>
+        {customOpen && (
+          <form onSubmit={applyDomain} className="mt-4 border-t border-[#30343a] pt-4">
+            <label htmlFor="website-domain-input" className="mb-2 block text-[11px] font-bold text-[#c0c4c7]">조회할 도메인 또는 계정 URL</label>
+            <div className="flex min-w-0 gap-2">
+              <div className="flex min-w-0 flex-1 items-center gap-2 border border-[#454a50] bg-[#08090a] px-3 focus-within:border-[#ff6a24]">
+                <Globe2 className="h-4 w-4 shrink-0 text-[#959c9f]" />
+                <input id="website-domain-input" type="text" inputMode="url" value={domainInput}
+                  onChange={(event) => setDomainInput(event.target.value)}
+                  placeholder={data?.selectedChannelUrl || "https://example.com/clinic"}
+                  className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#777f84]" />
+              </div>
+              <button type="submit" className="flex shrink-0 items-center gap-1.5 bg-[#ff6a24] px-3.5 text-xs font-bold text-[#08090a] hover:bg-[#ff9565]">
+                <Search className="h-3.5 w-3.5" /> 조회
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-[#959c9f]">임시 주소는 이번 조회에만 적용됩니다. 저장하려면 병원 소개에서 등록하세요.</p>
+          </form>
+        )}
         {data?.domain && (
           <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[#30343a] pt-3 text-[11px] text-[#959c9f]">
-            <span>조회 범위: <strong className="font-semibold text-[#f5f5ef]">{data.domain}{data.scopePath === "/" ? "" : data.scopePath}{data.scopeSearch}</strong>{data.scopeMode === "PATH_SUBTREE" && data.scopePath !== "/" ? " 및 하위 경로" : ""}</span>
+            <span>조회 범위: <strong className="font-semibold text-[#f5f5ef]">{data.domain}{data.scopePath === "/" ? "" : data.scopePath}{data.scopeSearch}</strong>{["PATH_SUBTREE", "SOCIAL_PROFILE"].includes(data.scopeMode || "") && data.scopePath !== "/" ? " 및 하위 경로" : ""}{data.scopeMode === "NAVER_ACCOUNT" ? " 계정의 글" : ""}</span>
             <span>·</span>
             <span>{dayLabel(data.fromDate)}–{dayLabel(data.toDate)} 수집일(KST)</span>
-            <span>· www는 동일 도메인, 다른 하위 도메인은 제외</span>
+            <span>· 다른 계정·하위 도메인은 제외</span>
             {activeDomain && (
-              <button type="button" onClick={() => { setActiveDomain(""); setDomainInput(""); setPage(1); }} className="flex items-center gap-1 text-[#ff9565] hover:underline">
+              <button type="button" onClick={() => { setActiveDomain(""); setDomainInput(""); setPage(1); setExpandedUrl(null); setSelectedResponseId(null); }} className="flex items-center gap-1 text-[#ff9565] hover:underline">
                 <RotateCcw className="h-3 w-3" /> 등록 주소로
               </button>
             )}
@@ -259,21 +303,22 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
         </div>
       ) : analysisQuery.isError ? (
         <div role="alert" className="border border-[#703c29] bg-[#251914] px-5 py-7">
-          <p className="text-sm font-semibold text-[#f5f5ef]">홈페이지 인용 데이터를 불러오지 못했습니다.</p>
-          <p className="mt-1 text-xs text-[#c0c4c7]">도메인 형식과 네트워크 연결을 확인한 뒤 다시 조회하세요.</p>
+          <p className="text-sm font-semibold text-[#f5f5ef]">{selectedChannel.label} 인용 데이터를 불러오지 못했습니다.</p>
+          <p className="mt-1 text-xs text-[#c0c4c7]">등록 주소나 임시 조회 URL의 형식과 네트워크 연결을 확인한 뒤 다시 조회하세요. 공유 플랫폼의 전체 도메인만으로는 우리 계정을 식별할 수 없습니다.</p>
           <button type="button" onClick={() => analysisQuery.refetch()} className="mt-4 text-xs font-semibold text-[#ff9565] hover:underline">다시 조회</button>
         </div>
       ) : data?.status === "DOMAIN_REQUIRED" ? (
         <div className="border border-[#30343a] bg-[#111315] px-5 py-12 text-center">
           <Globe2 className="mx-auto h-7 w-7 text-[#ff6a24]" />
-          <p className="mt-4 text-base font-semibold">홈페이지 도메인을 입력해 주세요.</p>
-          <p className="mt-2 text-xs leading-6 text-[#959c9f]">병원 등록 홈페이지가 비어 있습니다. 실제 운영 도메인을 위에 입력하면 저장된 답변에서 해당 페이지의 인용을 찾습니다.</p>
+          <p className="mt-4 text-base font-semibold">{selectedChannel.label} 주소를 등록해 주세요.</p>
+          <p className="mt-2 text-xs leading-6 text-[#959c9f]">병원 소개에서 공식 주소를 저장하면 해당 채널을 자동으로 분석합니다. 주소를 저장하기 전에는 “다른 주소로 조회”를 사용할 수 있습니다.</p>
+          <a href="/dashboard/settings#online-channels" className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-[#ff9565] hover:underline">공식 채널 주소 설정 <ArrowUpRight className="h-3.5 w-3.5" /></a>
         </div>
       ) : data ? (
         <>
           <div className="grid grid-cols-2 border border-[#30343a] bg-[#111315] lg:grid-cols-4">
-            <Metric label="인용된 AI 답변" value={data.citedResponseCount} note="선택 도메인 페이지를 1개 이상 인용" accent />
-            <Metric label="확인된 페이지" value={data.pageCount} note="같은 페이지의 중복 URL 통합" />
+            <Metric label="인용된 AI 답변" value={data.citedResponseCount} note={`${selectedChannel.label} 주소를 1개 이상 인용`} accent />
+            <Metric label={`확인된 ${selectedChannel.item}`} value={data.pageCount} note="같은 URL의 중복 인용 통합" />
             <Metric label="기간 내 수집 답변" value={data.totalResponses} note="선택한 기간·AI의 전체 답변" />
             <Metric label="Gemini 미확인" value={data.unresolvedGeminiResponses} note="마스킹 링크보다 실제 URL 단서가 적은 답변" />
           </div>
@@ -288,17 +333,17 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
             </div>
           ) : data.status === "NO_CITATIONS" ? (
             <div className="border border-[#30343a] bg-[#111315] px-5 py-12 text-center">
-              <p className="text-base font-semibold">이 도메인의 페이지 인용은 확인되지 않았습니다.</p>
-              <p className="mt-2 text-xs leading-6 text-[#959c9f]">수집 답변 {data.totalResponses.toLocaleString()}건을 확인했습니다. 실제 사이트 도메인이나 경로가 병원 등록 주소와 다르면 위에서 바꿔 조회해 보세요. Gemini 마스킹 링크는 원본 페이지 URL이 없으면 포함하지 않습니다.</p>
+              <p className="text-base font-semibold">{selectedChannel.label} 주소의 확인 가능한 인용은 없습니다.</p>
+              <p className="mt-2 text-xs leading-6 text-[#959c9f]">수집 답변 {data.totalResponses.toLocaleString()}건을 확인했습니다. 등록 주소와 실제 인용 URL이 다른 경우 “다른 주소로 조회”를 이용하세요. 가려진 링크는 원본 URL이 없으면 포함하지 않습니다. 0건이 해당 채널의 인용 부재를 증명하지는 않습니다.</p>
             </div>
           ) : (
             <section className="border border-[#30343a] bg-[#111315]">
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#30343a] px-4 py-4 sm:px-5">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#ff9565]">PAGE BY PAGE</p>
-                  <h3 className="mt-1 font-display text-lg font-semibold">인용된 홈페이지 페이지</h3>
+                  <h3 className="mt-1 font-display text-lg font-semibold">인용된 {selectedChannel.label} {selectedChannel.item}</h3>
                 </div>
-                <p className="text-xs text-[#959c9f]">인용 답변 수 순 · 전체 {data.pageCount.toLocaleString()}페이지</p>
+                <p className="text-xs text-[#959c9f]">인용 답변 수 순 · 전체 {data.pageCount.toLocaleString()}개 URL</p>
               </div>
               <div className="divide-y divide-[#30343a]">
                 {data.pages.map((item, index) => {
@@ -389,7 +434,7 @@ export function WebsiteAnalysis({ hospitalId }: { hospitalId: string }) {
             </section>
           )}
           <p className="border-t border-[#30343a] pt-4 text-[11px] leading-6 text-[#959c9f]">
-            집계 기준: 저장된 동일 병원의 AI 답변과 수집 시각(KST), 선택 기간·AI, 실제 출처 URL. www는 같은 호스트로 묶고 다른 하위 도메인은 별개로 취급합니다. 등록 주소에 경로가 있으면 그 경로와 하위 페이지만 포함합니다. 전체 도메인을 보려면 위에 도메인만 입력하세요. URL의 UTM·클릭 추적값과 #위치는 제거하지만 페이지를 구분하는 검색 조건은 유지합니다. Gemini의 가려진 링크는 실제 페이지 URL 단서만 집계하고, 마스킹 링크 수보다 URL 단서가 적은 답변을 미확인으로 셉니다.
+            집계 기준: 저장된 동일 병원의 AI 답변과 수집 시각(KST), 선택 기간·AI, 실제 출처 URL. 등록한 계정·경로 범위만 포함하며 타 계정은 제외합니다. 네이버 블로그의 모바일·PostView 주소는 같은 글로 묶습니다. 인스타그램 게시물·릴스와 유튜브 영상의 일반 URL은 소유 계정을 확인할 수 없어 제외합니다. 따라서 0건은 인용 부재의 증거가 아닙니다. UTM·클릭 추적값과 #위치는 제거하지만 일반 페이지를 구분하는 검색 조건은 유지합니다. Gemini의 가려진 링크는 실제 페이지 URL 단서만 집계합니다.
           </p>
         </>
       ) : null}

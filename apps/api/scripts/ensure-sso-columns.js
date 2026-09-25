@@ -10,6 +10,11 @@ async function main() {
     // migration even when unrelated schema drift makes prisma db push skip.
     await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "clinic_introduction" TEXT')
     console.log('[ensure-sso-columns] clinic_introduction ready')
+    // Official profile channels are nullable and must exist before Prisma reads Hospital.
+    await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "blog_url" TEXT')
+    await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "instagram_url" TEXT')
+    await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "youtube_url" TEXT')
+    console.log('[ensure-sso-columns] hospital official channels ready')
     await prisma.$executeRawUnsafe('ALTER TABLE "hospitals" ADD COLUMN IF NOT EXISTS "ps_hospital_id" TEXT')
     await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS "hospitals_ps_hospital_id_key" ON "hospitals"("ps_hospital_id")')
     await prisma.$executeRawUnsafe('ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "pending_ps_hospital_id" TEXT')

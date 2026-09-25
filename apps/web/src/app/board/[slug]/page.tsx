@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal } from '@/lib/utils';
+
 /**
  * 【원장용】병원 전용 AI 검색 가시성 대시보드
  *
@@ -321,7 +323,7 @@ export default function HospitalBoardPage() {
                   ? 'bg-brand-500/10 border-brand-400/30 text-brand-300'
                   : 'bg-white/5 border-white/10 text-slate-300'
               }`}>
-                SoV {data.sovChange >= 0 ? '+' : ''}{data.sovChange}%p (직전 {data.periodDays}일 대비)
+                SoV {data.sovChange >= 0 ? '+' : ''}{formatDecimal(data.sovChange)}%p (직전 {data.periodDays}일 대비)
               </span>
             )}
           </div>
@@ -334,7 +336,7 @@ export default function HospitalBoardPage() {
           {
             icon: <BarChart3 className="w-5 h-5 text-sky-400" />,
             label: 'AI 언급률 (SoV)',
-            value: `${data.sovPercent}%`,
+            value: `${formatDecimal(data.sovPercent)}%`,
             sub: `AI 답변 ${data.totalResponses}건 중 ${data.mentionedResponses}건 등판`,
           },
           {
@@ -420,7 +422,7 @@ export default function HospitalBoardPage() {
                 <Tooltip
                   contentStyle={{ background: '#292e23', border: '1px solid #c0c4c7', borderRadius: 8, fontSize: 12 }}
                   labelStyle={{ color: '#d9ddcf' }}
-                  formatter={(v) => [`${v}%`, 'SoV']}
+                  formatter={(v) => [`${formatDecimal(Number(v))}%`, 'SoV']}
                 />
                 <Area type="monotone" dataKey="sovPercent" stroke="#909781" strokeWidth={2} fill="url(#sovFill)" />
               </AreaChart>
@@ -449,7 +451,7 @@ export default function HospitalBoardPage() {
                     />
                   </div>
                   <span className="w-24 text-right text-xs text-slate-300 shrink-0">
-                    <b className="text-white">{stat.sov}%</b>
+                    <b className="text-white">{formatDecimal(stat.sov)}%</b>
                     <span className="text-[#959c9f]"> ({stat.mentioned}/{stat.total})</span>
                   </span>
                 </div>
@@ -491,7 +493,7 @@ export default function HospitalBoardPage() {
                     <td className={`py-2.5 pr-4 ${row.isMe ? 'font-extrabold text-amber-300' : 'text-slate-400'}`}>
                       {row.name} {row.isMe && '⭐'}
                     </td>
-                    <td className="py-2.5 pr-4 text-right font-semibold">{row.sovPercent}%</td>
+                    <td className="py-2.5 pr-4 text-right font-semibold">{formatDecimal(row.sovPercent)}%</td>
                     <td className="py-2.5 pr-4 text-right text-slate-400">
                       {row.avgMentionPosition !== null ? `${row.avgMentionPosition}번째` : '—'}
                     </td>

@@ -26,7 +26,7 @@ function setup(hubOverrides: Record<string, unknown> = {}) {
     buildQuestionMaterials: jest.fn(),
     ...hubOverrides,
   };
-  return { service: new HospitalsService(prisma as any, scheduler as any, hub as any), prisma, hub };
+  return { service: new HospitalsService(prisma as any, scheduler as any, hub as any, {} as any), prisma, hub };
 }
 
 describe('HospitalsService onboarding core prompts', () => {

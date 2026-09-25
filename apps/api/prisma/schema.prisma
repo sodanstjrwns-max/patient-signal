@@ -200,6 +200,9 @@ model Hospital {
   regionDong         String?            @map("region_dong") // 동/읍/면
   address            String?
   websiteUrl         String?            @map("website_url")
+  blogUrl            String?            @map("blog_url")
+  instagramUrl       String?            @map("instagram_url")
+  youtubeUrl         String?            @map("youtube_url")
   naverPlaceId       String?            @map("naver_place_id")
   coreTreatments     String[]           @map("core_treatments") // 주력 진료/시술
   clinicIntroduction String?            @map("clinic_introduction") @db.Text // Signal에서 편집하는 병원 소개; Hub 프리필은 저장값을 덮어쓰지 않음

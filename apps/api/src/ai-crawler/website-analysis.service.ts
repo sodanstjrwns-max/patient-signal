@@ -8,6 +8,9 @@ const TRACKING_PARAMETERS = new Set([
 ]);
 const MASKED_GEMINI_HOST = 'vertexaisearch.cloud.google.com';
 const BATCH_SIZE = 400;
+const CHANNELS = ['WEBSITE', 'BLOG', 'INSTAGRAM', 'YOUTUBE'] as const;
+export type OfficialChannel = typeof CHANNELS[number];
+export type RegisteredChannels = Record<OfficialChannel, string | null>;
 
 export type WebsiteAnalysisStatus =
   | 'DOMAIN_REQUIRED'
@@ -18,6 +21,7 @@ export type WebsiteAnalysisStatus =
 export interface WebsiteAnalysisFilters {
   days: number;
   platform: AIPlatform | 'ALL';
+  channel?: OfficialChannel;
   domain?: string;
   page: number;
   pageSize: number;
@@ -36,7 +40,7 @@ export interface WebsiteResponseRow {
   prompt: { promptText: string } | null;
 }
 
-interface CitationUrl {
+export interface CitationUrl {
   key: string;
   url: string;
   path: string;
@@ -49,7 +53,9 @@ export interface WebsiteScope {
   domain: string;
   scopePath: string;
   scopeSearch: string;
-  scopeMode: 'PATH_SUBTREE' | 'EXACT_URL';
+  scopeMode: 'PATH_SUBTREE' | 'EXACT_URL' | 'NAVER_ACCOUNT' | 'SOCIAL_PROFILE';
+  channel: OfficialChannel;
+  ownerAccount?: string;
 }
 
 interface MutablePage {
@@ -85,7 +91,11 @@ function parsedHttpUrl(input: string): URL | null {
 }
 
 function normalizedHost(hostname: string): string {
-  return hostname.toLowerCase().replace(/\.$/, '').replace(/^www\./, '');
+  const host = hostname.toLowerCase().replace(/\.$/, '').replace(/^www\./, '');
+  if (host === 'm.blog.naver.com') return 'blog.naver.com';
+  if (host === 'm.instagram.com') return 'instagram.com';
+  if (host === 'm.youtube.com') return 'youtube.com';
+  return host;
 }
 
 function isPublicDomain(host: string): boolean {
@@ -102,7 +112,7 @@ export function normalizeWebsiteDomain(input: string): string {
   return normalizeWebsiteScope(input).domain;
 }
 
-export function normalizeWebsiteScope(input: string): WebsiteScope {
+export function normalizeWebsiteScope(input: string, channel: OfficialChannel = 'WEBSITE'): WebsiteScope {
   const url = parsedHttpUrl(input);
   const host = url && normalizedHost(url.hostname);
   if (!host || !isPublicDomain(host) || host === MASKED_GEMINI_HOST) {
@@ -110,11 +120,56 @@ export function normalizeWebsiteScope(input: string): WebsiteScope {
   }
   const scopePath = url!.pathname === '/' ? '/' : url!.pathname.replace(/\/$/, '');
   const scopeSearch = cleanedSearch(url!);
+  // These are shared hosts: a root URL cannot establish ownership of the
+  // platform's other accounts, regardless of the selected channel.
+  const sharedHost = ['blog.naver.com', 'instagram.com', 'youtube.com',
+    'medium.com', 'velog.io', 'brunch.co.kr', 'tistory.com'].includes(host);
+  if (sharedHost && scopePath === '/') {
+    throw new BadRequestException('공유 플랫폼은 병원 계정이 포함된 URL을 입력해주세요.');
+  }
+  if (channel === 'INSTAGRAM' && host !== 'instagram.com') {
+    throw new BadRequestException('인스타그램 계정 URL을 입력해주세요.');
+  }
+  if (channel === 'YOUTUBE' && host !== 'youtube.com') {
+    throw new BadRequestException('유튜브 채널 URL을 입력해주세요.');
+  }
+  if (channel === 'BLOG' && host === 'blog.naver.com') {
+    const first = scopePath.split('/')[1];
+    const ownerAccount = /^\/[a-z\d_-]+$/i.test(scopePath) ? first.toLowerCase()
+      : /^\/Post(?:View|List)\.naver$/i.test(scopePath)
+        ? url!.searchParams.get('blogId')?.toLowerCase() : null;
+    if (!ownerAccount || !/^[a-z\d_-]+$/i.test(ownerAccount)) {
+      throw new BadRequestException('네이버 블로그 계정 주소를 입력해주세요.');
+    }
+    const queryAccount = queryParam(url!, 'blogId');
+    if (queryAccount && queryAccount.toLowerCase() !== ownerAccount) {
+      throw new BadRequestException('네이버 블로그 계정 주소를 입력해주세요.');
+    }
+    return { domain: host, scopePath: `/${ownerAccount}`, scopeSearch: '',
+      scopeMode: 'NAVER_ACCOUNT', channel, ownerAccount };
+  }
+  if (host === 'instagram.com') {
+    if (!/^\/[a-z\d._]{1,30}$/i.test(scopePath) ||
+      ['p', 'reel', 'reels', 'stories', 'explore', 'accounts', 'direct', 'about', 'developer', 'legal']
+        .includes(scopePath.slice(1).toLowerCase())) {
+      throw new BadRequestException('인스타그램 계정 URL을 입력해주세요.');
+    }
+    return { domain: host, scopePath: scopePath.toLowerCase(), scopeSearch: '',
+      scopeMode: 'SOCIAL_PROFILE', channel };
+  }
+  if (host === 'youtube.com') {
+    if (!/^\/(?:@[^/]+|(?:channel|c|user)\/[^/]+)$/.test(scopePath)) {
+      throw new BadRequestException('유튜브 채널 URL을 입력해주세요.');
+    }
+    return { domain: host, scopePath, scopeSearch: '',
+      scopeMode: 'SOCIAL_PROFILE', channel };
+  }
   return {
     domain: host,
     scopePath,
     scopeSearch,
     scopeMode: scopeSearch ? 'EXACT_URL' : 'PATH_SUBTREE',
+    channel,
   };
 }
 
@@ -148,6 +203,92 @@ export function normalizeCitationUrl(input: string): CitationUrl | null {
     search,
     host,
   };
+}
+
+function queryParam(url: URL, name: string): string | null {
+  for (const [key, value] of url.searchParams) {
+    if (key.toLowerCase() === name.toLowerCase()) return value;
+  }
+  return null;
+}
+
+/** Naver desktop, mobile and PostView links for one post share one page key. */
+function naverAccountCitation(input: string, ownerAccount: string): CitationUrl | null {
+  const url = parsedHttpUrl(input);
+  if (!url || normalizedHost(url.hostname) !== 'blog.naver.com') return null;
+  const pathname = url.pathname.replace(/\/$/, '') || '/';
+  let account: string | null;
+  let path: string;
+  if (/^\/Post(?:View|List)\.naver$/i.test(pathname)) {
+    account = queryParam(url, 'blogId');
+    const logNo = queryParam(url, 'logNo');
+    path = logNo ? `/${ownerAccount}/${encodeURIComponent(logNo)}` : `/${ownerAccount}`;
+  } else {
+    const segments = pathname.split('/').filter(Boolean);
+    account = segments[0] || null;
+    const logNo = queryParam(url, 'logNo');
+    path = logNo ? `/${ownerAccount}/${encodeURIComponent(logNo)}`
+      : `/${ownerAccount}${segments.length > 1 ? `/${segments.slice(1).join('/')}` : ''}`;
+  }
+  if (!account || account.toLowerCase() !== ownerAccount) return null;
+  const queryAccount = queryParam(url, 'blogId');
+  if (queryAccount && queryAccount.toLowerCase() !== ownerAccount) return null;
+  return {
+    key: `blog.naver.com${path}`,
+    url: `https://blog.naver.com${path}`,
+    path,
+    pathname: path,
+    search: '',
+    host: 'blog.naver.com',
+  };
+}
+
+/** Returns only URL evidence inside the saved account/domain scope. */
+export function matchCitationToScope(input: string, scope: WebsiteScope): CitationUrl | null {
+  if (scope.scopeMode === 'NAVER_ACCOUNT') {
+    return naverAccountCitation(input, scope.ownerAccount!);
+  }
+  const citation = normalizeCitationUrl(input);
+  if (!citation || citation.host !== scope.domain) return null;
+  const pathname = scope.scopeMode === 'SOCIAL_PROFILE' && scope.domain === 'instagram.com'
+    ? citation.pathname.toLowerCase() : citation.pathname;
+  const matches = scope.scopeMode === 'EXACT_URL'
+    ? pathname === scope.scopePath && citation.search === scope.scopeSearch
+    : scope.scopePath === '/' || pathname === scope.scopePath ||
+      pathname.startsWith(`${scope.scopePath}/`);
+  if (!matches) return null;
+  // Social post URLs do not encode their owner. The profile path above is the
+  // sole basis for ownership; /p, /reel, /watch and /shorts cannot match it.
+  if (scope.scopeMode === 'SOCIAL_PROFILE' && scope.domain === 'instagram.com') {
+    return { ...citation, key: `${citation.host}${pathname}${citation.search}`,
+      path: `${pathname}${citation.search}`, pathname };
+  }
+  return citation;
+}
+
+export interface RegisteredChannelCitation {
+  channel: OfficialChannel;
+  citation: CitationUrl;
+}
+
+/** Precompile registered scopes once when classifying a batch of source URLs. */
+export function createRegisteredChannelCitationMatcher(channels: RegisteredChannels) {
+  const scopes = CHANNELS.flatMap((channel) => {
+    const url = channels[channel];
+    if (!url) return [];
+    try { return [normalizeWebsiteScope(url, channel)]; }
+    catch { return []; } // Legacy root/shared URLs cannot establish ownership.
+  });
+  return (input: string): RegisteredChannelCitation[] => scopes.flatMap((scope) => {
+    const citation = matchCitationToScope(input, scope);
+    return citation ? [{ channel: scope.channel, citation }] : [];
+  });
+}
+
+export function matchRegisteredChannelCitation(
+  input: string, channels: RegisteredChannels,
+): RegisteredChannelCitation[] {
+  return createRegisteredChannelCitationMatcher(channels)(input);
 }
 
 function sourceHintUrls(hints: unknown): string[] {
@@ -200,6 +341,7 @@ export function aggregateWebsiteResponse(
   pages: Map<string, MutablePage>,
   scopePath = '/',
   scopeSearch = '',
+  scope?: WebsiteScope,
 ): { matched: boolean; unresolvedGemini: boolean } {
   const hints = sourceHintUrls(row.sourceHints);
   const sources = [
@@ -221,11 +363,11 @@ export function aggregateWebsiteResponse(
   const collectedDate = new Date(row.createdAt.getTime() + 9 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
   for (const source of sources) {
-    const citation = normalizeCitationUrl(source);
-    const pathMatches = citation && (scopeSearch
+    const citation = scope ? matchCitationToScope(source, scope) : normalizeCitationUrl(source);
+    const pathMatches = scope || (citation && (scopeSearch
       ? citation.pathname === scopePath && citation.search === scopeSearch
       : scopePath === '/' || citation.pathname === scopePath ||
-        citation.pathname.startsWith(`${scopePath}/`));
+        citation.pathname.startsWith(`${scopePath}/`)));
     if (!citation || citation.host !== domain || !pathMatches ||
       matchedInResponse.has(citation.key)) {
       continue;
@@ -269,16 +411,25 @@ export class WebsiteAnalysisService {
   async getAnalysis(hospitalId: string, filters: WebsiteAnalysisFilters) {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { websiteUrl: true },
+      select: { websiteUrl: true, blogUrl: true, instagramUrl: true, youtubeUrl: true },
     });
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다.');
 
-    const registeredWebsiteUrl = hospital.websiteUrl || null;
-    const chosen = filters.domain?.trim() || registeredWebsiteUrl;
-    const scope = chosen ? normalizeWebsiteScope(chosen) : null;
+    const channel = filters.channel ?? 'WEBSITE';
+    if (!CHANNELS.includes(channel)) throw new BadRequestException('지원하지 않는 공식 채널입니다.');
+    const registeredChannels: RegisteredChannels = {
+      WEBSITE: hospital.websiteUrl || null,
+      BLOG: hospital.blogUrl || null,
+      INSTAGRAM: hospital.instagramUrl || null,
+      YOUTUBE: hospital.youtubeUrl || null,
+    };
+    const registeredWebsiteUrl = registeredChannels.WEBSITE;
+    const selectedChannelUrl = registeredChannels[channel];
+    const chosen = filters.domain?.trim() || selectedChannelUrl;
+    const scope = chosen ? normalizeWebsiteScope(chosen, channel) : null;
     const domain = scope?.domain || null;
     const domainSource = filters.domain?.trim()
-      ? 'override' : registeredWebsiteUrl ? 'hospital' : 'missing';
+      ? 'override' : selectedChannelUrl ? 'hospital' : 'missing';
     const { fromDate, toDate, from, before } = kstPeriod(
       filters.days, filters.now ?? new Date(),
     );
@@ -291,8 +442,12 @@ export class WebsiteAnalysisService {
     const baseResult = {
       domain,
       domainSource,
+      channel,
+      registeredChannels,
+      selectedChannelUrl,
       registeredWebsiteUrl,
-      hostPolicy: 'EXACT_AND_WWW' as const,
+      hostPolicy: domain === 'blog.naver.com' || domain === 'instagram.com' ||
+        domain === 'youtube.com' ? 'EXACT_WWW_AND_PLATFORM_MOBILE' as const : 'EXACT_AND_WWW' as const,
       scopePath: scope?.scopePath || null,
       scopeSearch: scope?.scopeSearch || '',
       scopeMode: scope?.scopeMode || null,
@@ -350,7 +505,7 @@ export class WebsiteAnalysisService {
       for (const row of rows) {
         totalResponses++;
         const result = aggregateWebsiteResponse(
-          row, domain, pages, scope!.scopePath, scope!.scopeSearch,
+          row, domain, pages, scope!.scopePath, scope!.scopeSearch, scope!,
         );
         if (result.matched) citedResponseCount++;
         if (result.unresolvedGemini) unresolvedGeminiResponses++;

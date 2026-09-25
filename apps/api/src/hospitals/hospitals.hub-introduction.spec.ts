@@ -17,7 +17,7 @@ describe('HospitalsService Hub introduction', () => {
       invalidate: jest.fn(),
       fetchProfile: jest.fn().mockResolvedValue(hubProfile),
     };
-    const service = new HospitalsService(prisma as any, {} as any, hub as any);
+    const service = new HospitalsService(prisma as any, {} as any, hub as any, {} as any);
 
     const result = await service.getHubIntroduction('user-1', true);
 
@@ -40,7 +40,7 @@ describe('HospitalsService Hub introduction', () => {
     if (profileOrError instanceof Error) fetchProfile.mockRejectedValue(profileOrError);
     else fetchProfile.mockResolvedValue(profileOrError);
     const hub = { isEnabled: jest.fn().mockReturnValue(true), fetchProfile };
-    const service = new HospitalsService(prisma as any, {} as any, hub as any);
+    const service = new HospitalsService(prisma as any, {} as any, hub as any, {} as any);
 
     await expect(service.getHubIntroduction('user-1')).resolves.toEqual({
       enabled: true,
@@ -64,7 +64,7 @@ describe('HospitalsService Hub introduction', () => {
     };
     const prisma = { hospital: { findUnique: jest.fn().mockResolvedValue(hospital) } };
     const hub = { isEnabled: jest.fn().mockReturnValue(true), fetchProfile: jest.fn() };
-    const service = new HospitalsService(prisma as any, {} as any, hub as any);
+    const service = new HospitalsService(prisma as any, {} as any, hub as any, {} as any);
 
     const result = await service.findOne(hospital.id);
 
@@ -77,7 +77,7 @@ describe('HospitalsService Hub introduction', () => {
       user: { findUnique: jest.fn().mockResolvedValue({ hospitalId: 'hospital-1', role: 'OWNER' }) },
       hospital: { update: jest.fn().mockResolvedValue({ clinicIntroduction: '' }) },
     };
-    const service = new HospitalsService(prisma as any, {} as any, {} as any);
+    const service = new HospitalsService(prisma as any, {} as any, {} as any, {} as any);
 
     await service.update('hospital-1', 'user-1', { clinicIntroduction: '   ' });
 

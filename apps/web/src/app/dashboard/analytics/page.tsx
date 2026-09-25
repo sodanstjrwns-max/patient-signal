@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDecimal } from "@/lib/utils";
+
 import { Header } from "@/components/layout/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/stores/auth";
@@ -249,7 +251,7 @@ export default function AnalyticsPage() {
                       </dd>
                     </div>
                     <dd className="text-3xl font-medium tabular-nums tracking-tight">
-                      {abhs?.sovPercent ?? 0}
+                      {formatDecimal(abhs?.sovPercent ?? 0)}
                       <span className="ml-1 text-sm text-[#959c9f]">%</span>
                     </dd>
                   </div>
@@ -280,7 +282,7 @@ export default function AnalyticsPage() {
                       </dd>
                     </div>
                     <dd className="text-3xl font-medium tabular-nums tracking-tight">
-                      {competitiveShare?.mySharePercent ?? 0}
+                      {formatDecimal(competitiveShare?.mySharePercent ?? 0)}
                       <span className="ml-1 text-sm text-[#959c9f]">%</span>
                     </dd>
                   </div>
@@ -317,7 +319,7 @@ export default function AnalyticsPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-[#959c9f]">
-                                SoV {data.sovPercent}%
+                                SoV {formatDecimal(data.sovPercent)}%
                               </span>
                               <span className="font-semibold text-sm">
                                 {Math.round(data.contribution)}점
@@ -387,7 +389,7 @@ export default function AnalyticsPage() {
                               </span>
                             </div>
                             <span className="text-sm font-semibold">
-                              {count}건 ({percent}%)
+                              {count}건 ({formatDecimal(percent)}%)
                             </span>
                           </div>
                           <div className="bg-[#181b1e] rounded-full h-2">
@@ -569,7 +571,7 @@ export default function AnalyticsPage() {
                             }}
                           >
                             <span className="text-xs text-[#f5f5ef] font-medium">
-                              {competitiveShare.mySharePercent}%
+                              {formatDecimal(competitiveShare.mySharePercent)}%
                             </span>
                           </div>
                         </div>
@@ -592,7 +594,7 @@ export default function AnalyticsPage() {
                                 }}
                               >
                                 <span className="text-xs text-[#f5f5ef] font-medium">
-                                  {cs.sharePercent}%
+                                  {formatDecimal(cs.sharePercent)}%
                                 </span>
                               </div>
                             </div>

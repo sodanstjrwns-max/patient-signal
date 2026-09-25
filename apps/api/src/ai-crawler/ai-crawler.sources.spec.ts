@@ -14,8 +14,17 @@ const activePlatforms = [
   'NAVER_AI_BRIEFING',
 ] as const;
 
+type SourceRow = {
+  id: string;
+  aiPlatform: string;
+  citedSources: string[];
+  citedUrl: string | null;
+  isMentioned: boolean;
+  sourceHints: unknown;
+};
+
 const geminiRedirect = 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/gemini';
-const rows = [
+const rows: SourceRow[] = [
   ...activePlatforms.map((aiPlatform) => ({
     id: `response-${aiPlatform}`,
     aiPlatform,
@@ -48,11 +57,26 @@ const rows = [
   },
 ];
 
-function makeController() {
+function makeController({
+  responseRows = rows,
+  channels = {},
+}: {
+  responseRows?: SourceRow[];
+  channels?: Partial<Record<'websiteUrl' | 'blogUrl' | 'instagramUrl' | 'youtubeUrl', string | null>>;
+} = {}) {
   const prisma = {
+    hospital: {
+      findUnique: jest.fn().mockResolvedValue({
+        websiteUrl: null,
+        blogUrl: null,
+        instagramUrl: null,
+        youtubeUrl: null,
+        ...channels,
+      }),
+    },
     aIResponse: {
       findMany: jest.fn().mockImplementation(async ({ where }: { where: { aiPlatform?: string } }) =>
-        rows.filter((row) => !where.aiPlatform || row.aiPlatform === where.aiPlatform)),
+        responseRows.filter((row) => !where.aiPlatform || row.aiPlatform === where.aiPlatform)),
     },
   };
   const controller = new AICrawlerController(
@@ -60,7 +84,7 @@ function makeController() {
     prisma as unknown as PrismaService,
     {} as CacheService,
   );
-  return { controller, findMany: prisma.aIResponse.findMany };
+  return { controller, findMany: prisma.aIResponse.findMany, findHospital: prisma.hospital.findUnique };
 }
 
 describe('AICrawlerController source platform filters', () => {
@@ -145,5 +169,67 @@ describe('AICrawlerController source platform filters', () => {
     await expect(controller.getSourceDiagnostic('hospital-1', '30', 'UNKNOWN'))
       .rejects.toBeInstanceOf(BadRequestException);
     expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it('counts registered Naver blog pages, not another account on the same host, once per answer', async () => {
+    const responseRows: SourceRow[] = [
+      {
+        id: 'ours-chatgpt',
+        aiPlatform: 'CHATGPT',
+        citedSources: [
+          'https://blog.naver.com/ourclinic/one?utm_source=ai',
+          'https://blog.naver.com/otherclinic/two',
+        ],
+        citedUrl: 'https://m.blog.naver.com/ourclinic/one',
+        sourceHints: { sources: [
+          { url: 'https://blog.naver.com/PostView.naver?blogId=ourclinic&logNo=two' },
+          { title: 'blog.naver.com/otherclinic' },
+        ] },
+        isMentioned: false,
+      },
+      {
+        id: 'other-claude',
+        aiPlatform: 'CLAUDE',
+        citedSources: ['https://blog.naver.com/otherclinic/three'],
+        citedUrl: null,
+        sourceHints: null,
+        isMentioned: false,
+      },
+      {
+        id: 'masked-gemini',
+        aiPlatform: 'GEMINI',
+        citedSources: [geminiRedirect],
+        citedUrl: null,
+        sourceHints: { sources: [{ title: 'blog.naver.com/ourclinic' }] },
+        isMentioned: false,
+      },
+    ];
+    const registeredBlog = 'https://blog.naver.com/ourclinic';
+    const { controller, findMany, findHospital } = makeController({
+      responseRows,
+      channels: { blogUrl: registeredBlog },
+    });
+
+    const filtered = await controller.getSourceAnalysis('hospital-1', '30', 'CHATGPT');
+    expect(findHospital).toHaveBeenCalledTimes(1);
+    expect(findHospital).toHaveBeenCalledWith({
+      where: { id: 'hospital-1' },
+      select: { websiteUrl: true, blogUrl: true, instagramUrl: true, youtubeUrl: true },
+    });
+    expect(findMany.mock.calls[0][0].where.aiPlatform).toBe('CHATGPT');
+    expect(filtered.ownChannelSources).toEqual([
+      { channel: 'BLOG', url: registeredBlog, citationCount: 2, responseCount: 1 },
+    ]);
+    expect(filtered.totalResponses).toBe(1);
+
+    const all = await controller.getSourceAnalysis('hospital-1', '30', 'ALL');
+    expect(all.totalResponses).toBe(3);
+    expect(all.ownChannelSources).toEqual([
+      { channel: 'BLOG', url: registeredBlog, citationCount: 2, responseCount: 1 },
+    ]);
+    const gemini = await controller.getSourceAnalysis('hospital-1', '30', 'GEMINI');
+    expect(gemini.ownChannelSources).toEqual([
+      { channel: 'BLOG', url: registeredBlog, citationCount: 0, responseCount: 0 },
+    ]);
   });
 });

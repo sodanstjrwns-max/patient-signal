@@ -1,5 +1,7 @@
 'use client';
 
+import { formatDecimal } from '@/lib/utils';
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/layout/Header';
@@ -352,7 +354,7 @@ export default function FunnelPage() {
                         <div className="flex items-center gap-3 flex-shrink-0">
                           <div className="text-right">
                             <div className="flex items-center gap-1 justify-end">
-                              <span className={`text-xl font-semibold ${style.text}`}>{stage.sov}%</span>
+                              <span className={`text-xl font-semibold ${style.text}`}>{formatDecimal(stage.sov)}%</span>
                               {stage.trend === 'up' && <TrendingUp className="w-4 h-4 text-brand-500" />}
                               {stage.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
                               {stage.trend === 'flat' && <Minus className="w-4 h-4 text-[#b8bcab]" />}
@@ -390,7 +392,7 @@ export default function FunnelPage() {
                                   <div className="flex-1 h-1.5 bg-[#181b1e] rounded-full overflow-hidden">
                                     <div className="h-full bg-brand-400 rounded-full" style={{ width: `${b.sov}%` }} />
                                   </div>
-                                  <span className="w-12 text-right font-bold text-[#c0c4c7]">{b.sov}%</span>
+                                  <span className="w-12 text-right font-bold text-[#c0c4c7]">{formatDecimal(b.sov)}%</span>
                                 </div>
                               ))}
                             </div>
@@ -447,7 +449,7 @@ export default function FunnelPage() {
                   <Award className="w-8 h-8 text-brand-500 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-[#ff9565]">
-                      실행한 액션 {impactData.summary.improvedCount}개에서 총 SoV +{impactData.summary.totalSovGain}%p 상승 검증됨
+                      실행한 액션 {impactData.summary.improvedCount}개에서 총 SoV +{formatDecimal(impactData.summary.totalSovGain)}%p 상승 검증됨
                     </p>
                     <p className="text-xs text-[#ff9565]">베이스라인 대비 실측 — 처방→실행→재측정 루프가 작동 중입니다 🔁</p>
                   </div>
@@ -485,12 +487,12 @@ export default function FunnelPage() {
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
                             <p className="text-[10px] text-[#959c9f]">시작 시점</p>
-                            <p className="font-semibold text-[#c0c4c7] tabular-nums">{a.baseline.sov ?? '—'}%</p>
+                            <p className="font-semibold text-[#c0c4c7] tabular-nums">{formatDecimal(a.baseline.sov)}%</p>
                           </div>
                           <ArrowRight className="w-4 h-4 text-[#b8bcab]" />
                           <div className="text-right">
                             <p className="text-[10px] text-[#959c9f]">현재</p>
-                            <p className="font-semibold text-[#f5f5ef] tabular-nums">{a.outcome.sov ?? '—'}%</p>
+                            <p className="font-semibold text-[#f5f5ef] tabular-nums">{formatDecimal(a.outcome.sov)}%</p>
                           </div>
                           {a.outcome.deltaSov !== null && (
                             <span className={`px-2 py-1 rounded-lg text-sm font-semibold tabular-nums ${
@@ -498,7 +500,7 @@ export default function FunnelPage() {
                               : a.outcome.deltaSov <= -3 ? 'bg-[#3a2022] text-red-400'
                               : 'bg-[#181b1e] text-[#c0c4c7]'
                             }`}>
-                              {a.outcome.deltaSov > 0 ? '+' : ''}{a.outcome.deltaSov}%p
+                              {a.outcome.deltaSov > 0 ? '+' : ''}{formatDecimal(a.outcome.deltaSov)}%p
                             </span>
                           )}
                           {a.status === 'IN_PROGRESS' && (

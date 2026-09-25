@@ -1,6 +1,6 @@
-import { Controller, Get, Post, Query, Headers, Logger, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Post, Query, Headers, Logger, UnauthorizedException } from '@nestjs/common';
 import { timingSafeEqual } from 'crypto';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
@@ -8,6 +8,7 @@ import { SchedulerService } from '../scheduler/scheduler.service';
 import { TempUpgradeService } from '../scheduler/temp-upgrade.service';
 import { Public } from '../auth/decorators/public.decorator';
 import { registrySnapshot, refreshAvailability } from '../ai-crawler/model-registry';
+import { NaverSourceAnalysisService } from './naver-source-analysis.service';
 
 @ApiTags('관리자')
 @Controller('admin')
@@ -19,6 +20,7 @@ export class AdminController {
     private adminService: AdminService,
     private schedulerService: SchedulerService,
     private tempUpgradeService: TempUpgradeService,
+    private naverSourceAnalysis: NaverSourceAnalysisService,
   ) {}
 
   /**
@@ -592,6 +594,28 @@ export class AdminController {
     this.validateSecret(headerSecret);
     if (!hospitalId) return { success: false, error: 'hospitalId 필요' };
     return this.tempUpgradeService.tempUpgrade({ hospitalId, plan: (plan || 'STANDARD').toUpperCase(), days: parseInt(days || '21', 10) || 21, dryRun: apply !== '1' });
+  }
+
+  /**
+   * 저장된 응답의 네이버 인용 집계. 관리자 시크릿은 헤더에서만 받는다.
+   */
+  @Public()
+  @Get('naver-sources')
+  @ApiOperation({ summary: '병원별 ChatGPT·Gemini·Perplexity 네이버 인용 분석 (읽기 전용)' })
+  @ApiQuery({ name: 'hospitalId', required: true })
+  @ApiQuery({ name: 'days', required: false, description: '최근 KST 달력일 7~90일, 기본 30일' })
+  async getNaverSources(
+    @Headers('x-admin-secret') headerSecret: string,
+    @Query('hospitalId') hospitalId: string,
+    @Query('days') days?: string,
+  ) {
+    this.validateSecret(headerSecret);
+    if (!hospitalId?.trim()) throw new BadRequestException('hospitalId가 필요합니다.');
+    const requestedDays = days ?? '30';
+    if (!/^\d+$/.test(requestedDays) || Number(requestedDays) < 7 || Number(requestedDays) > 90) {
+      throw new BadRequestException('days는 7~90 사이의 정수여야 합니다.');
+    }
+    return this.naverSourceAnalysis.analyze(hospitalId.trim(), Number(requestedDays));
   }
 
   /**

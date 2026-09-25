@@ -12,6 +12,8 @@ import { findGlobalIdFromMap } from '../auth/hub-sso.util';
 import { FREE_TRIAL_DAYS } from '../subscriptions/trial.constants';
 import { buildCoreQuestions } from '../query-templates/core-questions';
 import { SPECIALTY_NAMES, SPECIALTY_PROCEDURES } from '../query-templates/query-templates.service';
+import { CacheService } from '../common/cache/cache.service';
+import { normalizeOfficialChannels, OFFICIAL_CHANNEL_FIELDS } from './official-channel-url';
 
 @Injectable()
 export class HospitalsService {
@@ -21,6 +23,7 @@ export class HospitalsService {
     private prisma: PrismaService,
     private schedulerService: SchedulerService,
     private hubProfileService: HubProfileService,
+    private cacheService: CacheService,
   ) {}
 
   /**
@@ -91,6 +94,7 @@ export class HospitalsService {
   async create(userId: string, dto: CreateHospitalDto) {
     // 빈 문자열을 null로 변환 (unique 제약조건 충돌 방지)
     const sanitize = (val?: string) => val?.trim() || null;
+    const officialChannels = normalizeOfficialChannels(dto);
 
     // 병원 생성 (STARTER 14일 트라이얼로 시작)
     // 새 필드(coreTreatments 등)가 DB에 아직 없을 수 있으므로 fallback 처리
@@ -112,7 +116,7 @@ export class HospitalsService {
           regionSigungu: dto.regionSigungu,
           regionDong: dto.regionDong,
           address: dto.address,
-          websiteUrl: dto.websiteUrl,
+          ...officialChannels,
           naverPlaceId: dto.naverPlaceId,
           planType: 'STARTER',              // 14일 트라이얼은 STARTER 권한
           subscriptionStatus: 'TRIAL',       // 트라이얼 상태
@@ -131,7 +135,7 @@ export class HospitalsService {
           regionSigungu: dto.regionSigungu,
           regionDong: dto.regionDong,
           address: dto.address,
-          websiteUrl: dto.websiteUrl,
+          ...officialChannels,
           naverPlaceId: dto.naverPlaceId,
           planType: 'STARTER',
           subscriptionStatus: 'TRIAL',
@@ -422,7 +426,8 @@ export class HospitalsService {
       throw new ForbiddenException('수정 권한이 없습니다');
     }
 
-    return this.prisma.hospital.update({
+    const officialChannels = normalizeOfficialChannels(dto);
+    const hospital = await this.prisma.hospital.update({
       where: { id: hospitalId },
       data: {
         name: dto.name,
@@ -439,10 +444,14 @@ export class HospitalsService {
         regionSigungu: dto.regionSigungu,
         regionDong: dto.regionDong,
         address: dto.address,
-        websiteUrl: dto.websiteUrl,
+        ...officialChannels,
         naverPlaceId: dto.naverPlaceId,
       },
     });
+    if (OFFICIAL_CHANNEL_FIELDS.some((field) => dto[field] !== undefined)) {
+      await this.cacheService.invalidateHospital(hospitalId);
+    }
+    return hospital;
   }
 
   async getDashboard(hospitalId: string) {

@@ -1,6 +1,7 @@
 import { IsString, IsEnum, IsOptional, IsArray, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { SpecialtyType } from '@prisma/client';
+import { IsOfficialChannelUrl } from '../official-channel-url';
 
 export class CreateHospitalDto {
   @ApiProperty({ example: '서울비디치과', description: '병원명' })
@@ -59,7 +60,26 @@ export class CreateHospitalDto {
   @ApiPropertyOptional({ example: 'https://www.hospital.com', description: '웹사이트 URL' })
   @IsOptional()
   @IsString()
-  websiteUrl?: string;
+  @IsOfficialChannelUrl('websiteUrl')
+  websiteUrl?: string | null;
+
+  @ApiPropertyOptional({ example: 'https://blog.naver.com/clinic', description: '공식 블로그 URL; 빈 값은 삭제' })
+  @IsOptional()
+  @IsString()
+  @IsOfficialChannelUrl('blogUrl')
+  blogUrl?: string | null;
+
+  @ApiPropertyOptional({ example: 'https://www.instagram.com/clinic/', description: '공식 인스타그램 계정 URL; 빈 값은 삭제' })
+  @IsOptional()
+  @IsString()
+  @IsOfficialChannelUrl('instagramUrl')
+  instagramUrl?: string | null;
+
+  @ApiPropertyOptional({ example: 'https://www.youtube.com/@clinic', description: '공식 유튜브 채널 URL; 빈 값은 삭제' })
+  @IsOptional()
+  @IsString()
+  @IsOfficialChannelUrl('youtubeUrl')
+  youtubeUrl?: string | null;
 
   @ApiPropertyOptional({ example: '12345678', description: '네이버 플레이스 ID' })
   @IsOptional()

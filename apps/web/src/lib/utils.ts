@@ -9,8 +9,14 @@ export function formatNumber(num: number): string {
   return new Intl.NumberFormat('ko-KR').format(num);
 }
 
-export function formatPercent(num: number): string {
-  return `${num.toFixed(1)}%`;
+export function formatDecimal(num: number | null | undefined): string {
+  return num == null || !Number.isFinite(num)
+    ? '—'
+    : new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(num);
+}
+
+export function formatPercent(num: number | null | undefined): string {
+  return `${formatDecimal(num)}%`;
 }
 
 export function formatDate(date: Date | string): string {

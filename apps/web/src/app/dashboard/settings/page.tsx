@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/useToast";
 import { ProcedureSelector, uniqueProcedures } from "@/components/settings/ProcedureSelector";
+import { OfficialChannels } from "@/components/settings/OfficialChannels";
 
 const specialtyNames: Record<string, string> = {
   DENTAL: "치과",
@@ -214,7 +215,6 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: "",
     address: "",
-    websiteUrl: "",
     naverPlaceId: "",
     specialtyType: "",
     regionSido: "",
@@ -223,6 +223,9 @@ export default function SettingsPage() {
   });
   const [nameAliases, setNameAliases] = useState<string[]>([]);
   const [newAlias, setNewAlias] = useState("");
+  const aliasesDirty = useRef(false);
+  const aliasesEditVersion = useRef(0);
+  const aliasesHospitalId = useRef<string>();
 
   // 허브 프로필에서 채워 내려온 필드 목록 (API가 빈 필드만 채워서 내려줌 — DB 저장 전 상태)
   const hubPrefilledFields: string[] = hospital?.hubPrefill?.fields || [];
@@ -237,17 +240,22 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (hospital) {
-      setFormData({
+      if (!isEditing) setFormData({
         name: hospital.name || "",
         address: hospital.address || "",
-        websiteUrl: hospital.websiteUrl || "",
         naverPlaceId: hospital.naverPlaceId || "",
         specialtyType: hospital.specialtyType || "",
         regionSido: hospital.regionSido || "",
         regionSigungu: hospital.regionSigungu || "",
         regionDong: hospital.regionDong || "",
       });
-      setNameAliases(hospital.nameAliases || []);
+      if (aliasesHospitalId.current !== hospital.id) {
+        aliasesHospitalId.current = hospital.id;
+        aliasesDirty.current = false;
+        aliasesEditVersion.current = 0;
+        setNewAlias("");
+      }
+      if (!aliasesDirty.current) setNameAliases(hospital.nameAliases || []);
       if (!introEditing) setIntroDraft(hospital.clinicIntroduction || "");
     }
   }, [hospital, introEditing]);
@@ -327,20 +335,28 @@ export default function SettingsPage() {
       toast.warning("별칭은 최대 10개까지 등록 가능합니다.");
       return;
     }
+    aliasesDirty.current = true;
+    aliasesEditVersion.current++;
     setNameAliases([...nameAliases, trimmed]);
     setNewAlias("");
   };
 
   // 별칭 삭제
   const removeAlias = (alias: string) => {
+    aliasesDirty.current = true;
+    aliasesEditVersion.current++;
     setNameAliases(nameAliases.filter((a) => a !== alias));
   };
 
   // 별칭 저장
   const saveAliasesMutation = useMutation({
-    mutationFn: () => hospitalApi.update(hospitalId!, { nameAliases }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["hospital"] });
+    mutationFn: ({ savingHospitalId, aliases }: { savingHospitalId: string; aliases: string[]; version: number }) =>
+      hospitalApi.update(savingHospitalId, { nameAliases: aliases }),
+    onSuccess: (_response, saved) => {
+      if (aliasesHospitalId.current === saved.savingHospitalId && aliasesEditVersion.current === saved.version) {
+        aliasesDirty.current = false;
+      }
+      queryClient.invalidateQueries({ queryKey: ["hospital", saved.savingHospitalId] });
       toast.success(
         "병원 별칭이 저장되었습니다. 다음 크롤링/실시간 질문부터 반영됩니다.",
       );
@@ -398,12 +414,16 @@ export default function SettingsPage() {
 
   // 병원 정보 업데이트
   const updateMutation = useMutation({
-    mutationFn: (data: any) => hospitalApi.update(hospitalId!, data),
+    mutationFn: ({ savingHospitalId, payload }: { savingHospitalId: string; payload: any; aliasVersion: number }) =>
+      hospitalApi.update(savingHospitalId, payload),
     onSuccess: (_response, saved) => {
-      if (saved.keyProcedures) proceduresDirty.current = false;
-      queryClient.invalidateQueries({ queryKey: ["hospital"] });
+      if (saved.payload.keyProcedures) proceduresDirty.current = false;
+      if (aliasesHospitalId.current === saved.savingHospitalId && aliasesEditVersion.current === saved.aliasVersion) {
+        aliasesDirty.current = false;
+      }
+      queryClient.invalidateQueries({ queryKey: ["hospital", saved.savingHospitalId] });
       queryClient.invalidateQueries({
-        queryKey: ["core-questions", hospitalId],
+        queryKey: ["core-questions", saved.savingHospitalId],
       });
       setIsEditing(false);
       setHubTreatmentsImported(false);
@@ -460,7 +480,6 @@ export default function SettingsPage() {
     const payload: any = {
       name: formData.name,
       address: formData.address,
-      websiteUrl: formData.websiteUrl,
       naverPlaceId: formData.naverPlaceId,
       nameAliases,
     };
@@ -476,7 +495,7 @@ export default function SettingsPage() {
       payload.coreTreatments = selectedProcedures;
       payload.keyProcedures = selectedProcedures;
     }
-    updateMutation.mutate(payload);
+    updateMutation.mutate({ savingHospitalId: hospitalId!, payload, aliasVersion: aliasesEditVersion.current });
   };
 
   if (!hospitalId) {
@@ -812,19 +831,6 @@ export default function SettingsPage() {
                 />
               </div>
               <div>
-                <Label>웹사이트</Label>
-                <Input
-                  value={
-                    isEditing ? formData.websiteUrl : hospital?.websiteUrl || ""
-                  }
-                  onChange={(e) =>
-                    setFormData({ ...formData, websiteUrl: e.target.value })
-                  }
-                  disabled={!isEditing}
-                  placeholder="https://example.com"
-                />
-              </div>
-              <div>
                 <Label>네이버 플레이스 ID</Label>
                 <Input
                   value={
@@ -890,7 +896,6 @@ export default function SettingsPage() {
                       setFormData({
                         name: hospital?.name || "",
                         address: hospital?.address || "",
-                        websiteUrl: hospital?.websiteUrl || "",
                         naverPlaceId: hospital?.naverPlaceId || "",
                         specialtyType: hospital?.specialtyType || "",
                         regionSido: hospital?.regionSido || "",
@@ -908,10 +913,12 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {hospital && <OfficialChannels hospital={hospital} />}
+
         <section className="grid gap-6 border-t border-[#30343a] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
             <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#959c9f]">
-              03 / FOCUS AREAS
+              04 / FOCUS AREAS
             </p>
             <h2 className="font-display text-xl font-semibold tracking-tight">핵심 시술</h2>
             <p className="mt-3 text-xs leading-6 text-[#959c9f]">
@@ -1006,7 +1013,7 @@ export default function SettingsPage() {
         <section className="grid gap-6 border-t border-[#30343a] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
             <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#959c9f]">
-              04 / NAME RECOGNITION
+              05 / NAME RECOGNITION
             </p>
             <h2 className="font-display text-xl font-semibold tracking-tight">병원 별칭</h2>
             <p className="mt-3 text-xs leading-6 text-[#959c9f]">
@@ -1073,7 +1080,7 @@ export default function SettingsPage() {
               </p>
               <Button
                 size="sm"
-                onClick={() => saveAliasesMutation.mutate()}
+                onClick={() => saveAliasesMutation.mutate({ savingHospitalId: hospitalId!, aliases: nameAliases, version: aliasesEditVersion.current })}
                 disabled={saveAliasesMutation.isPending}
               >
                 {saveAliasesMutation.isPending ? (
@@ -1090,7 +1097,7 @@ export default function SettingsPage() {
         <section className="grid gap-6 border-t border-[#30343a] pt-8 lg:grid-cols-[230px_minmax(0,1fr)]">
           <div>
             <p className="mb-2 text-[10px] font-bold tracking-[0.16em] text-[#959c9f]">
-              05 / WORKSPACE
+              06 / WORKSPACE
             </p>
             <h2 className="font-display text-xl font-semibold tracking-tight">
               구독과 계정
