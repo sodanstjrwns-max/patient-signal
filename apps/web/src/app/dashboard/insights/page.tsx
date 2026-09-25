@@ -1518,27 +1518,25 @@ function GeminiDietWidget({ diet }: { diet: any }) {
       <CardContent className="p-5">
         <h3 className="text-lg font-semibold text-[#f5f5ef] mb-1 flex items-center gap-2">
           <Eye className="h-5 w-5 text-[#ff9565]" />
-          Gemini 실제 식단{" "}
+          Gemini 출처 도메인{" "}
           <span className="text-xs font-normal text-[#959c9f]">
             ({diet.period} · 리다이렉트 {diet.totalRedirects?.toLocaleString()}
             개 디코딩 {diet.decodeRate}%)
           </span>
         </h3>
         <p className="text-xs text-[#959c9f] mb-4">
-          Gemini는 인용 URL을 전부 마스킹합니다 — 가면을 벗기면 실제로 어떤
-          채널을 긁는지 보입니다. 고유 도메인{" "}
+          저장된 Gemini 답변의 마스킹 링크에서 확인한 출처 도메인을 집계합니다.
+          직접 크롤링한 횟수를 뜻하지 않습니다. 고유 도메인{" "}
           <strong>{diet.uniqueDomains?.toLocaleString()}개</strong> 발견
         </p>
 
-        {/* 핵심 경고: 네이버/인스타 부재 */}
+        {/* 관측된 출처 비중과 해석 범위 */}
         <div className="mb-4 p-3 bg-[#281a13] border border-[#30343a] rounded-xl">
           <p className="text-xs text-[#ff9565]">
-            <strong>Gemini는 구글 색인 세계입니다</strong> — 네이버
-            블로그·카페·인스타·틱톡 비중{" "}
+            <strong>확인된 출처 중</strong> 네이버·인스타그램·틱톡 도메인의 인용 비중은{" "}
             <strong>{diet.naverInstaShare}%</strong>
-            {diet.naverInstaShare < 1 && " (사실상 0)"}. 네이버·인스타 콘텐츠는
-            Gemini에게 보이지 않습니다. Gemini 공략 = 공식홈 구글 색인 + 의료
-            플랫폼(모두닥·굿닥 등) + 유튜브·티스토리.
+            입니다. 이 수치는 현재 병원·측정 기간의 저장된 답변에 한정됩니다.
+            낮은 비중이나 0건만으로 해당 플랫폼에 접근할 수 없거나 크롤링하지 않는다고 판단할 수 없습니다.
           </p>
         </div>
 
