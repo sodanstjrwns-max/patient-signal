@@ -159,7 +159,10 @@ function sourceHintUrls(hints: unknown): string[] {
     if (!source || typeof source !== 'object') continue;
     const item = source as Record<string, unknown>;
     for (const value of [item.url, item.uri, item.link]) {
-      if (typeof value === 'string') urls.push(value);
+      // A bare hostname in a hint is insufficient evidence for the home page.
+      if (typeof value === 'string' && /^https?:\/\//i.test(value.trim())) {
+        urls.push(value);
+      }
     }
     // A title that is only a domain does not identify the cited page.
     if (typeof item.title === 'string' && /^https?:\/\//i.test(item.title.trim())) {

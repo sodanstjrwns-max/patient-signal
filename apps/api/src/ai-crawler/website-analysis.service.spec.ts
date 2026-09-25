@@ -119,7 +119,7 @@ describe('WebsiteAnalysisService', () => {
     const unresolved = aggregateWebsiteResponse(row({
       aiPlatform: AIPlatform.GEMINI,
       citedSources: [masked],
-      sourceHints: { sources: [{ title: 'bdbddc.com', domain: 'vertexaisearch.cloud.google.com' }] },
+      sourceHints: { sources: [{ url: 'bdbddc.com', title: 'bdbddc.com', domain: 'vertexaisearch.cloud.google.com' }] },
     }), 'bdbddc.com', pages);
     expect(unresolved).toEqual({ matched: false, unresolvedGemini: true });
     expect(pages.size).toBe(0);
