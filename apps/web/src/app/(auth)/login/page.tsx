@@ -3,15 +3,12 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowRight, Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import AuthShell from '@/components/public/AuthShell';
-
-// Hub SSO uses the active Signal API. Google accounts authenticate through Hub as well.
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.patientsignal.kr/api';
-const HUB_SSO_START_URL = API_BASE_URL + '/auth/hub';
+import SignInOptions from '@/components/public/SignInOptions';
 
 const ERROR_MESSAGES: Record<string, string> = {
   google_auth_failed: 'Google 로그인에 실패했습니다. 다시 시도해주세요.',
@@ -59,21 +56,13 @@ function LoginForm() {
     }
   };
 
-  const handleHubLogin = () => {
-    window.location.href = HUB_SSO_START_URL;
-  };
-
   return (
     <AuthShell mode="login">
             <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#c0c4c7]">Welcome back</p>
             <h1 className="font-display mt-3 text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">다시, 시그널.</h1>
             <p className="mt-2 text-sm leading-6 text-[#c0c4c7]">Patient Signal에 로그인해 우리 병원의 AI 답변을 확인하세요.</p>
 
-            <button type="button" onClick={handleHubLogin} className="mt-8 flex h-12 w-full items-center justify-center gap-2.5 rounded-none bg-[#08090a] px-4 text-sm font-semibold text-white hover:bg-[#d9ff43]">
-              <span className="flex h-6 w-6 items-center justify-center rounded-[6px] bg-white/20 text-[10px] font-bold">PH</span>
-              Patient Hub 계정으로 로그인 <ArrowRight className="h-4 w-4" />
-            </button>
-            <p className="mt-2.5 text-center text-xs text-[#959c9f]">Google 계정도 Patient Hub에서 로그인할 수 있습니다.</p>
+            <SignInOptions />
 
             <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#959c9f]"><span className="h-px flex-1 bg-[#30343a]" />이메일로 로그인<span className="h-px flex-1 bg-[#30343a]" /></div>
 

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import AuthShell from '@/components/public/AuthShell';
+import SignInOptions from '@/components/public/SignInOptions';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -45,7 +46,10 @@ export default function RegisterPage() {
             <h1 className="font-display mt-3 text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">첫 시그널을 켜세요.</h1>
             <p className="mt-2 text-sm leading-6 text-[#c0c4c7]">계정을 만든 뒤 병원 정보를 연결할 수 있습니다.</p>
 
-            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+            <SignInOptions registering />
+            <div className="my-7 flex items-center gap-3 text-xs font-medium text-[#959c9f]"><span className="h-px flex-1 bg-[#30343a]" />이메일로 회원가입<span className="h-px flex-1 bg-[#30343a]" /></div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
               {error && <div role="alert" className="rounded-none border border-red-200 bg-[#291718] p-3 text-sm text-red-400">{error}</div>}
               <div className="space-y-2">
                 <label htmlFor="register-name" className="text-sm font-semibold text-[#f5f5ef]">이름</label>
