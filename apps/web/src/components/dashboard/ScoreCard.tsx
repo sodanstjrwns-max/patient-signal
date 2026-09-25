@@ -15,13 +15,13 @@ interface ScoreCardProps {
 export function ScoreCard({ title, score, change, description, icon }: ScoreCardProps) {
   const getTrendIcon = () => {
     if (!change || change === 0) return <Minus className="h-4 w-4 text-slate-400" />;
-    if (change > 0) return <TrendingUp className="h-4 w-4 text-emerald-500" />;
+    if (change > 0) return <TrendingUp className="h-4 w-4 text-brand-500" />;
     return <TrendingDown className="h-4 w-4 text-red-500" />;
   };
 
   const getTrendColor = () => {
     if (!change || change === 0) return 'text-slate-500';
-    if (change > 0) return 'text-emerald-600';
+    if (change > 0) return 'text-brand-600';
     return 'text-red-600';
   };
 

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { TrialBanner } from '@/components/dashboard/TrialBanner';
 import { useAuthStore } from '@/stores/auth';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { hospitalApi } from '@/lib/api';
 
 export default function DashboardLayout({
@@ -14,6 +14,7 @@ export default function DashboardLayout({
 }) {
   const { isAuthenticated, user, updateUser, _hasHydrated } = useAuthStore();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!_hasHydrated) return;
@@ -57,12 +58,12 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="dashboard-shell flex min-h-screen bg-[#f4f5ef]">
+    <div className="dashboard-shell flex min-h-screen bg-[#f4f4f8]">
       <Sidebar />
       <main className="min-w-0 flex-1 overflow-auto pt-14 lg:pt-0 min-h-screen">
         <div>
           <TrialBanner />
-          <div>
+          <div key={pathname} className="signal-route-enter">
             {children}
           </div>
         </div>

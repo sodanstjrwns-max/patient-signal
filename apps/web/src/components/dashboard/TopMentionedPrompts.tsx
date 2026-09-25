@@ -130,7 +130,7 @@ export function TopMentionedPrompts({ hospitalId }: { hospitalId: string | undef
                 </p>
               </div>
               {p.r3Rate >= 50 && (
-                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-black shrink-0">
+                <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 font-black shrink-0">
                   단독추천 {Math.round(p.r3Rate)}%
                 </span>
               )}

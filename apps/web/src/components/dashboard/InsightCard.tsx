@@ -17,7 +17,7 @@ export function InsightCard({ insights, title = '주간 인사이트' }: Insight
       return <AlertTriangle className="h-5 w-5 text-orange-500" />;
     }
     if (insight.includes('📈')) {
-      return <TrendingUp className="h-5 w-5 text-emerald-500" />;
+      return <TrendingUp className="h-5 w-5 text-brand-500" />;
     }
     if (insight.includes('📉')) {
       return <TrendingDown className="h-5 w-5 text-red-500" />;

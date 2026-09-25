@@ -54,8 +54,8 @@ function SuccessContent() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-brand-600" />
-        <p className="text-[#637167] text-lg">결제를 확인하고 있습니다...</p>
-        <p className="text-[#87917E] text-sm">잠시만 기다려주세요</p>
+        <p className="text-[#606070] text-lg">결제를 확인하고 있습니다...</p>
+        <p className="text-[#858592] text-sm">잠시만 기다려주세요</p>
       </div>
     );
   }
@@ -66,15 +66,15 @@ function SuccessContent() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
           <span className="text-3xl">!</span>
         </div>
-        <h2 className="text-2xl font-bold text-[#15231B]">결제 확인에 문제가 있습니다</h2>
-        <p className="text-[#778378] text-center max-w-md">
+        <h2 className="text-2xl font-bold text-[#111118]">결제 확인에 문제가 있습니다</h2>
+        <p className="text-[#737382] text-center max-w-md">
           걱정하지 마세요. 결제가 실제로 이루어졌다면 자동으로 처리됩니다.
           문제가 지속되면 고객센터로 문의해주세요.
         </p>
         <div className="flex gap-3 mt-4">
           <a
             href="/dashboard/settings"
-            className="px-6 py-2.5 border border-[#DEE4D9] rounded-lg text-[#405345] hover:bg-white"
+            className="px-6 py-2.5 border border-[#dedee8] rounded-lg text-[#545067] hover:bg-white"
           >
             설정으로 이동
           </a>
@@ -91,13 +91,13 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-      <div className="w-24 h-24 bg-[#F4F5EF] rounded-full flex items-center justify-center">
+      <div className="w-24 h-24 bg-[#f4f4f8] rounded-full flex items-center justify-center">
         <PartyPopper className="h-12 w-12 text-brand-600" />
       </div>
 
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[#15231B] mb-2">결제 완료!</h2>
-        <p className="text-[#778378]">구독이 활성화되었습니다. 지금 바로 시작하세요.</p>
+        <h2 className="text-3xl font-bold text-[#111118] mb-2">결제 완료!</h2>
+        <p className="text-[#737382]">구독이 활성화되었습니다. 지금 바로 시작하세요.</p>
       </div>
 
       {paymentInfo?.receiptUrl && (

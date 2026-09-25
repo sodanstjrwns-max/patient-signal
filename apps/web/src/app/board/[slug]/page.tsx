@@ -38,12 +38,12 @@ const SLUG_MAP: Record<string, string> = {
 };
 
 const PLATFORM_LABELS: Record<string, { label: string; color: string }> = {
-  CHATGPT: { label: 'ChatGPT', color: '#10b981' },
+  CHATGPT: { label: 'ChatGPT', color: '#545067' },
   PERPLEXITY: { label: 'Perplexity', color: '#0ea5e9' },
   CLAUDE: { label: 'Claude', color: '#f97316' },
   GEMINI: { label: 'Gemini', color: '#8b5cf6' },
   GROK: { label: 'Grok', color: '#d946ef' },
-  CLOVA_X: { label: 'CLOVA X', color: '#22c55e' },
+  CLOVA_X: { label: 'CLOVA X', color: '#777489' },
 };
 
 interface PlatformStat {
@@ -113,7 +113,7 @@ function RankChangeBadge({ change }: { change: number | null }) {
     );
   if (change > 0)
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-brand-400">
         <TrendingUp className="w-3.5 h-3.5" /> {change}계단 상승
       </span>
     );
@@ -318,7 +318,7 @@ export default function HospitalBoardPage() {
             {data.sovChange !== null && (
               <span className={`px-4 py-2 rounded-full border text-sm font-semibold ${
                 data.sovChange >= 0
-                  ? 'bg-emerald-500/10 border-emerald-400/30 text-emerald-300'
+                  ? 'bg-brand-500/10 border-brand-400/30 text-brand-300'
                   : 'bg-white/5 border-white/10 text-slate-300'
               }`}>
                 SoV {data.sovChange >= 0 ? '+' : ''}{data.sovChange}%p (직전 {data.periodDays}일 대비)
@@ -350,7 +350,7 @@ export default function HospitalBoardPage() {
             sub: '언급될 때 추천 리스트 내 평균 위치',
           },
           {
-            icon: <Smile className="w-5 h-5 text-emerald-400" />,
+            icon: <Smile className="w-5 h-5 text-brand-400" />,
             label: 'AI 감성 평가',
             value: sentimentFace(data.avgSentiment),
             sub: data.avgSentiment !== null ? `감성 점수 ${data.avgSentiment > 0 ? '+' : ''}${data.avgSentiment} (−1~+1)` : '데이터 수집 중',
@@ -362,7 +362,7 @@ export default function HospitalBoardPage() {
             sub: `최근 ${data.periodDays}일 실제 AI 응답 전수 분석`,
           },
           {
-            icon: <TrendingUp className="w-5 h-5 text-emerald-400" />,
+            icon: <TrendingUp className="w-5 h-5 text-brand-400" />,
             label: '직전 기간 순위',
             value: data.prevRank !== null ? `${data.prevRank}위 → ${data.rank}위` : '신규 진입',
             sub: '동일 길이 직전 기간과 비교',

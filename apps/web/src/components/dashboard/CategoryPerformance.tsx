@@ -34,7 +34,7 @@ import {
 const categoryConfig: Record<string, { name: string; icon: any; color: string; bgColor: string; borderColor: string; barColor: string; emoji: string; description: string }> = {
   PROCEDURE: { name: '시술/진료', icon: Stethoscope, color: 'text-brand-600', bgColor: 'bg-brand-50', borderColor: 'border-brand-200', barColor: 'bg-brand-400', emoji: '🦷', description: '임플란트, 교정, 라미네이트 등 구체적 시술' },
   EMOTION:   { name: '감성/경험', icon: Heart, color: 'text-pink-600', bgColor: 'bg-pink-50', borderColor: 'border-pink-200', barColor: 'bg-pink-400', emoji: '💝', description: '친절한, 무서운데, 편안한 등 환자 감정' },
-  COST:      { name: '비용/가격', icon: DollarSign, color: 'text-emerald-600', bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', barColor: 'bg-emerald-400', emoji: '💰', description: '가격, 가성비, 저렴한 등 비용 관련' },
+  COST:      { name: '비용/가격', icon: DollarSign, color: 'text-brand-600', bgColor: 'bg-brand-50', borderColor: 'border-brand-200', barColor: 'bg-brand-400', emoji: '💰', description: '가격, 가성비, 저렴한 등 비용 관련' },
   REGION:    { name: '지역 기반', icon: MapPin, color: 'text-orange-600', bgColor: 'bg-orange-50', borderColor: 'border-orange-200', barColor: 'bg-orange-400', emoji: '📍', description: '강남, 홍대, 서울 등 지역 중심 검색' },
   REVIEW:    { name: '후기/평판', icon: MessageCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50', borderColor: 'border-yellow-200', barColor: 'bg-yellow-400', emoji: '⭐', description: '후기 좋은, 유명한, 평판 등' },
   COMPARISON:{ name: '비교', icon: GitCompare, color: 'text-violet-600', bgColor: 'bg-violet-50', borderColor: 'border-violet-200', barColor: 'bg-violet-400', emoji: '⚖️', description: 'vs, 비교, 차이 등 대안 비교' },
@@ -100,7 +100,7 @@ export function CategoryPerformance() {
             <p className="text-sm text-slate-500 mb-6">
               실시간 질문을 하거나, 정기 크롤링이 실행되면<br/>자동으로 카테고리가 분류되고 성과가 쌓여요!
             </p>
-            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-[#15231b] hover:bg-[#2c4635]">
+            <Button onClick={() => window.location.href = '/dashboard/live-query'} className="bg-[#111118] hover:bg-[#282433]">
               <Zap className="h-4 w-4 mr-2" />실시간 질문 하러 가기
             </Button>
           </CardContent>
@@ -119,8 +119,8 @@ export function CategoryPerformance() {
               </CardContent>
             </Card>
             <Card>
-              <CardContent className={`p-4 text-center ${data.totalMentionRate >= 50 ? 'bg-green-50/50' : ''}`}>
-                <p className={`text-3xl font-bold ${data.totalMentionRate >= 50 ? 'text-green-600' : data.totalMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>{data.totalMentionRate}%</p>
+              <CardContent className={`p-4 text-center ${data.totalMentionRate >= 50 ? 'bg-brand-50/50' : ''}`}>
+                <p className={`text-3xl font-bold ${data.totalMentionRate >= 50 ? 'text-brand-600' : data.totalMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>{data.totalMentionRate}%</p>
                 <p className="text-xs text-slate-500 mt-1">평균 언급률</p>
               </CardContent>
             </Card>
@@ -146,17 +146,17 @@ export function CategoryPerformance() {
 
           {/* 강점 / 약점 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card className="border-green-200 bg-green-50/30">
+            <Card className="border-brand-200 bg-brand-50/30">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
-                  <h4 className="font-bold text-green-800">우리 병원이 강한 분야</h4>
+                  <TrendingUp className="h-5 w-5 text-brand-600" />
+                  <h4 className="font-bold text-brand-800">우리 병원이 강한 분야</h4>
                 </div>
                 <div className="space-y-2.5">
                   {data.topTags?.filter((t: any) => t.avgMentionRate > 0).slice(0, 5).map((tag: any, i: number) => {
                     const config = categoryConfig[tag.category];
                     return (
-                      <div key={i} className="flex items-center justify-between bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-green-100">
+                      <div key={i} className="flex items-center justify-between bg-white/80 backdrop-blur-sm rounded-2xl p-3 border border-brand-100">
                         <div className="flex items-center gap-2.5">
                           <span className="text-base">{config?.emoji || '📋'}</span>
                           <div>
@@ -164,7 +164,7 @@ export function CategoryPerformance() {
                             <p className="text-[10px] text-slate-400">{tag.categoryName} · {tag.totalQueries}회</p>
                           </div>
                         </div>
-                        <span className="text-lg font-bold text-green-600">{tag.avgMentionRate}%</span>
+                        <span className="text-lg font-bold text-brand-600">{tag.avgMentionRate}%</span>
                       </div>
                     );
                   })}
@@ -204,7 +204,7 @@ export function CategoryPerformance() {
 
           {/* 진료별 드릴다운 */}
           {data.myProcedures?.length > 0 && (
-            <Card className="border-[#dee4d9] bg-[#f4f5ef]">
+            <Card className="border-[#dedee8] bg-[#f4f4f8]">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ export function CategoryPerformance() {
                               )}
                             </div>
                             {hasData ? (
-                              <span className={`text-xl font-bold ${proc.avgMentionRate >= 50 ? 'text-green-600' : proc.avgMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
+                              <span className={`text-xl font-bold ${proc.avgMentionRate >= 50 ? 'text-brand-600' : proc.avgMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
                                 {proc.avgMentionRate}%
                               </span>
                             ) : (
@@ -245,7 +245,7 @@ export function CategoryPerformance() {
                             <>
                               <div className="w-full bg-slate-100 rounded-full h-2.5 mb-3">
                                 <div
-                                  className={`h-2.5 rounded-full transition-all ${proc.avgMentionRate >= 50 ? 'bg-green-400' : proc.avgMentionRate > 0 ? 'bg-yellow-400' : 'bg-slate-300'}`}
+                                  className={`h-2.5 rounded-full transition-all ${proc.avgMentionRate >= 50 ? 'bg-brand-400' : proc.avgMentionRate > 0 ? 'bg-yellow-400' : 'bg-slate-300'}`}
                                   style={{ width: `${proc.avgMentionRate}%` }}
                                 />
                               </div>
@@ -275,7 +275,7 @@ export function CategoryPerformance() {
                                         <span className="text-[10px]">{q.type === 'live' ? '⚡' : '🔄'}</span>
                                         <span className="text-[11px] text-slate-600 truncate">{q.text}</span>
                                       </div>
-                                      <span className={`text-[11px] font-bold ml-2 ${q.mentionRate > 0 ? 'text-green-600' : 'text-slate-400'}`}>{q.mentionRate}%</span>
+                                      <span className={`text-[11px] font-bold ml-2 ${q.mentionRate > 0 ? 'text-brand-600' : 'text-slate-400'}`}>{q.mentionRate}%</span>
                                     </div>
                                   ))}
                                 </div>
@@ -354,7 +354,7 @@ export function CategoryPerformance() {
                           <div className="w-16 bg-slate-200 rounded-full h-2.5">
                             <div className={`h-2.5 rounded-full ${config.barColor}`} style={{ width: `${cat.avgMentionRate}%` }} />
                           </div>
-                          <span className={`text-lg font-bold min-w-[45px] text-right ${cat.avgMentionRate >= 50 ? 'text-green-600' : cat.avgMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
+                          <span className={`text-lg font-bold min-w-[45px] text-right ${cat.avgMentionRate >= 50 ? 'text-brand-600' : cat.avgMentionRate > 0 ? 'text-yellow-600' : 'text-slate-400'}`}>
                             {cat.avgMentionRate}%
                           </span>
                         </div>
@@ -387,7 +387,7 @@ export function CategoryPerformance() {
                             <div className="flex flex-wrap gap-2">
                               {cat.tags.map((tag: any) => (
                                 <div key={tag.tag} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl border text-xs ${
-                                  tag.avgMentionRate >= 50 ? 'bg-green-50 border-green-200 text-green-700'
+                                  tag.avgMentionRate >= 50 ? 'bg-brand-50 border-brand-200 text-brand-700'
                                     : tag.avgMentionRate > 0 ? 'bg-yellow-50 border-yellow-200 text-yellow-700'
                                     : 'bg-slate-50 border-slate-200 text-slate-500'
                                 }`}>
@@ -402,15 +402,15 @@ export function CategoryPerformance() {
 
                         {cat.topQuestions?.length > 0 && (
                           <div className="mb-3">
-                            <p className="text-xs font-semibold text-green-700 mb-1.5 flex items-center gap-1"><Star className="h-3 w-3" />잘 잡히는 질문</p>
+                            <p className="text-xs font-semibold text-brand-700 mb-1.5 flex items-center gap-1"><Star className="h-3 w-3" />잘 잡히는 질문</p>
                             <div className="space-y-1">
                               {cat.topQuestions.map((q: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between bg-green-50/50 rounded-2xl px-3 py-2">
+                                <div key={i} className="flex items-center justify-between bg-brand-50/50 rounded-2xl px-3 py-2">
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="text-[10px] text-green-400">{q.type === 'live' ? '⚡' : '🔄'}</span>
+                                    <span className="text-[10px] text-brand-400">{q.type === 'live' ? '⚡' : '🔄'}</span>
                                     <span className="text-xs text-slate-700 truncate">{q.text}</span>
                                   </div>
-                                  <span className="text-xs font-bold text-green-600 ml-2">{q.mentionRate}%</span>
+                                  <span className="text-xs font-bold text-brand-600 ml-2">{q.mentionRate}%</span>
                                 </div>
                               ))}
                             </div>
@@ -442,7 +442,7 @@ export function CategoryPerformance() {
           </div>
 
           {/* CTA: 실시간 질문으로 이동 */}
-          <Card className="border-[#dee4d9] bg-[#e9eddf]">
+          <Card className="border-[#dedee8] bg-[#eeedff]">
             <CardContent className="p-5 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-slate-900">더 많은 데이터로 정확한 분석을</p>
@@ -450,7 +450,7 @@ export function CategoryPerformance() {
               </div>
               <Button
                 size="sm"
-                className="bg-[#15231b] hover:bg-[#2c4635]"
+                className="bg-[#111118] hover:bg-[#282433]"
                 onClick={() => window.location.href = '/dashboard/live-query'}
               >
                 <Zap className="h-3.5 w-3.5 mr-1.5" />

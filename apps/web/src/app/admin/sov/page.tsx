@@ -77,17 +77,17 @@ interface TrendPoint {
 type SortKey = 'sov' | 'mentions' | 'avgPos' | 'firstPlace' | 'sentiment' | 'rankChange';
 
 const PLATFORM_LABELS: Record<string, { short: string; color: string }> = {
-  CHATGPT: { short: 'GPT', color: '#10b981' },
+  CHATGPT: { short: 'GPT', color: '#545067' },
   PERPLEXITY: { short: 'PPX', color: '#38bdf8' },
   CLAUDE: { short: 'CLD', color: '#f97316' },
   GEMINI: { short: 'GEM', color: '#a78bfa' },
   GROK: { short: 'GRK', color: '#e879f9' },
-  CLOVA_X: { short: 'CLV', color: '#4ade80' },
+  CLOVA_X: { short: 'CLV', color: '#ff6b3d' },
 };
 
 function sentimentFace(s: number | null) {
   if (s === null) return { face: '—', cls: 'text-slate-600' };
-  if (s >= 0.3) return { face: '😊 ' + s.toFixed(2), cls: 'text-emerald-400' };
+  if (s >= 0.3) return { face: '😊 ' + s.toFixed(2), cls: 'text-brand-400' };
   if (s <= -0.1) return { face: '😟 ' + s.toFixed(2), cls: 'text-red-400' };
   return { face: '😐 ' + s.toFixed(2), cls: 'text-slate-300' };
 }
@@ -126,7 +126,7 @@ function RankChangeBadge({ change }: { change: number | null }) {
   if (change === null)
     return <span className="inline-flex items-center gap-0.5 text-xs text-violet-600"><Sparkles className="h-3 w-3" />신규</span>;
   if (change > 0)
-    return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-emerald-600"><TrendingUp className="h-3 w-3" />+{change}</span>;
+    return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-600"><TrendingUp className="h-3 w-3" />+{change}</span>;
   if (change < 0)
     return <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-red-500"><TrendingDown className="h-3 w-3" />{change}</span>;
   return <span className="inline-flex items-center gap-0.5 text-xs text-slate-400"><Minus className="h-3 w-3" />0</span>;
@@ -383,7 +383,7 @@ export default function AdminSovPage() {
             ].map(c => (
               <article key={c.label} className={`rounded-xl border p-3 ${c.warn ? 'border-red-900/60 bg-red-950/20' : 'border-gray-800 bg-slate-900/50'}`}>
                 <p className="text-[11px] text-slate-500">{c.label}</p>
-                <p className={`text-xl font-bold ${c.warn ? 'text-red-400' : c.up ? 'text-emerald-400' : 'text-white'}`}>{c.value}</p>
+                <p className={`text-xl font-bold ${c.warn ? 'text-red-400' : c.up ? 'text-brand-400' : 'text-white'}`}>{c.value}</p>
                 <p className="text-[10px] text-slate-600">{c.sub}</p>
               </article>
             ))}
@@ -459,7 +459,7 @@ export default function AdminSovPage() {
                         <span className="block text-[11px] text-slate-500">{r.region}</span>
                       </td>
                       <td className="px-3 py-2 text-right font-semibold text-amber-300">{r.sovPercent}%</td>
-                      <td className={`px-3 py-2 text-right text-xs ${(r.sovChange ?? 0) > 0 ? 'text-emerald-400' : (r.sovChange ?? 0) < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                      <td className={`px-3 py-2 text-right text-xs ${(r.sovChange ?? 0) > 0 ? 'text-brand-400' : (r.sovChange ?? 0) < 0 ? 'text-red-400' : 'text-slate-500'}`}>
                         {r.sovChange === null ? '—' : `${r.sovChange > 0 ? '+' : ''}${r.sovChange}%p`}
                       </td>
                       <td className="px-3 py-2 text-right text-slate-300 font-mono text-xs">
@@ -467,7 +467,7 @@ export default function AdminSovPage() {
                       </td>
                       <td className="px-3 py-2 text-right">
                         {r.avgMentionPosition !== null ? (
-                          <span className={r.avgMentionPosition <= 2 ? 'text-emerald-400 font-semibold' : r.avgMentionPosition <= 3 ? 'text-slate-200' : 'text-slate-400'}>
+                          <span className={r.avgMentionPosition <= 2 ? 'text-brand-400 font-semibold' : r.avgMentionPosition <= 3 ? 'text-slate-200' : 'text-slate-400'}>
                             {r.avgMentionPosition}위
                           </span>
                         ) : <span className="text-slate-600">—</span>}
@@ -640,7 +640,7 @@ export default function AdminSovPage() {
                         contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }}
                         formatter={(v) => [`${v}%`, 'SoV']}
                       />
-                      <Line type="monotone" dataKey="sovPercent" stroke="#34d399" strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                      <Line type="monotone" dataKey="sovPercent" stroke="#777489" strokeWidth={2} dot={{ r: 2 }} connectNulls />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

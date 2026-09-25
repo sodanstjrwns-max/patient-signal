@@ -51,8 +51,8 @@ const platformColors: Record<string, string> = {
   CHATGPT: 'bg-brand-100 text-brand-800',
   CLAUDE: 'bg-orange-100 text-orange-800',
   PERPLEXITY: 'bg-brand-100 text-brand-800',
-  GEMINI: 'bg-[#ECEFE6] text-[#15231B]',
-  GROK: 'bg-[#DEE4D9] text-[#15231B]',
+  GEMINI: 'bg-[#ededf4] text-[#111118]',
+  GROK: 'bg-[#dedee8] text-[#111118]',
   CLOVA_X: 'bg-brand-100 text-brand-800',
 };
 
@@ -76,12 +76,12 @@ const planDisplayNames: Record<string, string> = {
 
 const categoryConfig: Record<string, { name: string; icon: any; color: string; bgColor: string; emoji: string }> = {
   PROCEDURE: { name: '시술/진료', icon: Stethoscope, color: 'text-brand-600', bgColor: 'bg-brand-50 border-brand-200', emoji: '🦷' },
-  EMOTION:   { name: '감성/경험', icon: Heart, color: 'text-[#36765A]', bgColor: 'bg-[#F4F5EF] border-[#DEE4D9]', emoji: '💝' },
+  EMOTION:   { name: '감성/경험', icon: Heart, color: 'text-[#5b4dff]', bgColor: 'bg-[#f4f4f8] border-[#dedee8]', emoji: '💝' },
   COST:      { name: '비용/가격', icon: DollarSign, color: 'text-brand-600', bgColor: 'bg-brand-50 border-brand-200', emoji: '💰' },
   REGION:    { name: '지역 기반', icon: MapPin, color: 'text-orange-600', bgColor: 'bg-orange-50 border-orange-200', emoji: '📍' },
   REVIEW:    { name: '후기/평판', icon: MessageCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-50 border-yellow-200', emoji: '⭐' },
-  COMPARISON:{ name: '비교', icon: GitCompare, color: 'text-[#36765A]', bgColor: 'bg-[#F4F5EF] border-[#DEE4D9]', emoji: '⚖️' },
-  GENERAL:   { name: '기타', icon: HelpCircle, color: 'text-[#637167]', bgColor: 'bg-[#F4F5EF] border-[#DEE4D9]', emoji: '📋' },
+  COMPARISON:{ name: '비교', icon: GitCompare, color: 'text-[#5b4dff]', bgColor: 'bg-[#f4f4f8] border-[#dedee8]', emoji: '⚖️' },
+  GENERAL:   { name: '기타', icon: HelpCircle, color: 'text-[#606070]', bgColor: 'bg-[#f4f4f8] border-[#dedee8]', emoji: '📋' },
 };
 
 const exampleQuestions = [
@@ -96,7 +96,7 @@ const getSentimentIcon = (label: string) => {
   switch (label) {
     case 'POSITIVE': return <ThumbsUp className="h-4 w-4 text-brand-600" />;
     case 'NEGATIVE': return <ThumbsDown className="h-4 w-4 text-red-600" />;
-    default: return <Minus className="h-4 w-4 text-[#87917E]" />;
+    default: return <Minus className="h-4 w-4 text-[#858592]" />;
   }
 };
 
@@ -209,9 +209,9 @@ export default function LiveQueryPage() {
         <Header title="실시간 AI 질문" description="AI에게 직접 질문하고 실시간으로 확인하세요" />
         <div className="p-4 sm:p-6">
           <Card><CardContent className="p-8 sm:p-12 text-center">
-            <Bot className="h-12 w-12 text-[#87917E] mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-[#15231B] mb-2">병원 등록이 필요합니다</h3>
-            <p className="text-[#778378] mb-4">실시간 질문을 사용하려면 먼저 병원 정보를 등록해주세요.</p>
+            <Bot className="h-12 w-12 text-[#858592] mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-[#111118] mb-2">병원 등록이 필요합니다</h3>
+            <p className="text-[#737382] mb-4">실시간 질문을 사용하려면 먼저 병원 정보를 등록해주세요.</p>
             <Button onClick={() => window.location.href = '/onboarding'}>병원 등록하기</Button>
           </CardContent></Card>
         </div>
@@ -229,29 +229,29 @@ export default function LiveQueryPage() {
 
         {/* 사용량 배너 */}
         {usage && (
-          <Card className={`border ${isLimitReached ? 'border-red-200 bg-red-50/50' : usagePercent >= 80 ? 'border-yellow-200 bg-yellow-50/30' : 'border-[#DEE4D9] bg-white '}`}>
+          <Card className={`border ${isLimitReached ? 'border-red-200 bg-red-50/50' : usagePercent >= 80 ? 'border-yellow-200 bg-yellow-50/30' : 'border-[#dedee8] bg-white '}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Gauge className="h-4 w-4 text-[#778378]" />
-                  <span className="text-sm font-semibold text-[#405345]">오늘 사용량</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planType === 'PRO' || planType === 'ENTERPRISE' ? 'bg-brand-100 text-brand-700' : planType === 'STANDARD' || planType === 'STARTER' ? 'bg-brand-100 text-brand-700' : 'bg-[#ECEFE6] text-[#637167]'}`}>
+                  <Gauge className="h-4 w-4 text-[#737382]" />
+                  <span className="text-sm font-semibold text-[#545067]">오늘 사용량</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${planType === 'PRO' || planType === 'ENTERPRISE' ? 'bg-brand-100 text-brand-700' : planType === 'STANDARD' || planType === 'STARTER' ? 'bg-brand-100 text-brand-700' : 'bg-[#ededf4] text-[#606070]'}`}>
                     {planDisplayNames[planType] || planType}
                   </span>
                 </div>
                 {usage.isUnlimited ? (
                   <span className="text-sm font-bold text-brand-600 flex items-center gap-1"><Shield className="h-3.5 w-3.5" />무제한</span>
                 ) : (
-                  <span className={`text-sm font-bold ${isLimitReached ? 'text-red-600' : usagePercent >= 80 ? 'text-yellow-600' : 'text-[#20372A]'}`}>{usage.used} / {usage.limit}회</span>
+                  <span className={`text-sm font-bold ${isLimitReached ? 'text-red-600' : usagePercent >= 80 ? 'text-yellow-600' : 'text-[#353143]'}`}>{usage.used} / {usage.limit}회</span>
                 )}
               </div>
               {!usage.isUnlimited && (
-                <div className="w-full bg-[#DEE4D9] rounded-full h-2 mb-2">
+                <div className="w-full bg-[#dedee8] rounded-full h-2 mb-2">
                   <div className={`h-2 rounded-full transition-all duration-300 ${isLimitReached ? 'bg-red-500' : usagePercent >= 80 ? 'bg-yellow-500' : 'bg-brand-500'}`} style={{ width: `${usagePercent}%` }} />
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <p className={`text-xs ${isLimitReached ? 'text-red-600' : 'text-[#778378]'}`}>
+                <p className={`text-xs ${isLimitReached ? 'text-red-600' : 'text-[#737382]'}`}>
                   {usage.isUnlimited ? '별도(엔터프라이즈) 플랜은 무제한' : isLimitReached ? '오늘 소진 완료. 자정에 초기화.' : `남은 횟수: ${usage.remaining}회`}
                 </p>
                 {planType !== 'ENTERPRISE' && planType !== 'PRO' && (
@@ -271,7 +271,7 @@ export default function LiveQueryPage() {
         >
           <div className="flex items-center gap-2.5">
             <PieChart className="h-4 w-4 text-brand-500" />
-            <span className="text-sm font-semibold text-[#20372A]">카테고리별 성과 분석</span>
+            <span className="text-sm font-semibold text-[#353143]">카테고리별 성과 분석</span>
             <span className="text-[10px] bg-brand-100 text-brand-600 px-1.5 py-0.5 rounded-full">실시간 + 크롤링 통합</span>
           </div>
           <ArrowRight className="h-4 w-4 text-brand-400 group-hover:translate-x-0.5 transition-transform" />
@@ -279,25 +279,25 @@ export default function LiveQueryPage() {
 
         {/* ==================== 질문 영역 ==================== */}
             {/* 질문 입력 카드 */}
-            <Card className="overflow-hidden border-[#DEE4D9] border-t-4 border-t-[#13251D] bg-white shadow-none">
+            <Card className="overflow-hidden border-[#dedee8] border-t-4 border-t-[#101016] bg-white shadow-none">
               <CardContent className="p-5 sm:p-6">
-                <div className="flex items-center gap-3 border-b border-[#DEE4D9] pb-5 mb-5">
-                  <div className="w-10 h-10 rounded-none bg-[#13251D] flex items-center justify-center shadow-none">
+                <div className="flex items-center gap-3 border-b border-[#dedee8] pb-5 mb-5">
+                  <div className="w-10 h-10 rounded-none bg-[#101016] flex items-center justify-center shadow-none">
                     <Zap className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold tracking-[-0.04em] text-[#15231B]">AI에게 질문하기</h2>
-                    <p className="text-xs text-[#778378]">환자가 실제로 물어볼 만한 질문을 입력해보세요</p>
+                    <h2 className="text-xl font-semibold tracking-[-0.04em] text-[#111118]">AI에게 질문하기</h2>
+                    <p className="text-xs text-[#737382]">환자가 실제로 물어볼 만한 질문을 입력해보세요</p>
                   </div>
                 </div>
 
                 {/* 플랫폼 선택 */}
                 <div className="mb-4">
-                  <p className="text-xs font-medium text-[#637167] mb-2">질문할 AI 플랫폼</p>
+                  <p className="text-xs font-medium text-[#606070] mb-2">질문할 AI 플랫폼</p>
                   <div className="flex flex-wrap gap-2">
                     {(['CHATGPT', 'CLAUDE', 'PERPLEXITY', 'GEMINI', 'GROK', 'CLOVA_X'] as const).map(platform => (
                       <button key={platform} onClick={() => togglePlatform(platform)} aria-pressed={platforms.includes(platform)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${platforms.includes(platform) ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm` : 'bg-[#ECEFE6] text-[#87917E] hover:bg-[#DEE4D9]'}`}>
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${platforms.includes(platform) ? `${platformColors[platform]} ring-2 ring-offset-1 ring-current shadow-sm` : 'bg-[#ededf4] text-[#858592] hover:bg-[#dedee8]'}`}>
                         {platformNames[platform]}
                         {platforms.includes(platform) && <CheckCircle className="inline h-3 w-3 ml-1" />}
                       </button>
@@ -325,11 +325,11 @@ export default function LiveQueryPage() {
                 {/* 예시 질문 */}
                 {!results && !loading && !isLimitReached && (
                   <div className="mt-4">
-                    <p className="text-xs text-[#778378] mb-2">예시 질문</p>
+                    <p className="text-xs text-[#737382] mb-2">예시 질문</p>
                     <div className="flex flex-wrap gap-2">
                       {exampleQuestions.map((q, i) => (
                         <button key={i} onClick={() => { setQuestion(q); handleQuery(q); }}
-                          className="text-xs px-3 py-1.5 bg-white border border-[#DEE4D9] rounded-full hover:border-brand-300 hover:bg-brand-50 text-[#637167] hover:text-brand-700 transition-all">
+                          className="text-xs px-3 py-1.5 bg-white border border-[#dedee8] rounded-full hover:border-brand-300 hover:bg-brand-50 text-[#606070] hover:text-brand-700 transition-all">
                           {q}
                         </button>
                       ))}
@@ -348,7 +348,7 @@ export default function LiveQueryPage() {
                   </div>
                   <h3 className="text-lg font-bold text-red-800 mb-2">오늘 사용량을 모두 소진했어요</h3>
                   <p className="text-sm text-red-600 mb-1">{limitReachedError.message}</p>
-                  <p className="text-xs text-[#778378] mb-4">매일 자정(00:00)에 초기화됩니다.</p>
+                  <p className="text-xs text-[#737382] mb-4">매일 자정(00:00)에 초기화됩니다.</p>
                   {limitReachedError.upgradeHint && (
                     <Button size="sm" className="bg-brand-600" onClick={() => window.location.href = '/dashboard/settings'}>
                       <ArrowUpCircle className="h-3.5 w-3.5 mr-1.5" />플랜 업그레이드
@@ -381,9 +381,9 @@ export default function LiveQueryPage() {
                       <Sparkles className="h-4 w-4 text-yellow-500 absolute -top-1 -right-1 animate-pulse" />
                     </div>
                     <div className="text-center">
-                      <p className="font-semibold text-[#20372A]">AI에게 질문하는 중...</p>
-                      <p className="text-sm text-[#778378] mt-1">{platforms.map(p => platformNames[p]).join(', ')}에 동시 질문 중</p>
-                      <p className="text-xs text-[#87917E] mt-2">보통 10~30초 소요</p>
+                      <p className="font-semibold text-[#353143]">AI에게 질문하는 중...</p>
+                      <p className="text-sm text-[#737382] mt-1">{platforms.map(p => platformNames[p]).join(', ')}에 동시 질문 중</p>
+                      <p className="text-xs text-[#858592] mt-2">보통 10~30초 소요</p>
                     </div>
                   </div>
                 </CardContent>
@@ -415,7 +415,7 @@ export default function LiveQueryPage() {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <Target className="h-5 w-5 text-brand-500" />
-                        <span className="font-bold text-[#15231B]">질문 결과</span>
+                        <span className="font-bold text-[#111118]">질문 결과</span>
                         {/* 카테고리 뱃지 */}
                         {results.category && categoryConfig[results.category] && (
                           <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${categoryConfig[results.category].bgColor} ${categoryConfig[results.category].color}`}>
@@ -426,7 +426,7 @@ export default function LiveQueryPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {usage && !usage.isUnlimited && (
-                          <span className="text-[10px] text-[#87917E] bg-[#ECEFE6] px-2 py-0.5 rounded-full">{usage.remaining}회 남음</span>
+                          <span className="text-[10px] text-[#858592] bg-[#ededf4] px-2 py-0.5 rounded-full">{usage.remaining}회 남음</span>
                         )}
                       </div>
                     </div>
@@ -437,17 +437,17 @@ export default function LiveQueryPage() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="bg-[#F4F5EF] rounded-md p-3 text-center">
-                        <p className="text-2xl font-bold text-[#20372A]">{results.successCount}<span className="text-sm font-normal text-[#87917E]">/{results.totalPlatforms}</span></p>
-                        <p className="text-[10px] text-[#778378] mt-0.5">응답 성공</p>
+                      <div className="bg-[#f4f4f8] rounded-md p-3 text-center">
+                        <p className="text-2xl font-bold text-[#353143]">{results.successCount}<span className="text-sm font-normal text-[#858592]">/{results.totalPlatforms}</span></p>
+                        <p className="text-[10px] text-[#737382] mt-0.5">응답 성공</p>
                       </div>
-                      <div className={`rounded-md p-3 text-center ${results.mentionedCount > 0 ? 'bg-brand-50' : 'bg-[#F4F5EF]'}`}>
-                        <p className={`text-2xl font-bold ${results.mentionedCount > 0 ? 'text-brand-600' : 'text-[#87917E]'}`}>{results.mentionedCount}</p>
-                        <p className="text-[10px] text-[#778378] mt-0.5">우리 병원 언급</p>
+                      <div className={`rounded-md p-3 text-center ${results.mentionedCount > 0 ? 'bg-brand-50' : 'bg-[#f4f4f8]'}`}>
+                        <p className={`text-2xl font-bold ${results.mentionedCount > 0 ? 'text-brand-600' : 'text-[#858592]'}`}>{results.mentionedCount}</p>
+                        <p className="text-[10px] text-[#737382] mt-0.5">우리 병원 언급</p>
                       </div>
-                      <div className={`rounded-md p-3 text-center ${results.mentionRate >= 50 ? 'bg-brand-50' : results.mentionRate > 0 ? 'bg-yellow-50' : 'bg-[#F4F5EF]'}`}>
-                        <p className={`text-2xl font-bold ${results.mentionRate >= 50 ? 'text-brand-600' : results.mentionRate > 0 ? 'text-yellow-600' : 'text-[#87917E]'}`}>{results.mentionRate}%</p>
-                        <p className="text-[10px] text-[#778378] mt-0.5">언급률</p>
+                      <div className={`rounded-md p-3 text-center ${results.mentionRate >= 50 ? 'bg-brand-50' : results.mentionRate > 0 ? 'bg-yellow-50' : 'bg-[#f4f4f8]'}`}>
+                        <p className={`text-2xl font-bold ${results.mentionRate >= 50 ? 'text-brand-600' : results.mentionRate > 0 ? 'text-yellow-600' : 'text-[#858592]'}`}>{results.mentionRate}%</p>
+                        <p className="text-[10px] text-[#737382] mt-0.5">언급률</p>
                       </div>
                     </div>
 
@@ -472,30 +472,30 @@ export default function LiveQueryPage() {
 
                 {/* 플랫폼별 결과 */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-bold text-[#405345] flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-[#545067] flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-brand-500" />플랫폼별 응답
                   </h3>
                   {results.responses?.map((resp: any) => (
-                    <Card key={resp.platform} className={`overflow-hidden transition-all ${resp.success && resp.isMentioned ? 'border-l-4 border-l-green-400 border-brand-100' : resp.success ? 'border-[#DEE4D9] hover:border-[#C7D2C0]' : 'border-red-200 bg-red-50/30'}`}>
-                      <button className="w-full p-4 flex items-center justify-between hover:bg-[#F4F5EF] transition-colors"
+                    <Card key={resp.platform} className={`overflow-hidden transition-all ${resp.success && resp.isMentioned ? 'border-l-4 border-l-green-400 border-brand-100' : resp.success ? 'border-[#dedee8] hover:border-[#d9d8e6]' : 'border-red-200 bg-red-50/30'}`}>
+                      <button className="w-full p-4 flex items-center justify-between hover:bg-[#f4f4f8] transition-colors"
                         onClick={() => setExpandedPlatform(expandedPlatform === resp.platform ? null : resp.platform)}>
                         <div className="flex items-center gap-3">
                           <span className={`px-3 py-1 rounded-lg text-xs font-bold ${platformColors[resp.platform]}`}>{resp.platformName}</span>
                           {resp.success ? (
                             resp.isMentioned ? <span className="flex items-center gap-1.5 text-sm text-brand-600 font-semibold"><Award className="h-4 w-4" />{resp.mentionPosition ? `${resp.mentionPosition}위 추천` : '언급됨'}</span>
-                              : <span className="text-sm text-[#87917E]">언급 안됨</span>
+                              : <span className="text-sm text-[#858592]">언급 안됨</span>
                           ) : <span className="text-sm text-red-500 flex items-center gap-1"><XCircle className="h-3.5 w-3.5" />응답 실패</span>}
                         </div>
                         <div className="flex items-center gap-2">
-                          {expandedPlatform === resp.platform ? <ChevronUp className="h-4 w-4 text-[#87917E]" /> : <ChevronDown className="h-4 w-4 text-[#87917E]" />}
+                          {expandedPlatform === resp.platform ? <ChevronUp className="h-4 w-4 text-[#858592]" /> : <ChevronDown className="h-4 w-4 text-[#858592]" />}
                         </div>
                       </button>
                       {expandedPlatform === resp.platform && resp.success && (
-                        <div className="px-4 pb-4 border-t border-[#E9ECE4]">
-                          <div className="mt-3 text-sm text-[#405345] whitespace-pre-wrap leading-relaxed bg-[#F4F5EF] rounded-md p-4 max-h-[500px] overflow-y-auto">{resp.response}</div>
+                        <div className="px-4 pb-4 border-t border-[#ededf6]">
+                          <div className="mt-3 text-sm text-[#545067] whitespace-pre-wrap leading-relaxed bg-[#f4f4f8] rounded-md p-4 max-h-[500px] overflow-y-auto">{resp.response}</div>
                           {resp.competitorsMentioned?.length > 0 && (
                             <div className="mt-3 flex flex-wrap gap-1.5 items-center">
-                              <span className="text-xs text-[#778378] mr-1">함께 언급:</span>
+                              <span className="text-xs text-[#737382] mr-1">함께 언급:</span>
                               {resp.competitorsMentioned.map((comp: string, i: number) => (
                                 <span key={i} className="text-xs bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full border border-orange-100">{comp}</span>
                               ))}
@@ -533,21 +533,21 @@ export default function LiveQueryPage() {
               <Card>
                 <CardContent className="p-5">
                   <div className="flex items-center gap-2 mb-4">
-                    <History className="h-4 w-4 text-[#778378]" />
-                    <h3 className="text-sm font-bold text-[#405345]">최근 질문 기록</h3>
+                    <History className="h-4 w-4 text-[#737382]" />
+                    <h3 className="text-sm font-bold text-[#545067]">최근 질문 기록</h3>
                   </div>
                   <div className="space-y-2">
                     {history.map((item, idx) => (
-                      <button key={idx} className={`w-full text-left p-3 rounded-md transition-all border ${results === item ? 'bg-brand-50 border-brand-200' : 'bg-[#F4F5EF] border-transparent hover:bg-[#ECEFE6]'}`}
+                      <button key={idx} className={`w-full text-left p-3 rounded-md transition-all border ${results === item ? 'bg-brand-50 border-brand-200' : 'bg-[#f4f4f8] border-transparent hover:bg-[#ededf4]'}`}
                         onClick={() => { setResults(item); setQuestion(item.question); const f = item.responses?.find((r: any) => r.success); if (f) setExpandedPlatform(f.platform); }}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {item.category && categoryConfig[item.category] && (
                               <span className="text-xs flex-shrink-0">{categoryConfig[item.category].emoji}</span>
                             )}
-                            <span className="text-sm text-[#20372A] truncate">{item.question}</span>
+                            <span className="text-sm text-[#353143] truncate">{item.question}</span>
                           </div>
-                          <span className={`text-xs font-bold min-w-[40px] text-right ${item.mentionRate >= 50 ? 'text-brand-600' : item.mentionRate > 0 ? 'text-yellow-600' : 'text-[#87917E]'}`}>{item.mentionRate}%</span>
+                          <span className={`text-xs font-bold min-w-[40px] text-right ${item.mentionRate >= 50 ? 'text-brand-600' : item.mentionRate > 0 ? 'text-yellow-600' : 'text-[#858592]'}`}>{item.mentionRate}%</span>
                         </div>
                       </button>
                     ))}

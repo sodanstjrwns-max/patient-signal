@@ -3,26 +3,27 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Patient Signal — editorial workspace */
+/* Patient Signal — neon control room */
 :root {
-  --background: #f4f5ef;
-  --foreground: #15231b;
+  --background: #f4f4f8;
+  --foreground: #111118;
   --sidebar-width: 232px;
-  --brand-primary: #36765a;
-  --brand-secondary: #254f3e;
-  --brand-accent: #d8f36a;
+  --brand-primary: #5b4dff;
+  --brand-secondary: #3930a3;
+  --brand-accent: #ff6b3d;
+  --signal-ease: cubic-bezier(.2,.8,.2,1);
   --glass-bg: #ffffff;
   --glass-bg-strong: #ffffff;
   --glass-bg-solid: #ffffff;
-  --glass-border: #dee4d9;
-  --glass-border-subtle: #e8ece4;
+  --glass-border: #dedee8;
+  --glass-border-subtle: #ededf6;
   --glass-blur: 0px;
   --glass-blur-strong: 0px;
-  --shadow-xs: 0 1px 2px #15231b05;
-  --shadow-sm: 0 2px 6px #15231b05;
-  --shadow-md: 0 8px 24px #15231b08;
-  --shadow-lg: 0 16px 40px #15231b10;
-  --shadow-xl: 0 24px 64px #15231b18;
+  --shadow-xs: 0 1px 2px #11111805;
+  --shadow-sm: 0 2px 6px #11111805;
+  --shadow-md: 0 8px 24px #11111808;
+  --shadow-lg: 0 16px 40px #11111810;
+  --shadow-xl: 0 24px 64px #11111818;
   --bento-gap: 20px;
   --bento-radius: 12px;
   --bento-radius-sm: 8px;
@@ -48,8 +49,8 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 ::selection {
-  color: #15231b;
-  background: #d8f36a;
+  color: #111118;
+  background: #ff6b3d;
 }
 button,
 input,
@@ -65,7 +66,7 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 :focus-visible {
-  outline: 2px solid #36765a;
+  outline: 2px solid #5b4dff;
   outline-offset: 4px;
 }
 ::-webkit-scrollbar {
@@ -73,7 +74,7 @@ select {
   height: 6px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #c4cdc0;
+  background: #b9b8c9;
   border-radius: 6px;
 }
 ::-webkit-scrollbar-track {
@@ -83,15 +84,15 @@ select {
 @layer components {
   .signal-eyebrow {
     @apply text-[10px] font-bold uppercase tracking-[0.18em];
-    color: #778378;
+    color: #737382;
   }
   .signal-panel {
     @apply rounded-xl border bg-white;
-    border-color: #dee4d9;
+    border-color: #dedee8;
   }
   .signal-rule {
     @apply border-t;
-    border-color: #dee4d9;
+    border-color: #dedee8;
   }
   .signal-display {
     @apply font-semibold tracking-[-0.065em];
@@ -99,10 +100,10 @@ select {
   }
   .signal-link {
     @apply inline-flex items-center gap-2 text-xs font-semibold transition-colors;
-    color: #36765a;
+    color: #5b4dff;
   }
   .signal-link:hover {
-    color: #15231b;
+    color: #111118;
   }
   .glass,
   .glass-strong,
@@ -110,26 +111,26 @@ select {
   .glass-frosted,
   .glass-bento {
     background: #fff;
-    border: 1px solid #dee4d9;
+    border: 1px solid #dedee8;
     border-radius: 12px;
     box-shadow: none;
   }
   .glass-dark,
   .glass-bento-dark,
   .glass-sidebar {
-    background: #13251d;
-    border: 1px solid #2a3c31;
+    background: #101016;
+    border: 1px solid #353143;
     border-radius: 12px;
     color: #fff;
   }
   .bg-mesh,
   .bg-mesh-strong,
   .bg-aurora {
-    background: #f4f5ef;
+    background: #f4f4f8;
   }
   .text-gradient,
   .text-gradient-aurora {
-    color: #36765a;
+    color: #5b4dff;
     background: none;
     -webkit-text-fill-color: currentColor;
   }
@@ -141,16 +142,18 @@ select {
   .hover-lift,
   .hover-glow {
     transition:
-      border-color 180ms,
-      box-shadow 180ms;
+      transform 260ms var(--signal-ease),
+      border-color 200ms,
+      box-shadow 260ms;
   }
   .hover-lift:hover,
   .hover-glow:hover {
-    border-color: #a8b5a2;
-    box-shadow: 0 5px 18px #15231b06;
+    border-color: #5b4dff70;
+    box-shadow: 0 10px 32px #5b4dff12;
+    transform: translateY(-3px);
   }
   .gradient-border {
-    border: 1px solid #dee4d9;
+    border: 1px solid #dedee8;
   }
   .inner-light {
     box-shadow: inset 0 1px 0 #ffffff18;
@@ -158,11 +161,11 @@ select {
   .glow-dot {
     width: 6px;
     height: 6px;
-    background: #d8f36a;
+    background: #ff6b3d;
     border-radius: 50%;
   }
   .shimmer {
-    background: #e8ece4;
+    background: #ededf6;
     animation: signal-pulse 1.8s ease-in-out infinite;
   }
   .chat-bubble-in {
@@ -176,8 +179,8 @@ select {
   }
 }
 .dashboard-shell {
-  color: #15231b;
-  background: #f4f5ef;
+  color: #111118;
+  background: #f4f4f8;
 }
 .dashboard-shell main {
   overflow-x: clip;
@@ -197,10 +200,47 @@ select {
 .recharts-surface:focus {
   outline: none;
 }
+.signal-route-enter { animation: signal-route-in 240ms ease-out; }
+.signal-enter { animation: signal-enter 420ms var(--signal-ease) both; }
+.signal-panel-enter { animation: signal-panel-in 340ms var(--signal-ease) both; }
+.signal-drawer-enter { animation: signal-drawer-in 320ms var(--signal-ease) both; }
+.signal-surface { position: relative; isolation: isolate; }
+.signal-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(380px circle at var(--pointer-x, 50%) var(--pointer-y, 50%), #8a78ff20, transparent 70%);
+  transition: opacity 260ms;
+}
+.signal-surface:hover::after { opacity: 1; }
+.signal-button,
+.signal-interactive,
+.signal-tab {
+  transition: color 180ms, background-color 180ms, border-color 180ms, box-shadow 220ms, transform 220ms var(--signal-ease);
+}
+.signal-button:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 5px 14px #11111814; }
+.signal-interactive:not(:disabled):hover { transform: translateY(-2px); }
+.signal-button:not(:disabled):active,
+.signal-interactive:not(:disabled):active,
+.signal-tab:not(:disabled):active { transform: scale(.975); }
+.signal-tab-active { box-shadow: 0 3px 14px #5b4dff24; }
+.signal-nav-link { position: relative; transition: background-color 180ms, color 180ms, transform 220ms var(--signal-ease); }
+.signal-nav-link:hover { transform: translateX(3px); }
+.signal-nav-link[aria-current="page"] { box-shadow: 0 4px 22px #ff6b3d20; }
+.signal-nav-link[aria-current="page"] > svg:last-child { animation: signal-arrow-in 300ms var(--signal-ease); }
+.signal-nav-link > svg:first-child { transition: transform 220ms var(--signal-ease); }
+.signal-nav-link:hover > svg:first-child { transform: rotate(-7deg); }
+@keyframes signal-route-in { from { opacity: .35; } to { opacity: 1; } }
+@keyframes signal-panel-in { from { opacity: 0; transform: translateY(12px) scale(.99); } to { opacity: 1; transform: none; } }
+@keyframes signal-drawer-in { from { opacity: .6; transform: translateX(-100%); } to { opacity: 1; transform: none; } }
+@keyframes signal-arrow-in { from { opacity: 0; transform: translate(-4px, 4px); } to { opacity: 1; transform: none; } }
 @keyframes signal-enter {
   from {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -223,4 +263,6 @@ select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+  .signal-surface::after { display: none; }
+  .signal-button, .signal-interactive, .signal-tab, .signal-nav-link, .hover-lift, .hover-glow { transform: none !important; }
 }

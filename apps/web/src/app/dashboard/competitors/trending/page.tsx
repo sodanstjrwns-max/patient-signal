@@ -40,9 +40,9 @@ export default function TrendingPage() {
   // 직전 기간 대비: 등장률 차이(%p) 기준
   const delta = (r: TrendRow) => r.deltaRate === null
     ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600"><Flame className="w-3 h-3" />NEW</span>
-    : r.deltaRate > 0.3 ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#36765A]"><TrendingUp className="w-3 h-3" />+{r.deltaRate}%p</span>
+    : r.deltaRate > 0.3 ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#5b4dff]"><TrendingUp className="w-3 h-3" />+{r.deltaRate}%p</span>
     : r.deltaRate < -0.3 ? <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-600"><TrendingDown className="w-3 h-3" />{r.deltaRate}%p</span>
-    : <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#87917E]"><Minus className="w-3 h-3" />유지</span>;
+    : <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#858592]"><Minus className="w-3 h-3" />유지</span>;
 
   return (
     <div className="flex-1 min-h-screen">
@@ -50,89 +50,89 @@ export default function TrendingPage() {
       <main className="mx-auto max-w-[1440px] space-y-7 px-5 py-7 sm:px-8 xl:px-10">
         <WorkspaceIntro eyebrow="AI MENTION TRENDS" title="AI 답변에 자주 등장한 병원." description="진료과와 질문 지역을 선택해 등록 고객의 AI 답변에서 관찰된 병원명 등장 추이를 확인하세요." />
         {data && (
-          <section className="grid grid-cols-2 gap-y-5 border-b border-[#DEE4D9] pb-7 sm:grid-cols-4" aria-label="집계 범위">
-            <div className="border-r border-[#DEE4D9] pr-5"><p className="text-[10px] font-medium text-[#778378]">집계 기간</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#15231B]">{data.period.days}<span className="ml-1 text-sm font-normal text-[#778378]">일</span></p><p className="mt-1 text-[10px] text-[#778378]">{data.period.since} ~ {data.period.until}</p></div>
-            <div className="pl-5 sm:border-r sm:border-[#DEE4D9]"><p className="text-[10px] font-medium text-[#778378]">질문 병원</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#15231B]">{(data.askingHospitals || 0).toLocaleString()}<span className="ml-1 text-sm font-normal text-[#778378]">곳</span></p></div>
-            <div className="border-r border-[#DEE4D9] pr-5 sm:pl-5"><p className="text-[10px] font-medium text-[#778378]">집계한 답변</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#15231B]">{(data.responsesTotal || 0).toLocaleString()}<span className="ml-1 text-sm font-normal text-[#778378]">건</span></p></div>
-            <div className="pl-5"><p className="text-[10px] font-medium text-[#778378]">등장한 병원명</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#36765A]">{data.totalNames.toLocaleString()}<span className="ml-1 text-sm font-normal text-[#778378]">개</span></p></div>
+          <section className="grid grid-cols-2 gap-y-5 border-b border-[#dedee8] pb-7 sm:grid-cols-4" aria-label="집계 범위">
+            <div className="border-r border-[#dedee8] pr-5"><p className="text-[10px] font-medium text-[#737382]">집계 기간</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#111118]">{data.period.days}<span className="ml-1 text-sm font-normal text-[#737382]">일</span></p><p className="mt-1 text-[10px] text-[#737382]">{data.period.since} ~ {data.period.until}</p></div>
+            <div className="pl-5 sm:border-r sm:border-[#dedee8]"><p className="text-[10px] font-medium text-[#737382]">질문 병원</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#111118]">{(data.askingHospitals || 0).toLocaleString()}<span className="ml-1 text-sm font-normal text-[#737382]">곳</span></p></div>
+            <div className="border-r border-[#dedee8] pr-5 sm:pl-5"><p className="text-[10px] font-medium text-[#737382]">집계한 답변</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#111118]">{(data.responsesTotal || 0).toLocaleString()}<span className="ml-1 text-sm font-normal text-[#737382]">건</span></p></div>
+            <div className="pl-5"><p className="text-[10px] font-medium text-[#737382]">등장한 병원명</p><p className="mt-2 text-3xl font-semibold tracking-[-0.055em] text-[#5b4dff]">{data.totalNames.toLocaleString()}<span className="ml-1 text-sm font-normal text-[#737382]">개</span></p></div>
           </section>
         )}
-        <Card className="border border-[#DEE4D9] shadow-none">
+        <Card className="border border-[#dedee8] shadow-none">
           <CardContent className="grid grid-cols-1 items-end gap-4 p-5 sm:grid-cols-2 xl:grid-cols-[1fr_1.2fr_auto_auto]">
-            <label className="text-xs font-semibold text-[#637167]">진료과
-              <select value={specialty} onChange={(e) => setSpecialty(e.target.value)} className="mt-2 block w-full rounded-md border border-[#DEE4D9] px-3 py-2 text-sm bg-white">
+            <label className="text-xs font-semibold text-[#606070]">진료과
+              <select value={specialty} onChange={(e) => setSpecialty(e.target.value)} className="mt-2 block w-full rounded-md border border-[#dedee8] px-3 py-2 text-sm bg-white">
                 {SPECIALTIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select></label>
-            <label className="text-xs font-semibold text-[#637167]">지역 (물어본 병원 기준)
-              <select value={sido} onChange={(e) => setSido(e.target.value)} className="mt-2 block w-full rounded-md border border-[#DEE4D9] px-3 py-2 text-sm bg-white">
+            <label className="text-xs font-semibold text-[#606070]">지역 (물어본 병원 기준)
+              <select value={sido} onChange={(e) => setSido(e.target.value)} className="mt-2 block w-full rounded-md border border-[#dedee8] px-3 py-2 text-sm bg-white">
                 <option value="">전국</option>{SIDOS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select></label>
-            <div className="text-xs font-semibold text-[#637167]">기간
-              <div className="mt-2 inline-flex rounded-md border border-[#DEE4D9] overflow-hidden">
-                {[30, 90].map((d) => <button key={d} onClick={() => setDays(d)} aria-pressed={days === d} className={`px-3 py-2 text-sm font-semibold ${days === d ? 'bg-[#13251D] text-white' : 'bg-white text-[#637167]'}`}>{d}일</button>)}
+            <div className="text-xs font-semibold text-[#606070]">기간
+              <div className="mt-2 inline-flex rounded-md border border-[#dedee8] overflow-hidden">
+                {[30, 90].map((d) => <button key={d} onClick={() => setDays(d)} aria-pressed={days === d} className={`px-3 py-2 text-sm font-semibold ${days === d ? 'bg-[#101016] text-white' : 'bg-white text-[#606070]'}`}>{d}일</button>)}
               </div></div>
-            <div className="text-xs font-semibold text-[#637167]">순위 기준
-              <div className="mt-2 inline-flex rounded-md border border-[#DEE4D9] overflow-hidden">
-                <button onClick={() => setSort('rate')} aria-pressed={sort === 'rate'} title="질문한 병원마다 응답 중 등장 비율을 구해 평균 — 기본" className={`px-3 py-2 text-sm font-semibold ${sort === 'rate' ? 'bg-[#13251D] text-white' : 'bg-white text-[#637167]'}`}>등장률</button>
-                <button onClick={() => setSort('mentions')} aria-pressed={sort === 'mentions'} className={`px-3 py-2 text-sm font-semibold ${sort === 'mentions' ? 'bg-[#13251D] text-white' : 'bg-white text-[#637167]'}`}>언급 수</button>
-                <button onClick={() => setSort('hospitals')} aria-pressed={sort === 'hospitals'} title="한 병원의 질문량에 쏠리지 않게, 몇 곳의 질문에서 나왔는지로 정렬" className={`px-3 py-2 text-sm font-semibold ${sort === 'hospitals' ? 'bg-[#13251D] text-white' : 'bg-white text-[#637167]'}`}>물어본 병원 수</button>
+            <div className="text-xs font-semibold text-[#606070]">순위 기준
+              <div className="mt-2 inline-flex rounded-md border border-[#dedee8] overflow-hidden">
+                <button onClick={() => setSort('rate')} aria-pressed={sort === 'rate'} title="질문한 병원마다 응답 중 등장 비율을 구해 평균 — 기본" className={`px-3 py-2 text-sm font-semibold ${sort === 'rate' ? 'bg-[#101016] text-white' : 'bg-white text-[#606070]'}`}>등장률</button>
+                <button onClick={() => setSort('mentions')} aria-pressed={sort === 'mentions'} className={`px-3 py-2 text-sm font-semibold ${sort === 'mentions' ? 'bg-[#101016] text-white' : 'bg-white text-[#606070]'}`}>언급 수</button>
+                <button onClick={() => setSort('hospitals')} aria-pressed={sort === 'hospitals'} title="한 병원의 질문량에 쏠리지 않게, 몇 곳의 질문에서 나왔는지로 정렬" className={`px-3 py-2 text-sm font-semibold ${sort === 'hospitals' ? 'bg-[#101016] text-white' : 'bg-white text-[#606070]'}`}>물어본 병원 수</button>
               </div></div>
           </CardContent>
         </Card>
 
-        {isLoading && <div className="flex items-center gap-2 text-[#778378] text-sm p-6"><Loader2 className="w-4 h-4 animate-spin" />전국 응답을 합산하는 중… (처음 한 번은 수십 초 걸릴 수 있어요)</div>}
+        {isLoading && <div className="flex items-center gap-2 text-[#737382] text-sm p-6"><Loader2 className="w-4 h-4 animate-spin" />전국 응답을 합산하는 중… (처음 한 번은 수십 초 걸릴 수 있어요)</div>}
         {isError && <div className="text-sm text-rose-600 p-6">불러오지 못했습니다. 새로고침을 눌러주세요.</div>}
 
         {data && data.risers.length > 0 && (
-          <Card className="border border-[#DEE4D9] shadow-none bg-[#F4F5EF]">
+          <Card className="border border-[#dedee8] shadow-none bg-[#f4f4f8]">
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#15231B] mb-3"><Flame className="w-4 h-4" />새로 뜬 병원 <span className="text-xs font-normal text-[#778378]">직전 {data.period.days}일엔 없었는데 이번에 5건 이상</span></div>
-              <div className="flex flex-wrap gap-2">{data.risers.map((r) => <span key={r.name} className="px-2.5 py-1 rounded-md bg-white border border-[#DEE4D9] text-xs font-semibold text-[#405345]">{r.name} <span className="text-[#36765A]">{r.rate}%</span></span>)}</div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-[#111118] mb-3"><Flame className="w-4 h-4" />새로 뜬 병원 <span className="text-xs font-normal text-[#737382]">직전 {data.period.days}일엔 없었는데 이번에 5건 이상</span></div>
+              <div className="flex flex-wrap gap-2">{data.risers.map((r) => <span key={r.name} className="px-2.5 py-1 rounded-md bg-white border border-[#dedee8] text-xs font-semibold text-[#545067]">{r.name} <span className="text-[#5b4dff]">{r.rate}%</span></span>)}</div>
             </CardContent>
           </Card>
         )}
 
         {data && (
-          <Card className="border border-[#DEE4D9] shadow-none overflow-hidden">
+          <Card className="border border-[#dedee8] shadow-none overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] text-sm">
-                <thead className="bg-[#F4F5EF] text-[11px] uppercase tracking-wide text-[#778378]">
+                <thead className="bg-[#f4f4f8] text-[11px] uppercase tracking-wide text-[#737382]">
                   <tr><th className="text-left px-4 py-3.5 w-12">No.</th><th className="text-left px-3 py-3.5">병원</th><th className="text-right px-3 py-3.5" title="질문 병원별 등장 비율의 평균">등장률</th><th className="text-right px-3 py-3.5" title="전체 응답 중 이 병원명이 나온 비율">전체 비율</th><th className="text-right px-3 py-3.5">언급</th><th className="text-left px-3 py-3.5">직전 대비</th><th className="text-right px-3 py-3.5">물어본 병원</th><th className="text-left px-3 py-3.5">주 플랫폼</th><th className="text-left px-3 py-3.5">주 지역</th></tr>
                 </thead>
                 <tbody>
                   {data.list.map((r) => {
                     const mine = myKey && r.name.replace(/\s+/g, '').includes(myKey.replace(/(치과|의원|병원)$/, '').slice(0, 4));
                     return (
-                      <tr key={r.name} className={`border-t border-[#E9ECE4] ${mine ? 'bg-[#D8F36A]/20' : ''}`}>
-                        <td className="px-4 py-3.5 tabular-nums text-[#87917E]">{r.rank}</td>
+                      <tr key={r.name} className={`border-t border-[#ededf6] ${mine ? 'bg-[#ff6b3d]/20' : ''}`}>
+                        <td className="px-4 py-3.5 tabular-nums text-[#858592]">{r.rank}</td>
                         <td className="px-3 py-3.5">
-                          <div className="font-semibold text-[#15231B] flex items-center gap-2">{r.name}
+                          <div className="font-semibold text-[#111118] flex items-center gap-2">{r.name}
                             {r.isCustomer && <span className="text-[10px] px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 font-bold" title={r.customerRegion || ''}>시그널 고객</span>}
-                            {mine && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#D8F36A] text-[#36765A] font-bold">우리 병원</span>}
+                            {mine && <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ff6b3d] text-[#5b4dff] font-bold">우리 병원</span>}
                           </div>
-                          {r.variants.length > 1 && <div className="text-[11px] text-[#87917E] truncate max-w-xs">표기: {r.variants.join(' · ')}</div>}
+                          {r.variants.length > 1 && <div className="text-[11px] text-[#858592] truncate max-w-xs">표기: {r.variants.join(' · ')}</div>}
                         </td>
-                        <td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#15231B]">{r.rate}%</td>
-                        <td className="px-3 py-3.5 text-right tabular-nums text-[#637167]">{r.share}%</td>
-                        <td className="px-3 py-3.5 text-right tabular-nums text-[#778378]">{r.mentions.toLocaleString()}</td>
+                        <td className="px-3 py-3.5 text-right font-bold tabular-nums text-[#111118]">{r.rate}%</td>
+                        <td className="px-3 py-3.5 text-right tabular-nums text-[#606070]">{r.share}%</td>
+                        <td className="px-3 py-3.5 text-right tabular-nums text-[#737382]">{r.mentions.toLocaleString()}</td>
                         <td className="px-3 py-3.5">{delta(r)}</td>
-                        <td className="px-3 py-3.5 text-right tabular-nums text-[#637167]">{r.askedBy}곳</td>
-                        <td className="px-3 py-3.5 text-[#637167]">{r.topPlatform ? PLATFORM_KO[r.topPlatform] || r.topPlatform : '—'} <span className="text-[11px] text-[#87917E]">/{r.platforms}</span></td>
-                        <td className="px-3 py-3.5 text-[#637167]"><span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 text-[#87917E]" />{r.topSido || '—'}</span></td>
+                        <td className="px-3 py-3.5 text-right tabular-nums text-[#606070]">{r.askedBy}곳</td>
+                        <td className="px-3 py-3.5 text-[#606070]">{r.topPlatform ? PLATFORM_KO[r.topPlatform] || r.topPlatform : '—'} <span className="text-[11px] text-[#858592]">/{r.platforms}</span></td>
+                        <td className="px-3 py-3.5 text-[#606070]"><span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3 text-[#858592]" />{r.topSido || '—'}</span></td>
                       </tr>
                     );
                   })}
-                  {data.list.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-[#778378]">이 조건에는 아직 합산할 응답이 없습니다.</td></tr>}
+                  {data.list.length === 0 && <tr><td colSpan={9} className="px-4 py-8 text-center text-[#737382]">이 조건에는 아직 합산할 응답이 없습니다.</td></tr>}
                 </tbody>
               </table>
             </div>
-            <div className="px-4 py-3 text-[11px] text-[#778378] space-y-1.5 border-t border-[#E9ECE4]">
+            <div className="px-4 py-3 text-[11px] text-[#737382] space-y-1.5 border-t border-[#ededf6]">
               <div className="flex items-start gap-2"><Info className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span>{data.method} 등장률 예: 3.2% = 질문 병원들의 AI 답변 100건 중 평균 3.2건에 이 병원이 나옴. 지역은 "질문한 병원"의 시·도라서 답변 속 병원의 실제 소재지와 다를 수 있습니다.</span></div>
-              <div className="flex items-start gap-2 text-[#637167]"><Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span><b>이 통계는 의료 품질·실력 순위가 아니라 AI 답변 관찰 결과입니다.</b> 의료광고·홍보에 인용하는 것은 병원의 책임이며 의료법상 의료광고 심의 대상이 될 수 있습니다. 화면 캡처·외부 게시를 금합니다. 계약 병원의 내부 경영 참고용으로만 제공됩니다.</span></div>
+              <div className="flex items-start gap-2 text-[#606070]"><Shield className="w-3.5 h-3.5 mt-0.5 shrink-0" /><span><b>이 통계는 의료 품질·실력 순위가 아니라 AI 답변 관찰 결과입니다.</b> 의료광고·홍보에 인용하는 것은 병원의 책임이며 의료법상 의료광고 심의 대상이 될 수 있습니다. 화면 캡처·외부 게시를 금합니다. 계약 병원의 내부 경영 참고용으로만 제공됩니다.</span></div>
             </div>
           </Card>
         )}
-        {!isLoading && !data && !isError && <div className="text-sm text-[#778378] p-6 flex items-center gap-2"><Sparkles className="w-4 h-4" />조건을 고르면 등장률 표가 나옵니다.</div>}
+        {!isLoading && !data && !isError && <div className="text-sm text-[#737382] p-6 flex items-center gap-2"><Sparkles className="w-4 h-4" />조건을 고르면 등장률 표가 나옵니다.</div>}
       </main>
     </div>
   );

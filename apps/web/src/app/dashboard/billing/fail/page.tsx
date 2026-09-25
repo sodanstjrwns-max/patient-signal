@@ -16,10 +16,10 @@ function FailContent() {
       </div>
 
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-[#15231B] mb-2">결제 실패</h2>
-        <p className="text-[#778378] max-w-md">{decodeURIComponent(errorMessage)}</p>
+        <h2 className="text-2xl font-bold text-[#111118] mb-2">결제 실패</h2>
+        <p className="text-[#737382] max-w-md">{decodeURIComponent(errorMessage)}</p>
         {errorCode && (
-          <p className="text-xs text-[#87917E] mt-2">에러 코드: {errorCode}</p>
+          <p className="text-xs text-[#858592] mt-2">에러 코드: {errorCode}</p>
         )}
       </div>
 
@@ -33,7 +33,7 @@ function FailContent() {
         </a>
         <a
           href="/dashboard/settings"
-          className="px-6 py-2.5 border border-[#DEE4D9] rounded-lg text-[#405345] hover:bg-white"
+          className="px-6 py-2.5 border border-[#dedee8] rounded-lg text-[#545067] hover:bg-white"
         >
           설정으로 돌아가기
         </a>

@@ -64,7 +64,7 @@ export interface Finding {
 const SEV: Record<Severity, { icon: any; ring: string; chipBg: string; chipText: string; label: string }> = {
   critical: { icon: ShieldAlert,    ring: 'border-red-200/80 bg-red-50/50',       chipBg: 'bg-red-100',     chipText: 'text-red-700',     label: '먼저 해결' },
   warn:     { icon: AlertTriangle,  ring: 'border-amber-200/80 bg-amber-50/40',   chipBg: 'bg-amber-100',   chipText: 'text-amber-700',   label: '개선 기회' },
-  good:     { icon: TrendingUp,     ring: 'border-emerald-200/80 bg-emerald-50/40', chipBg: 'bg-emerald-100', chipText: 'text-emerald-700', label: '잘 되는 중' },
+  good:     { icon: TrendingUp,     ring: 'border-brand-200/80 bg-brand-50/40', chipBg: 'bg-brand-100', chipText: 'text-brand-700', label: '잘 되는 중' },
 };
 
 /**

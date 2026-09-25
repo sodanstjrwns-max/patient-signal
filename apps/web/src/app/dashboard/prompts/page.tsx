@@ -13,6 +13,11 @@ import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  AnimatedNumber,
+  Reveal,
+  SignalSurface,
+} from '@/components/motion/SignalMotion';
+import {
   api,
   promptsApi,
   hospitalApi,
@@ -33,6 +38,8 @@ import {
   X,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ChevronUp,
   Grid3X3,
   RefreshCw,
@@ -146,6 +153,9 @@ export default function PromptsPage() {
   const [expandedPromptId, setExpandedPromptId] = useState<string | null>(null);
   const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
   const [promptDraft, setPromptDraft] = useState('');
+  const [libraryFilter, setLibraryFilter] = useState<
+    'all' | 'active' | 'archived'
+  >('all');
 
   // 프롬프트 목록 조회
   const { data: prompts, isLoading } = useQuery({
@@ -398,12 +408,17 @@ export default function PromptsPage() {
 
   const openTrackedQuestion = useCallback((promptId: string) => {
     setSearchTerm('');
+    setLibraryFilter('all');
     setExpandedPromptId(promptId);
     window.setTimeout(
       () =>
-        document
-          .getElementById(`question-${promptId}`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+        document.getElementById(`question-${promptId}`)?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)')
+            .matches
+            ? 'auto'
+            : 'smooth',
+          block: 'center',
+        }),
       100,
     );
   }, []);
@@ -421,8 +436,11 @@ export default function PromptsPage() {
     openTrackedQuestion(requestedPromptId);
   }, [hospitalId, requestedPromptId, prompts, openTrackedQuestion]);
 
-  const filteredPrompts = prompts?.filter((prompt: any) =>
-    prompt.promptText.toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredPrompts = prompts?.filter(
+    (prompt: any) =>
+      prompt.promptText.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (libraryFilter === 'all' ||
+        (libraryFilter === 'active' ? prompt.isActive : !prompt.isActive)),
   );
 
   const toggleSuggestionSelect = (query: string) => {
@@ -502,20 +520,20 @@ export default function PromptsPage() {
 
   if (!hospitalId) {
     return (
-      <div className="min-h-screen bg-[#F4F5EF]">
+      <div className="min-h-screen bg-[#f4f4f8]">
         <Header
           title="질문 관리"
           description="병원에 맞는 질문으로 AI 답변을 살펴보세요"
         />
         <div className="mx-auto max-w-[1320px] p-5 sm:p-10">
-          <div className="border-y border-[#DEE4D9] py-16">
-            <span className="text-xs font-semibold tracking-[0.18em] text-[#778378]">
+          <div className="border-y border-[#dedee8] py-16">
+            <span className="text-xs font-semibold tracking-[0.18em] text-[#737382]">
               QUESTION WORKSPACE
             </span>
-            <h2 className="mt-5 text-3xl font-semibold tracking-tight text-[#15231B]">
+            <h2 className="mt-5 text-3xl font-semibold tracking-tight text-[#111118]">
               병원부터 알려주세요.
             </h2>
-            <p className="mb-6 mt-3 text-sm text-[#778378]">
+            <p className="mb-6 mt-3 text-sm text-[#737382]">
               병원 소개와 주력 진료가 질문 설계의 출발점이 됩니다.
             </p>
             <Button onClick={() => (window.location.href = '/onboarding')}>
@@ -528,56 +546,56 @@ export default function PromptsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F5EF] text-[#15231B]">
+    <div className="min-h-screen bg-[#f4f4f8] text-[#111118]">
       <Header title="질문 관리" description="핵심 질문부터 실제 AI 답변까지" />
       <div className="mx-auto max-w-[1440px] px-5 pb-16 pt-7 sm:px-8 lg:px-10 lg:pt-10">
-        <section className="mb-9 flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
+        <Reveal className="mb-9 flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
           <div>
-            <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#778378]">
-              <span className="h-2 w-2 bg-[#36765A]" /> Question workspace
+            <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#737382]">
+              <span className="h-2 w-2 bg-[#5b4dff]" /> Question workspace
             </p>
             <h1 className="text-[32px] font-semibold leading-[1.17] tracking-[-0.06em] sm:text-[42px]">
               좋은 질문이
               <br className="sm:hidden" /> 병원을 발견하게 합니다.
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#778378]">
+            <p className="mt-3 max-w-xl text-sm leading-6 text-[#737382]">
               환자분이 물어볼 질문을 정하고, AI가 우리 병원을 어떻게 소개하는지
               확인하세요.
             </p>
           </div>
-          <div className="flex shrink-0 gap-7 border-t border-[#DEE4D9] pt-4 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
+          <div className="flex shrink-0 gap-7 border-t border-[#dedee8] pt-4 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
             <div>
-              <p className="text-[11px] font-medium text-[#778378]">측정 중</p>
+              <p className="text-[11px] font-medium text-[#737382]">측정 중</p>
               <p className="mt-1 text-[32px] font-semibold leading-none tracking-tight">
-                {activePrompts}
-                <span className="ml-1 text-sm font-normal text-[#778378]">
+                <AnimatedNumber value={activePrompts} />
+                <span className="ml-1 text-sm font-normal text-[#737382]">
                   / {planLimits.maxPrompts === -1 ? '무제한' : MAX_PROMPTS}
                 </span>
               </p>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-[#778378]">
+              <p className="text-[11px] font-medium text-[#737382]">
                 보관된 질문
               </p>
               <p className="mt-1 text-[32px] font-semibold leading-none tracking-tight">
-                {archivedPrompts}
-                <span className="ml-1 text-sm font-normal text-[#778378]">
+                <AnimatedNumber value={archivedPrompts} />
+                <span className="ml-1 text-sm font-normal text-[#737382]">
                   개
                 </span>
               </p>
             </div>
           </div>
-        </section>
+        </Reveal>
 
         <section
           aria-labelledby="core-questions-title"
-          className="mb-10 grid overflow-hidden border border-[#DEE4D9] bg-white lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[310px_minmax(0,1fr)]"
+          className="mb-10 grid overflow-hidden rounded-2xl border border-[#dedee8] bg-white shadow-[0_16px_45px_-35px_#5b4dff] lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[310px_minmax(0,1fr)]"
         >
-          <div className="flex flex-col bg-[#13251D] p-6 text-white sm:p-7">
-            <span className="mb-7 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#D8F36A]/40 text-[#D8F36A]">
+          <SignalSurface className="flex flex-col bg-[#5b4dff] p-6 text-white sm:p-7">
+            <span className="mb-7 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-[#ff6b3d] text-[#101016]">
               <Sparkles className="h-4 w-4" />
             </span>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#D8F36A]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">
               Made for your clinic
             </p>
             <h2
@@ -587,13 +605,13 @@ export default function PromptsPage() {
               우리 병원에서
               <br className="hidden lg:block" /> 시작한 핵심 질문
             </h2>
-            <p className="mt-4 text-[13px] leading-6 text-[#BDC9BC]">
+            <p className="mt-4 text-[13px] leading-6 text-white/75">
               병원 소개와 주력 진료를 읽고 추천했습니다. 우리 병원에 맞게 문장을
               다듬어 모니터링에 넣어보세요.
             </p>
             <div className="mt-7 border-t border-white/15 pt-5 lg:mt-auto lg:pt-6">
-              <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#D8F36A]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[#D8F36A]" />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1.5 text-[10px] font-semibold text-white">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ff6b3d]" />
                 {coreData?.hubConnected
                   ? '허브 정보 연결됨'
                   : 'Signal 프로필 기준'}
@@ -602,61 +620,61 @@ export default function PromptsPage() {
                 {coreData?.profile?.name || hospitalData?.name || '우리 병원'}
               </p>
               {coreData?.profile?.region && (
-                <p className="mt-1 text-xs text-[#BDC9BC]">
+                <p className="mt-1 text-xs text-white/70">
                   {coreData.profile.region}
                 </p>
               )}
               {coreData?.profile?.treatments?.length > 0 && (
-                <p className="mt-2 text-xs leading-5 text-[#BDC9BC]">
+                <p className="mt-2 text-xs leading-5 text-white/70">
                   {coreData.profile.treatments.join(' · ')}
                 </p>
               )}
               <Link
                 href="/dashboard/settings"
-                className="mt-5 inline-flex items-center gap-2 border-b border-[#D8F36A]/50 pb-1 text-xs font-medium text-[#D8F36A] hover:text-white"
+                className="signal-interactive mt-5 inline-flex items-center gap-2 border-b border-white/50 pb-1 text-xs font-medium text-white"
               >
                 병원 소개 수정 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-          </div>
+          </SignalSurface>
           <div className="min-w-0">
-            <div className="flex items-center justify-between border-b border-[#DEE4D9] px-5 py-4 sm:px-7">
-              <p className="text-xs font-semibold text-[#36765A]">추천 질문</p>
-              <span className="text-[11px] text-[#778378]">
+            <div className="flex items-center justify-between border-b border-[#dedee8] px-5 py-4 sm:px-7">
+              <p className="text-xs font-semibold text-[#5b4dff]">추천 질문</p>
+              <span className="text-[11px] text-[#737382]">
                 수정 후 추가할 수 있어요
               </span>
             </div>
             {coreLoading ? (
-              <div className="flex items-center gap-2 p-10 text-sm text-[#778378]">
+              <div className="flex items-center gap-2 p-10 text-sm text-[#737382]">
                 <Loader2 className="h-4 w-4 animate-spin" /> 병원 정보를 읽고
                 있습니다
               </div>
             ) : !coreData?.coreQuestions?.length ? (
-              <div className="px-7 py-12 text-sm leading-6 text-[#778378]">
+              <div className="px-7 py-12 text-sm leading-6 text-[#737382]">
                 병원 소개와 주력 진료를 입력하면
                 <br />
                 이곳에 맞춤 질문을 추천합니다.
               </div>
             ) : (
-              <div className="divide-y divide-[#DEE4D9]">
+              <div className="divide-y divide-[#dedee8]">
                 {(coreData.coreQuestions as CoreQuestion[]).map(
                   (question, index) => {
                     const editing = editingCoreQuery === question.query;
                     return (
                       <div
                         key={`${question.query}-${index}`}
-                        className="group px-5 py-5 transition-colors hover:bg-[#F4F5EF]/70 sm:px-7"
+                        className={`group relative px-5 py-5 transition-colors duration-200 sm:px-7 ${editing || replacingCoreQuery === question.query ? 'bg-[#5b4dff]/[0.06] shadow-[inset_3px_0_0_#5b4dff]' : 'hover:bg-[#f4f4f8]/70'}`}
                       >
                         <div className="flex gap-4">
-                          <span className="pt-0.5 font-mono text-xs tabular-nums text-[#778378]">
+                          <span className="pt-0.5 font-mono text-xs tabular-nums text-[#737382]">
                             {String(index + 1).padStart(2, '0')}
                           </span>
                           <div className="min-w-0 flex-1">
                             <div className="mb-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
-                              <span className="font-semibold text-[#36765A]">
+                              <span className="font-semibold text-[#5b4dff]">
                                 {question.category}
                               </span>
-                              <span className="text-[#778378]">
+                              <span className="text-[#737382]">
                                 {coreSourceLabels[question.source] ||
                                   '병원 정보'}
                               </span>
@@ -664,6 +682,7 @@ export default function PromptsPage() {
                             {editing ? (
                               <Input
                                 autoFocus
+                                className="signal-panel-enter !border-[#5b4dff] !ring-2 !ring-[#5b4dff]/10"
                                 aria-label="추천 질문 수정"
                                 value={
                                   coreDrafts[question.query] ?? question.query
@@ -684,7 +703,7 @@ export default function PromptsPage() {
                                 {coreDrafts[question.query] ?? question.query}
                               </p>
                             )}
-                            <p className="mt-1.5 text-xs leading-5 text-[#778378]">
+                            <p className="mt-1.5 text-xs leading-5 text-[#737382]">
                               {question.reason}
                             </p>
                             <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -694,7 +713,7 @@ export default function PromptsPage() {
                                   onClick={() =>
                                     openTrackedQuestion(question.promptId!)
                                   }
-                                  className="inline-flex items-center gap-2 text-xs font-semibold text-[#36765A] hover:underline"
+                                  className="inline-flex items-center gap-2 text-xs font-semibold text-[#5b4dff] hover:underline"
                                 >
                                   <Check className="h-3.5 w-3.5" /> 모니터링 중
                                   · 답변 읽기{' '}
@@ -711,7 +730,7 @@ export default function PromptsPage() {
                                     onClick={() =>
                                       handleAddCoreQuestion(question)
                                     }
-                                    className="inline-flex min-h-8 items-center gap-1.5 bg-[#D8F36A] px-3 text-xs font-semibold text-[#15231B] transition-colors hover:bg-[#C6E456] disabled:opacity-40"
+                                    className="signal-interactive inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#ff6b3d] px-3 text-xs font-semibold text-[#101016] transition-colors hover:bg-[#ff825c] disabled:opacity-40"
                                   >
                                     <Plus className="h-3.5 w-3.5" />
                                     {isAtLimit
@@ -729,7 +748,7 @@ export default function PromptsPage() {
                                           return next;
                                         });
                                       }}
-                                      className="min-h-8 text-xs text-[#778378] hover:text-[#15231B]"
+                                      className="min-h-8 text-xs text-[#737382] hover:text-[#111118]"
                                     >
                                       수정 취소
                                     </button>
@@ -739,7 +758,7 @@ export default function PromptsPage() {
                                       onClick={() =>
                                         setEditingCoreQuery(question.query)
                                       }
-                                      className="inline-flex min-h-8 items-center gap-1.5 text-xs text-[#778378] hover:text-[#15231B]"
+                                      className="inline-flex min-h-8 items-center gap-1.5 text-xs text-[#737382] hover:text-[#111118]"
                                     >
                                       <Pencil className="h-3 w-3" />
                                       문장 수정
@@ -750,7 +769,7 @@ export default function PromptsPage() {
                             </div>
                             {replacingCoreQuery === question.query &&
                               !question.alreadyTracked && (
-                                <div className="mt-4 border-l-2 border-[#36765A] bg-[#F4F5EF] p-4">
+                                <div className="signal-panel-enter mt-4 rounded-xl border border-[#5b4dff]/20 bg-white p-4 shadow-sm">
                                   <label
                                     htmlFor={`replace-prompt-${index}`}
                                     className="block text-xs font-semibold"
@@ -763,7 +782,7 @@ export default function PromptsPage() {
                                     onChange={(event) =>
                                       setReplacementPromptId(event.target.value)
                                     }
-                                    className="mt-2 h-10 w-full min-w-0 rounded-none border border-[#DEE4D9] bg-white px-3 text-xs"
+                                    className="mt-2 h-10 w-full min-w-0 rounded-none border border-[#dedee8] bg-white px-3 text-xs"
                                   >
                                     <option value="">
                                       기존 질문을 선택해 주세요
@@ -780,7 +799,7 @@ export default function PromptsPage() {
                                         </option>
                                       ))}
                                   </select>
-                                  <p className="mt-2 text-[11px] leading-5 text-[#778378]">
+                                  <p className="mt-2 text-[11px] leading-5 text-[#737382]">
                                     교체 전 질문과 AI 답변은 기록으로
                                     보관됩니다.
                                   </p>
@@ -829,7 +848,7 @@ export default function PromptsPage() {
         <section aria-labelledby="question-library-title">
           <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#778378]">
+              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#737382]">
                 Your question library
               </p>
               <h2
@@ -837,22 +856,22 @@ export default function PromptsPage() {
                 className="text-[26px] font-semibold tracking-[-0.045em]"
               >
                 모니터링 질문{' '}
-                <span className="ml-1 text-[#778378]">{totalPrompts}</span>
+                <span className="ml-1 text-[#737382]">{totalPrompts}</span>
               </h2>
             </div>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-0 top-3 h-4 w-4 text-[#778378]" />
+              <Search className="absolute left-0 top-3 h-4 w-4 text-[#737382]" />
               <input
                 aria-label="등록된 질문 검색"
                 placeholder="질문 검색"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="h-10 w-full border-b border-[#BCC8B8] bg-transparent pl-7 pr-3 text-sm outline-none placeholder:text-[#778378] focus:border-[#36765A]"
+                className="h-10 w-full border-b border-[#b9b8c9] bg-transparent pl-7 pr-3 text-sm outline-none placeholder:text-[#737382] focus:border-[#5b4dff]"
               />
             </div>
           </div>
 
-          <div className="border-x border-t border-[#DEE4D9] bg-white p-5 sm:p-6">
+          <div className="border-x border-t border-[#dedee8] bg-white p-5 sm:p-6">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <label
                 htmlFor="new-monitoring-question"
@@ -860,7 +879,7 @@ export default function PromptsPage() {
               >
                 새 질문 작성
               </label>
-              <span className="text-[11px] text-[#778378]">
+              <span className="text-[11px] text-[#737382]">
                 {isAtLimit
                   ? '모니터링 한도에 도달했어요'
                   : planLimits.maxPrompts === -1
@@ -869,7 +888,7 @@ export default function PromptsPage() {
               </span>
             </div>
             {isAtLimit ? (
-              <div className="flex items-start gap-3 border-l-2 border-[#36765A] bg-[#F4F5EF] px-4 py-3 text-xs leading-6 text-[#526451]">
+              <div className="flex items-start gap-3 border-l-2 border-[#5b4dff] bg-[#f4f4f8] px-4 py-3 text-xs leading-6 text-[#545067]">
                 <Layers className="mt-1 h-4 w-4 shrink-0" />
                 <p>
                   현재 {MAX_PROMPTS}개 질문을 모니터링 중입니다. 추천 질문으로
@@ -907,10 +926,10 @@ export default function PromptsPage() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-              <span className="text-[#778378]">다른 질문을 찾아볼까요?</span>
+              <span className="text-[#737382]">다른 질문을 찾아볼까요?</span>
               <button
                 onClick={handleOpenSuggestions}
-                className="inline-flex items-center gap-1.5 font-semibold text-[#36765A] hover:underline"
+                className="inline-flex items-center gap-1.5 font-semibold text-[#5b4dff] hover:underline"
               >
                 <Lightbulb className="h-3.5 w-3.5" /> AI 질문 제안
               </button>
@@ -920,7 +939,7 @@ export default function PromptsPage() {
                   setShowSuggestions(false);
                   setSelectedMatrixPrompts(new Set());
                 }}
-                className="inline-flex items-center gap-1.5 font-semibold text-[#36765A] hover:underline"
+                className="inline-flex items-center gap-1.5 font-semibold text-[#5b4dff] hover:underline"
               >
                 <Grid3X3 className="h-3.5 w-3.5" /> 다양한 질문 조합
               </button>
@@ -928,16 +947,16 @@ export default function PromptsPage() {
           </div>
 
           {showMatrix && (
-            <div className="border-x border-t border-[#DEE4D9] bg-[#EDF1E7] p-5 sm:p-6">
+            <div className="signal-panel-enter border-x border-t border-[#dedee8] bg-[#ededf6] p-5 sm:p-6">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold tracking-[0.16em] text-[#36765A]">
+                  <p className="text-[10px] font-bold tracking-[0.16em] text-[#5b4dff]">
                     QUESTION EXPLORER
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight">
                     다양한 질문 조합
                   </h3>
-                  <p className="mt-2 text-xs leading-5 text-[#778378]">
+                  <p className="mt-2 text-xs leading-5 text-[#737382]">
                     의도 · 시술 · 말투 · 시즌 · 지역을 조합한 질문입니다.
                   </p>
                 </div>
@@ -967,24 +986,24 @@ export default function PromptsPage() {
                 </div>
               </div>
               {isMatrixLoading ? (
-                <div className="flex items-center gap-2 py-10 text-sm text-[#778378]">
+                <div className="flex items-center gap-2 py-10 text-sm text-[#737382]">
                   <Loader2 className="h-4 w-4 animate-spin" /> 질문 후보를
                   준비하고 있습니다
                 </div>
               ) : matrixData ? (
                 <>
-                  <div className="my-5 flex flex-wrap gap-x-6 gap-y-3 border-y border-[#D5DDCE] py-4 text-xs">
-                    <span className="text-[#778378]">
+                  <div className="my-5 flex flex-wrap gap-x-6 gap-y-3 border-y border-[#d9d8e6] py-4 text-xs">
+                    <span className="text-[#737382]">
                       전체 후보{' '}
-                      <b className="ml-1 text-[#15231B]">
+                      <b className="ml-1 text-[#111118]">
                         {matrixData.matrix?.totalCandidates || 0}
                       </b>
                     </span>
                     {Object.entries(matrixData.matrix?.byIntent || {}).map(
                       ([intent, count]) => (
-                        <span key={intent} className="text-[#778378]">
+                        <span key={intent} className="text-[#737382]">
                           {intentConfig[intent]?.label || intent}{' '}
-                          <b className="ml-1 text-[#15231B]">
+                          <b className="ml-1 text-[#111118]">
                             {count as number}
                           </b>
                         </span>
@@ -997,7 +1016,7 @@ export default function PromptsPage() {
                         ([procedure, count]) => (
                           <span
                             key={procedure}
-                            className="border border-[#D5DDCE] px-2 py-1 text-[10px] text-[#526451]"
+                            className="border border-[#d9d8e6] px-2 py-1 text-[10px] text-[#545067]"
                           >
                             {procedure} · {count as number}
                           </span>
@@ -1005,7 +1024,7 @@ export default function PromptsPage() {
                       )}
                     </div>
                   )}
-                  <div className="max-h-[460px] divide-y divide-[#DEE4D9] overflow-y-auto border border-[#DEE4D9] bg-white">
+                  <div className="max-h-[460px] divide-y divide-[#dedee8] overflow-y-auto border border-[#dedee8] bg-white">
                     {matrixData.todaySelection?.map(
                       (item: any, index: number) => {
                         const selected = selectedMatrixPrompts.has(item.text);
@@ -1013,10 +1032,10 @@ export default function PromptsPage() {
                           <button
                             key={index}
                             onClick={() => toggleMatrixSelect(item.text)}
-                            className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${selected ? 'bg-[#D8F36A]/30' : 'hover:bg-[#F4F5EF]'}`}
+                            className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${selected ? 'bg-[#ff6b3d]/30' : 'hover:bg-[#f4f4f8]'}`}
                           >
                             <span
-                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${selected ? 'border-[#36765A] bg-[#36765A]' : 'border-[#BCC8B8]'}`}
+                              className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center border ${selected ? 'border-[#5b4dff] bg-[#5b4dff]' : 'border-[#b9b8c9]'}`}
                             >
                               {selected && (
                                 <Check className="h-3 w-3 text-white" />
@@ -1026,7 +1045,7 @@ export default function PromptsPage() {
                               <span className="text-sm leading-6">
                                 {item.text}
                               </span>
-                              <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#778378]">
+                              <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#737382]">
                                 <span>
                                   {intentConfig[item.intent]?.label ||
                                     item.intent}
@@ -1046,7 +1065,7 @@ export default function PromptsPage() {
                     )}
                   </div>
                   <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-[#778378]">
+                    <p className="text-xs text-[#737382]">
                       {matrixData.todayCount}개 추천 ·{' '}
                       {selectedMatrixPrompts.size}개 선택
                     </p>
@@ -1090,7 +1109,7 @@ export default function PromptsPage() {
                   </div>
                 </>
               ) : (
-                <p className="py-8 text-sm text-[#778378]">
+                <p className="py-8 text-sm text-[#737382]">
                   질문 조합을 불러올 수 없습니다.
                 </p>
               )}
@@ -1098,24 +1117,24 @@ export default function PromptsPage() {
           )}
 
           {showSuggestions && (
-            <div className="border-x border-t border-[#DEE4D9] bg-[#EDF1E7] p-5 sm:p-6">
+            <div className="signal-panel-enter border-x border-t border-[#dedee8] bg-[#ededf6] p-5 sm:p-6">
               <div className="mb-5 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-bold tracking-[0.16em] text-[#36765A]">
+                  <p className="text-[10px] font-bold tracking-[0.16em] text-[#5b4dff]">
                     AI SUGGESTIONS
                   </p>
                   <h3 className="mt-2 text-xl font-semibold tracking-tight">
                     다음으로 물어볼 질문
                   </h3>
                   {suggestData?.hospital && (
-                    <p className="mt-2 text-xs leading-5 text-[#778378]">
+                    <p className="mt-2 text-xs leading-5 text-[#737382]">
                       {suggestData.hospital.name} ·{' '}
                       {suggestData.hospital.specialty} ·{' '}
                       {suggestData.hospital.region}
                     </p>
                   )}
                   {suggestData?.hospital?.procedures && (
-                    <p className="mt-2 text-xs text-[#526451]">
+                    <p className="mt-2 text-xs text-[#545067]">
                       {suggestData.hospital.procedures.join(' · ')}
                     </p>
                   )}
@@ -1133,17 +1152,17 @@ export default function PromptsPage() {
                 </Button>
               </div>
               {isSuggestLoading ? (
-                <div className="flex items-center gap-2 py-10 text-sm text-[#778378]">
+                <div className="flex items-center gap-2 py-10 text-sm text-[#737382]">
                   <Loader2 className="h-4 w-4 animate-spin" /> 병원 정보를
                   바탕으로 질문을 만들고 있습니다
                 </div>
               ) : Object.keys(groupedSuggestions).length === 0 ? (
-                <p className="py-8 text-sm leading-6 text-[#778378]">
+                <p className="py-8 text-sm leading-6 text-[#737382]">
                   추가로 추천할 질문이 없습니다. 직접 질문을 작성하거나 병원
                   소개를 보완해보세요.
                 </p>
               ) : (
-                <div className="max-h-[520px] overflow-y-auto border border-[#DEE4D9] bg-white">
+                <div className="max-h-[520px] overflow-y-auto border border-[#dedee8] bg-white">
                   {(
                     Object.entries(groupedSuggestions) as [string, any[]][]
                   ).map(([category, items]) => {
@@ -1154,7 +1173,7 @@ export default function PromptsPage() {
                     return (
                       <div
                         key={category}
-                        className="border-b border-[#DEE4D9] last:border-b-0"
+                        className="border-b border-[#dedee8] last:border-b-0"
                       >
                         <button
                           onClick={() => toggleCategory(category)}
@@ -1162,7 +1181,7 @@ export default function PromptsPage() {
                         >
                           <span className="text-sm font-semibold">
                             {category}
-                            <span className="ml-2 text-xs font-normal text-[#778378]">
+                            <span className="ml-2 text-xs font-normal text-[#737382]">
                               {items.length}개
                               {selectedCount > 0
                                 ? ` · ${selectedCount}개 선택`
@@ -1170,13 +1189,13 @@ export default function PromptsPage() {
                             </span>
                           </span>
                           {expanded ? (
-                            <ChevronUp className="h-4 w-4 text-[#778378]" />
+                            <ChevronUp className="h-4 w-4 text-[#737382]" />
                           ) : (
-                            <ChevronDown className="h-4 w-4 text-[#778378]" />
+                            <ChevronDown className="h-4 w-4 text-[#737382]" />
                           )}
                         </button>
                         {expanded && (
-                          <div className="border-t border-[#DEE4D9]">
+                          <div className="border-t border-[#dedee8]">
                             {items.map((item: any) => {
                               const selected = selectedSuggestions.has(
                                 item.query,
@@ -1187,10 +1206,10 @@ export default function PromptsPage() {
                                   onClick={() =>
                                     toggleSuggestionSelect(item.query)
                                   }
-                                  className={`flex w-full items-start gap-3 px-4 py-3 text-left ${selected ? 'bg-[#D8F36A]/30' : 'hover:bg-[#F4F5EF]'}`}
+                                  className={`flex w-full items-start gap-3 px-4 py-3 text-left ${selected ? 'bg-[#ff6b3d]/30' : 'hover:bg-[#f4f4f8]'}`}
                                 >
                                   <span
-                                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center border ${selected ? 'border-[#36765A] bg-[#36765A]' : 'border-[#BCC8B8]'}`}
+                                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center border ${selected ? 'border-[#5b4dff] bg-[#5b4dff]' : 'border-[#b9b8c9]'}`}
                                   >
                                     {selected && (
                                       <Check className="h-3 w-3 text-white" />
@@ -1211,7 +1230,7 @@ export default function PromptsPage() {
               )}
               {suggestData && Object.keys(groupedSuggestions).length > 0 && (
                 <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-xs text-[#778378]">
+                  <p className="text-xs text-[#737382]">
                     {suggestData.total}개 제안 · {selectedSuggestions.size}개
                     선택
                   </p>
@@ -1255,58 +1274,87 @@ export default function PromptsPage() {
             </div>
           )}
 
-          <div className="border border-[#DEE4D9] bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#DEE4D9] bg-[#F4F5EF] px-5 py-3 sm:px-6">
-              <p className="text-[10px] font-bold tracking-[0.1em] text-[#526451]">
+          <div
+            className="flex flex-wrap gap-1 border-x border-t border-[#dedee8] bg-[#101016] p-2"
+            aria-label="질문 상태 필터"
+          >
+            {(
+              [
+                ['all', '전체', totalPrompts],
+                ['active', '측정 중', activePrompts],
+                ['archived', '보관', archivedPrompts],
+              ] as const
+            ).map(([value, label, count]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={libraryFilter === value}
+                onClick={() => setLibraryFilter(value)}
+                className={`signal-tab inline-flex min-h-9 items-center gap-2 rounded-lg px-4 text-xs font-semibold ${libraryFilter === value ? 'signal-tab-active bg-[#ff6b3d] text-[#101016]' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}
+              >
+                {label}
+                <span className="font-mono text-[10px] opacity-70">
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="border border-[#dedee8] bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#dedee8] bg-[#f4f4f8] px-5 py-3 sm:px-6">
+              <p className="text-[10px] font-bold tracking-[0.1em] text-[#545067]">
                 QUESTION / ANSWER
               </p>
-              <p className="text-[11px] text-[#778378]">
+              <p className="text-[11px] text-[#737382]">
                 {activePrompts}개 측정 중
                 {archivedPrompts > 0 ? ` · ${archivedPrompts}개 기록 보관` : ''}
               </p>
             </div>
             {isLoading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-[#36765A]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[#5b4dff]" />
               </div>
             ) : filteredPrompts?.length === 0 ? (
               <div className="px-6 py-16 text-center">
-                <MessageSquare className="mx-auto mb-4 h-7 w-7 text-[#BCC8B8]" />
+                <MessageSquare className="mx-auto mb-4 h-7 w-7 text-[#b9b8c9]" />
                 <p className="text-sm font-medium">
                   {searchTerm
                     ? '일치하는 질문이 없습니다'
-                    : '첫 질문을 추가해보세요'}
+                    : libraryFilter === 'archived'
+                      ? '보관된 질문이 없습니다'
+                      : libraryFilter === 'active'
+                        ? '측정 중인 질문이 없습니다'
+                        : '첫 질문을 추가해보세요'}
                 </p>
-                <p className="mt-2 text-xs text-[#778378]">
+                <p className="mt-2 text-xs text-[#737382]">
                   {searchTerm
                     ? '다른 단어로 검색해보세요.'
                     : '위에서 추천 질문을 선택하거나 직접 작성할 수 있습니다.'}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-[#DEE4D9]">
+              <div className="divide-y divide-[#dedee8]">
                 {filteredPrompts?.map((prompt: any, index: number) => (
                   <div
                     id={`question-${prompt.id}`}
                     key={prompt.id}
-                    className={`scroll-mt-24 ${prompt.isActive ? '' : 'bg-[#F4F5EF]/60'}`}
+                    className={`relative scroll-mt-24 transition-colors duration-200 ${expandedPromptId === prompt.id ? 'bg-[#5b4dff]/[0.04] shadow-[inset_3px_0_0_#5b4dff]' : prompt.isActive ? 'hover:bg-[#fafafe]' : 'bg-[#f4f4f8]/60'}`}
                   >
                     <div className="px-5 py-5 sm:px-6">
                       <div className="flex gap-4">
-                        <span className="pt-1 font-mono text-xs tabular-nums text-[#778378]">
+                        <span className="pt-1 font-mono text-xs tabular-nums text-[#737382]">
                           {String(index + 1).padStart(2, '0')}
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px]">
                             <span
-                              className={`inline-flex items-center gap-1.5 font-medium ${prompt.isActive ? 'text-[#36765A]' : 'text-[#778378]'}`}
+                              className={`inline-flex items-center gap-1.5 font-medium ${prompt.isActive ? 'text-[#5b4dff]' : 'text-[#737382]'}`}
                             >
                               <span
-                                className={`h-1.5 w-1.5 rounded-full ${prompt.isActive ? 'bg-[#36765A]' : 'bg-[#A6B09F]'}`}
+                                className={`h-1.5 w-1.5 rounded-full ${prompt.isActive ? 'bg-[#5b4dff]' : 'bg-[#9997ad]'}`}
                               />
                               {prompt.isActive ? '측정 중' : '기록 보관'}
                             </span>
-                            <span className="text-[#778378]">
+                            <span className="text-[#737382]">
                               {prompt.promptType === 'PRESET'
                                 ? '추천 질문'
                                 : prompt.promptType === 'AUTO_GENERATED'
@@ -1314,7 +1362,7 @@ export default function PromptsPage() {
                                   : '직접 입력'}
                             </span>
                             {prompt.specialtyCategory && (
-                              <span className="text-[#778378]">
+                              <span className="text-[#737382]">
                                 {prompt.specialtyCategory}
                               </span>
                             )}
@@ -1322,6 +1370,7 @@ export default function PromptsPage() {
                           {editingPromptId === prompt.id ? (
                             <Input
                               autoFocus
+                              className="signal-panel-enter !border-[#5b4dff]"
                               aria-label="등록된 질문 수정"
                               value={promptDraft}
                               onChange={(event) =>
@@ -1334,7 +1383,7 @@ export default function PromptsPage() {
                             />
                           ) : (
                             <p
-                              className={`text-[15px] font-medium leading-6 tracking-[-0.02em] sm:text-base ${prompt.isActive ? 'text-[#15231B]' : 'text-[#778378]'}`}
+                              className={`text-[15px] font-medium leading-6 tracking-[-0.02em] sm:text-base ${prompt.isActive ? 'text-[#111118]' : 'text-[#737382]'}`}
                             >
                               {prompt.promptText}
                             </p>
@@ -1374,7 +1423,7 @@ export default function PromptsPage() {
                                     )
                                   }
                                   aria-expanded={expandedPromptId === prompt.id}
-                                  className={`inline-flex min-h-8 items-center gap-2 text-xs font-semibold ${expandedPromptId === prompt.id ? 'text-[#15231B]' : 'text-[#36765A]'} hover:underline`}
+                                  className={`signal-interactive inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors ${expandedPromptId === prompt.id ? 'bg-[#5b4dff] text-white' : 'bg-[#5b4dff]/[0.06] text-[#5b4dff] hover:bg-[#5b4dff]/10'}`}
                                 >
                                   <MessageSquare className="h-3.5 w-3.5" /> 실측
                                   답변{' '}
@@ -1453,7 +1502,7 @@ export default function PromptsPage() {
                                     }
                                   >
                                     {prompt.isActive ? (
-                                      <ToggleRight className="h-5 w-5 text-[#36765A]" />
+                                      <ToggleRight className="h-5 w-5 text-[#5b4dff]" />
                                     ) : (
                                       <ToggleLeft className="h-5 w-5" />
                                     )}
@@ -1494,7 +1543,7 @@ export default function PromptsPage() {
               </div>
             )}
           </div>
-          <p className="mt-4 text-[11px] leading-5 text-[#778378]">
+          <p className="mt-4 text-[11px] leading-5 text-[#737382]">
             질문을 수정해도 지난 AI 답변에는 측정 당시 질문이 함께 남습니다.
           </p>
         </section>
@@ -1572,6 +1621,18 @@ function PromptAnswerPanel({
   const selectedResponse =
     responses.find((response) => response.id === selectedResponseId) ||
     responses[0];
+  const selectedIndex = responses.findIndex(
+    (response) => response.id === selectedResponse?.id,
+  );
+  const selectResponseAt = (index: number, moveFocus = false) => {
+    const response = responses[index];
+    if (!response) return;
+    setSelectedResponseId(response.id);
+    if (moveFocus)
+      document
+        .getElementById(`answer-choice-${promptId}-${response.id}`)
+        ?.focus();
+  };
   const platformLabels: Record<string, string> = {
     CHATGPT: 'ChatGPT',
     CLAUDE: 'Claude',
@@ -1593,28 +1654,28 @@ function PromptAnswerPanel({
   };
 
   return (
-    <div className="border-t border-[#DEE4D9] bg-[#F4F5EF] p-4 sm:p-6">
+    <div className="signal-panel-enter border-t border-[#5b4dff]/20 bg-[#f4f4f8] p-4 sm:p-6">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold tracking-[0.18em] text-[#36765A]">
+          <p className="text-[10px] font-bold tracking-[0.18em] text-[#5b4dff]">
             ANSWER READER
           </p>
           <h4 className="mt-2 text-lg font-semibold tracking-tight">
             AI가 실제로 답한 내용
           </h4>
-          <p className="mt-1 text-xs leading-5 text-[#778378]">
+          <p className="mt-1 text-xs leading-5 text-[#737382]">
             답변을 선택하면 측정 질문과 원문을 함께 읽을 수 있습니다.
           </p>
         </div>
         <Link
           href="/dashboard/responses"
-          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#36765A] hover:underline"
+          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#5b4dff] hover:underline"
         >
           전체 AI 답변 <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
       {isLoading ? (
-        <div className="flex items-center gap-2 py-8 text-sm text-[#778378]">
+        <div className="flex items-center gap-2 py-8 text-sm text-[#737382]">
           <Loader2 className="h-4 w-4 animate-spin" /> 답변을 불러오고 있습니다
         </div>
       ) : isError ? (
@@ -1624,16 +1685,16 @@ function PromptAnswerPanel({
       ) : (
         <>
           <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px]">
-            <span className="text-[#526451]">
+            <span className="text-[#545067]">
               실측 답변{' '}
-              <b className="ml-1 text-[#15231B]">{summary?.total || 0}건</b>
+              <b className="ml-1 text-[#111118]">{summary?.total || 0}건</b>
             </span>
-            <span className="text-[#526451]">
+            <span className="text-[#545067]">
               우리 병원 언급{' '}
-              <b className="ml-1 text-[#36765A]">{summary?.mentioned || 0}건</b>
+              <b className="ml-1 text-[#5b4dff]">{summary?.mentioned || 0}건</b>
             </span>
             {(summary?.byPlatform || []).map((item) => (
-              <span key={item.platform} className="text-[#778378]">
+              <span key={item.platform} className="text-[#737382]">
                 {platformLabels[item.platform] || item.platform}{' '}
                 <span className="font-mono">
                   {item.mentioned}/{item.total}
@@ -1642,20 +1703,39 @@ function PromptAnswerPanel({
             ))}
           </div>
           {responses.length === 0 ? (
-            <div className="border border-dashed border-[#BCC8B8] px-5 py-10 text-center text-sm leading-6 text-[#778378]">
+            <div className="border border-dashed border-[#b9b8c9] px-5 py-10 text-center text-sm leading-6 text-[#737382]">
               아직 저장된 답변이 없습니다.
               <br />
               다음 측정이 끝나면 이 질문의 AI 답변이 연결됩니다.
             </div>
           ) : (
-            <div className="grid min-w-0 overflow-hidden border border-[#DEE4D9] bg-white xl:grid-cols-[220px_minmax(0,1fr)]">
-              <div className="min-w-0 border-b border-[#DEE4D9] bg-[#F8F9F5] xl:border-b-0 xl:border-r">
-                <div className="border-b border-[#DEE4D9] px-4 py-3 text-[10px] font-semibold text-[#778378]">
+            <div className="grid min-w-0 overflow-hidden border border-[#dedee8] bg-white xl:grid-cols-[220px_minmax(0,1fr)]">
+              <div className="min-w-0 border-b border-[#dedee8] bg-[#fafafe] xl:border-b-0 xl:border-r">
+                <div className="border-b border-[#dedee8] px-4 py-3 text-[10px] font-semibold text-[#737382]">
                   측정 기록 · 최신순
                 </div>
                 <div
                   className="flex max-h-[520px] gap-0 overflow-x-auto xl:block xl:overflow-x-hidden xl:overflow-y-auto"
                   aria-label="AI 답변 선택"
+                  role="tablist"
+                  onKeyDown={(event) => {
+                    let target = selectedIndex;
+                    if (event.key === 'ArrowRight' || event.key === 'ArrowDown')
+                      target = Math.min(
+                        responses.length - 1,
+                        selectedIndex + 1,
+                      );
+                    else if (
+                      event.key === 'ArrowLeft' ||
+                      event.key === 'ArrowUp'
+                    )
+                      target = Math.max(0, selectedIndex - 1);
+                    else if (event.key === 'Home') target = 0;
+                    else if (event.key === 'End') target = responses.length - 1;
+                    else return;
+                    event.preventDefault();
+                    selectResponseAt(target, true);
+                  }}
                 >
                   {responses.map((response) => {
                     const selected = response.id === selectedResponse?.id;
@@ -1663,27 +1743,31 @@ function PromptAnswerPanel({
                       <button
                         key={response.id}
                         type="button"
-                        aria-pressed={selected}
+                        id={`answer-choice-${promptId}-${response.id}`}
+                        role="tab"
+                        aria-selected={selected}
+                        aria-controls={`answer-content-${promptId}`}
+                        tabIndex={selected ? 0 : -1}
                         onClick={() => setSelectedResponseId(response.id)}
-                        className={`min-w-[165px] shrink-0 border-b border-r border-[#DEE4D9] px-4 py-4 text-left transition-colors xl:w-full xl:min-w-0 xl:border-r-0 ${selected ? 'bg-[#13251D] text-white' : 'hover:bg-[#EDF1E7]'}`}
+                        className={`relative min-w-[165px] shrink-0 border-b border-r border-[#dedee8] px-4 py-4 text-left transition-colors duration-200 xl:w-full xl:min-w-0 xl:border-r-0 ${selected ? 'bg-[#5b4dff] text-white shadow-[inset_3px_0_0_#ff6b3d]' : 'hover:bg-[#ededf6]'}`}
                       >
                         <span className="flex items-center justify-between gap-4 text-xs font-semibold">
                           {platformLabels[response.aiPlatform] ||
                             response.aiPlatform}
                           {selected && (
-                            <ArrowRight className="h-3.5 w-3.5 text-[#D8F36A]" />
+                            <ArrowRight className="h-3.5 w-3.5 text-[#ff6b3d]" />
                           )}
                         </span>
                         <span
-                          className={`mt-2 block text-[10px] ${selected ? 'text-[#BDC9BC]' : 'text-[#778378]'}`}
+                          className={`mt-2 block text-[10px] ${selected ? 'text-white/70' : 'text-[#737382]'}`}
                         >
                           {formatDate(response)}
                         </span>
                         <span
-                          className={`mt-2 inline-flex items-center gap-1.5 text-[10px] ${selected ? 'text-[#D8F36A]' : response.isMentioned ? 'text-[#36765A]' : 'text-[#778378]'}`}
+                          className={`mt-2 inline-flex items-center gap-1.5 text-[10px] ${selected ? 'text-white' : response.isMentioned ? 'text-[#5b4dff]' : 'text-[#737382]'}`}
                         >
                           <span
-                            className={`h-1 w-1 rounded-full ${selected ? 'bg-[#D8F36A]' : response.isMentioned ? 'bg-[#36765A]' : 'bg-[#A6B09F]'}`}
+                            className={`h-1 w-1 rounded-full ${selected ? 'bg-[#ff6b3d]' : response.isMentioned ? 'bg-[#5b4dff]' : 'bg-[#9997ad]'}`}
                           />
                           {response.isMentioned
                             ? '우리 병원 언급'
@@ -1698,7 +1782,7 @@ function PromptAnswerPanel({
                     type="button"
                     onClick={() => fetchNextPage()}
                     disabled={isFetchingNextPage}
-                    className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-[#DEE4D9] px-3 py-3 text-[11px] font-medium text-[#36765A] hover:bg-[#EDF1E7] disabled:opacity-50"
+                    className="flex min-h-11 w-full items-center justify-center gap-2 border-t border-[#dedee8] px-3 py-3 text-[11px] font-medium text-[#5b4dff] hover:bg-[#ededf6] disabled:opacity-50"
                   >
                     {isFetchingNextPage ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1710,27 +1794,61 @@ function PromptAnswerPanel({
                 )}
               </div>
               {selectedResponse && (
-                <article className="min-w-0 p-5 sm:p-7" aria-live="polite">
+                <article
+                  key={selectedResponse.id}
+                  id={`answer-content-${promptId}`}
+                  role="tabpanel"
+                  aria-labelledby={`answer-choice-${promptId}-${selectedResponse.id}`}
+                  tabIndex={0}
+                  className="signal-enter min-w-0 p-5 outline-none sm:p-7"
+                  aria-live="polite"
+                >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-medium text-[#778378]">
+                      <p className="text-[10px] font-medium text-[#737382]">
                         {formatDate(selectedResponse)}
                       </p>
-                      <h5 className="mt-1.5 text-xl font-semibold tracking-tight">
+                      <h5 className="mt-1.5 text-2xl font-semibold tracking-tight">
                         {platformLabels[selectedResponse.aiPlatform] ||
                           selectedResponse.aiPlatform}
                       </h5>
                     </div>
                     <span
-                      className={`border px-2.5 py-1.5 text-[10px] font-medium ${selectedResponse.isMentioned ? 'border-[#B8D3BE] bg-[#EDF5E8] text-[#36765A]' : 'border-[#DEE4D9] bg-[#F4F5EF] text-[#778378]'}`}
+                      className={`border px-2.5 py-1.5 text-[10px] font-medium ${selectedResponse.isMentioned ? 'border-[#b9b8c9] bg-[#ededf6] text-[#5b4dff]' : 'border-[#dedee8] bg-[#f4f4f8] text-[#737382]'}`}
                     >
                       {selectedResponse.isMentioned
                         ? `우리 병원 언급${selectedResponse.mentionPosition ? ` · ${selectedResponse.mentionPosition}번째` : ''}`
                         : '우리 병원 미언급'}
                     </span>
                   </div>
-                  <blockquote className="mb-6 mt-6 border-l-2 border-[#D8F36A] pl-4">
-                    <p className="mb-1 text-[10px] font-semibold text-[#778378]">
+                  <div className="mt-5 flex items-center justify-between border-y border-[#dedee8] py-2">
+                    <span className="font-mono text-[10px] text-[#737382]">
+                      {String(selectedIndex + 1).padStart(2, '0')} /{' '}
+                      {String(responses.length).padStart(2, '0')}
+                    </span>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label="이전 AI 답변"
+                        disabled={selectedIndex <= 0}
+                        onClick={() => selectResponseAt(selectedIndex - 1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" /> 이전
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label="다음 AI 답변"
+                        disabled={selectedIndex >= responses.length - 1}
+                        onClick={() => selectResponseAt(selectedIndex + 1)}
+                      >
+                        다음 <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <blockquote className="mb-6 mt-6 border-l-2 border-[#ff6b3d] pl-4">
+                    <p className="mb-1 text-[10px] font-semibold text-[#737382]">
                       측정 당시 질문
                     </p>
                     <p className="break-words text-sm font-medium leading-6">
@@ -1740,12 +1858,12 @@ function PromptAnswerPanel({
                         : '당시 질문 문구를 확인할 수 없습니다'}
                     </p>
                   </blockquote>
-                  <div className="max-h-[520px] overflow-y-auto whitespace-pre-wrap break-words border-t border-[#DEE4D9] pt-5 text-[13px] leading-[1.95] text-[#384D3C] sm:text-sm">
+                  <div className="max-h-[520px] overflow-y-auto whitespace-pre-wrap break-words border-t border-[#dedee8] pt-5 text-[13px] leading-[1.95] text-[#353143] sm:text-sm">
                     {selectedResponse.responseText || '답변 원문이 없습니다.'}
                   </div>
                   {Array.isArray(selectedResponse.citedSources) &&
                     selectedResponse.citedSources.length > 0 && (
-                      <p className="mt-5 border-t border-[#DEE4D9] pt-3 text-[10px] text-[#778378]">
+                      <p className="mt-5 border-t border-[#dedee8] pt-3 text-[10px] text-[#737382]">
                         이 답변에 인용된 출처{' '}
                         {selectedResponse.citedSources.length}개
                       </p>

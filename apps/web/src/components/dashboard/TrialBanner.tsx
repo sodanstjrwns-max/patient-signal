@@ -120,7 +120,7 @@ export function TrialBanner() {
           </div>
           <Link
             href="/dashboard/billing"
-            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#15231b] text-white font-bold rounded-xl hover:bg-[#2c4635] transition-all mb-3"
+            className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-[#111118] text-white font-bold rounded-xl hover:bg-[#282433] transition-all mb-3"
           >
             <CreditCard className="h-5 w-5" />
             {isCouponExpired ? '유료 결제로 계속 이용하기' : '플랜 업그레이드하기'}
@@ -162,7 +162,7 @@ export function TrialBanner() {
           ? 'bg-[#873d31] text-white'
           : isWarning
             ? 'bg-[#f1e5c4] text-[#5e4d22]'
-            : 'bg-[#e8eddf] text-[#263e2e]'
+            : 'bg-[#ededf6] text-[#353143]'
         }
       `}>
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -187,7 +187,7 @@ export function TrialBanner() {
                 ? 'bg-white/80 backdrop-blur-sm text-red-600 hover:bg-red-50'
                 : isWarning
                   ? 'bg-amber-900 text-white hover:bg-amber-800'
-                  : 'bg-white/80 backdrop-blur-sm text-[#263e2e] hover:bg-[#f4f5ef]'
+                  : 'bg-white/80 backdrop-blur-sm text-[#353143] hover:bg-[#f4f4f8]'
               }
             `}
           >
@@ -210,7 +210,7 @@ export function TrialBanner() {
   // "데이터 수집 중..."으로 오해하지 않도록 만료 사실 + 재개 경로를 명시
   if (subInfo.isExpired) {
     return (
-      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-[#263e2e] text-white">
+      <div className="relative px-4 py-3 text-sm flex items-center justify-between gap-3 bg-[#353143] text-white">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
           <span className="font-medium text-xs leading-relaxed">
@@ -251,7 +251,7 @@ export function TrialBanner() {
         ? 'bg-[#873d31] text-white'
         : isExpiring
           ? 'bg-[#f1e5c4] text-[#5e4d22]'
-          : 'bg-[#e8eddf] text-[#263e2e]'
+          : 'bg-[#ededf6] text-[#353143]'
       }
     `}>
       <div className="flex items-center gap-2 flex-1 min-w-0">

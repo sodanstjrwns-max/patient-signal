@@ -121,10 +121,10 @@ function CallbackHandler() {
     <div className="text-center">
       <div className={`rounded-full h-12 w-12 mx-auto mb-4 ${
         status === 'success'
-        ? 'bg-green-100 flex items-center justify-center'
+        ? 'bg-brand-100 flex items-center justify-center'
         : 'animate-spin border-b-2 border-brand-600'
       }`}>
-        {status === 'success' && <span className="text-green-600 text-xl">✓</span>}
+        {status === 'success' && <span className="text-brand-600 text-xl">✓</span>}
       </div>
       <p className="text-slate-600">
         {status === 'processing' && '로그인 처리 중...'}

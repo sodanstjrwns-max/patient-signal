@@ -49,7 +49,7 @@ function BillingSuccessContent() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-brand-600" />
-        <p className="text-[#637167] text-lg">카드를 등록하고 있습니다...</p>
+        <p className="text-[#606070] text-lg">카드를 등록하고 있습니다...</p>
       </div>
     );
   }
@@ -60,8 +60,8 @@ function BillingSuccessContent() {
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
           <CreditCard className="h-8 w-8 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-[#15231B]">카드 등록에 문제가 있습니다</h2>
-        <p className="text-[#778378] text-center max-w-md">
+        <h2 className="text-2xl font-bold text-[#111118]">카드 등록에 문제가 있습니다</h2>
+        <p className="text-[#737382] text-center max-w-md">
           다시 시도해주세요. 문제가 지속되면 고객센터로 문의해주세요.
         </p>
         <a
@@ -76,13 +76,13 @@ function BillingSuccessContent() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-6 p-6">
-      <div className="w-24 h-24 bg-[#F4F5EF] rounded-full flex items-center justify-center">
+      <div className="w-24 h-24 bg-[#f4f4f8] rounded-full flex items-center justify-center">
         <PartyPopper className="h-12 w-12 text-brand-600" />
       </div>
 
       <div className="text-center">
-        <h2 className="text-3xl font-bold text-[#15231B] mb-2">카드 등록 완료!</h2>
-        <p className="text-[#778378]">
+        <h2 className="text-3xl font-bold text-[#111118] mb-2">카드 등록 완료!</h2>
+        <p className="text-[#737382]">
           자동결제가 설정되었습니다. 무료 체험 중이라면 남은 체험 기간이 끝난 뒤 결제가 시작됩니다.
         </p>
       </div>

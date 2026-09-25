@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -108,6 +108,8 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const drawerRef = useRef<HTMLElement>(null);
+  const menuRef = useRef<HTMLButtonElement>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   useEffect(() => {
     setMobileOpen(false);
@@ -116,18 +118,28 @@ export function Sidebar() {
     if (!mobileOpen) return;
     const prior = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    drawerRef.current?.querySelector<HTMLElement>("a,button")?.focus();
     const close = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMobileOpen(false);
+      if (event.key === "Tab") {
+        const items = drawerRef.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled])');
+        if (!items?.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     };
     document.addEventListener("keydown", close);
     return () => {
       document.body.style.overflow = prior;
       document.removeEventListener("keydown", close);
+      menuRef.current?.focus();
     };
   }, [mobileOpen]);
   const plan = planLabels[user?.hospital?.planType || "FREE"] || "Free";
   const content = (
-    <div className="flex h-full flex-col text-[#c0cabc]">
+    <div className="flex h-full flex-col text-[#b9b8c9]">
       <div className="flex h-[88px] shrink-0 items-center justify-between px-6">
         <Link
           href="/dashboard"
@@ -149,16 +161,16 @@ export function Sidebar() {
       </div>
       <Link
         href="/dashboard/settings"
-        className="mx-4 mb-7 flex items-center gap-3 rounded-lg border border-white/10 bg-white/[.035] px-3 py-3.5 hover:bg-white/[.07]"
+        className="signal-interactive mx-4 mb-7 flex items-center gap-3 rounded-xl border border-[#5b4dff]/30 bg-[#5b4dff]/10 px-3 py-3.5 hover:border-[#5b4dff]/60 hover:bg-[#5b4dff]/20"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#334536] text-[#d8f36a]">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#353143] text-[#ff6b3d]">
           <Building2 className="h-4 w-4" />
         </span>
         <span className="min-w-0 flex-1">
-          <strong className="block truncate text-xs font-semibold text-[#eef2e9]">
+          <strong className="block truncate text-xs font-semibold text-[#ededf6]">
             {user?.hospital?.name || "병원 프로필"}
           </strong>
-          <span className="mt-1 block text-[10px] text-[#8f9e8e]">
+          <span className="mt-1 block text-[10px] text-[#9997ad]">
             {plan} PLAN / WORKSPACE
           </span>
         </span>
@@ -179,7 +191,7 @@ export function Sidebar() {
               className={idx ? "mt-6 border-t border-white/10 pt-4" : ""}
             >
               {idx === 0 ? (
-                <h2 className="mb-3 px-3 text-[9px] font-semibold uppercase tracking-[.2em] text-[#738774]">
+                <h2 className="mb-3 px-3 text-[9px] font-semibold uppercase tracking-[.2em] text-[#777489]">
                   WORKSPACE
                 </h2>
               ) : (
@@ -189,7 +201,7 @@ export function Sidebar() {
                     setOpenGroups((prev) => ({ ...prev, [group.label]: !open }))
                   }
                   aria-expanded={open}
-                  className="mb-2 flex w-full items-center justify-between px-3 py-1 text-[11px] font-medium text-[#8e9f8c] hover:text-white"
+                  className="mb-2 flex w-full items-center justify-between px-3 py-1 text-[11px] font-medium text-[#9997ad] hover:text-white"
                 >
                   {group.label}
                   <ChevronDown
@@ -201,7 +213,7 @@ export function Sidebar() {
                 </button>
               )}
               {open && (
-                <div className="space-y-1">
+                <div className="signal-enter space-y-1">
                   {group.items.map((item) => {
                     const active = pathname === item.href;
                     return (
@@ -210,10 +222,10 @@ export function Sidebar() {
                         href={item.href}
                         aria-current={active ? "page" : undefined}
                         className={cn(
-                          "group flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px] transition-colors",
+                          "signal-nav-link group flex min-h-11 items-center gap-3 rounded-lg px-3 text-[13px]",
                           active
-                            ? "bg-[#d8f36a] font-semibold text-[#15231b]"
-                            : "text-[#b3c1b0] hover:bg-white/[.06] hover:text-white",
+                            ? "bg-[#ff6b3d] font-semibold text-[#111118]"
+                            : "text-[#b9b8c9] hover:bg-white/[.06] hover:text-white",
                         )}
                       >
                         <item.icon
@@ -234,20 +246,20 @@ export function Sidebar() {
       <div className="shrink-0 px-4 pb-5 pt-3">
         <Link
           href="/dashboard/billing"
-          className="mb-5 flex items-center justify-between border-b border-white/10 px-2 pb-4 text-[11px] text-[#aabd9f] hover:text-[#d8f36a]"
+          className="mb-5 flex items-center justify-between border-b border-white/10 px-2 pb-4 text-[11px] text-[#b9b8c9] hover:text-[#ff6b3d]"
         >
           <span>측정 범위 확장하기</span>
           <ArrowUpRight className="h-4 w-4" />
         </Link>
         <div className="flex items-center gap-2.5 px-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 text-xs text-[#d8f36a]">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/20 text-xs text-[#ff6b3d]">
             {user?.name?.charAt(0) || "U"}
           </span>
           <span className="min-w-0 flex-1">
-            <strong className="block truncate text-xs font-medium text-[#e0e7da]">
+            <strong className="block truncate text-xs font-medium text-[#ededf6]">
               {user?.name}
             </strong>
-            <span className="block truncate text-[10px] text-[#83937f]">
+            <span className="block truncate text-[10px] text-[#9997ad]">
               {user?.email}
             </span>
           </span>
@@ -265,7 +277,7 @@ export function Sidebar() {
   );
   return (
     <>
-      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-[#13251d] px-4 text-white lg:hidden">
+      <div className="fixed inset-x-0 top-0 z-40 flex h-14 items-center justify-between bg-[#101016] px-4 text-white lg:hidden">
         <Link
           href="/dashboard"
           className="flex items-center gap-2 text-[17px] font-semibold tracking-[-.06em]"
@@ -277,6 +289,7 @@ export function Sidebar() {
           onClick={() => setMobileOpen(true)}
           aria-label="메뉴 열기"
           aria-expanded={mobileOpen}
+          ref={menuRef}
           className="p-2"
         >
           <Menu className="h-5 w-5" />
@@ -287,17 +300,17 @@ export function Sidebar() {
           type="button"
           aria-label="메뉴 닫기"
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-50 bg-[#13251d]/50 backdrop-blur-sm lg:hidden"
+          className="signal-route-enter fixed inset-0 z-50 bg-[#101016]/65 backdrop-blur-sm lg:hidden"
         />
       )}
       <>
         {mobileOpen && (
-          <aside className="fixed inset-y-0 left-0 z-50 w-[272px] bg-[#13251d] lg:hidden">
+          <aside ref={drawerRef} role="dialog" aria-modal="true" aria-label="시그널 탐색" className="signal-drawer-enter fixed inset-y-0 left-0 z-50 w-[272px] border-r border-white/10 bg-[#101016] lg:hidden">
             {content}
           </aside>
         )}
       </>
-      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 bg-[#13251d] lg:block">
+      <aside className="sticky top-0 hidden h-screen w-[232px] shrink-0 border-r border-white/10 bg-[#101016] lg:block">
         {content}
       </aside>
     </>

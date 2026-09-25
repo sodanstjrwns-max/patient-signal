@@ -36,12 +36,12 @@ interface PlatformStatsProps {
 }
 
 const platformColors: Record<string, string> = {
-  CHATGPT: '#10a37f',
+  CHATGPT: '#545067',
   PERPLEXITY: '#1E88E5',
   CLAUDE: '#D97706',
   GEMINI: '#8B5CF6',
   GROK: '#000000',
-  CLOVA_X: '#03c75a',
+  CLOVA_X: '#545067',
 };
 
 const platformNames: Record<string, string> = {
@@ -145,7 +145,7 @@ export function PlatformStats({ data, planType: propPlanType }: PlatformStatsPro
 
 function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }: { data: PlatformDetail[]; allowedPlatforms: string[]; teaserPlatforms?: string[] }) {
   const TrendIcon = ({ direction }: { direction: 'UP' | 'DOWN' | 'STABLE' }) => {
-    if (direction === 'UP') return <TrendingUp className="w-4 h-4 text-emerald-500" />;
+    if (direction === 'UP') return <TrendingUp className="w-4 h-4 text-brand-500" />;
     if (direction === 'DOWN') return <TrendingDown className="w-4 h-4 text-red-500" />;
     return <Minus className="w-4 h-4 text-slate-400" />;
   };
@@ -203,7 +203,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                       {hasData && <TrendIcon direction={platform.trend.direction} />}
                       {hasData && platform.trend.change !== 0 && (
                         <span className={`text-xs font-medium ${
-                          platform.trend.direction === 'UP' ? 'text-emerald-600' :
+                          platform.trend.direction === 'UP' ? 'text-brand-600' :
                           platform.trend.direction === 'DOWN' ? 'text-red-600' : 'text-slate-500'
                         }`}>
                           {platform.trend.change > 0 ? '+' : ''}{platform.trend.change}%
@@ -257,7 +257,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                       
                       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
                         <div className="text-slate-500 mb-1">긍정률</div>
-                        <div className="font-semibold text-base text-emerald-600">
+                        <div className="font-semibold text-base text-brand-600">
                           {platform.sentiment.positiveRate}%
                         </div>
                         <div className="text-slate-400">
@@ -268,7 +268,7 @@ function DetailedPlatformStats({ data, allowedPlatforms, teaserPlatforms = [] }:
                       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-2.5 text-center border border-slate-100/80">
                         <div className="text-slate-500 mb-1">감성</div>
                         <div className="flex items-center justify-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                          <CheckCircle2 className="w-3 h-3 text-brand-500" />
                           <span>{platform.sentiment.positive}</span>
                           <Minus className="w-3 h-3 text-slate-400 ml-1" />
                           <span>{platform.sentiment.neutral}</span>

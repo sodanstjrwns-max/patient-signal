@@ -348,7 +348,7 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-3">
                           {u.isPfMember ? (
-                            <span className="text-green-400 text-xs font-medium">✓ 수강생</span>
+                            <span className="text-brand-400 text-xs font-medium">✓ 수강생</span>
                           ) : (
                             <span className="text-slate-600 text-xs">-</span>
                           )}
@@ -367,7 +367,7 @@ export default function AdminPage() {
         {!loading && activeTab === 'hospitals' && hospitals && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold">전체 병원 <span className="text-green-400">{hospitals.total}개</span></h2>
+              <h2 className="text-lg font-bold">전체 병원 <span className="text-brand-400">{hospitals.total}개</span></h2>
             </div>
             <div className="bg-slate-900 rounded-xl border border-gray-800 overflow-hidden">
               <div className="overflow-x-auto">
@@ -488,13 +488,13 @@ export default function AdminPage() {
 function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: any; color: string }) {
   const colors: Record<string, string> = {
     blue: 'from-brand-500/20 to-brand-600/10 border-brand-500/30',
-    green: 'from-green-500/20 to-green-600/10 border-green-500/30',
+    green: 'from-brand-500/20 to-brand-600/10 border-brand-500/30',
     purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30',
     orange: 'from-orange-500/20 to-orange-600/10 border-orange-500/30',
   };
   const iconColors: Record<string, string> = {
     blue: 'text-blue-400',
-    green: 'text-green-400',
+    green: 'text-brand-400',
     purple: 'text-purple-400',
     orange: 'text-orange-400',
   };

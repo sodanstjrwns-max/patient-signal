@@ -16,7 +16,7 @@ export default function CategoryAnalysisRedirectPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center">
-      <div className="flex items-center gap-2 text-[#778378] text-sm">
+      <div className="flex items-center gap-2 text-[#737382] text-sm">
         <Loader2 className="h-4 w-4 animate-spin" />
         기회 분석 &gt; 카테고리 성과로 이동 중...
       </div>
