@@ -358,6 +358,11 @@ export class AICrawlerService implements OnModuleInit {
     });
     const registeredNames = registeredCompetitors.map(c => c.competitorName);
 
+    // 【2026-09-26 확장 대비】방금 저장한 응답 행의 id — 아래 교차검증 갱신을 id 로 바로 하기 위함.
+    //  종전엔 (병원·질문·플랫폼) 최신 행을 findFirst(전 컬럼, 응답 원문 포함)로 다시 찾았는데,
+    //  이 조회가 DB 누적 실행시간 1위(28만 회 × 평균 42ms)였고 질문별 이력이 쌓일수록 느려진다.
+    const savedIds = new WeakMap<AIQueryResult, string>();
+
     // 【최적화 R2】플랫폼별 질의를 병렬로 실행 (API 레이트 리밋은 withRetry에서 처리)
     const platformPromises = availablePlatforms.map(async (platform) => {
       const platformResults: AIQueryResult[] = [];
@@ -427,7 +432,9 @@ export class AICrawlerService implements OnModuleInit {
 
           // DB에 저장 (ABHS + 신뢰도 데이터 통합)
           // 【P0-2 FIX】confidenceScore를 create에 직접 포함 (불필요한 findFirst+update 제거)
-          await this.prisma.aIResponse.create({
+          // 【2026-09-26】반환은 id 만 — 원문 포함 전 컬럼을 되돌려 받지 않는다
+          const saved = await this.prisma.aIResponse.create({
+            select: { id: true },
             data: {
               promptId,
               // 질문 원문을 응답에 영구 스냅샷으로 보존 — prompt가 삭제돼도 어떤 질문이었는지 유지
@@ -474,6 +481,7 @@ export class AICrawlerService implements OnModuleInit {
               estimatedCostUsd: result.estimatedCostUsd ?? null,
             },
           });
+          savedIds.set(result, saved.id);
 
           // API 레이트 리밋 방지 (측정 사이 1.5초 딜레이)
           if (repeatIdx < this.REPEAT_COUNT - 1) {
@@ -502,18 +510,13 @@ export class AICrawlerService implements OnModuleInit {
       for (const result of allResults) {
         if (result.confidenceScore !== undefined) {
           try {
-            // 가장 최근 생성된 레코드를 찾아 업데이트
-            const latestResponse = await this.prisma.aIResponse.findFirst({
-              where: {
-                hospitalId,
-                promptId,
-                aiPlatform: result.platform,
-              },
-              orderBy: { createdAt: 'desc' },
-            });
-            if (latestResponse) {
+            // 【2026-09-26】이번 배치에서 저장한 바로 그 행을 id 로 갱신 (종전: 최신 행 findFirst 전 컬럼 재조회).
+            //  저장에 실패한 결과는 갱신하지 않는다 — 종전엔 이 경우 전날 행을 잘못 덮어쓸 수 있었다.
+            const savedId = savedIds.get(result);
+            if (savedId) {
               await this.prisma.aIResponse.update({
-                where: { id: latestResponse.id },
+                where: { id: savedId },
+                select: { id: true },
                 data: {
                   confidenceScore: result.confidenceScore,
                   confidenceFactors: result.confidenceFactors as any,
@@ -719,6 +722,17 @@ export class AICrawlerService implements OnModuleInit {
     if (this.sharedCrawlCache.size > 3000) {
       for (const [k, v] of this.sharedCrawlCache) {
         if (v.expiresAt <= now) this.sharedCrawlCache.delete(k);
+      }
+      // 【2026-09-26 확장 대비】TTL 20시간 안의 엔트리는 위에서 안 지워져 병원 수에 비례해 쌓인다
+      //  (1,000곳이면 (플랫폼×질문) 5만+개 × 응답 원문 → 수백 MB). 상한을 넘으면 가장 먼저 넣은 것부터 버린다.
+      //  Map 은 삽입 순서를 지키므로 앞에서부터 지우면 된다. 기본 40,000(약 500곳 규모까지는 영향 없음).
+      const maxEntries = Math.max(3000, parseInt(process.env.SHARED_CRAWL_MAX_ENTRIES || '40000', 10) || 40000);
+      if (this.sharedCrawlCache.size > maxEntries) {
+        let over = this.sharedCrawlCache.size - maxEntries;
+        for (const k of this.sharedCrawlCache.keys()) {
+          if (over-- <= 0) break;
+          this.sharedCrawlCache.delete(k);
+        }
       }
     }
 

@@ -14,6 +14,24 @@ export class AdminService {
     private psOpenApi: PsOpenApiService,
   ) {}
 
+  /**
+   * 【2026-09-26 확장 대비】병원 무관 전국 집계의 짧은 메모(프로세스 내, 진행 중 호출 공유).
+   *  원장용 병원 보드(hospital-board)는 열 때마다 전 병원 ai_responses 를 최대 180일 groupBy 했다
+   *  (pg_stat_statements 실측 평균 11~25초·최대 2분). 결과는 병원과 무관하므로 15분간 같은 결과를 나눠 쓴다.
+   */
+  private readonly globalMemo = new Map<string, { at: number; promise: Promise<any> }>();
+  private memoGlobal<T>(key: string, ttlMs: number, fn: () => Promise<T>): Promise<T> {
+    const now = Date.now();
+    const hit = this.globalMemo.get(key);
+    if (hit && now - hit.at < ttlMs) return hit.promise as Promise<T>;
+    const promise = fn().catch((e) => {
+      this.globalMemo.delete(key); // 실패는 기억하지 않는다
+      throw e;
+    });
+    this.globalMemo.set(key, { at: now, promise });
+    return promise;
+  }
+
   // ==================== 실시간 질문 인사이트 분석 ====================
 
   /**
@@ -1270,7 +1288,7 @@ export class AdminService {
       total: number;
       ours: number;
       avg_pos: number | null;
-    }> = await this.prisma.$queryRaw`
+    }> = await this.memoGlobal(`sovDailyRows:${days}`, 15 * 60 * 1000, () => this.prisma.$queryRaw`
       SELECT DATE(response_date) AS day,
              hospital_id,
              COUNT(*)::int AS total,
@@ -1279,7 +1297,7 @@ export class AdminService {
       FROM ai_responses
       WHERE response_date >= ${since}
       GROUP BY DATE(response_date), hospital_id
-    `;
+    `); // 【2026-09-26】일별 순위 계산엔 전 병원 행이 필요 → 병원 무관 원자료를 15분 메모로 공유
 
     // 병원 이름 매핑
     const ids = [...new Set(rows.map(r => r.hospital_id))];
@@ -1677,7 +1695,8 @@ export class AdminService {
    */
   async getHospitalBoard(hospitalId: string, days = 30) {
     const [rankingRes, dailyRes] = await Promise.all([
-      this.getSovRanking(days),
+      // 【2026-09-26】전국 순위는 병원 무관 → 15분 메모 공유 (병원 수만큼 보드가 열려도 전국 집계는 한 번)
+      this.memoGlobal(`sovRanking:${days}`, 15 * 60 * 1000, () => this.getSovRanking(days)),
       this.getSovDaily(Math.min(days, 90), hospitalId),
     ]);
 

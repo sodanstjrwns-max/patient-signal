@@ -63,6 +63,13 @@ async function main() {
     } catch (e7) {
       console.warn('[ensure-sso-columns] ai_response_archive 생성 실패(아카이브 잡이 실패할 뿐 서비스 무관):', e7.message)
     }
+    // 【2026-09-26】확장 대비: daily_scores 날짜 단독 인덱스(크롤 정렬·전국 순위). 1.2만 행이라 일반 생성 1초 미만(CONCURRENTLY 는 풀러에서 실패).
+    try {
+      await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS "daily_scores_score_date_idx" ON "daily_scores"("score_date")')
+      console.log('[ensure-sso-columns] daily_scores_score_date_idx ready')
+    } catch (e8) {
+      console.warn('[ensure-sso-columns] daily_scores 날짜 인덱스 생성 실패(느려질 뿐 서비스 무관):', e8.message)
+    }
     // 【2026-09-15】해외판 AI 가시성 체크(intl_checks) — prisma db push 가 드리프트 경고로 거부되는 환경 대비, 마이그레이션 SQL 을 멱등 적용
     try {
       await prisma.$executeRawUnsafe('CREATE TABLE IF NOT EXISTS "intl_checks" ("id" TEXT NOT NULL, "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "email" TEXT NOT NULL, "clinic_name" TEXT NOT NULL, "city" TEXT NOT NULL, "country" TEXT NOT NULL, "language" TEXT NOT NULL DEFAULT \'en\', "website" TEXT, "specialty" TEXT NOT NULL DEFAULT \'dental\', "ip_hash" TEXT, "status" TEXT NOT NULL DEFAULT \'PENDING\', "result_json" JSONB, "emailed_at" TIMESTAMP(3), "waitlist" BOOLEAN NOT NULL DEFAULT false, "error_message" TEXT, CONSTRAINT "intl_checks_pkey" PRIMARY KEY ("id"))')

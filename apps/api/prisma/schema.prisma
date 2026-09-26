@@ -428,6 +428,7 @@ model DailyScore {
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@unique([hospitalId, scoreDate])
+  @@index([scoreDate]) // 【2026-09-26】크롤 정렬 '오늘 점수 난 병원'·전국 순위 — 날짜 단독 조회용 (SQL: migrations/20260926230000_scale_indexes)
   @@map("daily_scores")
 }
 

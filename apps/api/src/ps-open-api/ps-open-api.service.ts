@@ -183,13 +183,18 @@ export class PsOpenApiService {
     const [activeHospitals, scores, responses] = await Promise.all([
       this.prisma.hospital.count(),
       this.prisma.dailyScore.findMany({ where: { scoreDate: { gte: since } }, select: { scoreDate: true, hospitalId: true } }),
-      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since } }, select: { responseDate: true, aiPlatform: true } }),
+      // 【2026-09-26 확장 대비】원본 행을 전부 Node 로 가져와 세던 것을 DB 에서 (날짜×플랫폼) 건수로 묶어 받는다(결과 동일).
+      //  1,000곳이면 하루 5만~10만 행 × N일을 메모리에 올리던 경로. response_date 는 DATE 컬럼.
+      this.prisma.$queryRaw<Array<{ day: string; platform: string; cnt: number }>>`
+        SELECT to_char(response_date, 'YYYY-MM-DD') AS day, ai_platform::text AS platform, COUNT(*)::int AS cnt
+        FROM ai_responses WHERE response_date >= ${since}
+        GROUP BY 1, 2`,
     ]);
     type Day = { hospitals: Set<string>; scores: number; responses: number; platforms: Record<string, number> };
     const byDay: Record<string, Day> = {};
     const mk = (k: string) => (byDay[k] = byDay[k] || { hospitals: new Set(), scores: 0, responses: 0, platforms: {} });
     for (const s of scores) { const d = mk(dateKey(s.scoreDate)); d.scores++; d.hospitals.add(s.hospitalId); }
-    for (const r of responses) { const d = mk(dateKey(r.responseDate)); d.responses++; d.platforms[r.aiPlatform] = (d.platforms[r.aiPlatform] || 0) + 1; }
+    for (const r of responses) { const d = mk(r.day); d.responses += r.cnt; d.platforms[r.platform] = (d.platforms[r.platform] || 0) + r.cnt; }
     const daysOut = Object.keys(byDay).sort().map((k) => ({
       date: k,
       hospitals_scored: byDay[k].hospitals.size,
@@ -218,15 +223,18 @@ export class PsOpenApiService {
     const [hospitals, scores, responses] = await Promise.all([
       this.prisma.hospital.findMany({ select: { id: true, name: true, planType: true, createdAt: true }, orderBy: { name: 'asc' } }),
       this.prisma.dailyScore.findMany({ where: { scoreDate: { gte: since, lte: untilEnd } }, select: { hospitalId: true, scoreDate: true } }),
-      this.prisma.aIResponse.findMany({ where: { responseDate: { gte: since, lt: untilEnd } }, select: { hospitalId: true, responseDate: true, aiPlatform: true } }),
+      // 【2026-09-26 확장 대비】(병원×날짜×플랫폼) 존재 여부만 필요 → DISTINCT 로 받아 원본 행 적재를 피한다(결과 동일).
+      this.prisma.$queryRaw<Array<{ hospital_id: string; day: string; platform: string }>>`
+        SELECT DISTINCT hospital_id, to_char(response_date, 'YYYY-MM-DD') AS day, ai_platform::text AS platform
+        FROM ai_responses WHERE response_date >= ${since} AND response_date < ${untilEnd}`,
     ]);
     const have: Record<string, Set<string>> = {};
     for (const s of scores) { (have[s.hospitalId] = have[s.hospitalId] || new Set()).add(dateKey(s.scoreDate)); }
     const plat: Record<string, Record<string, Set<string>>> = {};
     for (const r of responses) {
-      const k = dateKey(r.responseDate);
-      const h = (plat[r.hospitalId] = plat[r.hospitalId] || {});
-      (h[k] = h[k] || new Set()).add(r.aiPlatform);
+      const k = r.day;
+      const h = (plat[r.hospital_id] = plat[r.hospital_id] || {});
+      (h[k] = h[k] || new Set()).add(r.platform);
     }
     const rows = hospitals.map((h) => {
       const got = have[h.id] || new Set<string>();

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, Logger, Optional } from '@nestjs/common';
 import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { withResponseCounts } from '../common/stats/prompt-response-count';
 import { hospitalResponseStats } from '../common/stats/response-daily';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
 import { UpdateHospitalDto } from './dto/update-hospital.dto';
@@ -1250,8 +1251,8 @@ export class HospitalsService {
     //    프롬프트는 비활성화만, 응답 없는 프롬프트만 삭제한다. (데이터 보존)
     const targetPrompts = await this.prisma.prompt.findMany({
       where: { hospitalId, promptType: 'AUTO_GENERATED' },
-      select: { id: true, _count: { select: { aiResponses: true } } },
-    });
+      select: { id: true },
+    }).then((rows) => withResponseCounts(this.prisma, rows)); // 【2026-09-26】이 질문들만 센다(전 병원 집계 방지)
     const emptyIds = targetPrompts.filter((p) => p._count.aiResponses === 0).map((p) => p.id);
     const usedIds = targetPrompts.filter((p) => p._count.aiResponses > 0).map((p) => p.id);
 

@@ -1,6 +1,7 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { withResponseCounts } from '../common/stats/prompt-response-count';
 import { SpecialtyType, QueryIntent, AIPlatform } from '@prisma/client';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
@@ -386,8 +387,8 @@ export class QueryTemplatesService {
         hospitalId,
         promptType: { in: ['PRESET', 'AUTO_GENERATED'] },
       },
-      select: { id: true, _count: { select: { aiResponses: true } } },
-    });
+      select: { id: true },
+    }).then((rows) => withResponseCounts(this.prisma, rows)); // 【2026-09-26】이 질문들만 센다(전 병원 집계 방지)
 
     const emptyPromptIds = targetPrompts
       .filter((p) => p._count.aiResponses === 0)

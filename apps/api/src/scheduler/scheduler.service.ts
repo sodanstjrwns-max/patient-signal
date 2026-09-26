@@ -225,8 +225,14 @@ export class SchedulerService implements OnModuleInit {
     // 변경: least-recently-crawled (가장 오래 안 돌아간 병원) 우선
     //       → 매 사이클마다 굶주린 병원이 자동으로 앞으로 와서 공정하게 순환
     // ============================================================
+    // 【2026-09-26 확장 대비】"마지막 크롤" = 실제로 끝난(COMPLETED) 크롤만, 최근 60일 안에서.
+    //  종전엔 [SKIP] 주기/한도 잡(FAILED)도 '크롤'로 쳐서, 주 2회 병원은 매 세션 생기는 스킵 잡 때문에
+    //  늘 '방금 돈 병원'처럼 보여 예산이 모자랄 때 뒤로 밀렸다. 또 전 이력 groupBy 는 병원·일수에 비례해 커진다.
+    //  60일 넘게 성공 크롤이 없는 병원은 '한 번도 안 돈 병원'(0)으로 취급 = 굶주림 최우선 (의도와 같음).
+    const lastCrawlSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
     const lastCrawlRows = await this.prisma.crawlJob.groupBy({
       by: ['hospitalId'],
+      where: { status: 'COMPLETED', startedAt: { gte: lastCrawlSince } },
       _max: { startedAt: true },
     });
     const lastCrawlMap = new Map<string, number>();
@@ -371,20 +377,29 @@ export class SchedulerService implements OnModuleInit {
       } as any;
     }
 
-    // 병원을 HOSPITAL_CONCURRENCY개씩 묶어 배치 병렬 처리
-    for (let i = 0; i < crawlTargets.length; i += HOSPITAL_CONCURRENCY) {
-      // 예산 초과 체크 — 남은 병원은 다음 세션으로 (좀비 생성 방지)
-      if (Date.now() - runStartedAt > RUN_BUDGET_MS) {
-        skippedByBudget += crawlTargets.length - i;
-        break;
+    // 【2026-09-26 확장 대비】배치(4곳 묶음) → 작업자 풀(빈 자리가 나면 바로 다음 병원)
+    //  종전: 4곳을 묶어 가장 느린 병원이 끝날 때까지 나머지 3자리가 놀았다.
+    //        질문 306개 병원(ENTERPRISE)이 한 묶음에 들면 그 묶음이 30분 넘게 막혀 세션 처리량이 크게 줄었다.
+    //  변경: 동시 처리 수(HOSPITAL_CONCURRENCY)·처리 순서(위 공정 정렬)·예산(새 병원 시작 전 확인)·
+    //        병원 사이 2초 완충은 그대로 두고, 자리만 쉬지 않게 한다. AI 호출 동시성 상한은 종전과 같다.
+    let nextIdx = 0;
+    const worker = async () => {
+      while (true) {
+        // 예산 초과 체크 — 남은 병원은 다음 세션으로 (좀비 생성 방지)
+        if (Date.now() - runStartedAt > RUN_BUDGET_MS) return;
+        const i = nextIdx++;
+        if (i >= crawlTargets.length) return;
+        await processOneHospital(crawlTargets[i]);
+        // 병원 사이 짧은 rate-limit 완충 (AI API 보호)
+        if (nextIdx < crawlTargets.length) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
       }
-      const batch = crawlTargets.slice(i, i + HOSPITAL_CONCURRENCY);
-      await Promise.allSettled(batch.map((h) => processOneHospital(h)));
-      // 배치 간 짧은 rate-limit 완충 (AI API 보호)
-      if (i + HOSPITAL_CONCURRENCY < crawlTargets.length) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-    }
+    };
+    await Promise.allSettled(
+      Array.from({ length: Math.min(HOSPITAL_CONCURRENCY, crawlTargets.length) }, () => worker()),
+    );
+    skippedByBudget = Math.max(0, crawlTargets.length - nextIdx);
 
     this.logger.log(
       `=== 크롤링 완료 (${session}): 성공 ${successCount}, 실패 ${failCount}, ` +
@@ -1727,8 +1742,13 @@ export class SchedulerService implements OnModuleInit {
 
     for (const h of hospitals) {
       const aliases = ((h as any).nameAliases as string[]) || [];
+      // 【2026-09-26 확장 대비】최근 N일(기본 45, SOV_SELF_HEAL_DAYS)·원문이 남은 행만 본다.
+      //  종전엔 병원마다 '미언급 응답 전 기간'을 원문째 읽어(기간 무제한) 병원 수×일수에 비례해 느려졌다.
+      //  매주 돌기 때문에 그 이전 구간은 지난 실행들이 이미 검사했고, 120일 지난 행은 원문이 아카이브돼 비어 있다.
+      const healDays = Math.max(7, parseInt(process.env.SOV_SELF_HEAL_DAYS || '45', 10) || 45);
+      const healSince = new Date(Date.now() - healDays * 24 * 60 * 60 * 1000);
       const responses = await this.prisma.aIResponse.findMany({
-        where: { hospitalId: h.id, isMentioned: false },
+        where: { hospitalId: h.id, isMentioned: false, responseDate: { gte: healSince }, responseText: { not: '' } },
         select: { id: true, responseText: true, responseDate: true },
       });
       if (responses.length === 0) continue;

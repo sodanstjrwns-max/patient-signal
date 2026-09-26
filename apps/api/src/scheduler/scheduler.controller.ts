@@ -294,7 +294,9 @@ export class SchedulerController {
     const expectedSecret = process.env.CRON_SECRET;
     if (!expectedSecret || cronSecret !== expectedSecret) throw new UnauthorizedException('Invalid cron secret');
     const d = parseInt(days || process.env.RESPONSE_ARCHIVE_DAYS || '120', 10) || 120;
-    const n = parseInt(limit || '20000', 10) || 20000;
+    // 【2026-09-26 확장 대비】주당 처리 상한을 env(RESPONSE_ARCHIVE_LIMIT)로 조정 가능하게. 기본 2만은 그대로.
+    //  하루 적재량 × 7 보다 작으면 밀린 원문이 계속 쌓인다(현재 규모에서도 주 4만 행 안팎 적재 → 상향 권장).
+    const n = parseInt(limit || process.env.RESPONSE_ARCHIVE_LIMIT || '20000', 10) || 20000;
     const r = await archiveOldResponseTexts(this.prisma, d, n);
     return { success: true, ...r };
   }

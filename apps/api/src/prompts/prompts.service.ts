@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { withResponseCounts } from '../common/stats/prompt-response-count';
 import { CreatePromptDto, BulkCreatePromptsDto, ReplacePromptDto, UpdatePromptTextDto } from './dto/create-prompt.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
 import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
@@ -145,18 +146,16 @@ export class PromptsService {
   }
 
   async findAll(hospitalId: string, onlyActive: boolean = true) {
-    return this.prisma.prompt.findMany({
+    // 【2026-09-26 확장 대비】relation _count 는 전 병원 ai_responses 를 집계하므로(평균 7초) 이 병원 질문 id 로만 센다.
+    //  응답 모양(_count.aiResponses)은 종전과 같다.
+    const prompts = await this.prisma.prompt.findMany({
       where: {
         hospitalId,
         ...(onlyActive && { isActive: true }),
       },
       orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { aiResponses: true },
-        },
-      },
     });
+    return withResponseCounts(this.prisma, prompts);
   }
 
   async findOne(id: string, hospitalId?: string) {
