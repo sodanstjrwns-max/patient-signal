@@ -26,6 +26,7 @@ import {
 import { toast } from "@/hooks/useToast";
 import { ProcedureSelector, uniqueProcedures } from "@/components/settings/ProcedureSelector";
 import { OfficialChannels } from "@/components/settings/OfficialChannels";
+import { HubEntitlementLine } from "@/components/plan/HubEntitlementLine";
 
 const specialtyNames: Record<string, string> = {
   DENTAL: "치과",
@@ -1118,6 +1119,7 @@ export default function SettingsPage() {
                       ?.name || hospital?.planType}{" "}
                     플랜 · 사용 범위와 플랜 비교
                   </p>
+                  <HubEntitlementLine entitlement={(hospital as any)?.hubEntitlement} />
                 </div>
                 <Plus className="h-4 w-4 shrink-0 group-open:rotate-45" />
               </summary>

@@ -1,4 +1,5 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { AICrawlerService } from '../ai-crawler/ai-crawler.service';
@@ -28,7 +29,32 @@ export class SchedulerService implements OnModuleInit {
     private weightCalibrationService: WeightCalibrationService,
     private crawlQueue: CrawlQueueService,
     private cacheService: CacheService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {}
+
+  /**
+   * 【허브 올패스】크론 대상 보강 — 로컬 상태로는 빠지지만(체험 만료 등) 허브 권한으로 열린 병원.
+   * 허브 실패·키 없음·예외 = [] (기존 대상 그대로). 캐시 30분.
+   */
+  private async hubExtraHospitalIds(excludeIds: string[], minPlan: 'FREE' | 'STANDARD' = 'FREE'): Promise<string[]> {
+    if (!this.hubEntitlement) return [];
+    try {
+      return await this.hubEntitlement.hubActivatedHospitalIds(excludeIds, minPlan);
+    } catch (e: any) {
+      this.logger.warn(`[허브 올패스] 대상 보강 실패(무시): ${e?.message}`);
+      return [];
+    }
+  }
+
+  /** 【허브 올패스】판정용 유효 플랜 사본(DB 불변). 실패 = 원본 */
+  private async withHubPlan<T extends Record<string, any>>(hospital: T): Promise<T> {
+    if (!this.hubEntitlement || !hospital) return hospital;
+    try {
+      return (await this.hubEntitlement.apply(hospital)) as T;
+    } catch {
+      return hospital;
+    }
+  }
 
   /**
    * 【P1-4】Bull 큐 워커 등록
@@ -166,6 +192,18 @@ export class SchedulerService implements OnModuleInit {
         },
       },
     });
+    // 【허브 올패스】체험 만료 등으로 빠졌지만 허브 권한이 있는 병원을 대상에 더한다(실패 시 기존 목록 그대로)
+    const hubExtraIds = await this.hubExtraHospitalIds(hospitals.map((h) => h.id));
+    if (hubExtraIds.length > 0) {
+      const extra = await this.prisma.hospital.findMany({
+        where: { id: { in: hubExtraIds } },
+        include: {
+          prompts: { where: { isActive: true } },
+          competitors: { where: { isActive: true } },
+        },
+      });
+      hospitals.push(...extra);
+    }
 
     // ============================================================
     // 【A안 #2】오늘 아직 점수가 안 나온 병원을 먼저 처리 (공정성)
@@ -388,7 +426,7 @@ export class SchedulerService implements OnModuleInit {
     const { session, includeCompetitors, includeContentGap, bypassGates } = options;
 
     // 큐 모드에서는 hospitalId만 넘어오므로 관계 포함 재조회
-    const hospital =
+    const hospitalRaw =
       typeof hospitalOrId === 'string'
         ? await this.prisma.hospital.findUnique({
             where: { id: hospitalOrId },
@@ -399,9 +437,11 @@ export class SchedulerService implements OnModuleInit {
           })
         : hospitalOrId;
 
-    if (!hospital) {
+    if (!hospitalRaw) {
       throw new Error(`병원을 찾을 수 없습니다: ${hospitalOrId}`);
     }
+    // 【허브 올패스】플랫폼·주기·월간 한도·프롬프트 상한을 유효 플랜으로 판정(올려주기만, DB 불변)
+    const hospital = await this.withHubPlan(hospitalRaw);
     if (!hospital.prompts || hospital.prompts.length === 0) {
       this.logger.log(`[${hospital.name}] 활성 프롬프트 없음 - 스킵`);
       return { hospitalId: hospital.id, hospitalName: hospital.name, skipped: true, reason: 'no-prompts' };
@@ -797,6 +837,16 @@ export class SchedulerService implements OnModuleInit {
           },
       include: { prompts: { where: { isActive: true } } },
     });
+    // 【허브 올패스】허브 M·L 권한으로 STANDARD 이상이 된 병원 추가(실패 시 기존 목록 그대로)
+    if (!options?.hospitalId) {
+      const hubIds = await this.hubExtraHospitalIds(hospitals.map((h) => h.id), 'STANDARD');
+      if (hubIds.length > 0) {
+        hospitals.push(...(await this.prisma.hospital.findMany({
+          where: { id: { in: hubIds } },
+          include: { prompts: { where: { isActive: true } } },
+        })));
+      }
+    }
 
     const maxPrompts = options?.maxPrompts
       ?? parseInt(process.env.NAVER_BRIEFING_MAX_PROMPTS || '200', 10);
@@ -1002,6 +1052,16 @@ export class SchedulerService implements OnModuleInit {
         prompts: { where: { isActive: true }, select: { id: true, promptText: true, promptType: true } },
       },
     });
+    // 【허브 올패스】허브 권한으로 열린 병원 추가(실패 시 기존 목록 그대로)
+    const hubPromptIds = await this.hubExtraHospitalIds(hospitals.map((h) => h.id));
+    if (hubPromptIds.length > 0) {
+      hospitals.push(...(await this.prisma.hospital.findMany({
+        where: { id: { in: hubPromptIds } },
+        include: {
+          prompts: { where: { isActive: true }, select: { id: true, promptText: true, promptType: true } },
+        },
+      })));
+    }
 
     const results: Array<{
       hospitalId: string;
@@ -1047,7 +1107,9 @@ export class SchedulerService implements OnModuleInit {
     replaced: number;
     matrixStats?: any;
   }> {
-    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
+    // 【허브 올패스】유효 플랜 기준 슬롯
+    const effPlan = (await this.withHubPlan(hospital)).planType;
+    const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[effPlan] || PlanGuard.PLAN_LIMITS.FREE;
     const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
 
     const existingTexts = new Set<string>(hospital.prompts.map((p: any) => p.promptText));
@@ -1422,8 +1484,11 @@ export class SchedulerService implements OnModuleInit {
       ].filter(v => v !== golden.promptText);
 
       if (variants.length > 0) {
+        // 【허브 올패스】유효 플랜(올려주기만)
         const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[
-          (await this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { planType: true } }))?.planType || 'FREE'
+          this.hubEntitlement
+            ? await this.hubEntitlement.effectivePlanType(hospitalId)
+            : (await this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { planType: true } }))?.planType || 'FREE'
         ] || PlanGuard.PLAN_LIMITS.FREE;
         const maxPrompts = planLimits.maxPrompts === -1 ? 100 : planLimits.maxPrompts;
         const currentCount = await this.prisma.prompt.count({ where: { hospitalId, isActive: true } });

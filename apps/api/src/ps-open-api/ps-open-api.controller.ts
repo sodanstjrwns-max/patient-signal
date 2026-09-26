@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Headers,
+  Optional,
   Post,
   Query,
   Req,
@@ -17,6 +18,7 @@ import { PsServiceKeyGuard } from './guards/ps-service-key.guard';
 import { PsOpenApiService } from './ps-open-api.service';
 import { HubProfileService } from '../hospitals/hub-profile.service';
 import { EmailService } from '../email/email.service';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 
 /**
  * 【PS-통합】Patient Series Open API v1
@@ -34,6 +36,7 @@ export class PsOpenApiController {
     private readonly psOpenApiService: PsOpenApiService,
     private readonly hubProfileService: HubProfileService,
     private readonly emailService: EmailService,
+    @Optional() private readonly hubEntitlement?: HubEntitlementService,
   ) {}
 
   /**
@@ -65,6 +68,7 @@ export class PsOpenApiController {
    * POST /api/v1/hub-events — 허브 → 시그널 push 캐시 무효화 웹훅
    * 허브가 병원 프로필 변경 시 호출. 해당 병원의 메모리 캐시를 지워
    * 다음 조회 때 신선한 프로필을 pull 하게 한다.
+   * 【2026-09-26】type 'subscription_updated'(올패스·단품 구독 변경) → 허브 권한 캐시도 지운다.
    * 인증: Authorization: Bearer {PS_SSO_SECRET} (허브 SSO 공유 시크릿 — 자체 검증)
    */
   @Public() // JWT 스킵 — 아래에서 PS_SSO_SECRET Bearer를 직접 검증
@@ -81,6 +85,11 @@ export class PsOpenApiController {
     }
     const psId = typeof body?.ps_hospital_id === 'string' ? body.ps_hospital_id.trim() : '';
     if (!psId) throw new BadRequestException('ps_hospital_id가 필요합니다.');
+    const type = typeof body?.type === 'string' ? body.type : 'profile_updated';
+    if (type === 'subscription_updated') {
+      this.hubEntitlement?.invalidate(psId);
+      return { ok: true, type, cleared: true };
+    }
     this.hubProfileService.invalidate(psId);
     return { ok: true };
   }

@@ -27,6 +27,7 @@ import { GrowthDiagnosisModule } from './growth-diagnosis/growth-diagnosis.modul
 import { PsOpenApiModule } from './ps-open-api/ps-open-api.module';
 import { IntlCheckModule } from './intl-check/intl-check.module';
 import { LeadMagnetModule } from './lead-magnet/lead-magnet.module';
+import { HubEntitlementModule } from './common/hub-entitlement/hub-entitlement.service';
 
 @Module({
   imports: [
@@ -57,6 +58,7 @@ import { LeadMagnetModule } from './lead-magnet/lead-magnet.module';
     ]),
     ScheduleModule.forRoot(),
     PrismaModule,
+    HubEntitlementModule, // 【2026-09-26】허브 올패스 권한 (전역)
     AppCacheModule,
     AuthModule,
     HospitalsModule,

@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger, Optional } from '@nestjs/common';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
@@ -16,6 +17,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private emailService: EmailService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {
   }
 
@@ -122,7 +124,8 @@ export class AuthService {
       phone: user.phone,
       role: user.role,
       hospitalId: user.hospitalId,
-      hospital: user.hospital,
+      // 【허브 올패스】유효 planType·subscriptionStatus 로 합성(DB 불변, 허브 실패 = 원본)
+      hospital: user.hospital && this.hubEntitlement ? await this.hubEntitlement.apply(user.hospital) : user.hospital,
       isPfMember: user.isPfMember,
       createdAt: user.createdAt,
       hubLinked: !!user.hubUserId,

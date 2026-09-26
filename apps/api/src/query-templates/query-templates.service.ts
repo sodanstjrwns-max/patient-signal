@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import OpenAI from 'openai';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { SpecialtyType, QueryIntent, AIPlatform } from '@prisma/client';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { HubProfileService, HubQuestionMaterials } from '../hospitals/hub-profile.service';
 import { findGlobalIdFromMap } from '../auth/hub-sso.util';
 import { isDongConsistentWithSigungu } from '../common/utils/region-consistency';
@@ -296,6 +297,7 @@ export class QueryTemplatesService {
   constructor(
     private prisma: PrismaService,
     private hubProfileService: HubProfileService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {
     // 이 저장소가 이미 쓰는 OpenAI 경로 재사용 (source-analyzer.service.ts와 동일 패턴)
     // 키 미설정 시 LLM 제안은 건너뛰고 템플릿 폴백으로 동작 (우아한 저하)
@@ -417,8 +419,8 @@ export class QueryTemplatesService {
       `기존 자동 질문 정리: ${deletedCount}개 삭제(응답없음) / ${deactivatedCount}개 비활성화(응답보존)`,
     );
 
-    // 플랜별 한도 체크
-    const planType = hospital.planType || 'FREE';
+    // 플랜별 한도 체크 (【허브 올패스】유효 플랜, 올려주기만)
+    const planType = (this.hubEntitlement ? (await this.hubEntitlement.apply(hospital)).planType : hospital.planType) || 'FREE';
     const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[planType] || PlanGuard.PLAN_LIMITS.FREE;
     const maxPrompts = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
     

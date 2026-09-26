@@ -1,12 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { CreatePromptDto, BulkCreatePromptsDto, ReplacePromptDto, UpdatePromptTextDto } from './dto/create-prompt.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 
 @Injectable()
 export class PromptsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
+  ) {}
 
   /**
    * 병원의 플랜별 질문 한도 조회
@@ -14,9 +18,11 @@ export class PromptsService {
   private async getPromptLimit(hospitalId: string): Promise<number> {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { planType: true },
+      select: { id: true, planType: true, psHospitalId: true },
     });
-    const planType = hospital?.planType || 'FREE';
+    // 【허브 올패스】유효 플랜으로 한도 판정(올려주기만)
+    const eff = hospital && this.hubEntitlement ? await this.hubEntitlement.apply(hospital) : hospital;
+    const planType = eff?.planType || 'FREE';
     const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.FREE;
     return limits.maxPrompts === -1 ? 999 : limits.maxPrompts;
   }
@@ -90,6 +96,8 @@ export class PromptsService {
       throw new BadRequestException('새 질문은 1~500자로 입력해 주세요.');
     }
 
+    // 【허브 올패스】트랜잭션 밖에서 유효 플랜을 미리 구한다(허브 호출을 트랜잭션 안에 두지 않음)
+    const effPlan = this.hubEntitlement ? await this.hubEntitlement.effectivePlanType(hospitalId) : null;
     return this.prisma.$transaction(async (tx) => {
       const hospital = await tx.hospital.findUnique({
         where: { id: hospitalId },
@@ -103,7 +111,7 @@ export class PromptsService {
       });
       if (!current) throw new NotFoundException('교체할 활성 질문을 찾을 수 없습니다.');
 
-      const planLimits = PlanGuard.PLAN_LIMITS[hospital.planType || 'FREE'] || PlanGuard.PLAN_LIMITS.FREE;
+      const planLimits = PlanGuard.PLAN_LIMITS[(effPlan || hospital.planType || 'FREE') as keyof typeof PlanGuard.PLAN_LIMITS] || PlanGuard.PLAN_LIMITS.FREE;
       const maxPrompts = planLimits.maxPrompts === -1 ? 999 : planLimits.maxPrompts;
       const active = await tx.prompt.findMany({
         where: { hospitalId, isActive: true },

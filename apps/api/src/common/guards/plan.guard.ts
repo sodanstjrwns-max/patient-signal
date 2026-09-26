@@ -4,10 +4,12 @@ import {
   ExecutionContext,
   ForbiddenException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_LIMITS_KEY, PlanLimitOptions } from '../decorators/plan-limit.decorator';
+import { HubEntitlementService } from '../hub-entitlement/hub-entitlement.service';
 
 /**
  * PlanGuard - 플랜별 기능 제한을 강제하는 Guard
@@ -111,6 +113,7 @@ export class PlanGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private prisma: PrismaService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -130,11 +133,13 @@ export class PlanGuard implements CanActivate {
     }
 
     // 병원의 현재 플랜 조회
-    const hospital = await this.prisma.hospital.findUnique({
+    const hospitalRow = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
       select: {
+        id: true,
         planType: true,
         subscriptionStatus: true,
+        psHospitalId: true,
         name: true,
         _count: {
           select: {
@@ -145,9 +150,11 @@ export class PlanGuard implements CanActivate {
       },
     });
 
-    if (!hospital) {
+    if (!hospitalRow) {
       throw new ForbiddenException('병원을 찾을 수 없습니다.');
     }
+    // 【허브 올패스】유효 권한이 있으면 그 티어로 판정(올려주기만, DB 불변). 실패 시 로컬 플랜 그대로.
+    const hospital = this.hubEntitlement ? await this.hubEntitlement.apply(hospitalRow) : hospitalRow;
 
     const planType = hospital.planType || 'FREE';
     const limits = PlanGuard.PLAN_LIMITS[planType] || PlanGuard.PLAN_LIMITS.FREE;

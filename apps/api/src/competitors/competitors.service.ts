@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { hospitalResponseStats, hospitalCompetitorMentions } from '../common/stats/response-daily';
 import { CacheService } from '../common/cache/cache.service';
 import { CreateCompetitorDto } from './dto/create-competitor.dto';
 import { PlanGuard } from '../common/guards/plan.guard';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 
 export interface CompetitorSuggestion {
   name: string;
@@ -20,7 +21,11 @@ export interface CompetitorSuggestion {
 @Injectable()
 export class CompetitorsService {
   private readonly logger = new Logger(CompetitorsService.name);
-  constructor(private prisma: PrismaService, private cache: CacheService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cache: CacheService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
+  ) {}
 
   // ===== 한국어 치과명 정규화 및 유사도 매칭 =====
 
@@ -297,12 +302,16 @@ export class CompetitorsService {
     const hospital = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
       select: {
+        id: true,
         planType: true,
+        psHospitalId: true,
         _count: { select: { competitors: { where: { isActive: true } } } },
       },
     });
     if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
-    const limit = PlanGuard.PLAN_LIMITS[hospital.planType].maxCompetitors;
+    // 【허브 올패스】유효 플랜으로 한도 판정(올려주기만)
+    const eff = this.hubEntitlement ? await this.hubEntitlement.apply(hospital) : hospital;
+    const limit = (PlanGuard.PLAN_LIMITS[eff.planType] || PlanGuard.PLAN_LIMITS.FREE).maxCompetitors;
     return limit === -1 ? -1 : Math.max(0, limit - hospital._count.competitors);
   }
 

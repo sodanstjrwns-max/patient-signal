@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger, Optional } from '@nestjs/common';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { hospitalResponseStats } from '../common/stats/response-daily';
 import { CreateHospitalDto } from './dto/create-hospital.dto';
@@ -24,6 +25,7 @@ export class HospitalsService {
     private schedulerService: SchedulerService,
     private hubProfileService: HubProfileService,
     private cacheService: CacheService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {}
 
   /**
@@ -194,9 +196,17 @@ export class HospitalsService {
       this.logger.warn(`Subscription 생성 실패 (무시됨): ${err?.message}`);
     }
 
+    // 【허브 올패스】온보딩 한도: 트라이얼 STARTER 와 허브 유효 플랜 중 높은 것 (허브 실패 = STARTER)
+    let onboardPlan = 'STARTER';
+    try {
+      if (this.hubEntitlement) onboardPlan = await this.hubEntitlement.effectivePlanType(hospital.id, 'STARTER');
+    } catch {
+      onboardPlan = 'STARTER';
+    }
+
     // ── 경쟁 병원 등록 (STARTER 트라이얼 한도 적용) ──
     if (dto.competitorNames && dto.competitorNames.length > 0) {
-      const planLimits = PlanGuard.PLAN_LIMITS['STARTER']; // 트라이얼은 STARTER 권한
+      const planLimits = (PlanGuard.PLAN_LIMITS as Record<string, any>)[onboardPlan] || PlanGuard.PLAN_LIMITS['STARTER']; // 트라이얼은 STARTER 권한(허브 권한이 높으면 그 티어)
       const maxCompetitors = planLimits.maxCompetitors;
       const competitorRegion = `${dto.regionSido} ${dto.regionSigungu}`;
       
@@ -244,7 +254,7 @@ export class HospitalsService {
         knownProcedures: SPECIALTY_PROCEDURES[dto.specialtyType] || [],
         trackedPrompts: [],
       });
-      await this.createAutoPrompts(hospital.id, dto, 'STARTER', 0, coreQuestions.map((question) => question.query));
+      await this.createAutoPrompts(hospital.id, dto, onboardPlan, 0, coreQuestions.map((question) => question.query));
     } catch (err) {
       this.logger.warn(`자동 프롬프트 생성 실패 (무시됨): ${err?.message}`);
     }
@@ -298,7 +308,7 @@ export class HospitalsService {
         throw new NotFoundException('병원을 찾을 수 없습니다');
       }
 
-      return this.withHubPrefill(hospital);
+      return this.withHubPlan(await this.withHubPrefill(hospital));
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       // subscriptions 관계 에러 시 subscription 없이 조회
@@ -314,8 +324,17 @@ export class HospitalsService {
         },
       });
       if (!hospital) throw new NotFoundException('병원을 찾을 수 없습니다');
-      return this.withHubPrefill({ ...hospital, subscriptions: [] });
+      return this.withHubPlan(await this.withHubPrefill({ ...hospital, subscriptions: [] }));
     }
+  }
+
+  /**
+   * 【허브 올패스】응답의 planType·subscriptionStatus 를 유효 값으로 합성(DB 불변).
+   * localPlanType = DB 원래 값, hubEntitlement = 설정/요금 화면 한 줄용(label). 허브 실패 = 원본 그대로.
+   */
+  private async withHubPlan<T extends { id: string; planType?: any; subscriptionStatus?: any; psHospitalId?: string | null }>(hospital: T) {
+    if (!this.hubEntitlement) return { ...hospital, hubEntitlement: null };
+    return this.hubEntitlement.apply(hospital);
   }
 
   /**
@@ -1267,7 +1286,10 @@ export class HospitalsService {
     const customCount = await this.prisma.prompt.count({
       where: { hospitalId, promptType: 'CUSTOM' },
     });
-    const result = await this.createAutoPrompts(hospitalId, dto, hospital.planType || 'FREE', customCount);
+    const planForPrompts = this.hubEntitlement
+      ? String((await this.hubEntitlement.apply(hospital)).planType || 'FREE')
+      : hospital.planType || 'FREE';
+    const result = await this.createAutoPrompts(hospitalId, dto, planForPrompts, customCount);
 
     return {
       deleted: deleted.count,

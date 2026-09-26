@@ -1,4 +1,5 @@
-import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { PlanType, SubscriptionStatus } from '@prisma/client';
@@ -16,7 +17,24 @@ export class SubscriptionsService {
     private hospitalsService: HospitalsService,
     private emailService: EmailService,
     private cacheService: CacheService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {}
+
+  /**
+   * 【허브 올패스】병원의 허브 유효 권한(없음·실패 = null). localPlan 이상 티어일 때만 applied=true.
+   * DB 는 건드리지 않는다 — 응답·판정에만 합성.
+   */
+  private async hubOverlay(hospitalId: string, localPlan: string) {
+    if (!this.hubEntitlement) return null;
+    try {
+      const h = await this.prisma.hospital.findUnique({ where: { id: hospitalId }, select: { id: true, psHospitalId: true } });
+      if (!h) return null;
+      const eff = await this.hubEntitlement.apply({ ...h, planType: localPlan });
+      return eff.hubEntitlement;
+    } catch {
+      return null;
+    }
+  }
 
   /**
    * 【스케일】다중 인스턴스 크론 중복 실행 방지 가드
@@ -92,10 +110,27 @@ export class SubscriptionsService {
     });
 
     if (!subscription) {
+      const hubNone = await this.hubOverlay(hospitalId, 'FREE');
+      if (hubNone?.applied) {
+        // 【허브 올패스】자체 구독이 없어도 허브 권한이면 유료 티어로 취급
+        return {
+          hasSubscription: false,
+          status: 'ACTIVE',
+          planType: hubNone.planType,
+          isActive: true,
+          isExpired: false,
+          isInTrial: false,
+          isUnpaidActive: false,
+          needsPayment: false,
+          trialDaysRemaining: 0,
+          hubEntitlement: hubNone,
+        };
+      }
       return {
         hasSubscription: false,
         status: 'NONE',
         planType: 'FREE',
+        ...(hubNone ? { hubEntitlement: hubNone } : {}),
       };
     }
 
@@ -138,6 +173,34 @@ export class SubscriptionsService {
       }
     } catch {}
 
+    // 【허브 올패스】허브 티어가 현재(만료면 FREE) 이상이면 유료 활성으로 합성 — 체험 만료 배너·잠금 해제
+    const hub = await this.hubOverlay(hospitalId, isActive ? subscription.planType : 'FREE');
+    if (hub?.applied) {
+      return {
+        hasSubscription: true,
+        subscription,
+        isActive: true,
+        isExpired: false,
+        isInTrial: false,
+        isUnpaidActive: false,
+        needsPayment: false,
+        trialDaysRemaining: 0,
+        daysRemaining,
+        isUnlimitedPeriod,
+        rawDaysRemaining,
+        planType: hub.planType,
+        localPlanType: subscription.planType,
+        status: 'ACTIVE',
+        willCancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        hasBillingKey: !!subscription.billingKey,
+        isCouponUser,
+        couponName,
+        couponFreeMonths,
+        hubEntitlement: hub,
+      };
+    }
+
     return {
       hasSubscription: true,
       subscription,
@@ -160,6 +223,7 @@ export class SubscriptionsService {
       isCouponUser,
       couponName,
       couponFreeMonths,
+      ...(hub ? { hubEntitlement: hub } : {}),
     };
   }
 
@@ -407,10 +471,16 @@ export class SubscriptionsService {
       });
 
       // 경쟁사 비활성화 (FREE는 경쟁사 0개)
-      await this.prisma.competitor.updateMany({
-        where: { hospitalId: subscription.hospitalId },
-        data: { isActive: false },
-      });
+      // 【허브 올패스】허브 권한이 있는 병원은 유효 플랜이 유지되므로 경쟁사를 끄지 않는다(허브 실패 시 기존대로 끔)
+      const hubAtExpiry = await this.hubOverlay(subscription.hospitalId, 'FREE');
+      if (hubAtExpiry?.applied) {
+        this.logger.log(`만료지만 허브 ${hubAtExpiry.via} ${hubAtExpiry.tier} 유효 — 경쟁사 유지: hospitalId=${subscription.hospitalId}`);
+      } else {
+        await this.prisma.competitor.updateMany({
+          where: { hospitalId: subscription.hospitalId },
+          data: { isActive: false },
+        });
+      }
 
       downgraded++;
       this.logger.log(`트라이얼 만료 → FREE 다운그레이드: hospitalId=${subscription.hospitalId}, 병원=${subscription.hospital?.name}`);
@@ -467,10 +537,16 @@ export class SubscriptionsService {
       });
 
       // 경쟁사 비활성화 (FREE는 경쟁사 0개)
-      await this.prisma.competitor.updateMany({
-        where: { hospitalId: subscription.hospitalId },
-        data: { isActive: false },
-      });
+      // 【허브 올패스】허브 권한이 있는 병원은 유효 플랜이 유지되므로 경쟁사를 끄지 않는다(허브 실패 시 기존대로 끔)
+      const hubAtExpiry = await this.hubOverlay(subscription.hospitalId, 'FREE');
+      if (hubAtExpiry?.applied) {
+        this.logger.log(`만료지만 허브 ${hubAtExpiry.via} ${hubAtExpiry.tier} 유효 — 경쟁사 유지: hospitalId=${subscription.hospitalId}`);
+      } else {
+        await this.prisma.competitor.updateMany({
+          where: { hospitalId: subscription.hospitalId },
+          data: { isActive: false },
+        });
+      }
 
       this.logger.log(`구독 만료 → FREE 다운그레이드: hospitalId=${subscription.hospitalId}`);
     }
@@ -546,7 +622,10 @@ export class SubscriptionsService {
     }
 
     const { PlanGuard } = require('../common/guards/plan.guard');
-    const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
+    // 【허브 올패스】유효 플랜으로 한도 표시(올려주기만)
+    const hubUsage = await this.hubOverlay(hospitalId, hospital.planType);
+    const effPlan = hubUsage?.applied ? hubUsage.planType : hospital.planType;
+    const limits = PlanGuard.PLAN_LIMITS[effPlan] || PlanGuard.PLAN_LIMITS.FREE;
 
     // 이번 달 크롤링 횟수
     const now = new Date();
@@ -575,7 +654,8 @@ export class SubscriptionsService {
     const maxDailyLiveQueries = (limits as any).maxDailyLiveQueries ?? 3;
 
     return {
-      planType: hospital.planType,
+      planType: effPlan,
+      hubEntitlement: hubUsage,
       usage: {
         prompts: {
           used: hospital._count.prompts,
@@ -645,6 +725,8 @@ export class SubscriptionsService {
 
       // D-3, D-1, D-0만 발송
       if (![3, 1, 0].includes(daysRemaining)) continue;
+      // 【허브 올패스】허브 권한으로 열린 병원에는 결제 유도 메일을 보내지 않는다
+      if ((await this.hubOverlay(sub.hospitalId, 'FREE'))?.applied) continue;
 
       const owner = sub.hospital?.users?.[0];
       if (!owner?.email) continue;

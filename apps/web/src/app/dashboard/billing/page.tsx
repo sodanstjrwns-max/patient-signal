@@ -9,6 +9,7 @@ import { WorkspaceIntro } from '@/components/dashboard/WorkspaceIntro';
 import { couponsApi, paymentsApi, subscriptionsApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from '@/hooks/useToast';
+import { HubEntitlementLine } from '@/components/plan/HubEntitlementLine';
 import {
   CreditCard,
   Tag,
@@ -280,6 +281,7 @@ function BillingContent() {
   // ============== RENDER: 플랜 선택 단계 ==============
   const renderPlanStep = () => (
     <div className="space-y-6">
+      <HubEntitlementLine entitlement={(user as any)?.hospital?.hubEntitlement} className="text-sm text-[#ff9565]" />
       {/* 플랜 선택 카드 */}
       <div className="grid grid-cols-1 border-y border-[#30343a] sm:grid-cols-2 xl:grid-cols-4">
         {Object.entries(PLAN_INFO).map(([planId, info]) => {

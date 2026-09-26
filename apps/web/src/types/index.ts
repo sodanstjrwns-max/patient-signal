@@ -24,9 +24,24 @@ export interface Hospital {
   address?: string;
   websiteUrl?: string;
   naverPlaceId?: string;
-  planType: PlanType;  // FREE | STARTER | STANDARD | PRO | ENTERPRISE
+  planType: PlanType;  // FREE | STARTER | STANDARD | PRO | ENTERPRISE  (허브 올패스 합성 후 유효 플랜)
   subscriptionStatus: SubscriptionStatus;
+  localPlanType?: PlanType;  // 허브 권한이 적용됐을 때 DB 원래 플랜
+  hubEntitlement?: HubEntitlement | null;
   createdAt: string;
+}
+
+// 【2026-09-26】허브 올패스 권한 (API 가 판정 시점에 합성해 내려줌. S→STARTER, M→STANDARD, L→PRO)
+export interface HubEntitlement {
+  tier: 'S' | 'M' | 'L';
+  planType: PlanType;
+  status: string;
+  source: string;
+  endsAt: string;
+  trial: boolean;
+  via: 'service' | 'allpass';
+  applied: boolean;
+  label: string;
 }
 
 // 진료과 타입

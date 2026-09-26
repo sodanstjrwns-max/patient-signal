@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Param, Body, UseGuards, UseInterceptors, Query, Req, Logger, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, UseGuards, UseInterceptors, Query, Req, Logger, NotFoundException, ConflictException, BadRequestException, Optional } from '@nestjs/common';
+import { HubEntitlementService } from '../common/hub-entitlement/hub-entitlement.service';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AICrawlerService } from './ai-crawler.service';
@@ -91,6 +92,7 @@ export class AICrawlerController {
     private aiCrawlerService: AICrawlerService,
     private prisma: PrismaService,
     private cacheService: CacheService,
+    @Optional() private hubEntitlement?: HubEntitlementService,
   ) {}
 
   @Get('status')
@@ -3023,14 +3025,16 @@ export class AICrawlerController {
     description: '오늘 사용한 실시간 질문 횟수와 플랜별 제한을 조회합니다',
   })
   async getLiveQueryUsage(@Param('hospitalId') hospitalId: string) {
-    const hospital = await this.prisma.hospital.findUnique({
+    const hospitalRow = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { id: true, planType: true },
+      select: { id: true, planType: true, psHospitalId: true },
     });
 
-    if (!hospital) {
+    if (!hospitalRow) {
       throw new NotFoundException('병원을 찾을 수 없습니다');
     }
+    // 【허브 올패스】유효 플랜(올려주기만)
+    const hospital = this.hubEntitlement ? await this.hubEntitlement.apply(hospitalRow) : hospitalRow;
 
     const limits = PlanGuard.PLAN_LIMITS[hospital.planType] || PlanGuard.PLAN_LIMITS.FREE;
     const maxDaily = (limits as any).maxDailyLiveQueries ?? 3;
@@ -3083,14 +3087,16 @@ export class AICrawlerController {
     @Body() body: { question: string; platforms?: string[] },
     @Req() req: any,
   ) {
-    const hospital = await this.prisma.hospital.findUnique({
+    const hospitalRow = await this.prisma.hospital.findUnique({
       where: { id: hospitalId },
-      select: { id: true, name: true, nameAliases: true, planType: true },
+      select: { id: true, name: true, nameAliases: true, planType: true, psHospitalId: true },
     });
 
-    if (!hospital) {
+    if (!hospitalRow) {
       throw new NotFoundException('병원을 찾을 수 없습니다');
     }
+    // 【허브 올패스】유효 플랜(올려주기만)
+    const hospital = this.hubEntitlement ? await this.hubEntitlement.apply(hospitalRow) : hospitalRow;
 
     // 별칭(alias)을 크롤러에 세팅 → 매칭 시 포함
     if (hospital.nameAliases && hospital.nameAliases.length > 0) {
